@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './common/prisma/prisma.module';
+import { RbacModule } from './rbac';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
     SharedModule,
     AuthModule,
     PrismaModule,
+    RbacModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
