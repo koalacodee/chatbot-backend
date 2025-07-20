@@ -9,17 +9,48 @@ export class PrismaUserRepository extends UserRepository {
     super();
   }
 
-  async create(user: User): Promise<User> {
-    const created = await this.prisma.user.create({
-      data: {
-        id: user.id,
-        name: user.name,
-        email: user.email.toString(),
-        password: user.password.toString(),
-        role: user.role.getRole(),
-      },
+  async save(user: User): Promise<User> {
+    const existing = await this.prisma.user.findUnique({
+      where: { id: user.id },
     });
-    return this.mapToDomain(created);
+
+    if (existing) {
+      const toUpdate: Partial<Record<keyof User, any>> = {};
+
+      for (const key of Object.keys(user) as Array<keyof User>) {
+        const newValue = user[key];
+        const oldValue = existing[key];
+
+        // تجنب تحديث الحقول اللي قيمها متساوية (حتى لو نفس القيمة بأنواع مختلفة)
+        if (JSON.stringify(newValue) !== JSON.stringify(oldValue)) {
+          toUpdate[key] = newValue;
+        }
+      }
+
+      if (Object.keys(toUpdate).length === 0) {
+        return this.mapToDomain(existing);
+      }
+
+      return this.mapToDomain(
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: toUpdate,
+        }),
+      );
+    }
+
+    // create logic
+    return this.mapToDomain(
+      await this.prisma.user.create({
+        data: {
+          id: user.id,
+          name: user.name,
+          email: user.email.toString(),
+          password: user.password.toString(),
+          role: user.role.getRole(),
+        },
+      }),
+    );
   }
 
   async existsByEmail(email: string): Promise<boolean> {

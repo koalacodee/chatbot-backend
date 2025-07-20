@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Patch, Post, UseGuards } from '@nestjs/common';
 import { InviteEmployeeUseCase } from 'src/users/application/use-cases/invite-employee-use-case';
 import { CompleteAccountUseCase } from 'src/users/application/use-cases/complete-account.use-case';
 import { Roles } from 'src/shared/value-objects/role.vo';
@@ -6,12 +6,15 @@ import { RolesGuard, UseRoles } from 'src/rbac';
 import { InviteEmployeeDto } from '../dto/invite-employee.dto';
 import { CompleteAccountDto } from '../dto/complete-account.dto';
 import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { PromoteDto } from '../dto/promote.dto';
+import { PromoteUseCase } from 'src/users/application/use-cases/promote.use-case';
 
 @Controller('users')
 export class UserController {
   constructor(
     private readonly inviteEmployeeUseCase: InviteEmployeeUseCase,
     private readonly completeAccountUseCase: CompleteAccountUseCase,
+    private readonly promoteUseCase: PromoteUseCase,
   ) {}
 
   @Post('invite-employee')
@@ -31,5 +34,10 @@ export class UserController {
   async completeAccount(@Body() dto: CompleteAccountDto) {
     const user = await this.completeAccountUseCase.execute(dto);
     return { user };
+  }
+
+  @Patch('promote')
+  async promote(@Body() { id, role }: PromoteDto) {
+    return this.promoteUseCase.execute({ id, role });
   }
 }

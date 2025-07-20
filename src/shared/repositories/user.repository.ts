@@ -4,5 +4,5 @@ export abstract class UserRepository {
   abstract existsByEmail(email: string): Promise<boolean>;
   abstract findByEmail(email: string): Promise<User>;
   abstract findById(id: string): Promise<User>;
-  abstract create(user: User): Promise<User>;
+  abstract save(user: User): Promise<User>;
 }
