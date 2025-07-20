@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { RefreshTokenRepository } from 'src/auth/repositories/refresh-token.repository';
+import { RefreshTokenRepository } from 'src/auth/domain/repositories/refresh-token.repository';
 import { Response } from 'express';
+import { RefreshToken } from 'src/auth/domain/entities/refresh-token.entity';
 
 @Injectable()
 export class TokenService {
@@ -22,11 +23,13 @@ export class TokenService {
     const refreshTokenExpiry = new Date();
     refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + 7); // 7 days expiry
 
-    await this.refreshTokenRepository.create({
+    const refreshTokenEntity = new RefreshToken({
       token: refreshToken,
       userId,
       expiresAt: refreshTokenExpiry,
     });
+
+    await this.refreshTokenRepository.save(refreshTokenEntity);
 
     return {
       accessToken,
@@ -34,7 +37,11 @@ export class TokenService {
     };
   }
 
-  private async generateAccessToken(userId: string, email: string, role: string) {
+  private async generateAccessToken(
+    userId: string,
+    email: string,
+    role: string,
+  ) {
     const payload = { sub: userId, email, role };
     return this.jwtService.signAsync(payload, {
       secret: this.config.get('ACCESS_JWT_SECRET'),
@@ -42,7 +49,11 @@ export class TokenService {
     });
   }
 
-  private async generateRefreshToken(userId: string, email: string, role: string) {
+  private async generateRefreshToken(
+    userId: string,
+    email: string,
+    role: string,
+  ) {
     const payload = { sub: userId, email, role };
     return this.jwtService.signAsync(payload, {
       secret: this.config.get('REFRESH_JWT_SECRET'),
@@ -52,30 +63,31 @@ export class TokenService {
 
   async refreshAccessToken(refreshToken: string) {
     // Verify the refresh token exists and is not revoked
-    const storedToken = await this.refreshTokenRepository.findByToken(refreshToken);
-    
-    if (!storedToken || storedToken.revokedAt) {
+    const storedToken =
+      await this.refreshTokenRepository.findByToken(refreshToken);
+
+    if (!storedToken || storedToken.isRevoked) {
       throw new Error('Invalid refresh token');
     }
-    
-    if (new Date() > new Date(storedToken.expiresAt)) {
+
+    if (storedToken.isExpired) {
       throw new Error('Refresh token expired');
     }
-    
+
     // Decode the token to get user information
-    const decoded = this.jwtService.decode(refreshToken) as {
+    const decoded = this.jwtService.decode(storedToken.token) as {
       sub: string;
       email: string;
       role: string;
     };
-    
+
     // Generate a new access token
     const accessToken = await this.generateAccessToken(
       decoded.sub,
       decoded.email,
       decoded.role,
     );
-    
+
     return { accessToken };
   }
 
@@ -86,12 +98,12 @@ export class TokenService {
   async revokeAllUserTokens(userId: string) {
     await this.refreshTokenRepository.deleteAllForUser(userId);
   }
-  
+
   // Helper method to set refresh token cookie
   setRefreshTokenCookie(res: Response, token: string) {
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 7);
-    
+
     res.cookie('refresh_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -100,7 +112,7 @@ export class TokenService {
       path: '/',
     });
   }
-  
+
   // Helper method to clear refresh token cookie
   clearRefreshTokenCookie(res: Response) {
     res.clearCookie('refresh_token', {

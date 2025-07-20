@@ -4,7 +4,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { Strategy } from 'passport-jwt';
 import { UserRepository } from 'src/shared/repositories/user.repository';
-import { RefreshTokenRepository } from 'src/auth/repositories/refresh-token.repository';
+import { RefreshTokenRepository } from 'src/auth/domain/repositories/refresh-token.repository';
 
 // Custom extractor function to get JWT from cookies
 const cookieExtractor = (req: Request): string | null => {
@@ -15,7 +15,10 @@ const cookieExtractor = (req: Request): string | null => {
 };
 
 @Injectable()
-export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'refresh-token') {
+export class RefreshTokenStrategy extends PassportStrategy(
+  Strategy,
+  'refresh-token',
+) {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly refreshTokenRepository: RefreshTokenRepository,
@@ -31,33 +34,34 @@ export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'refresh-to
 
   async validate(req: Request, payload: any) {
     const refreshToken = req.cookies['refresh_token'];
-    
+
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token not found');
     }
-    
+
     // Verify that the refresh token exists in the database and hasn't been revoked
-    const storedToken = await this.refreshTokenRepository.findByToken(refreshToken);
-    
+    const storedToken =
+      await this.refreshTokenRepository.findByToken(refreshToken);
+
     if (!storedToken) {
       throw new UnauthorizedException('Invalid refresh token');
     }
-    
-    if (storedToken.revokedAt) {
+
+    if (storedToken.isRevoked) {
       throw new UnauthorizedException('Refresh token has been revoked');
     }
-    
-    if (new Date() > new Date(storedToken.expiresAt)) {
+
+    if (storedToken.isExpired) {
       throw new UnauthorizedException('Refresh token has expired');
     }
-    
+
     // Verify the token belongs to the user in the payload
     if (storedToken.userId !== payload.sub) {
       throw new UnauthorizedException('Invalid token owner');
     }
-    
+
     const user = await this.userRepository.findById(payload.sub);
-    
+
     return {
       id: user.id,
       email: user.email.toString(),

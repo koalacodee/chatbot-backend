@@ -6,6 +6,8 @@ import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RbacModule } from './rbac';
+import { UsersModule } from './users/users.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -24,10 +26,21 @@ import { RbacModule } from './rbac';
         ],
       }),
     }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          port: config.get('REDIS_PORT'),
+          host: config.get('REDIS_HOST'),
+          password: config.get('REDIS_PASSWORD'),
+        },
+      }),
+    }),
     SharedModule,
     AuthModule,
     PrismaModule,
     RbacModule,
+    UsersModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

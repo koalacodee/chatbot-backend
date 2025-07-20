@@ -3,13 +3,14 @@ import { Email } from '../value-objects/email.vo';
 import { Password } from '../value-objects/password.vo';
 import { Role, Roles } from '../value-objects/role.vo';
 import { minLength } from 'class-validator';
+import { randomUUID } from 'crypto';
 
 export interface UserOptions {
-  id: string;
   name: string;
   email: string;
   password: string;
   role: Roles;
+  id?: string;
 }
 
 export class User {
@@ -43,7 +44,13 @@ export class User {
       : Password.fromHash(options.password);
     const role = Role.create(options.role);
 
-    return new User(options.id, options.name, email, password, role);
+    return new User(
+      options.id || randomUUID(),
+      options.name,
+      email,
+      password,
+      role,
+    );
   }
 
   // ✅ Getters

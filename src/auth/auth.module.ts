@@ -7,7 +7,7 @@ import { LoginUseCase } from './application/use-cases/login.use-case';
 import { JwtStrategy } from './infrastructure/strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './infrastructure/strategies/refresh-token.strategy';
 import { ConfigService } from '@nestjs/config';
-import { RefreshTokenRepository } from './repositories/refresh-token.repository';
+import { RefreshTokenRepository } from './domain/repositories/refresh-token.repository';
 import { PrismaRefreshTokenRepository } from './infrastructure/repositories/prisma-refresh-token.repository';
 import { TokenService } from './infrastructure/services/token.service';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case';
@@ -26,7 +26,6 @@ import { AuthController } from './interface/http/auth.controller';
     }),
   ],
   providers: [
-    { provide: UserRepository, useClass: PrismaUserRepository },
     { provide: RefreshTokenRepository, useClass: PrismaRefreshTokenRepository },
     LoginUseCase,
     RefreshTokenUseCase,
@@ -35,7 +34,7 @@ import { AuthController } from './interface/http/auth.controller';
     RefreshTokenStrategy,
     TokenService,
   ],
-  exports: [UserRepository, JwtModule, TokenService],
+  exports: [JwtModule, TokenService],
   controllers: [AuthController],
 })
 export class AuthModule {}

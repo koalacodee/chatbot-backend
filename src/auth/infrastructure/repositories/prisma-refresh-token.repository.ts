@@ -1,25 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/prisma/prisma.service';
-import { RefreshTokenRepository } from 'src/auth/repositories/refresh-token.repository';
-
+import { RefreshTokenRepository } from 'src/auth/domain/repositories/refresh-token.repository';
+import { RefreshToken } from 'src/auth/domain/entities/refresh-token.entity';
+import { RefreshToken as PrismaRefreshToken } from '@prisma/client';
 @Injectable()
 export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: {
-    token: string;
-    userId: string;
-    expiresAt: Date;
-  }): Promise<void> {
+  async save(refreshToken: RefreshToken): Promise<void> {
+    console.log(refreshToken.toJSON());
+
     await this.prisma.refreshToken.create({
-      data,
+      data: refreshToken.toJSON(),
     });
   }
 
   async findByToken(token: string) {
-    return this.prisma.refreshToken.findUnique({
-      where: { token },
-    });
+    return this.mapToDomain(
+      await this.prisma.refreshToken.findUnique({
+        where: { token },
+      }),
+    );
   }
 
   async deleteByToken(token: string): Promise<void> {
@@ -39,5 +40,10 @@ export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
       where: { token },
       data: { revokedAt: new Date() },
     });
+  }
+
+  private mapToDomain(refreshToken: PrismaRefreshToken): RefreshToken {
+    const { createdAt, revokedAt, ...rest } = refreshToken;
+    return new RefreshToken({ ...rest, isRevoked: !!revokedAt });
   }
 }

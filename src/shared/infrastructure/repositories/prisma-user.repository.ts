@@ -42,11 +42,11 @@ export class PrismaUserRepository extends UserRepository {
   private async mapToDomain(user: any): Promise<User> {
     return await User.create(
       {
-        id: user.id,
         name: user.name,
         email: user.email,
         password: user.password,
         role: user.role,
+        id: user.id,
       },
       false,
     );
