@@ -11,6 +11,7 @@ export class QdrantService implements OnModuleInit {
   onModuleInit() {
     this.client = new QdrantClient({
       url: this.config.get('QDRANT_URL') || 'http://localhost:6333',
+      apiKey: this.config.get('QDRANT_API_KEY') || undefined,
     });
   }
 

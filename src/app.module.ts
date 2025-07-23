@@ -9,6 +9,8 @@ import { RbacModule } from './rbac';
 import { UsersModule } from './users/users.module';
 import { BullModule } from '@nestjs/bullmq';
 import { DepartmentModule } from './department/department.module';
+import { QdrantModule } from './common/qdrant/qdrant.module';
+import { KnowledgeChunkModule } from './knowledge-chunks/knowledge-chunk.module';
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { DepartmentModule } from './department/department.module';
     RbacModule,
     UsersModule,
     DepartmentModule,
+    QdrantModule,
+    KnowledgeChunkModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
