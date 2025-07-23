@@ -44,7 +44,7 @@ export class CompleteAccountUseCase {
     });
 
     // 4. Save the user
-    await this.userRepo.create(user);
+    await this.userRepo.save(user);
 
     // 5. Delete the invitation from Redis
     await this.redis.del(`invite:${input.token}`);

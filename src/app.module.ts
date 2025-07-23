@@ -8,6 +8,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { RbacModule } from './rbac';
 import { UsersModule } from './users/users.module';
 import { BullModule } from '@nestjs/bullmq';
+import { DepartmentModule } from './department/department.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { BullModule } from '@nestjs/bullmq';
     PrismaModule,
     RbacModule,
     UsersModule,
+    DepartmentModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

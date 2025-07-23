@@ -17,11 +17,10 @@ export class PrismaUserRepository extends UserRepository {
     if (existing) {
       const toUpdate: Partial<Record<keyof User, any>> = {};
 
-      for (const key of Object.keys(user) as Array<keyof User>) {
-        const newValue = user[key];
+      for (const key of Object.keys(user.toJSON()) as Array<keyof User>) {
+        const newValue = user[key].toString();
         const oldValue = existing[key];
 
-        // تجنب تحديث الحقول اللي قيمها متساوية (حتى لو نفس القيمة بأنواع مختلفة)
         if (JSON.stringify(newValue) !== JSON.stringify(oldValue)) {
           toUpdate[key] = newValue;
         }

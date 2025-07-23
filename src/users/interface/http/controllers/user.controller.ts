@@ -37,6 +37,8 @@ export class UserController {
   }
 
   @Patch('promote')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER)
   async promote(@Body() { id, role }: PromoteDto) {
     return this.promoteUseCase.execute({ id, role });
   }

@@ -30,6 +30,30 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+model Department {
+  id              String           @id @default(uuid()) @db.Uuid
+  name            String
+  questions       Question[]
+  knowledgeChunks KnowledgeChunk[]
+}
+
+model Question {
+  id               String   @id @default(uuid()) @db.Uuid
+  text             String
+  departmentId     String   @db.Uuid
+  department       Department @relation(fields: [departmentId], references: [id])
+  knowledgeChunkId String?  @db.Uuid
+  knowledgeChunk   KnowledgeChunk? @relation(fields: [knowledgeChunkId], references: [id])
+}
+
+model KnowledgeChunk {
+  id           String   @id @default(uuid()) @db.Uuid
+  content      String
+  departmentId String   @db.Uuid
+  department   Department @relation(fields: [departmentId], references: [id])
+  questions    Question[]
+}
+
 enum Role {
   MANAGER
   ADMIN
