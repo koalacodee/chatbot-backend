@@ -14,6 +14,7 @@ model User {
   password      String         @db.Char(97)
   role          Role
   refreshTokens RefreshToken[]
+  conversations Conversation[]
 
   @@map("users")
 }
@@ -21,11 +22,11 @@ model User {
 model RefreshToken {
   id        String   @id @default(uuid()) @db.Uuid
   token     String   @unique
-  userId    String   @db.Uuid
+  userId    String   @db.Uuid @map("user_id")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  revokedAt DateTime?
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
 
   @@map("refresh_tokens")
 }
@@ -35,27 +36,76 @@ model Department {
   name            String
   questions       Question[]
   knowledgeChunks KnowledgeChunk[]
+
+  @@map("departments")
 }
 
 model Question {
   id               String   @id @default(uuid()) @db.Uuid
   text             String
-  departmentId     String   @db.Uuid
+  departmentId     String   @db.Uuid @map("department_id")
   department       Department @relation(fields: [departmentId], references: [id])
-  knowledgeChunkId String?  @db.Uuid
+  knowledgeChunkId String?  @db.Uuid @map("knowledge_chunk_id")
   knowledgeChunk   KnowledgeChunk? @relation(fields: [knowledgeChunkId], references: [id])
+
+  @@map("questions")
 }
 
 model KnowledgeChunk {
   id           String   @id @default(uuid()) @db.Uuid
   content      String
-  departmentId String   @db.Uuid
+  departmentId String   @db.Uuid @map("department_id")
   department   Department @relation(fields: [departmentId], references: [id])
   questions    Question[]
+  retrievedChunks RetrievedChunk[]
+
+  @@map("knowledge_chunks")
+}
+
+model Conversation {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid @map("user_id")
+  user       User      @relation(fields: [userId], references: [id])
+  messages   Message[]
+  startedAt  DateTime  @default(now()) @map("started_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  endedAt    DateTime? @map("ended_at")
+
+  @@map("conversations")
+}
+
+model Message {
+  id         String    @id @default(uuid()) @db.Uuid
+  content    String
+  role       MessageRole @map("role")
+  conversationId String @db.Uuid @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  retrievedChunk   RetrievedChunk?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("messages")
+}
+
+model RetrievedChunk {
+  id           String   @id @default(uuid()) @db.Uuid
+  messageId    String   @db.Uuid @unique @map("message_id")
+  message      Message  @relation(fields: [messageId], references: [id])
+  knowledgeChunkId String @db.Uuid @map("knowledge_chunk_id")
+  knowledgeChunk   KnowledgeChunk @relation(fields: [knowledgeChunkId], references: [id])
+  score        Float
+  retrievedAt   DateTime @default(now()) @map("retrieved_at")
+
+  @@map("retrieved_chunks")
 }
 
 enum Role {
-  MANAGER
-  ADMIN
-  EMPLOYEE
+  MANAGER @map("manager")
+  ADMIN @map("admin")
+  EMPLOYEE @map("employee")
+}
+
+enum MessageRole {
+  USER @map("user")
+  ASSISTANT @map("assistant")
 }
