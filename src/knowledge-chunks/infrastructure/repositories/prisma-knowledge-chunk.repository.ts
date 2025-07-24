@@ -2,10 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
 import { KnowledgeChunk } from '../../domain/entities/knowldege-chunk.entity';
-import { Vector } from '../../domain/value-objects/vector.vo';
-import { VectorsRepository } from 'src/knowledge-chunks/domain/repositories/vectors.repository';
 import { Department } from 'src/department/domain/entities/department.entity';
-import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 
 @Injectable()
 export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
@@ -18,7 +15,6 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
     return KnowledgeChunk.create({
       id: chunk.id,
       content: chunk.content,
-      vector: undefined as unknown as Vector, // Placeholder
       department: undefined as unknown as Department,
     });
   }
@@ -27,7 +23,6 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
     const data = {
       id: chunk.id.value,
       content: chunk.content,
-      vectorId: chunk.vector.id.value,
       departmentId: chunk.department.id.value,
     };
     const upserted = await this.prisma.knowledgeChunk.upsert({

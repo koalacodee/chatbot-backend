@@ -4,7 +4,8 @@ import { KnowledgeChunk } from '../../domain/entities/knowldege-chunk.entity';
 import { EmbeddingService } from 'src/knowledge-chunks/domain/embedding/embedding-service.interface';
 import { Vector } from 'src/knowledge-chunks/domain/value-objects/vector.vo';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
-import { VectorsRepository } from 'src/knowledge-chunks/domain/repositories/vectors.repository';
+import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
+import { Point } from 'src/knowledge-chunks/domain/entities/point.entity';
 
 interface UpdateKnowledgeChunkDto {
   content?: string;
@@ -17,7 +18,7 @@ export class UpdateKnowledgeChunkUseCase {
     private readonly chunkRepo: KnowledgeChunkRepository,
     private readonly embeddingService: EmbeddingService,
     private readonly departmentRepo: DepartmentRepository,
-    private readonly vectorRepo: VectorsRepository,
+    private readonly pointRepo: PointRepository,
   ) {}
 
   async execute(
@@ -35,13 +36,25 @@ export class UpdateKnowledgeChunkUseCase {
       const vector = Vector.create({
         vector: embedding,
         dim: embedding.length as 2048,
-        id: chunk.vector.id.value,
       });
 
-      await this.vectorRepo.save(vector);
+      // Update or create point
+      if (chunk.point) {
+        const updatedPoint = Point.create({
+          id: chunk.point.id.value,
+          vector,
+          knowledgeChunkId: chunk.id.value,
+        });
+        await this.pointRepo.save(updatedPoint);
+      } else {
+        const newPoint = Point.create({
+          vector,
+          knowledgeChunkId: chunk.id.value,
+        });
+        await this.pointRepo.save(newPoint);
+      }
 
       chunk.updateContent(dto.content);
-      chunk.updateVector(vector);
     }
 
     if (dto.departmentId) {

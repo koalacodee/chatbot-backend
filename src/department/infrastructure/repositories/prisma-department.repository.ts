@@ -29,7 +29,7 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
           KnowledgeChunk.create({
             id: kc.id,
             content: kc.content,
-            vector: undefined, // Vector mapping not handled here
+            point: undefined,
             department: undefined as unknown as Department,
           }),
         ) || [],

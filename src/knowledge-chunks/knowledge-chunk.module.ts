@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { KnowledgeChunkRepository } from './domain/repositories/knowledge-chunk.repository';
 import { PrismaKnowledgeChunkRepository } from './infrastructure/repositories/prisma-knowledge-chunk.repository';
-import { VectorsRepository } from './domain/repositories/vectors.repository';
-import { QdrantVectorsRepository } from './infrastructure/repositories/qdrant-vectors.repository';
 import { EmbeddingService } from './domain/embedding/embedding-service.interface';
 import { JinaAiEmbeddingService } from './infrastructure/ai/jina-ai.embedding-service';
 import { KnowledgeChunkController } from './interface/http/knowledge-chunk.controller';
@@ -17,6 +15,8 @@ import {
   UpdateKnowledgeChunkUseCase,
 } from './application/use-cases';
 import { DepartmentModule } from 'src/department/department.module';
+import { PointRepository } from './domain/repositories/point.repository';
+import { QdrantPointRepository } from './infrastructure/repositories/qdrant-point.repository';
 @Module({
   providers: [
     {
@@ -24,8 +24,8 @@ import { DepartmentModule } from 'src/department/department.module';
       useClass: PrismaKnowledgeChunkRepository,
     },
     {
-      provide: VectorsRepository,
-      useClass: QdrantVectorsRepository,
+      provide: PointRepository,
+      useClass: QdrantPointRepository,
     },
     {
       provide: EmbeddingService,
