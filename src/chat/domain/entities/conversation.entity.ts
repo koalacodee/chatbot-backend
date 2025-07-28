@@ -1,13 +1,15 @@
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { Message } from './message.entity';
+import { RetrievedChunk } from './retrieved-chunk.entity';
 
 interface ConversationOptions {
   id?: UUID;
-  userId?: UUID;
+  userId: UUID;
   startedAt?: Date;
   endedAt?: Date;
   updatedAt?: Date;
   messages?: Message[];
+  retrievedChunks?: RetrievedChunk[];
 }
 
 export class Conversation {
@@ -17,14 +19,15 @@ export class Conversation {
   private _updatedAt: Date;
   private _endedAt?: Date;
   private _messages: Message[];
-
+  private _retrievedChunks: RetrievedChunk[];
   private constructor(options: ConversationOptions) {
     this._id = options.id || UUID.create();
     this._userId = options.userId;
     this._startedAt = options.startedAt || new Date();
     this._endedAt = options.endedAt;
     this._updatedAt = options.updatedAt || new Date();
-    this._messages = options.messages || [];
+    this._messages = options.messages ?? [];
+    this._retrievedChunks = options.retrievedChunks ?? [];
   }
 
   // Getters
@@ -48,6 +51,10 @@ export class Conversation {
     return [...this._messages];
   }
 
+  get retrievedChunks(): RetrievedChunk[] {
+    return [...this._retrievedChunks];
+  }
+
   get updatedAt(): Date {
     return this._updatedAt;
   }
@@ -65,6 +72,10 @@ export class Conversation {
     this._updatedAt = value;
   }
 
+  set retrievedChunks(value: RetrievedChunk[]) {
+    this._retrievedChunks = value;
+  }
+
   // Utility methods
   addMessage(message: Message): void {
     this._messages.push(message);
@@ -80,7 +91,7 @@ export class Conversation {
     }
   }
 
-  static create(options: ConversationOptions = {}): Conversation {
+  static create(options: ConversationOptions): Conversation {
     return new Conversation(options);
   }
 
@@ -91,6 +102,7 @@ export class Conversation {
       startedAt: this._startedAt.toISOString(),
       endedAt: this._endedAt?.toISOString(),
       messages: this._messages.map((msg) => msg.toJSON()),
+      retrievedChunks: this._retrievedChunks.map((chunk) => chunk.toJSON()),
     };
   }
 }

@@ -1,4 +1,4 @@
-import { KnowledgeChunk } from 'src/knowledge-chunks/domain/entities/knowldege-chunk.entity';
+import { KnowledgeChunk } from 'src/knowledge-chunks/domain/entities/knowledge-chunk.entity';
 
 interface CreateRetrievedChunkOptions {
   id?: string;
@@ -35,7 +35,7 @@ export class RetrievedChunk {
       messageId: options.messageId,
       knowledgeChunk: options.knowledgeChunk,
       score: options.score,
-      retrievedAt: options.retrievedAt || new Date()
+      retrievedAt: options.retrievedAt || new Date(),
     });
   }
 
@@ -76,7 +76,7 @@ export class RetrievedChunk {
       messageId: this._messageId,
       knowledgeChunk: this._knowledgeChunk.toJSON(),
       score: this._score,
-      retrievedAt: this._retrievedAt.toISOString()
+      retrievedAt: this._retrievedAt.toISOString(),
     };
   }
 
@@ -90,7 +90,7 @@ export class RetrievedChunk {
       messageId: this._messageId,
       knowledgeChunk: this._knowledgeChunk.clone(),
       score: this._score,
-      retrievedAt: new Date(this._retrievedAt)
+      retrievedAt: new Date(this._retrievedAt),
     });
   }
 }

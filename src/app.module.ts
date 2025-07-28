@@ -11,6 +11,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { DepartmentModule } from './department/department.module';
 import { QdrantModule } from './common/qdrant/qdrant.module';
 import { KnowledgeChunkModule } from './knowledge-chunks/knowledge-chunk.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { KnowledgeChunkModule } from './knowledge-chunks/knowledge-chunk.module'
     DepartmentModule,
     QdrantModule,
     KnowledgeChunkModule,
+    ChatModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

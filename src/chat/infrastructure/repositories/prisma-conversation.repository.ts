@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { ConversationRepository } from '../../domain/repositories/conversation.repository';
 import { Conversation } from '../../domain/entities/conversation.entity';
+import { Message } from 'src/chat/domain/entities/message.entity';
 
 @Injectable()
 export class PrismaConversationRepository extends ConversationRepository {
@@ -16,6 +17,18 @@ export class PrismaConversationRepository extends ConversationRepository {
       startedAt: conversation.startedAt,
       updatedAt: conversation.updatedAt,
       endedAt: conversation.endedAt,
+      messages: conversation.message
+        ? conversation.messages.map((m) =>
+            Message.create({
+              id: m.id,
+              conversationId: m.conversationId,
+              content: m.content,
+              createdAt: m.createdAt,
+              updatedAt: m.updatedAt,
+              role: m.role,
+            }),
+          )
+        : undefined,
     });
   }
 
@@ -31,6 +44,7 @@ export class PrismaConversationRepository extends ConversationRepository {
       where: { id: data.id },
       update: data,
       create: data,
+      include: { messages: true },
     });
     return this.toDomain(upserted);
   }
@@ -38,6 +52,7 @@ export class PrismaConversationRepository extends ConversationRepository {
   async findById(id: string): Promise<Conversation | null> {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id },
+      include: { messages: true },
     });
     return conversation ? this.toDomain(conversation) : null;
   }

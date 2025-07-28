@@ -1,4 +1,4 @@
-import { KnowledgeChunk } from '../../../knowledge-chunks/domain/entities/knowldege-chunk.entity';
+import { KnowledgeChunk } from '../../../knowledge-chunks/domain/entities/knowledge-chunk.entity';
 import { Question } from '../../../questions/domain/entities/question.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 
@@ -16,7 +16,7 @@ export class Department {
   private _knowledgeChunks: KnowledgeChunk[];
 
   constructor({
-    id,
+    id = undefined,
     name,
     questions,
     knowledgeChunks,

@@ -3,7 +3,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import { DepartmentRepository } from '../../domain/repositories/department.repository';
 import { Department } from '../../domain/entities/department.entity';
 import { Question } from '../../../questions/domain/entities/question.entity';
-import { KnowledgeChunk } from '../../../knowledge-chunks/domain/entities/knowldege-chunk.entity';
+import { KnowledgeChunk } from '../../../knowledge-chunks/domain/entities/knowledge-chunk.entity';
 
 @Injectable()
 export class PrismaDepartmentRepository extends DepartmentRepository {
@@ -38,7 +38,7 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
 
   async save(department: Department): Promise<Department> {
     const data = {
-      id: department.id.value,
+      id: department.id.toString(),
       name: department.name,
     };
     const upserted = await this.prisma.department.upsert({
