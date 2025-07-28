@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   CreateKnowledgeChunkUseCase,
@@ -25,6 +26,9 @@ import { GetAllKnowledgeChunksOutputDto } from './dto/get-all-knowledge-chunks.d
 import { DeleteManyKnowledgeChunksInputDto } from './dto/delete-many-knowledge-chunks.dto';
 import { FindKnowledgeChunksByDepartmentInputDto } from './dto/find-by-department.dto';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
+import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { RolesGuard, UseRoles } from 'src/rbac';
+import { Roles } from 'src/shared/value-objects/role.vo';
 
 @Controller('knowledge-chunks')
 export class KnowledgeChunkController {
@@ -46,6 +50,8 @@ export class KnowledgeChunkController {
     return this.createUseCase.execute(input);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER, Roles.ADMIN)
   @Put()
   async update(
     @Body() input: UpdateKnowledgeChunkInputDto,
@@ -54,6 +60,8 @@ export class KnowledgeChunkController {
     return this.updateUseCase.execute(id, dto);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER, Roles.ADMIN)
   @Get(':id')
   async get(
     @Param('id') id: string,
@@ -61,11 +69,15 @@ export class KnowledgeChunkController {
     return this.getUseCase.execute(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER, Roles.ADMIN)
   @Get()
   async getAll(): Promise<GetAllKnowledgeChunksOutputDto> {
     return this.getAllUseCase.execute();
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER, Roles.ADMIN)
   @Get('by-department')
   async findByDepartment(
     @Query() input: FindKnowledgeChunksByDepartmentInputDto,
@@ -73,6 +85,8 @@ export class KnowledgeChunkController {
     return this.findByDepartmentUseCase.execute(input);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER, Roles.ADMIN)
   @Delete(':id')
   async delete(
     @Param('id') id: string,
@@ -80,6 +94,8 @@ export class KnowledgeChunkController {
     return this.deleteUseCase.execute(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER, Roles.ADMIN)
   @Delete('multiple')
   async deleteMany(
     @Body() input: DeleteManyKnowledgeChunksInputDto,
@@ -87,6 +103,8 @@ export class KnowledgeChunkController {
     return this.deleteManyUseCase.execute(input.ids);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER, Roles.ADMIN)
   @Get('count')
   async count(): Promise<number> {
     return this.countUseCase.execute();

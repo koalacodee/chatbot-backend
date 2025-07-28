@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  UseGuards,
 } from '@nestjs/common';
 import {
   CreateDepartmentUseCase,
@@ -22,6 +23,9 @@ import { GetDepartmentOutputDto } from './dto/get-department.dto';
 import { GetAllDepartmentsOutputDto } from './dto/get-all-departments.dto';
 import { DeleteManyDepartmentsInputDto } from './dto/delete-many-departments.dto';
 import { Department } from '../../domain/entities/department.entity';
+import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { RolesGuard, UseRoles } from 'src/rbac';
+import { Roles } from 'src/shared/value-objects/role.vo';
 
 @Controller('department')
 export class DepartmentController {
@@ -35,11 +39,15 @@ export class DepartmentController {
     private readonly countDepartmentsUseCase: CountDepartmentsUseCase,
   ) {}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER)
   @Post()
   async create(@Body() input: CreateDepartmentInputDto): Promise<Department> {
     return this.createDepartmentUseCase.execute(input);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER)
   @Put()
   async update(@Body() input: UpdateDepartmentInputDto): Promise<Department> {
     const { id, ...dto } = input;
@@ -56,6 +64,8 @@ export class DepartmentController {
     return this.getAllDepartmentsUseCase.execute();
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER)
   @Delete(':id')
   async delete(
     @Param('id') id: string,
@@ -63,6 +73,8 @@ export class DepartmentController {
     return this.deleteDepartmentUseCase.execute(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER)
   @Delete('multiple')
   async deleteMany(
     @Body() input: DeleteManyDepartmentsInputDto,

@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  UseGuards,
 } from '@nestjs/common';
 import {
   CreateQuestionUseCase,
@@ -25,6 +26,9 @@ import {
   DeleteManyQuestionsInputDto,
 } from './dto';
 import { Question } from '../../domain/entities/question.entity';
+import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { RolesGuard, UseRoles } from 'src/rbac';
+import { Roles } from 'src/shared/value-objects/role.vo';
 
 @Controller('questions')
 export class QuestionController {
@@ -38,17 +42,23 @@ export class QuestionController {
     private readonly countUseCase: CountQuestionsUseCase,
   ) {}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.ADMIN, Roles.MANAGER)
   @Post()
   async create(@Body() input: CreateQuestionInputDto): Promise<Question> {
     return this.createUseCase.execute(input);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.ADMIN, Roles.MANAGER)
   @Put()
   async update(@Body() input: UpdateQuestionInputDto): Promise<Question> {
     const { id, ...dto } = input;
     return this.updateUseCase.execute(id, dto);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.ADMIN, Roles.MANAGER)
   @Get(':id')
   async get(@Param('id') id: string): Promise<GetQuestionOutputDto | null> {
     return this.getUseCase.execute(id);
@@ -59,13 +69,15 @@ export class QuestionController {
     return this.getAllUseCase.execute();
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.ADMIN, Roles.MANAGER)
   @Delete(':id')
-  async delete(
-    @Param('id') id: string,
-  ): Promise<GetQuestionOutputDto | null> {
+  async delete(@Param('id') id: string): Promise<GetQuestionOutputDto | null> {
     return this.deleteUseCase.execute(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.ADMIN, Roles.MANAGER)
   @Delete('multiple')
   async deleteMany(
     @Body() input: DeleteManyQuestionsInputDto,
@@ -73,6 +85,8 @@ export class QuestionController {
     return this.deleteManyUseCase.execute(input.ids);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.ADMIN, Roles.MANAGER)
   @Get('count')
   async count(): Promise<number> {
     return this.countUseCase.execute();
