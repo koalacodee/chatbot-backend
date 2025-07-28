@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
+import { randomUUID } from 'crypto';
 
 export class UUID {
   private _value: string;
@@ -12,7 +13,7 @@ export class UUID {
     if (value && !isUUID(value, '4')) {
       throw new BadRequestException({ id: 'id_invalid' });
     }
-    return new UUID(value ?? '');
+    return new UUID(value ?? randomUUID());
   }
 
   public get value(): string {

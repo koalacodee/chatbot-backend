@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
-import { KnowledgeChunk } from '../../domain/entities/knowldege-chunk.entity';
+import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 
 @Injectable()
 export class GetAllKnowledgeChunksUseCase {

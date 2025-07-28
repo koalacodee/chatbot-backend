@@ -24,7 +24,7 @@ export class JinaAiEmbeddingService extends EmbeddingService {
     super();
   }
 
-  async generateEmbedding(content: string): Promise<number[]> {
+  async embed(content: string): Promise<number[]> {
     const data = {
       model: 'jina-embeddings-v4',
       task: 'text-matching',

@@ -1,3 +1,3 @@
 export abstract class EmbeddingService {
-  abstract generateEmbedding(content: string): Promise<number[]> | number[];
+  abstract embed(content: string): Promise<number[]>;
 }

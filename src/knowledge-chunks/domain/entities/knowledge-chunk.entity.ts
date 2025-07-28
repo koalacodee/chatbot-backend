@@ -92,7 +92,7 @@ export class KnowledgeChunk {
     return {
       id: this._id.toString(),
       content: this._content,
-      point: this._point.toJSON(),
+      point: this.point ? this._point.toJSON() : null,
       department: this._department.toJSON(),
     };
   }

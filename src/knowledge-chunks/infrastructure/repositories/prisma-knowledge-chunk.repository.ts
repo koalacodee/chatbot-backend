@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
-import { KnowledgeChunk } from '../../domain/entities/knowldege-chunk.entity';
+import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
     return KnowledgeChunk.create({
       id: chunk.id,
       content: chunk.content,
-      department: undefined as unknown as Department,
+      department: Department.create(chunk.department),
     });
   }
 
@@ -23,12 +23,13 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
     const data = {
       id: chunk.id.value,
       content: chunk.content,
-      departmentId: chunk.department.id.value,
+      departmentId: chunk.department.id.toString(),
     };
     const upserted = await this.prisma.knowledgeChunk.upsert({
       where: { id: data.id },
       update: data,
       create: data,
+      include: { department: true },
     });
     return this.toDomain(upserted);
   }
@@ -36,12 +37,15 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
   async findById(id: string): Promise<KnowledgeChunk | null> {
     const chunk = await this.prisma.knowledgeChunk.findUnique({
       where: { id },
+      include: { department: true },
     });
     return chunk ? this.toDomain(chunk) : null;
   }
 
   async findAll(): Promise<KnowledgeChunk[]> {
-    const chunks = await this.prisma.knowledgeChunk.findMany();
+    const chunks = await this.prisma.knowledgeChunk.findMany({
+      include: { department: true },
+    });
     return chunks.map(this.toDomain);
   }
 
@@ -55,6 +59,7 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
   async findByIds(ids: string[]): Promise<KnowledgeChunk[]> {
     const chunks = await this.prisma.knowledgeChunk.findMany({
       where: { id: { in: ids } },
+      include: { department: true },
     });
     return chunks.map(this.toDomain);
   }
@@ -90,6 +95,7 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
   async findByDepartmentId(departmentId: string): Promise<KnowledgeChunk[]> {
     const chunks = await this.prisma.knowledgeChunk.findMany({
       where: { departmentId },
+      include: { department: true },
     });
     return chunks.map(this.toDomain);
   }

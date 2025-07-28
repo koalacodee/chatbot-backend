@@ -24,7 +24,7 @@ import { GetKnowledgeChunkOutputDto } from './dto/get-knowledge-chunk.dto';
 import { GetAllKnowledgeChunksOutputDto } from './dto/get-all-knowledge-chunks.dto';
 import { DeleteManyKnowledgeChunksInputDto } from './dto/delete-many-knowledge-chunks.dto';
 import { FindKnowledgeChunksByDepartmentInputDto } from './dto/find-by-department.dto';
-import { KnowledgeChunk } from '../../domain/entities/knowldege-chunk.entity';
+import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 
 @Controller('knowledge-chunks')
 export class KnowledgeChunkController {

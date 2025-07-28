@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
-import { KnowledgeChunk } from '../../domain/entities/knowldege-chunk.entity';
+import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { EmbeddingService } from 'src/knowledge-chunks/domain/embedding/embedding-service.interface';
 import { Vector } from 'src/knowledge-chunks/domain/value-objects/vector.vo';
 import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
@@ -28,7 +28,7 @@ export class CreateKnowledgeChunkUseCase {
       throw new NotFoundException('Department not found');
     }
 
-    const vector = await this.embeddingService.generateEmbedding(dto.content);
+    const vector = await this.embeddingService.embed(dto.content);
     const vectorObj = Vector.create({
       vector,
       dim: vector.length as 2048,

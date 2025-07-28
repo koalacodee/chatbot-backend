@@ -1,4 +1,4 @@
-import { KnowledgeChunk } from '../entities/knowldege-chunk.entity';
+import { KnowledgeChunk } from '../entities/knowledge-chunk.entity';
 
 export abstract class KnowledgeChunkRepository {
   abstract save(chunk: KnowledgeChunk): Promise<KnowledgeChunk>;

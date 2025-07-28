@@ -42,5 +42,6 @@ import { QdrantPointRepository } from './infrastructure/repositories/qdrant-poin
   ],
   controllers: [KnowledgeChunkController],
   imports: [DepartmentModule],
+  exports: [EmbeddingService, PointRepository, KnowledgeChunkRepository],
 })
 export class KnowledgeChunkModule {}
