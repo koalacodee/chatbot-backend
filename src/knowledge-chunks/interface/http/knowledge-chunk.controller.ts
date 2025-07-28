@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   CreateKnowledgeChunkUseCase,
@@ -44,10 +45,13 @@ export class KnowledgeChunkController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.MANAGER, Roles.ADMIN)
   async create(
     @Body() input: CreateKnowledgeChunkInputDto,
+    @Req() req: any,
   ): Promise<KnowledgeChunk> {
-    return this.createUseCase.execute(input);
+    return this.createUseCase.execute({ ...input, userId: req.user.id });
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -55,9 +59,10 @@ export class KnowledgeChunkController {
   @Put()
   async update(
     @Body() input: UpdateKnowledgeChunkInputDto,
+    @Req() req: any,
   ): Promise<KnowledgeChunk> {
     const { id, ...dto } = input;
-    return this.updateUseCase.execute(id, dto);
+    return this.updateUseCase.execute(id, { ...dto, userId: req.user.id });
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -65,15 +70,16 @@ export class KnowledgeChunkController {
   @Get(':id')
   async get(
     @Param('id') id: string,
+    @Req() req: any,
   ): Promise<GetKnowledgeChunkOutputDto | null> {
-    return this.getUseCase.execute(id);
+    return this.getUseCase.execute(id, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseRoles(Roles.MANAGER, Roles.ADMIN)
   @Get()
-  async getAll(): Promise<GetAllKnowledgeChunksOutputDto> {
-    return this.getAllUseCase.execute();
+  async getAll(@Req() req: any): Promise<GetAllKnowledgeChunksOutputDto> {
+    return this.getAllUseCase.execute(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -90,8 +96,9 @@ export class KnowledgeChunkController {
   @Delete(':id')
   async delete(
     @Param('id') id: string,
+    @Req() req: any,
   ): Promise<GetKnowledgeChunkOutputDto | null> {
-    return this.deleteUseCase.execute(id);
+    return this.deleteUseCase.execute(id, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -99,8 +106,9 @@ export class KnowledgeChunkController {
   @Delete('multiple')
   async deleteMany(
     @Body() input: DeleteManyKnowledgeChunksInputDto,
+    @Req() req: any,
   ): Promise<KnowledgeChunk[]> {
-    return this.deleteManyUseCase.execute(input.ids);
+    return this.deleteManyUseCase.execute(input.ids, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

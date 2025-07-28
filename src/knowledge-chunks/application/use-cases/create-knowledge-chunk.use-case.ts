@@ -6,10 +6,12 @@ import { Vector } from 'src/knowledge-chunks/domain/value-objects/vector.vo';
 import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Point } from 'src/knowledge-chunks/domain/entities/point.entity';
+import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
 
 interface CreateKnowledgeChunkDto {
   content: string;
   departmentId: string;
+  userId: string;
 }
 
 @Injectable()
@@ -19,9 +21,11 @@ export class CreateKnowledgeChunkUseCase {
     private readonly embeddingService: EmbeddingService,
     private readonly pointRepo: PointRepository,
     private readonly departmentRepo: DepartmentRepository,
+    private readonly accessControl: AccessControlService,
   ) {}
 
   async execute(dto: CreateKnowledgeChunkDto): Promise<KnowledgeChunk> {
+    await this.accessControl.canAccessDepartment(dto.userId, dto.departmentId);
     const department = await this.departmentRepo.findById(dto.departmentId);
 
     if (!department) {

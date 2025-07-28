@@ -37,9 +37,7 @@ export class Message {
     const now = new Date();
     return new Message({
       id: UUID.create(options.id),
-      conversationId: options.conversationId
-        ? UUID.create(options.conversationId)
-        : undefined,
+      conversationId: UUID.create(options.conversationId),
       role: options.role,
       content: options.content,
       createdAt: options.createdAt || now,

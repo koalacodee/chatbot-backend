@@ -6,10 +6,12 @@ import { Vector } from 'src/knowledge-chunks/domain/value-objects/vector.vo';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
 import { Point } from 'src/knowledge-chunks/domain/entities/point.entity';
+import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
 
 interface UpdateKnowledgeChunkDto {
   content?: string;
   departmentId?: string;
+  userId: string;
 }
 
 @Injectable()
@@ -19,6 +21,7 @@ export class UpdateKnowledgeChunkUseCase {
     private readonly embeddingService: EmbeddingService,
     private readonly departmentRepo: DepartmentRepository,
     private readonly pointRepo: PointRepository,
+    private readonly accessControl: AccessControlService,
   ) {}
 
   async execute(
@@ -26,6 +29,10 @@ export class UpdateKnowledgeChunkUseCase {
     dto: UpdateKnowledgeChunkDto,
   ): Promise<KnowledgeChunk | null> {
     const chunk = await this.chunkRepo.findById(id);
+    await this.accessControl.canAccessDepartment(
+      dto.userId,
+      chunk.department.id.value,
+    );
     if (!chunk) throw new NotFoundException('Knowledge chunk not found');
 
     if (dto.content) {

@@ -30,12 +30,25 @@ export class PrismaUserRepository extends UserRepository {
         return this.mapToDomain(existing);
       }
 
-      return this.mapToDomain(
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: toUpdate,
-        }),
-      );
+      if ('departmentId' in toUpdate) {
+        const { departmentId, ...rest } = toUpdate;
+        return this.mapToDomain(
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data: {
+              ...rest,
+              department: { connect: { id: departmentId } },
+            },
+          }),
+        );
+      } else {
+        return this.mapToDomain(
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data: toUpdate,
+          }),
+        );
+      }
     }
 
     // create logic
@@ -47,6 +60,7 @@ export class PrismaUserRepository extends UserRepository {
           email: user.email.toString(),
           password: user.password.toString(),
           role: user.role.getRole(),
+          department: { connect: { id: user.departmentId.toString() } },
         },
       }),
     );

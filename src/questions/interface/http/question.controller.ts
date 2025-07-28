@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   CreateQuestionUseCase,
@@ -22,7 +23,6 @@ import {
   UpdateQuestionInputDto,
   GetQuestionOutputDto,
   GetAllQuestionsOutputDto,
-  DeleteQuestionInputDto,
   DeleteManyQuestionsInputDto,
 } from './dto';
 import { Question } from '../../domain/entities/question.entity';
@@ -45,35 +45,47 @@ export class QuestionController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.MANAGER)
   @Post()
-  async create(@Body() input: CreateQuestionInputDto): Promise<Question> {
-    return this.createUseCase.execute(input);
+  async create(
+    @Body() input: CreateQuestionInputDto,
+    @Req() req: any,
+  ): Promise<Question> {
+    return this.createUseCase.execute({ ...input, userId: req.user.id });
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.MANAGER)
   @Put()
-  async update(@Body() input: UpdateQuestionInputDto): Promise<Question> {
+  async update(
+    @Body() input: UpdateQuestionInputDto,
+    @Req() req: any,
+  ): Promise<Question> {
     const { id, ...dto } = input;
-    return this.updateUseCase.execute(id, dto);
+    return this.updateUseCase.execute(id, { ...dto, userId: req.user.id });
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.MANAGER)
   @Get(':id')
-  async get(@Param('id') id: string): Promise<GetQuestionOutputDto | null> {
-    return this.getUseCase.execute(id);
+  async get(
+    @Param('id') id: string,
+    @Req() req: any,
+  ): Promise<GetQuestionOutputDto | null> {
+    return this.getUseCase.execute(id, req.user.id);
   }
 
   @Get()
-  async getAll(): Promise<GetAllQuestionsOutputDto> {
-    return this.getAllUseCase.execute();
+  async getAll(@Req() req: any): Promise<GetAllQuestionsOutputDto> {
+    return this.getAllUseCase.execute(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.MANAGER)
   @Delete(':id')
-  async delete(@Param('id') id: string): Promise<GetQuestionOutputDto | null> {
-    return this.deleteUseCase.execute(id);
+  async delete(
+    @Param('id') id: string,
+    @Req() req: any,
+  ): Promise<GetQuestionOutputDto | null> {
+    return this.deleteUseCase.execute(id, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -81,8 +93,9 @@ export class QuestionController {
   @Delete('multiple')
   async deleteMany(
     @Body() input: DeleteManyQuestionsInputDto,
+    @Req() req: any,
   ): Promise<Question[]> {
-    return this.deleteManyUseCase.execute(input.ids);
+    return this.deleteManyUseCase.execute(input.ids, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

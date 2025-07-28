@@ -77,7 +77,7 @@ export class AskUseCase {
     await this.queue.add('save-message', {
       question,
       answer,
-      conversationId,
+      conversationId: conversation.id.toString(),
       currentChunks,
     });
 
