@@ -35,15 +35,20 @@ export class PrismaConversationRepository extends ConversationRepository {
   async save(conversation: Conversation): Promise<Conversation> {
     const data = {
       id: conversation.id.value,
-      userId: conversation.userId.value,
       startedAt: conversation.startedAt,
       updatedAt: conversation.updatedAt,
       endedAt: conversation.endedAt,
     };
     const upserted = await this.prisma.conversation.upsert({
       where: { id: data.id },
-      update: data,
-      create: data,
+      update: {
+        ...data,
+        user: { connect: { id: conversation.userId.toString() } },
+      },
+      create: {
+        ...data,
+        user: { connect: { id: conversation.userId.toString() } },
+      },
       include: { messages: true },
     });
     return this.toDomain(upserted);

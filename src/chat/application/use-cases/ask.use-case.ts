@@ -17,7 +17,8 @@ import { UUID } from 'src/shared/value-objects/uuid.vo';
 interface AskUseCaseInput {
   question: string;
   conversationId?: string;
-  userId: string;
+  userId?: string;
+  guestId?: string;
 }
 
 @Injectable()
@@ -31,7 +32,15 @@ export class AskUseCase {
     @InjectQueue('chat') private readonly queue: Queue,
   ) {}
 
-  async execute({ question, conversationId, userId }: AskUseCaseInput) {
+  async execute({
+    question,
+    conversationId,
+    userId,
+    guestId,
+  }: AskUseCaseInput) {
+    if (!!userId && !!guestId) {
+      guestId = undefined;
+    }
     const [currentChunks, conversation] = await Promise.all([
       this.embeddingService
         .embed(question)
@@ -47,20 +56,11 @@ export class AskUseCase {
             points.map((p) => p.knowledgeChunkId.toString()),
           ),
         ),
-      conversationId
-        ? this.conversationRepo.findById(conversationId).then((c) => {
-            if (!c) {
-              throw new NotFoundException('conversation_not_found');
-            }
-
-            if (c.userId.toString() !== userId) {
-              throw new ForbiddenException('conversation_not_owned');
-            }
-            return c;
-          })
-        : this.conversationRepo.save(
-            Conversation.create({ userId: UUID.create(userId) }),
-          ),
+      this.ensureConversation({
+        id: conversationId,
+        type: userId ? 'user' : 'guest',
+        userOrGuestId: userId ? userId : guestId,
+      }),
     ]);
 
     const oldMessages = conversation.messages;
@@ -83,5 +83,42 @@ export class AskUseCase {
 
     // 5. Return the answer (and optionally the messages)
     return answer;
+  }
+
+  private async ensureConversation({
+    id,
+    type,
+    userOrGuestId,
+  }: {
+    id?: string;
+    type: 'user' | 'guest';
+    userOrGuestId: string;
+  }) {
+    if (id) {
+      return this.conversationRepo.findById(id).then((c) => {
+        if (!c) {
+          throw new NotFoundException('conversation_not_found');
+        }
+
+        if (type === 'guest') {
+          if (c.guestId.toString() !== userOrGuestId) {
+            throw new ForbiddenException('conversation_not_owned');
+          }
+        } else {
+          if (c.userId.toString() !== userOrGuestId) {
+            throw new ForbiddenException('conversation_not_owned');
+          }
+        }
+
+        return c;
+      });
+    }
+
+    return this.conversationRepo.save(
+      Conversation.create({
+        userId: type === 'user' ? UUID.create(userOrGuestId) : undefined,
+        guestId: type === 'guest' ? UUID.create(userOrGuestId) : undefined,
+      }),
+    );
   }
 }

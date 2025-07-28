@@ -73,6 +73,8 @@ model Conversation {
   startedAt DateTime  @default(now()) @map("started_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   endedAt   DateTime? @map("ended_at")
+  guestId String? @unique @db.Uuid @map("guest_id")
+  isDeleted Boolean @default(false) @map("is_deleted")
 
   @@map("conversations")
 }
