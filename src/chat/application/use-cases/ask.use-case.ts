@@ -13,6 +13,8 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { Conversation } from 'src/chat/domain/entities/conversation.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { randomInt } from 'crypto';
 
 interface AskUseCaseInput {
   question: string;
@@ -29,6 +31,7 @@ export class AskUseCase {
     private readonly chunkRepo: KnowledgeChunkRepository,
     private readonly chatbotService: ChatbotService,
     private readonly conversationRepo: ConversationRepository,
+    private readonly eventEmitter: EventEmitter2,
     @InjectQueue('chat') private readonly queue: Queue,
   ) {}
 
@@ -63,6 +66,22 @@ export class AskUseCase {
       }),
     ]);
 
+    if (currentChunks.length === 0) {
+      const ticket = randomInt(1e7, 1e8);
+
+      this.eventEmitter.emit('chatbot.unanswered', {
+        question,
+        userId,
+        guestId,
+        ticketCode: ticket,
+      });
+
+      return {
+        message: 'ticket_created',
+        ticket,
+      };
+    }
+
     const oldMessages = conversation.messages;
     const oldRetrievedChunks = conversation.retrievedChunks;
 
@@ -82,7 +101,7 @@ export class AskUseCase {
     });
 
     // 5. Return the answer (and optionally the messages)
-    return answer;
+    return { answer, conversationId: conversation.id };
   }
 
   private async ensureConversation({

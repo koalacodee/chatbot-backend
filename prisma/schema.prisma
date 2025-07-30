@@ -17,6 +17,7 @@ model User {
   department    Department?    @relation(fields: [departmentId], references: [id])
   refreshTokens RefreshToken[]
   conversations Conversation[]
+  tickets       Ticket[]
 
   @@map("users")
 }
@@ -39,6 +40,7 @@ model Department {
   questions       Question[]
   knowledgeChunks KnowledgeChunk[]
   admins          User[]
+  tickets         Ticket[]
 
   @@map("departments")
 }
@@ -73,8 +75,8 @@ model Conversation {
   startedAt DateTime  @default(now()) @map("started_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   endedAt   DateTime? @map("ended_at")
-  guestId String? @unique @db.Uuid @map("guest_id")
-  isDeleted Boolean @default(false) @map("is_deleted")
+  guestId   String?   @unique @map("guest_id") @db.Uuid
+  isDeleted Boolean   @default(false) @map("is_deleted")
 
   @@map("conversations")
 }
@@ -102,6 +104,28 @@ model RetrievedChunk {
   retrievedAt      DateTime       @default(now()) @map("retrieved_at")
 
   @@map("retrieved_chunks")
+}
+
+model Ticket {
+  id           String       @id @default(uuid()) @db.Uuid
+  userId       String?      @map("user_id") @db.Uuid
+  user         User?        @relation(fields: [userId], references: [id])
+  guestId      String?      @unique @map("guest_id") @db.Uuid
+  question     String
+  departmentId String       @map("department_id") @db.Uuid
+  department   Department   @relation(fields: [departmentId], references: [id])
+  ticketCode   String       @unique @map("ticket_code")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  status       TicketStatus @default(PENDING)
+
+  @@map("tickets")
+}
+
+enum TicketStatus {
+  PENDING  @map("pending")
+  ANSWERED @map("answered")
+  REJECTED @map("rejected")
 }
 
 enum Role {

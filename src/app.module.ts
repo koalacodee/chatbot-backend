@@ -12,7 +12,8 @@ import { DepartmentModule } from './department/department.module';
 import { QdrantModule } from './common/qdrant/qdrant.module';
 import { KnowledgeChunkModule } from './knowledge-chunks/knowledge-chunk.module';
 import { ChatModule } from './chat/chat.module';
-
+import { TicketModule } from './tickets/ticket.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -40,6 +41,7 @@ import { ChatModule } from './chat/chat.module';
         },
       }),
     }),
+    EventEmitterModule.forRoot(),
     SharedModule,
     AuthModule,
     PrismaModule,
@@ -49,6 +51,7 @@ import { ChatModule } from './chat/chat.module';
     QdrantModule,
     KnowledgeChunkModule,
     ChatModule,
+    TicketModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

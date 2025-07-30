@@ -14,7 +14,7 @@ export class DeepSeekChatbotService extends ChatbotService {
     super();
 
     this.client = new OpenAI({
-      baseURL: config.get('HF_BASE_URL'),
+      baseURL: config.get('CHATBOT_API_URL'),
       apiKey: config.get('HF_TOKEN'),
     });
   }
@@ -60,7 +60,7 @@ export class DeepSeekChatbotService extends ChatbotService {
       });
 
       const chatCompletion = await this.client.chat.completions.create({
-        model: 'deepseek-ai/DeepSeek-V3:novita',
+        model: this.config.getOrThrow('CHATBOT_MODEL_ID'),
         messages,
       });
 
