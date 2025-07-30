@@ -2,11 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { EmbeddingService } from 'src/knowledge-chunks/domain/embedding/embedding-service.interface';
-import { Vector } from 'src/knowledge-chunks/domain/value-objects/vector.vo';
+import { Vector } from 'src/shared/value-objects/vector.vo';
 import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
-import { Point } from 'src/knowledge-chunks/domain/entities/point.entity';
+import { Point } from 'src/shared/entities/point.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 interface CreateKnowledgeChunkDto {
   content: string;
@@ -22,6 +23,7 @@ export class CreateKnowledgeChunkUseCase {
     private readonly pointRepo: PointRepository,
     private readonly departmentRepo: DepartmentRepository,
     private readonly accessControl: AccessControlService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(dto: CreateKnowledgeChunkDto): Promise<KnowledgeChunk> {
@@ -38,20 +40,26 @@ export class CreateKnowledgeChunkUseCase {
       dim: vector.length as 2048,
     });
 
-    // First create the knowledge chunk to get its ID
+    // First create the point
+    const point = Point.create({
+      vector: vectorObj,
+    });
+    const savedPoint = await this.pointRepo.save(point);
+
+    // Then create the knowledge chunk with the point ID
     const chunk = KnowledgeChunk.create({
       content: dto.content,
+      pointId: savedPoint.id.value,
       department,
     });
     const savedChunk = await this.chunkRepo.save(chunk);
 
-    // Then create the point with the knowledge chunk ID
-    const point = Point.create({
-      vector: vectorObj,
-      knowledgeChunkId: savedChunk.id.value,
+    return this.chunkRepo.save(savedChunk).then((updatedChunk) => {
+      this.eventEmitter.emit('knowledgeChunk.created', {
+        knowledgeChunkId: updatedChunk.id.toString(),
+        pointId: savedPoint.id.value,
+      });
+      return updatedChunk;
     });
-    await this.pointRepo.save(point);
-
-    return this.chunkRepo.save(savedChunk);
   }
 }

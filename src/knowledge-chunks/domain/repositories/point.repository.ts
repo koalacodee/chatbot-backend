@@ -1,11 +1,10 @@
-import { Point } from '../entities/point.entity';
+import { Point } from '../../../shared/entities/point.entity';
 
 export abstract class PointRepository {
   abstract save(point: Point): Promise<Point>;
   abstract saveMany(points: Point[]): Promise<Point[]>;
   abstract findById(id: string): Promise<Point | null>;
   abstract findByIds(ids: string[]): Promise<Point[]>;
-  abstract findByKnowledgeChunkId(knowledgeChunkId: string): Promise<Point[]>;
   abstract removeById(id: string): Promise<Point | null>;
   abstract removeByIds(ids: string[]): Promise<Point[]>;
   abstract search(

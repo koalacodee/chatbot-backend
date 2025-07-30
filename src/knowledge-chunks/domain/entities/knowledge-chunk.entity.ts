@@ -1,11 +1,12 @@
 import { UUID } from 'src/shared/value-objects/uuid.vo';
-import { Point } from './point.entity';
+import { Point } from '../../../shared/entities/point.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
 
 interface CreateKnowledgeChunkOptions {
   id?: string;
   content: string;
   point?: Point; // Made optional since point will be created after chunk
+  pointId?: string; // Add pointId to track the relation
   department: Department;
 }
 
@@ -13,17 +14,20 @@ export class KnowledgeChunk {
   private _id: UUID;
   private _content: string;
   private _point: Point | null;
+  private _pointId: string | null;
   private _department: Department;
 
   private constructor(
     id: UUID,
     content: string,
     point: Point | null,
+    pointId: string | null,
     department: Department,
   ) {
     this._id = id;
     this._content = content;
     this._point = point;
+    this._pointId = pointId;
     this._department = department;
   }
 
@@ -31,9 +35,16 @@ export class KnowledgeChunk {
     id,
     content,
     point = null,
+    pointId = null,
     department,
   }: CreateKnowledgeChunkOptions): KnowledgeChunk {
-    return new KnowledgeChunk(UUID.create(id), content, point, department);
+    return new KnowledgeChunk(
+      UUID.create(id),
+      content,
+      point,
+      pointId,
+      department,
+    );
   }
 
   // Getters
@@ -45,8 +56,12 @@ export class KnowledgeChunk {
     return this._content;
   }
 
-  get point(): Point {
+  get point(): Point | null {
     return this._point;
+  }
+
+  get pointId(): string | null {
+    return this._pointId;
   }
 
   get department(): Department {
@@ -60,6 +75,7 @@ export class KnowledgeChunk {
 
   set point(newPoint: Point) {
     this._point = newPoint;
+    this._pointId = newPoint.id.value;
   }
 
   // Utility methods
@@ -69,6 +85,12 @@ export class KnowledgeChunk {
 
   public updatePoint(newPoint: Point): void {
     this._point = newPoint;
+    this._pointId = newPoint.id.value;
+  }
+
+  public updatePointId(pointId: string): void {
+    this._pointId = pointId;
+    this._point = null; // Clear the point object since we only have the ID
   }
 
   public updateDepartment(newDepartment: Department): void {
@@ -84,6 +106,7 @@ export class KnowledgeChunk {
       this._id,
       this._content,
       this._point,
+      this._pointId,
       this._department,
     );
   }
@@ -93,6 +116,7 @@ export class KnowledgeChunk {
       id: this._id.toString(),
       content: this._content,
       point: this.point ? this._point.toJSON() : null,
+      pointId: this._pointId,
       department: this._department.toJSON(),
     };
   }

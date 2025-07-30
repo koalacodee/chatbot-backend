@@ -15,6 +15,7 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
     return KnowledgeChunk.create({
       id: chunk.id,
       content: chunk.content,
+      pointId: chunk.pointId,
       department: Department.create(chunk.department),
     });
   }
@@ -24,6 +25,7 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
       id: chunk.id.value,
       content: chunk.content,
       departmentId: chunk.department.id.toString(),
+      pointId: chunk.pointId,
     };
     const upserted = await this.prisma.knowledgeChunk.upsert({
       where: { id: data.id },
@@ -68,17 +70,18 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
     id: string,
     update: Partial<{
       content: string;
-      vectorId: string;
+      pointId: string;
       departmentId: string;
     }>,
   ): Promise<KnowledgeChunk> {
     const data: any = {};
     if (update.content) data.content = update.content;
-    if (update.vectorId) data.vectorId = update.vectorId;
+    if (update.pointId) data.pointId = update.pointId;
     if (update.departmentId) data.departmentId = update.departmentId;
     const updated = await this.prisma.knowledgeChunk.update({
       where: { id },
       data,
+      include: { department: true },
     });
     return this.toDomain(updated);
   }
@@ -95,6 +98,14 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
   async findByDepartmentId(departmentId: string): Promise<KnowledgeChunk[]> {
     const chunks = await this.prisma.knowledgeChunk.findMany({
       where: { departmentId },
+      include: { department: true },
+    });
+    return chunks.map(this.toDomain);
+  }
+
+  async findByPointIds(pointIds: string[]): Promise<KnowledgeChunk[]> {
+    const chunks = await this.prisma.knowledgeChunk.findMany({
+      where: { pointId: { in: pointIds } },
       include: { department: true },
     });
     return chunks.map(this.toDomain);

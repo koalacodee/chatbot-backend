@@ -2,10 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { EmbeddingService } from 'src/knowledge-chunks/domain/embedding/embedding-service.interface';
-import { Vector } from 'src/knowledge-chunks/domain/value-objects/vector.vo';
+import { Vector } from 'src/shared/value-objects/vector.vo';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
-import { Point } from 'src/knowledge-chunks/domain/entities/point.entity';
+import { Point } from 'src/shared/entities/point.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
 
 interface UpdateKnowledgeChunkDto {
@@ -44,19 +44,18 @@ export class UpdateKnowledgeChunkUseCase {
       });
 
       // Update or create point
-      if (chunk.point) {
+      if (chunk.pointId) {
         const updatedPoint = Point.create({
-          id: chunk.point.id.value,
+          id: chunk.pointId,
           vector,
-          knowledgeChunkId: chunk.id.value,
         });
         await this.pointRepo.save(updatedPoint);
       } else {
         const newPoint = Point.create({
           vector,
-          knowledgeChunkId: chunk.id.value,
         });
-        await this.pointRepo.save(newPoint);
+        const savedPoint = await this.pointRepo.save(newPoint);
+        chunk.updatePointId(savedPoint.id.value);
       }
 
       chunk.updateContent(dto.content);

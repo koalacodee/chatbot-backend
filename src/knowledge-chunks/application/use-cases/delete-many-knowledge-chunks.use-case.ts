@@ -2,11 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
+import { PointRepository } from '../../domain/repositories/point.repository';
 
 @Injectable()
 export class DeleteManyKnowledgeChunksUseCase {
   constructor(
     private readonly chunkRepo: KnowledgeChunkRepository,
+    private readonly pointRepo: PointRepository,
     private readonly accessControl: AccessControlService,
   ) {}
 
@@ -21,6 +23,17 @@ export class DeleteManyKnowledgeChunksUseCase {
         ),
       ),
     );
+
+    // Delete associated points first
+    const pointIds = found
+      .map((chunk) => chunk.pointId)
+      .filter((pointId): pointId is string => pointId !== null);
+
+    if (pointIds.length > 0) {
+      await this.pointRepo.removeByIds(pointIds);
+    }
+
+    // Then delete the knowledge chunks
     await Promise.all(ids.map((id) => this.chunkRepo.removeById(id)));
     return found;
   }

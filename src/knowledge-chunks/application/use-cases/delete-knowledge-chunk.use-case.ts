@@ -2,11 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
+import { PointRepository } from '../../domain/repositories/point.repository';
 
 @Injectable()
 export class DeleteKnowledgeChunkUseCase {
   constructor(
     private readonly chunkRepo: KnowledgeChunkRepository,
+    private readonly pointRepo: PointRepository,
     private readonly accessControl: AccessControlService,
   ) {}
 
@@ -17,6 +19,12 @@ export class DeleteKnowledgeChunkUseCase {
       userId,
       chunk.department.id.value,
     );
+
+    // Delete the associated point if it exists
+    if (chunk.pointId) {
+      await this.pointRepo.removeById(chunk.pointId);
+    }
+
     return this.chunkRepo.removeById(id);
   }
 }

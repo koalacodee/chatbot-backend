@@ -8,7 +8,7 @@ import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.
 import { KnowledgeChunkRepository } from 'src/knowledge-chunks/domain/repositories/knowledge-chunk.repository';
 import { ChatbotService } from 'src/chat/domain/chatbot/chatbot-service.interface';
 import { ConversationRepository } from 'src/chat/domain/repositories/conversation.repository';
-import { Vector } from 'src/knowledge-chunks/domain/value-objects/vector.vo';
+import { Vector } from 'src/shared/value-objects/vector.vo';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { Conversation } from 'src/chat/domain/entities/conversation.entity';
@@ -55,9 +55,7 @@ export class AskUseCase {
           ),
         )
         .then((points) =>
-          this.chunkRepo.findByIds(
-            points.map((p) => p.knowledgeChunkId.toString()),
-          ),
+          this.chunkRepo.findByPointIds(points.map((p) => p.id.value)),
         ),
       this.ensureConversation({
         id: conversationId,

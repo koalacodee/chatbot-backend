@@ -61,9 +61,11 @@ model KnowledgeChunk {
   content         String
   departmentId    String           @map("department_id") @db.Uuid
   department      Department       @relation(fields: [departmentId], references: [id])
+  pointId         String?          @map("point_id") @db.Uuid
   questions       Question[]
   retrievedChunks RetrievedChunk[]
 
+  @@index([pointId])
   @@map("knowledge_chunks")
 }
 
