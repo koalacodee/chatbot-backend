@@ -76,6 +76,99 @@ Get all push subscriptions for a specific user.
 }
 ```
 
+### POST /push/send/users
+
+Send push notifications to multiple users.
+
+**Request Body:**
+
+```json
+{
+  "userIds": ["user-1", "user-2", "user-3"],
+  "notification": {
+    "title": "New Message",
+    "body": "You have received a new message",
+    "data": {
+      "type": "message",
+      "messageId": "msg-123"
+    },
+    "icon": "/icon.png",
+    "badge": "/badge.png",
+    "image": "/image.jpg",
+    "tag": "message",
+    "url": "/messages",
+    "actions": ["view", "dismiss"]
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "recipientId": "user-1",
+      "recipientType": "user",
+      "success": true,
+      "subscriptionResults": [
+        {
+          "subscriptionId": "sub-123",
+          "success": true
+        }
+      ]
+    },
+    {
+      "recipientId": "user-2",
+      "recipientType": "user",
+      "success": false,
+      "error": "No push subscriptions found for user"
+    }
+  ]
+}
+```
+
+### POST /push/send/guests
+
+Send push notifications to multiple guests.
+
+**Request Body:**
+
+```json
+{
+  "guestIds": ["guest-1", "guest-2"],
+  "notification": {
+    "title": "Welcome!",
+    "body": "Welcome to our platform",
+    "data": {
+      "type": "welcome"
+    }
+  }
+}
+```
+
+### POST /push/send/mixed
+
+Send push notifications to both users and guests in a single request.
+
+**Request Body:**
+
+```json
+{
+  "userIds": ["user-1", "user-2"],
+  "guestIds": ["guest-1"],
+  "notification": {
+    "title": "System Update",
+    "body": "System will be down for maintenance",
+    "data": {
+      "type": "maintenance",
+      "duration": "2 hours"
+    }
+  }
+}
+```
+
 ## Usage
 
 ### Import the module
@@ -90,14 +183,20 @@ import { PushManagerModule } from 'src/common/push-manager';
 export class YourModule {}
 ```
 
-### Inject the service
+### Inject the services
 
 ```typescript
-import { PushManagerService } from 'src/common/push-manager';
+import {
+  PushManagerService,
+  PushNotificationService,
+} from 'src/common/push-manager';
 
 @Injectable()
 export class YourService {
-  constructor(private readonly pushManagerService: PushManagerService) {}
+  constructor(
+    private readonly pushManagerService: PushManagerService,
+    private readonly pushNotificationService: PushNotificationService,
+  ) {}
 
   async registerSubscription(data: CreatePushSubscriptionDto) {
     return this.pushManagerService.register(data);
@@ -105,6 +204,32 @@ export class YourService {
 
   async getUserSubscriptions(userId: string) {
     return this.pushManagerService.getAllForUser(userId);
+  }
+
+  async sendNotificationToUsers(
+    userIds: string[],
+    notification: SendNotificationDto,
+  ) {
+    return this.pushNotificationService.sendToUsers(userIds, notification);
+  }
+
+  async sendNotificationToGuests(
+    guestIds: string[],
+    notification: SendNotificationDto,
+  ) {
+    return this.pushNotificationService.sendToGuests(guestIds, notification);
+  }
+
+  async sendNotificationToMixed(
+    userIds: string[],
+    guestIds: string[],
+    notification: SendNotificationDto,
+  ) {
+    return this.pushNotificationService.sendToMixedRecipients(
+      userIds,
+      guestIds,
+      notification,
+    );
   }
 }
 ```
