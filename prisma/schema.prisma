@@ -138,6 +138,18 @@ enum Role {
   EMPLOYEE @map("employee")
 }
 
+model PushSubscription {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id")
+  endpoint       String
+  expirationTime DateTime? @map("expiration_time")
+  keys           Json
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("push_subscriptions")
+}
+
 enum MessageRole {
   USER      @map("user")
   ASSISTANT @map("assistant")

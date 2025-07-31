@@ -13,6 +13,7 @@ import { QdrantModule } from './common/qdrant/qdrant.module';
 import { KnowledgeChunkModule } from './knowledge-chunks/knowledge-chunk.module';
 import { ChatModule } from './chat/chat.module';
 import { TicketModule } from './tickets/ticket.module';
+import { PushManagerModule } from './common/push-manager/push-manager.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     KnowledgeChunkModule,
     ChatModule,
     TicketModule,
+    PushManagerModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
