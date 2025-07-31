@@ -4,6 +4,7 @@ import { TicketRepository } from '../../domain/repositories/ticket.repository';
 import { Ticket } from '../../domain/entities/ticket.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
 import { User } from 'src/shared/entities/user.entity';
+import { TicketStatus } from '@prisma/client';
 
 @Injectable()
 export class PrismaTicketRepository extends TicketRepository {
@@ -19,6 +20,7 @@ export class PrismaTicketRepository extends TicketRepository {
       question: ticket.question,
       department: Department.create(ticket.department),
       ticketCode: ticket.ticketCode,
+      pointId: ticket.pointId,
     });
   }
 
@@ -29,11 +31,12 @@ export class PrismaTicketRepository extends TicketRepository {
       guestId: ticket.guestId?.toString(),
       question: ticket.question,
       departmentId: ticket.department.id.toString(),
+      pointId: ticket.pointId,
       ticketCode: ticket.ticketCode.value,
-      status: ticket.status,
+      status: TicketStatus[ticket.status.value],
     };
 
-    const upserted = await (this.prisma as any).ticket.upsert({
+    const upserted = await this.prisma.ticket.upsert({
       where: { id: data.id },
       update: data,
       create: data,
@@ -53,6 +56,7 @@ export class PrismaTicketRepository extends TicketRepository {
       guestId: ticket.guestId?.toString(),
       question: ticket.question,
       departmentId: ticket.department.id.toString(),
+      pointId: ticket.pointId,
       ticketCode: ticket.ticketCode.value,
     }));
 
@@ -143,5 +147,31 @@ export class PrismaTicketRepository extends TicketRepository {
     });
 
     return Promise.all(tickets.map((ticket) => this.toDomain(ticket)));
+  }
+
+  async findPendingTickets(): Promise<Ticket[]> {
+    const tickets = await (this.prisma as any).ticket.findMany({
+      include: {
+        user: true,
+        department: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return Promise.all(tickets.map((ticket: any) => this.toDomain(ticket)));
+  }
+
+  async findByPointIds(pointIds: string[]): Promise<Ticket[]> {
+    const tickets = await (this.prisma as any).ticket.findMany({
+      where: { pointId: { in: pointIds } },
+      include: {
+        user: true,
+        department: true,
+      },
+    });
+
+    return Promise.all(tickets.map((ticket: any) => this.toDomain(ticket)));
   }
 }

@@ -6,6 +6,10 @@ import { UserRepository } from 'src/shared/repositories/user.repository';
 import { ClassifierService } from 'src/tickets/domain/classifier/classifier-service.interface';
 import { Ticket } from 'src/tickets/domain/entities/ticket.entity';
 import { TicketRepository } from 'src/tickets/domain/repositories/ticket.repository';
+import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
+import { EmbeddingService } from 'src/knowledge-chunks/domain/embedding/embedding-service.interface';
+import { Vector } from 'src/shared/value-objects/vector.vo';
+import { Point } from 'src/shared/entities/point.entity';
 
 @Injectable()
 export class CreateTicketListener {
@@ -21,6 +25,8 @@ export class CreateTicketListener {
     private readonly ticketRepo: TicketRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly userRepo: UserRepository,
+    private readonly pointRepo: PointRepository,
+    private readonly embeddingService: EmbeddingService,
   ) {}
 
   @OnEvent('chatbot.unanswered')
@@ -77,20 +83,56 @@ export class CreateTicketListener {
     const user = userId ? await this.userRepo.findById(userId) : undefined;
     const isGuest = !userId && guestId;
 
-    const newTicket = Ticket.create({
-      department: matchedDepartment,
-      question,
-      guestId: isGuest ? guestId : undefined,
-      user: user,
-      ticketCode: `${ticketCode}`,
-    });
+    try {
+      // Create vector embedding for the question
+      const embedding = await this.embeddingService.embed(question);
+      const vector = Vector.create({
+        vector: embedding,
+        dim: embedding.length as 2048,
+      });
 
-    await this.ticketRepo.save(newTicket);
+      // Create the point first
+      const point = Point.create({
+        vector,
+      });
+      const savedPoint = await this.pointRepo.save(point);
 
-    this.eventEmitter.emit('tickets.created', {
-      department: newTicket.department.id.toString(),
-      ticket: newTicket.id.toString(),
-    });
+      // Create the ticket with the associated point
+      const newTicket = Ticket.create({
+        department: matchedDepartment,
+        question,
+        guestId: isGuest ? guestId : undefined,
+        user: user,
+        ticketCode: `${ticketCode}`,
+        pointId: savedPoint.id.value,
+      });
+
+      await this.ticketRepo.save(newTicket);
+
+      this.eventEmitter.emit('tickets.created', {
+        department: newTicket.department.id.toString(),
+        ticket: newTicket.id.toString(),
+        pointId: savedPoint.id.value,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to create ticket with point: ${error.message}`);
+
+      // Fallback: create ticket without point if embedding fails
+      const newTicket = Ticket.create({
+        department: matchedDepartment,
+        question,
+        guestId: isGuest ? guestId : undefined,
+        user: user,
+        ticketCode: `${ticketCode}`,
+      });
+
+      await this.ticketRepo.save(newTicket);
+
+      this.eventEmitter.emit('tickets.created', {
+        department: newTicket.department.id.toString(),
+        ticket: newTicket.id.toString(),
+      });
+    }
   }
 
   private async getTopClassified(question: string, labels: string[]) {

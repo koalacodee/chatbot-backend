@@ -116,11 +116,13 @@ model Ticket {
   question     String
   departmentId String       @map("department_id") @db.Uuid
   department   Department   @relation(fields: [departmentId], references: [id])
+  pointId      String?      @map("point_id") @db.Uuid
   ticketCode   String       @unique @map("ticket_code")
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
   status       TicketStatus @default(PENDING)
 
+  @@index([pointId])
   @@map("tickets")
 }
 

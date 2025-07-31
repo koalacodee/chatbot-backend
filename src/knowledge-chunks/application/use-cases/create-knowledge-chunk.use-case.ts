@@ -57,7 +57,6 @@ export class CreateKnowledgeChunkUseCase {
     return this.chunkRepo.save(savedChunk).then((updatedChunk) => {
       this.eventEmitter.emit('knowledgeChunk.created', {
         knowledgeChunkId: updatedChunk.id.toString(),
-        pointId: savedPoint.id.value,
       });
       return updatedChunk;
     });

@@ -3,6 +3,7 @@ import { User } from 'src/shared/entities/user.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { TicketCode } from '../value-objects/ticket-code.vo';
 import { TicketStatus } from '../value-objects/ticket-status.vo';
+import { Point } from 'src/shared/entities/point.entity';
 
 export interface TicketCreateRaw {
   id?: string | UUID;
@@ -12,6 +13,8 @@ export interface TicketCreateRaw {
   department: Department;
   ticketCode?: string | TicketCode;
   status?: TicketStatus | number; // Support status as TicketStatus or enum value
+  point?: Point;
+  pointId?: string;
 }
 
 export class Ticket {
@@ -22,6 +25,8 @@ export class Ticket {
   private _department: Department;
   private readonly _ticketCode: TicketCode;
   private _status: TicketStatus;
+  private _point?: Point;
+  private _pointId?: string;
 
   private constructor(options: {
     id: UUID;
@@ -31,6 +36,8 @@ export class Ticket {
     department: Department;
     ticketCode?: TicketCode;
     status?: TicketStatus;
+    point?: Point;
+    pointId?: string;
   }) {
     this._id = options.id;
     this._user = options.user;
@@ -39,6 +46,8 @@ export class Ticket {
     this._department = options.department;
     this._ticketCode = options.ticketCode ?? TicketCode.create();
     this._status = options.status ?? TicketStatus.create();
+    this._point = options.point;
+    this._pointId = options.pointId;
   }
 
   /**
@@ -72,6 +81,8 @@ export class Ticket {
       department: raw.department,
       ticketCode,
       status,
+      point: raw.point,
+      pointId: raw.pointId,
     });
   }
 
@@ -104,6 +115,14 @@ export class Ticket {
     return this._status;
   }
 
+  get point(): Point | undefined {
+    return this._point;
+  }
+
+  get pointId(): string | undefined {
+    return this._pointId;
+  }
+
   // Setters
   set user(user: User | undefined) {
     this._user = user;
@@ -123,6 +142,27 @@ export class Ticket {
 
   set status(status: TicketStatus) {
     this._status = status;
+  }
+
+  set point(point: Point | undefined) {
+    this._point = point;
+    this._pointId = point?.id.value;
+  }
+
+  set pointId(pointId: string | undefined) {
+    this._pointId = pointId;
+    this._point = undefined; // Clear the point object since we only have the ID
+  }
+
+  // Utility methods
+  public updatePoint(newPoint: Point): void {
+    this._point = newPoint;
+    this._pointId = newPoint.id.value;
+  }
+
+  public updatePointId(newPointId: string): void {
+    this._pointId = newPointId;
+    this._point = undefined; // Clear the point object since we only have the ID
   }
 
   // Enhancements: equality check

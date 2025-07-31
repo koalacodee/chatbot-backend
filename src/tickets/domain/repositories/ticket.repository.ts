@@ -10,4 +10,6 @@ export abstract class TicketRepository {
   abstract count(): Promise<number>;
   abstract exists(id: string): Promise<boolean>;
   abstract findAll(offset?: number, limit?: number): Promise<Ticket[]>;
+  abstract findPendingTickets(): Promise<Ticket[]>;
+  abstract findByPointIds(pointIds: string[]): Promise<Ticket[]>;
 }
