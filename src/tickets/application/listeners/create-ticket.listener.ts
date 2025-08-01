@@ -6,8 +6,8 @@ import { UserRepository } from 'src/shared/repositories/user.repository';
 import { ClassifierService } from 'src/tickets/domain/classifier/classifier-service.interface';
 import { Ticket } from 'src/tickets/domain/entities/ticket.entity';
 import { TicketRepository } from 'src/tickets/domain/repositories/ticket.repository';
-import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
-import { EmbeddingService } from 'src/knowledge-chunks/domain/embedding/embedding-service.interface';
+import { PointRepository } from 'src/shared/repositories/point.repository';
+import { EmbeddingService } from 'src/shared/embedding/embedding-service.interface';
 import { Vector } from 'src/shared/value-objects/vector.vo';
 import { Point } from 'src/shared/entities/point.entity';
 

@@ -1,4 +1,4 @@
-import { Point } from '../../../shared/entities/point.entity';
+import { Point } from 'src/shared/entities/point.entity';
 
 export abstract class PointRepository {
   abstract save(point: Point): Promise<Point>;

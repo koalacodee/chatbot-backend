@@ -3,8 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EmbeddingService } from 'src/knowledge-chunks/domain/embedding/embedding-service.interface';
-import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
+import { EmbeddingService } from 'src/shared/embedding/embedding-service.interface';
+import { PointRepository } from 'src/shared/repositories/point.repository';
 import { KnowledgeChunkRepository } from 'src/knowledge-chunks/domain/repositories/knowledge-chunk.repository';
 import { ChatbotService } from 'src/chat/domain/chatbot/chatbot-service.interface';
 import { ConversationRepository } from 'src/chat/domain/repositories/conversation.repository';

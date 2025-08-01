@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { EmbeddingService } from 'src/knowledge-chunks/domain/embedding/embedding-service.interface';
+import { EmbeddingService } from 'src/shared/embedding/embedding-service.interface';
 
 export interface EmbeddingResponse {
   model: string;

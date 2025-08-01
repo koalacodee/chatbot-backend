@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PointRepository } from '../../domain/repositories/point.repository';
-import { Point } from '../../../shared/entities/point.entity';
-import { Vector } from '../../../shared/value-objects/vector.vo';
+import { PointRepository } from 'src/shared/repositories/point.repository';
+import { Point } from '../../entities/point.entity';
+import { Vector } from '../../value-objects/vector.vo';
 import { QdrantService } from '../../../common/qdrant/qdrant.service';
 
 const QDRANT_COLLECTION = 'points';

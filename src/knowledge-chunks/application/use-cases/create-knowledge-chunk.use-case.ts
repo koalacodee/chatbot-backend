@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
-import { EmbeddingService } from 'src/knowledge-chunks/domain/embedding/embedding-service.interface';
+import { EmbeddingService } from 'src/shared/embedding/embedding-service.interface';
 import { Vector } from 'src/shared/value-objects/vector.vo';
-import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
+import { PointRepository } from 'src/shared/repositories/point.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Point } from 'src/shared/entities/point.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
