@@ -68,7 +68,7 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
 
   async findAll(): Promise<Department[]> {
     const depts = await this.prisma.department.findMany({
-      include: { questions: true, knowledgeChunks: true },
+      include: { questions: true },
     });
     return depts.map(this.toDomain);
   }

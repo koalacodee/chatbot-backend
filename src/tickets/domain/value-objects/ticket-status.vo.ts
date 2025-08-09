@@ -1,7 +1,8 @@
-enum TicketStatusEnum {
-  ANSWERED,
-  PENDING,
-  REJECTED,
+export enum TicketStatusEnum {
+  RESOLVED = 'RESOLVED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  PENDING = 'PENDING',
+  REJECTED = 'REJECTED',
 }
 
 export class TicketStatus {

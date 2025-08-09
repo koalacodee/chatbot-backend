@@ -95,7 +95,7 @@ export class CreateTicketListener {
       const point = Point.create({
         vector,
       });
-      const savedPoint = await this.pointRepo.save(point);
+      const savedPoint = await this.pointRepo.save(point, 'tickets');
 
       // Create the ticket with the associated point
       const newTicket = Ticket.create({

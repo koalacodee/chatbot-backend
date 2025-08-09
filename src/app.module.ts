@@ -15,23 +15,24 @@ import { ChatModule } from './chat/chat.module';
 import { TicketModule } from './tickets/ticket.module';
 import { PushManagerModule } from './common/push-manager/push-manager.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { QuestionModule } from './questions/question.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    ThrottlerModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        throttlers: [
-          {
-            limit: configService.get<number>('THROTTLER_LIMIT'),
-            ttl: configService.get<number>('THROTTLER_TTL'),
-          },
-        ],
-      }),
-    }),
+    // ThrottlerModule.forRootAsync({
+    //   imports: [ConfigModule],
+    //   inject: [ConfigService],
+    //   useFactory: (configService: ConfigService) => ({
+    //     throttlers: [
+    //       {
+    //         limit: configService.get<number>('THROTTLER_LIMIT'),
+    //         ttl: configService.get<number>('THROTTLER_TTL'),
+    //       },
+    //     ],
+    //   }),
+    // }),
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -54,7 +55,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     ChatModule,
     TicketModule,
     PushManagerModule,
+    QuestionModule,
   ],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  // providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

@@ -6,7 +6,9 @@ import { Department } from '../../domain/entities/department.entity';
 export class GetAllDepartmentsUseCase {
   constructor(private readonly departmentRepo: DepartmentRepository) {}
 
-  async execute(): Promise<Department[]> {
-    return this.departmentRepo.findAll();
+  async execute(): Promise<any[]> {
+    return this.departmentRepo
+      .findAll()
+      .then((depts) => depts.map((dept) => dept.toJSON()));
   }
 }

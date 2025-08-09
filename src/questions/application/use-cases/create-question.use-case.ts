@@ -8,6 +8,7 @@ interface CreateQuestionDto {
   departmentId: string;
   knowledgeChunkId?: string;
   userId: string;
+  answer?: string;
 }
 
 @Injectable()
@@ -23,6 +24,7 @@ export class CreateQuestionUseCase {
       text: dto.text,
       departmentId: dto.departmentId,
       knowledgeChunkId: dto.knowledgeChunkId,
+      answer: dto.answer,
     });
     return this.questionRepo.save(question);
   }

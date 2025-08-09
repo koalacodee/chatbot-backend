@@ -12,4 +12,5 @@ export abstract class QuestionRepository {
   abstract exists(id: string): Promise<boolean>;
   abstract count(): Promise<number>;
   abstract findByCriteria(criteria: Partial<Question>): Promise<Question[]>;
+  abstract findByDepartmentId(departmentId: string): Promise<Question[]>;
 }

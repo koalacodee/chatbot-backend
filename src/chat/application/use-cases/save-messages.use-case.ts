@@ -18,12 +18,16 @@ export class SaveMessagesUseCase {
     conversationId: string,
     currentChunks: KnowledgeChunk[],
   ) {
+    const now = new Date();
+    const laterTime = new Date(now.getTime() + 2000); // 2 seconds later
+
     const [_, savedAssistantMessage] = await Promise.all([
       this.messageRepo.save(
         Message.create({
           role: 'USER',
           content: question,
           conversationId,
+          createdAt: now,
         }),
       ),
       this.messageRepo.save(
@@ -31,6 +35,7 @@ export class SaveMessagesUseCase {
           role: 'ASSISTANT',
           content: answer,
           conversationId,
+          createdAt: laterTime,
         }),
       ),
     ]);

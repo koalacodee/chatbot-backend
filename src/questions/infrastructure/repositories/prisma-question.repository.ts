@@ -85,4 +85,12 @@ export class PrismaQuestionRepository extends QuestionRepository {
     const qs = await this.prisma.question.findMany({ where });
     return qs.map(this.toDomain);
   }
+
+  async findByDepartmentId(departmentId: string): Promise<Question[]> {
+    const questions = await this.prisma.question.findMany({
+      where: { departmentId },
+    });
+
+    return questions.map(this.toDomain);
+  }
 }

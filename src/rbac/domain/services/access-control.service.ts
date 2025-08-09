@@ -26,6 +26,10 @@ export class AccessControlService {
       throw new NotFoundException({ user: 'user_not_found' });
     }
 
+    if (user.role.getRole() === 'MANAGER') {
+      return true;
+    }
+
     if (!department) {
       throw new NotFoundException({ department: 'department_not_found' });
     }

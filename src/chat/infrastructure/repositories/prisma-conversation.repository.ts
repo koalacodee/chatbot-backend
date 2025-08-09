@@ -14,10 +14,11 @@ export class PrismaConversationRepository extends ConversationRepository {
     return Conversation.create({
       id: conversation.id,
       userId: conversation.userId,
+      guestId: conversation.guestId,
       startedAt: conversation.startedAt,
       updatedAt: conversation.updatedAt,
       endedAt: conversation.endedAt,
-      messages: conversation.message
+      messages: conversation.messages
         ? conversation.messages.map((m) =>
             Message.create({
               id: m.id,
@@ -38,18 +39,18 @@ export class PrismaConversationRepository extends ConversationRepository {
       startedAt: conversation.startedAt,
       updatedAt: conversation.updatedAt,
       endedAt: conversation.endedAt,
+      user: conversation.userId
+        ? { connect: { id: conversation.userId.toString() } }
+        : undefined,
+      guestId: conversation.guestId
+        ? conversation.guestId.toString()
+        : undefined,
     };
     const upserted = await this.prisma.conversation.upsert({
       where: { id: data.id },
-      update: {
-        ...data,
-        user: { connect: { id: conversation.userId.toString() } },
-      },
-      create: {
-        ...data,
-        user: { connect: { id: conversation.userId.toString() } },
-      },
-      include: { messages: true },
+      update: data,
+      create: data,
+      include: { messages: { orderBy: { createdAt: 'desc' } } },
     });
     return this.toDomain(upserted);
   }
@@ -57,7 +58,7 @@ export class PrismaConversationRepository extends ConversationRepository {
   async findById(id: string): Promise<Conversation | null> {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id },
-      include: { messages: true },
+      include: { messages: { orderBy: { createdAt: 'asc' } } },
     });
     return conversation ? this.toDomain(conversation) : null;
   }
@@ -81,5 +82,20 @@ export class PrismaConversationRepository extends ConversationRepository {
 
   async count(): Promise<number> {
     return this.prisma.conversation.count();
+  }
+
+  async findByGuestOrUser(
+    userId?: string,
+    guestId?: string,
+  ): Promise<Conversation[] | null> {
+    const conversation = await this.prisma.conversation.findMany({
+      where: {
+        OR: [{ userId: userId }, { guestId: guestId }],
+      },
+      include: { messages: { orderBy: { createdAt: 'desc' } } },
+      orderBy: { updatedAt: 'desc' },
+    });
+    console.dir(conversation);
+    return conversation ? conversation.map(this.toDomain) : null;
   }
 }

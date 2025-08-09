@@ -4,6 +4,7 @@ interface ConstructQuestionOptions {
   id?: string;
   text: string;
   departmentId: string;
+  answer?: string;
   knowledgeChunkId?: string;
 }
 
@@ -11,6 +12,7 @@ export class Question {
   private readonly _id: UUID;
   private _text: string;
   private _departmentId: UUID;
+  private _answer: string;
   private _knowledgeChunkId?: UUID;
 
   private constructor({
@@ -18,9 +20,11 @@ export class Question {
     text,
     departmentId,
     knowledgeChunkId,
+    answer,
   }: ConstructQuestionOptions) {
     this._id = UUID.create(id);
     this._text = text;
+    this._answer = answer;
     this._departmentId = UUID.create(departmentId);
     this._knowledgeChunkId = knowledgeChunkId
       ? UUID.create(knowledgeChunkId)
@@ -59,6 +63,14 @@ export class Question {
     this._knowledgeChunkId = newKnowledgeChunkId;
   }
 
+  get answer(): string {
+    return this._answer;
+  }
+
+  set answer(newAnswer: string) {
+    this._answer = newAnswer;
+  }
+
   toJSON() {
     return {
       id: this._id.value,
@@ -67,6 +79,7 @@ export class Question {
       knowledgeChunkId: this._knowledgeChunkId
         ? this._knowledgeChunkId.value
         : undefined,
+      answer: this.answer,
     };
   }
 }

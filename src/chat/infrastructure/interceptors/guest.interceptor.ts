@@ -12,7 +12,7 @@ import { RedisService } from 'src/shared/infrastructure/redis';
 
 @Injectable()
 export class GuestInterceptor implements NestInterceptor {
-  private readonly GUEST_TTL = parseInt(this.config.getOrThrow('GUEST_TTL'));
+  private readonly GUEST_TTL = +this.config.getOrThrow('GUEST_TTL');
 
   constructor(
     private readonly config: ConfigService,
@@ -23,6 +23,8 @@ export class GuestInterceptor implements NestInterceptor {
     context: ExecutionContext,
     next: CallHandler,
   ): Promise<Observable<any>> {
+    console.log(this.GUEST_TTL);
+
     const ctx = context.switchToHttp();
     const request = ctx.getRequest();
     const response = ctx.getResponse();
@@ -34,12 +36,14 @@ export class GuestInterceptor implements NestInterceptor {
     let guestId = request.cookies?.guest_id;
 
     if (guestId) {
-      const guest = await this.redis.get(`guest${guestId}`);
+      const guest = await this.redis.get(`guest:${guestId}`);
 
       if (!guest) {
         throw new UnauthorizedException({ guest: 'guest_expired' });
       }
 
+      // Set the guest object on request even for existing guests
+      request.guest = { id: guestId };
       return next.handle();
     }
 
@@ -52,7 +56,7 @@ export class GuestInterceptor implements NestInterceptor {
     response.cookie('guest_id', guestId, {
       httpOnly: true,
       sameSite: 'strict',
-      maxAge: this.GUEST_TTL,
+      maxAge: this.GUEST_TTL * 1000,
     });
 
     request.guest = { id: guestId };

@@ -16,9 +16,9 @@ export class QdrantPointRepository extends PointRepository {
     return this.qdrantService.getClient();
   }
 
-  async save(point: Point): Promise<Point> {
-    await this.ensureCollection(point.vector.dim);
-    await this.client.upsert(QDRANT_COLLECTION, {
+  async save(point: Point, collection?: string): Promise<Point> {
+    await this.ensureCollection(point.vector.dim, collection);
+    await this.client.upsert(collection ?? QDRANT_COLLECTION, {
       points: [
         {
           id: point.id.value,
@@ -32,10 +32,10 @@ export class QdrantPointRepository extends PointRepository {
     return point;
   }
 
-  async saveMany(points: Point[]): Promise<Point[]> {
+  async saveMany(points: Point[], collection?: string): Promise<Point[]> {
     if (points.length === 0) return [];
-    await this.ensureCollection(points[0].vector.dim);
-    await this.client.upsert(QDRANT_COLLECTION, {
+    await this.ensureCollection(points[0].vector.dim, collection);
+    await this.client.upsert(collection ?? QDRANT_COLLECTION, {
       points: points.map((point) => ({
         id: point.id.value,
         vector: point.vector.value,
@@ -47,10 +47,11 @@ export class QdrantPointRepository extends PointRepository {
     return points;
   }
 
-  async findById(id: string): Promise<Point | null> {
-    const result = await this.client.retrieve(QDRANT_COLLECTION, {
+  async findById(id: string, collection?: string): Promise<Point | null> {
+    const result = await this.client.retrieve(collection ?? QDRANT_COLLECTION, {
       ids: [id],
       with_payload: true,
+      with_vector: true,
     });
     const point = result?.[0];
     if (!point) return null;
@@ -63,11 +64,12 @@ export class QdrantPointRepository extends PointRepository {
     });
   }
 
-  async findByIds(ids: string[]): Promise<Point[]> {
+  async findByIds(ids: string[], collection?: string): Promise<Point[]> {
     if (ids.length === 0) return [];
-    const result = await this.client.retrieve(QDRANT_COLLECTION, {
+    const result = await this.client.retrieve(collection ?? QDRANT_COLLECTION, {
       ids,
       with_payload: true,
+      with_vector: true,
     });
     return (result || []).map((point) =>
       Point.create({
@@ -80,8 +82,12 @@ export class QdrantPointRepository extends PointRepository {
     );
   }
 
-  async findAll(offset?: number, limit?: number): Promise<Point[]> {
-    const result = await this.client.scroll(QDRANT_COLLECTION, {
+  async findAll(
+    offset?: number,
+    limit?: number,
+    collection?: string,
+  ): Promise<Point[]> {
+    const result = await this.client.scroll(collection ?? QDRANT_COLLECTION, {
       with_payload: true,
       with_vector: true,
       limit,
@@ -98,19 +104,23 @@ export class QdrantPointRepository extends PointRepository {
     );
   }
 
-  async removeById(id: string): Promise<Point | null> {
-    const found = await this.findById(id);
+  async removeById(id: string, collection?: string): Promise<Point | null> {
+    const found = await this.findById(id, collection);
     if (found) {
-      await this.client.delete(QDRANT_COLLECTION, { points: [id] });
+      await this.client.delete(collection ?? QDRANT_COLLECTION, {
+        points: [id],
+      });
     }
     return found;
   }
 
-  async removeByIds(ids: string[]): Promise<Point[]> {
+  async removeByIds(ids: string[], collection?: string): Promise<Point[]> {
     if (ids.length === 0) return [];
-    const found = await this.findByIds(ids);
+    const found = await this.findByIds(ids, collection);
     if (found.length > 0) {
-      await this.client.delete(QDRANT_COLLECTION, { points: ids });
+      await this.client.delete(collection ?? QDRANT_COLLECTION, {
+        points: ids,
+      });
     }
     return found;
   }
@@ -119,12 +129,24 @@ export class QdrantPointRepository extends PointRepository {
     vector: Vector,
     limit: number,
     minScore?: number,
+    collection?: string,
+    ids?: string[],
   ): Promise<Point[]> {
-    const result = await this.client.search(QDRANT_COLLECTION, {
+    const result = await this.client.search(collection ?? QDRANT_COLLECTION, {
       vector: vector.value,
       limit,
       with_payload: true,
       score_threshold: minScore,
+      filter:
+        ids && ids.length > 0
+          ? {
+              must: [
+                {
+                  has_id: ids,
+                },
+              ],
+            }
+          : undefined,
     });
     return result.map((point) =>
       Point.create({
@@ -137,18 +159,24 @@ export class QdrantPointRepository extends PointRepository {
     );
   }
 
-  async count(): Promise<number> {
-    const collection = await this.client.getCollection(QDRANT_COLLECTION);
-    return collection?.points_count ?? 0;
+  async count(collection?: string): Promise<number> {
+    const collectionInfo = await this.client.getCollection(
+      collection ?? QDRANT_COLLECTION,
+    );
+    return collectionInfo?.points_count ?? 0;
   }
 
-  async exists(id: string): Promise<boolean> {
-    const point = await this.findById(id);
+  async exists(id: string, collection?: string): Promise<boolean> {
+    const point = await this.findById(id, collection);
     return !!point;
   }
 
-  async update(id: string, update: Partial<Point>): Promise<Point> {
-    const existing = await this.findById(id);
+  async update(
+    id: string,
+    update: Partial<Point>,
+    collection?: string,
+  ): Promise<Point> {
+    const existing = await this.findById(id, collection);
     if (!existing) {
       throw new Error(`Point with id ${id} not found`);
     }
@@ -160,15 +188,15 @@ export class QdrantPointRepository extends PointRepository {
       vector: updatedVector,
     });
 
-    await this.save(updatedPoint);
+    await this.save(updatedPoint, collection);
     return updatedPoint;
   }
 
-  private async ensureCollection(dim: number) {
+  private async ensureCollection(dim: number, name?: string) {
     try {
-      await this.client.getCollection(QDRANT_COLLECTION);
+      await this.client.getCollection(name ?? QDRANT_COLLECTION);
     } catch {
-      await this.client.createCollection(QDRANT_COLLECTION, {
+      await this.client.createCollection(name ?? QDRANT_COLLECTION, {
         vectors: {
           size: dim,
           distance: 'Cosine',

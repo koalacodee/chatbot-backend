@@ -35,6 +35,12 @@ export class BartClassifierService extends ClassifierService {
             candidate_labels: transformedLabels,
           },
         },
+        {
+          headers: {
+            'Authorization': `Bearer ${this.config.getOrThrow('HF_TOKEN')}`,
+            'Content-Type': 'application/json',
+          },
+        }
       )
       .then((res) => {
         return res.data.labels.map((label, idx) => ({

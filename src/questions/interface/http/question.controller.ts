@@ -8,6 +8,7 @@ import {
   Param,
   UseGuards,
   Req,
+  Query,
 } from '@nestjs/common';
 import {
   CreateQuestionUseCase,
@@ -74,8 +75,10 @@ export class QuestionController {
   }
 
   @Get()
-  async getAll(@Req() req: any): Promise<GetAllQuestionsOutputDto> {
-    return this.getAllUseCase.execute(req.user.id);
+  async getAll(@Query('departmentId') departmentId: string): Promise<any> {
+    return this.getAllUseCase
+      .execute(departmentId)
+      .then((qs) => qs.map((qs) => qs.toJSON()));
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

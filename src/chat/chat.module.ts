@@ -11,8 +11,10 @@ import { BullModule } from '@nestjs/bullmq';
 import { AskUseCase } from './application/use-cases/ask.use-case';
 import { SaveMessageProcessor } from './infrastructure/queues/save-message.processor';
 import { SaveMessagesUseCase } from './application/use-cases/save-messages.use-case';
-import { AskController } from './interface/http/ask.controller';
+import { AskController } from './interface/http/chat.controller';
 import { KnowledgeChunkModule } from 'src/knowledge-chunks/knowledge-chunk.module';
+import { GetAllConversationsUseCase } from './application/use-cases/get-all-conversations.use-case';
+import { GetConversationUseCase } from './application/use-cases/get-conversation.use-case';
 
 @Module({
   providers: [
@@ -35,6 +37,8 @@ import { KnowledgeChunkModule } from 'src/knowledge-chunks/knowledge-chunk.modul
     AskUseCase,
     SaveMessageProcessor,
     SaveMessagesUseCase,
+    GetAllConversationsUseCase,
+    GetConversationUseCase,
   ],
   imports: [
     BullModule.registerQueue({

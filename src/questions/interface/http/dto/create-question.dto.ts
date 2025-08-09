@@ -10,4 +10,8 @@ export class CreateQuestionInputDto {
   @IsOptional()
   @IsString()
   knowledgeChunkId?: string;
+
+  @IsOptional()
+  @IsString()
+  answer?: string;
 }

@@ -91,8 +91,8 @@ export class Department {
     return {
       id: this._id.toString(),
       name: this._name,
-      questions: this._questions.map((q) => q.id.toString()),
-      knowledgeChunks: this._knowledgeChunks.map((kc) => kc.id.toString()),
+      questions: this._questions.map((q) => q.toJSON()),
+      knowledgeChunks: this._knowledgeChunks.map((kc) => kc.toJSON()),
     };
   }
 

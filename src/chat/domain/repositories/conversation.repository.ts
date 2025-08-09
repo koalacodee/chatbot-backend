@@ -7,4 +7,8 @@ export abstract class ConversationRepository {
   abstract removeById(id: string): Promise<Conversation | null>;
   abstract exists(id: string): Promise<boolean>;
   abstract count(): Promise<number>;
+  abstract findByGuestOrUser(
+    userId?: string,
+    guestId?: string,
+  ): Promise<Conversation[] | null>;
 }

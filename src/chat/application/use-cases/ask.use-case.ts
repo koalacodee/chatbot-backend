@@ -44,27 +44,28 @@ export class AskUseCase {
     if (!!userId && !!guestId) {
       guestId = undefined;
     }
-    const [currentChunks, conversation] = await Promise.all([
-      this.embeddingService
-        .embed(question)
-        .then((value) =>
-          this.pointRepo.search(
-            Vector.create({ vector: value, dim: value.length as 2048 }),
-            3,
-            0.65,
-          ),
-        )
-        .then((points) =>
-          this.chunkRepo.findByPointIds(points.map((p) => p.id.value)),
-        ),
-      this.ensureConversation({
-        id: conversationId,
-        type: userId ? 'user' : 'guest',
-        userOrGuestId: userId ? userId : guestId,
-      }),
-    ]);
 
-    if (currentChunks.length === 0) {
+    // Check if conversation exists
+    const conversationExists = conversationId
+      ? await this.conversationRepo.exists(conversationId)
+      : null;
+
+    // Always search for knowledge chunks regardless of conversation status
+    const currentChunks = await this.embeddingService
+      .embed(question)
+      .then((value) =>
+        this.pointRepo.search(
+          Vector.create({ vector: value, dim: value.length as 2048 }),
+          3,
+          0.65,
+        ),
+      )
+      .then((points) =>
+        this.chunkRepo.findByPointIds(points.map((p) => p.id.value)),
+      );
+
+    // If no conversation exists and no chunks found, create ticket
+    if (!conversationExists && currentChunks.length === 0) {
       const ticket = randomInt(1e7, 1e8);
 
       this.eventEmitter.emit('chatbot.unanswered', {
@@ -80,10 +81,17 @@ export class AskUseCase {
       };
     }
 
+    // Ensure conversation exists or create new one
+    const conversation = await this.ensureConversation({
+      id: conversationId,
+      type: userId ? 'user' : 'guest',
+      userOrGuestId: userId ? userId : guestId,
+    });
+
     const oldMessages = conversation.messages;
     const oldRetrievedChunks = conversation.retrievedChunks;
 
-    // 3. Get the AI's answer
+    // Always process the message regardless of chunk availability
     const answer = await this.chatbotService.ask(
       currentChunks,
       question,
@@ -98,7 +106,7 @@ export class AskUseCase {
       currentChunks,
     });
 
-    // 5. Return the answer (and optionally the messages)
+    // Return consistent response format
     return { answer, conversationId: conversation.id };
   }
 
@@ -116,6 +124,8 @@ export class AskUseCase {
         if (!c) {
           throw new NotFoundException('conversation_not_found');
         }
+
+        console.log(c);
 
         if (type === 'guest') {
           if (c.guestId.toString() !== userOrGuestId) {
