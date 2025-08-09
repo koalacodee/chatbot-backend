@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateIf,
+} from 'class-validator';
 
 export class AskDto {
   @IsString()
@@ -8,4 +14,9 @@ export class AskDto {
   @IsOptional()
   @IsUUID()
   conversationId?: string;
+
+  @IsOptional()
+  @ValidateIf((o: AskDto) => !o.question)
+  @IsUUID('4')
+  faqId?: string;
 }

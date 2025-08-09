@@ -31,6 +31,7 @@ export class AskController {
       question: dto.question,
       conversationId: dto.conversationId,
       userId: req.user.id,
+      faqId: dto.faqId,
     });
     return answer;
   }
@@ -42,6 +43,7 @@ export class AskController {
       question: dto.question,
       conversationId: dto.conversationId,
       guestId: req.guest.id,
+      faqId: dto.faqId,
     });
 
     return answer;
