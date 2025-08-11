@@ -8,85 +8,219 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid()) @db.Uuid
-  name          String
-  email         String         @unique
-  password      String         @db.Char(97)
-  role          Role
-  departmentId  String?        @map("department_id") @db.Uuid
-  department    Department?    @relation(fields: [departmentId], references: [id])
-  refreshTokens RefreshToken[]
-  conversations Conversation[]
-  tickets       Ticket[]
+  id                           String                @id @default(uuid()) @map("id") @db.Uuid
+  name                         String                @map("name") @db.VarChar(255)
+  email                        String                @unique @map("email") @db.VarChar(255)
+  password                     String                @map("password") @db.Char(97)
+  role                         UserRole              @map("role")
+  permissions                  Permissions[]
+  departmentId                 String?               @map("department_id") @db.Uuid
+  department                   Department?           @relation(fields: [departmentId], references: [id])
+  refreshTokens                UserRefreshToken[]
+  tickets                      Ticket[]
+  questions                    Question[]
+  supportTicketAnswersAuthored SupportTicketAnswer[] @relation("AnswererOfSupportTicketAnswer")
+  supportTicketAnswersAssigned SupportTicketAnswer[] @relation("AssigneeOfSupportTicketAnswer")
+  assigneeTasks                Task[]                @relation("AssigneeOfTask")
+  assignerTasks                Task[]                @relation("AssignerOfTask")
+  approvedTasks                Task[]                @relation("ApproverOfTask")
+  vehicles                     Vehicle[]
+  violations                   Violation[]
+  employeeRequests             EmployeeRequest[]     @relation("SupervisorRequests")
+  adminResolutions             EmployeeRequest[]     @relation("AdminResolutions")
+  activities                   ActivityLog[]
+  promotions                   Promotion[]
 
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([departmentId])
   @@map("users")
 }
 
+enum Permissions {
+  HANDLE_TICKETS         @map("handle_tickets")
+  HANDLE_TASKS           @map("handle_tasks")
+  ADD_FAQS               @map("add_faqs")
+  VIEW_ANALYTICS         @map("view_analytics")
+  CLOSE_TICKETS          @map("close_tickets")
+  VIEW_ALL_DASHBOARD     @map("view_all_dashboard")
+  MANAGE_DEPARTMENTS     @map("manage_departments")
+  MANAGE_PROMOTIONS      @map("manage_promotions")
+  APPROVE_STAFF_REQUESTS @map("approve_staff_requests")
+  MANAGE_SUPERVISORS     @map("manage_supervisors")
+  VIEW_USER_ACTIVITY     @map("view_user_activity")
+  MANAGE_STAFF_DIRECTLY  @map("manage_staff_directly")
+
+  @@map("permissions")
+}
+
+model UserRefreshToken {
+  id      String       @id @default(uuid()) @map("id") @db.Uuid
+  userId  String       @map("user_id") @db.Uuid
+  user    User         @relation(fields: [userId], references: [id])
+  tokenId String       @unique @map("token_id") @db.Uuid
+  token   RefreshToken @relation(fields: [tokenId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("user_refresh_tokens")
+}
+
+model Guest {
+  id             String                @id @default(uuid()) @map("id") @db.Uuid
+  name           String                @map("name") @db.VarChar(255)
+  email          String                @unique @map("email") @db.VarChar(255)
+  phone          String                @unique @map("phone") @db.VarChar(255)
+  refreshTokens  GuestRefreshToken[]
+  conversations  Conversation[]
+  interactions   QuestionInteraction[]
+  supportTickets SupportTicket[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("guests")
+}
+
+model GuestRefreshToken {
+  id      String       @id @default(uuid()) @map("id") @db.Uuid
+  guestId String       @map("guest_id") @db.Uuid
+  guest   Guest        @relation(fields: [guestId], references: [id])
+  tokenId String       @unique @map("token_id") @db.Uuid
+  token   RefreshToken @relation(fields: [tokenId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([guestId])
+  @@map("guest_refresh_tokens")
+}
+
 model RefreshToken {
-  id        String    @id @default(uuid()) @db.Uuid
-  token     String    @unique
-  userId    String    @map("user_id") @db.Uuid
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime  @map("expires_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-  revokedAt DateTime? @map("revoked_at")
+  id                String             @id @default(uuid()) @map("id") @db.Uuid
+  token             String             @unique @map("token") @db.VarChar(255)
+  expiresAt         DateTime           @map("expires_at")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  revokedAt         DateTime?          @map("revoked_at")
+  guestRefreshToken GuestRefreshToken?
+  userRefreshToken  UserRefreshToken?
 
   @@map("refresh_tokens")
 }
 
 model Department {
-  id              String           @id @default(uuid()) @db.Uuid
-  name            String
+  id              String           @id @default(uuid()) @map("id") @db.Uuid
+  name            String           @map("name") @db.VarChar(255)
   questions       Question[]
   knowledgeChunks KnowledgeChunk[]
   admins          User[]
   tickets         Ticket[]
 
+  // Self-relation fields
+  parentId       String?         @map("parent_id") @db.Uuid
+  parent         Department?     @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  subDepartments Department[]    @relation("DepartmentHierarchy")
+  supportTickets SupportTicket[]
+  tasks          Task[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([parentId])
   @@map("departments")
 }
 
 model Question {
-  id               String          @id @default(uuid()) @db.Uuid
-  text             String
-  answer           String?
+  id               String          @id @default(uuid()) @map("id") @db.Uuid
+  text             String          @map("text") @db.Text
+  answer           String?         @map("answer") @db.Text
   departmentId     String          @map("department_id") @db.Uuid
   department       Department      @relation(fields: [departmentId], references: [id])
   knowledgeChunkId String?         @map("knowledge_chunk_id") @db.Uuid
   knowledgeChunk   KnowledgeChunk? @relation(fields: [knowledgeChunkId], references: [id])
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  creatorId        String          @map("creator_id") @db.Uuid
+  creator          User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
+  attachmentId String?               @unique @map("attachment_id") @db.Uuid
+  attachment   QuestionAttachment?
+  interactions QuestionInteraction[]
+
+  @@index([departmentId])
+  @@index([creatorId])
   @@map("questions")
 }
 
+model QuestionInteraction {
+  id        String          @id @default(uuid()) @map("id") @db.Uuid
+  type      InteractionType @map("type")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  questionId String   @map("question_id") @db.Uuid
+  question   Question @relation(fields: [questionId], references: [id])
+  guestId    String   @map("guest_id") @db.Uuid
+  guest      Guest    @relation(fields: [guestId], references: [id])
+
+  @@unique([questionId, guestId])
+  @@index([questionId])
+  @@index([guestId])
+  @@map("question_interactions")
+}
+
+model QuestionAttachment {
+  id           String     @id @default(uuid()) @map("id") @db.Uuid
+  attachmentId String     @unique @map("attachment_id") @db.Uuid
+  attachment   Attachment @relation(fields: [attachmentId], references: [id])
+  questionId   String     @unique @map("question_id") @db.Uuid
+  question     Question   @relation(fields: [questionId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("question_attachments")
+}
+
 model KnowledgeChunk {
-  id              String           @id @default(uuid()) @db.Uuid
-  content         String
+  id              String           @id @default(uuid()) @map("id") @db.Uuid
+  content         String           @map("content") @db.Text
   departmentId    String           @map("department_id") @db.Uuid
   department      Department       @relation(fields: [departmentId], references: [id])
   pointId         String?          @map("point_id") @db.Uuid
   questions       Question[]
   retrievedChunks RetrievedChunk[]
 
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@index([pointId])
+  @@index([departmentId])
   @@map("knowledge_chunks")
 }
 
 model Conversation {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String?   @map("user_id") @db.Uuid
-  user      User?     @relation(fields: [userId], references: [id])
+  id        String    @id @default(uuid()) @map("id") @db.Uuid
+  guestId   String    @map("guest_id") @db.Uuid
+  guest     Guest     @relation(fields: [guestId], references: [id])
   messages  Message[]
+  createdAt DateTime  @default(now()) @map("created_at")
   startedAt DateTime  @default(now()) @map("started_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   endedAt   DateTime? @map("ended_at")
-  guestId   String?   @map("guest_id") @db.Uuid
   isDeleted Boolean   @default(false) @map("is_deleted")
 
+  @@index([guestId, isDeleted])
   @@map("conversations")
 }
 
 model Message {
-  id             String          @id @default(uuid()) @db.Uuid
-  content        String
+  id             String          @id @default(uuid()) @map("id") @db.Uuid
+  content        String          @map("content") @db.Text
   role           MessageRole     @map("role")
   conversationId String          @map("conversation_id") @db.Uuid
   conversation   Conversation    @relation(fields: [conversationId], references: [id])
@@ -94,78 +228,486 @@ model Message {
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
 
+  @@index([conversationId])
   @@map("messages")
 }
 
 model RetrievedChunk {
-  id               String         @id @default(uuid()) @db.Uuid
+  id               String         @id @default(uuid()) @map("id") @db.Uuid
   messageId        String         @unique @map("message_id") @db.Uuid
   message          Message        @relation(fields: [messageId], references: [id])
   knowledgeChunkId String         @map("knowledge_chunk_id") @db.Uuid
   knowledgeChunk   KnowledgeChunk @relation(fields: [knowledgeChunkId], references: [id])
-  score            Float
+  score            Float          @map("score")
   retrievedAt      DateTime       @default(now()) @map("retrieved_at")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
 
+  @@index([knowledgeChunkId])
   @@map("retrieved_chunks")
 }
 
 model Ticket {
-  id              String       @id @default(uuid()) @db.Uuid
-  userId          String?      @map("user_id") @db.Uuid
-  user            User?        @relation(fields: [userId], references: [id])
-  guestId         String?      @map("guest_id") @db.Uuid
-  question        String
-  departmentId    String       @map("department_id") @db.Uuid
-  department      Department   @relation(fields: [departmentId], references: [id])
-  pointId         String?      @map("point_id") @db.Uuid
-  ticketCode      String       @unique @map("ticket_code")
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
-  status          TicketStatus @default(PENDING)
-  isAutoGenerated Boolean      @default(true) @map("is_auto_generated")
-  answer TicketAnswer?
+  id              String        @id @default(uuid()) @map("id") @db.Uuid
+  userId          String?       @map("user_id") @db.Uuid
+  user            User?         @relation(fields: [userId], references: [id])
+  guestId         String?       @map("guest_id") @db.Uuid
+  question        String        @map("question") @db.Text
+  departmentId    String        @map("department_id") @db.Uuid
+  department      Department    @relation(fields: [departmentId], references: [id])
+  pointId         String?       @map("point_id") @db.Uuid
+  ticketCode      String        @unique @map("ticket_code") @db.VarChar(255)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  // status          TicketStatus  @default(PENDING) @map("status")
+  isAutoGenerated Boolean       @default(true) @map("is_auto_generated")
+  answer          TicketAnswer?
 
   @@index([pointId, isAutoGenerated])
+  @@index([departmentId])
+  @@index([userId])
+  @@index([guestId])
   @@map("tickets")
 }
 
+model SupportTicket {
+  id           String                   @id @default(uuid()) @map("id") @db.Uuid
+  guestId      String                   @map("guest_id") @db.Uuid
+  guest        Guest                    @relation(fields: [guestId], references: [id])
+  subject      String                   @map("subject") @db.VarChar(255)
+  description  String                   @map("description") @db.Text
+  departmentId String                   @map("department_id") @db.Uuid
+  department   Department               @relation(fields: [departmentId], references: [id])
+  attachment   SupportTicketAttachment?
+  status       SupportTicketStatus      @default(NEW) @map("status")
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  updatedAt    DateTime                 @updatedAt @map("updated_at")
+  answeredAt   DateTime?                @map("answered_at")
+  answer       SupportTicketAnswer?
+
+  @@index([guestId])
+  @@index([departmentId, status])
+  @@map("support_tickets")
+}
+
+model SupportTicketAnswer {
+  id              String                         @id @default(uuid()) @map("id") @db.Uuid
+  supportTicketId String                         @unique @map("support_ticket_id") @db.Uuid
+  supportTicket   SupportTicket                  @relation(fields: [supportTicketId], references: [id])
+  content         String                         @map("content") @db.Text
+  attachment      SupportTicketAnswerAttachment?
+  answererId      String                         @map("answerer_id") @db.Uuid
+  answerer        User                           @relation("AnswererOfSupportTicketAnswer", fields: [answererId], references: [id])
+  assignedId      String?                        @map("assigned_id") @db.Uuid
+  assigned        User?                          @relation("AssigneeOfSupportTicketAnswer", fields: [assignedId], references: [id])
+  createdAt       DateTime                       @default(now()) @map("created_at")
+  updatedAt       DateTime                       @updatedAt @map("updated_at")
+  rating          Rating?                        @map("rating")
+
+  @@index([answererId])
+  @@index([assignedId])
+  @@map("support_ticket_answers")
+}
+
+model Task {
+  id            String           @id @default(uuid()) @map("id") @db.Uuid
+  title         String           @map("title") @db.VarChar(255)
+  description   String           @map("description") @db.Text
+  departmentId  String           @map("department_id") @db.Uuid
+  department    Department       @relation(fields: [departmentId], references: [id])
+  assigneeId    String           @map("assignee_id") @db.Uuid
+  assignee      User             @relation("AssigneeOfTask", fields: [assigneeId], references: [id])
+  assignerId    String           @map("assigner_id") @db.Uuid
+  assigner      User             @relation("AssignerOfTask", fields: [assignerId], references: [id])
+  approverId    String           @map("approver_id") @db.Uuid
+  approver      User             @relation("ApproverOfTask", fields: [approverId], references: [id])
+  status        TaskStatus       @default(TODO) @map("status")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  completedAt   DateTime?        @map("completed_at")
+  attachments   TaskAttachment[]
+  assignerNotes String           @map("assigner_notes") @db.Text
+  feedback      String           @map("feedback") @db.Text
+
+  @@index([departmentId])
+  @@index([assigneeId])
+  @@index([assignerId])
+  @@index([approverId, status])
+  @@map("tasks")
+}
+
+model TaskAttachment {
+  id           String             @id @default(uuid()) @map("id") @db.Uuid
+  taskId       String             @unique @map("task_id") @db.Uuid
+  task         Task               @relation(fields: [taskId], references: [id])
+  attachmentId String             @unique @map("attachment_id") @db.Uuid
+  attachment   Attachment         @relation(fields: [attachmentId], references: [id])
+  type         TaskAttachmentType @map("type")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("task_attachments")
+}
+
+enum TaskAttachmentType {
+  ASSIGNER @map("assigner")
+  ASSIGNEE @map("assignee")
+
+  @@map("task_attachment_type")
+}
+
+enum TaskStatus {
+  TODO                      @map("to_do")
+  SEEN                      @map("seen")
+  PENDING_REVIEW            @map("pending_review")
+  PENDING_SUPERVISOR_REVIEW @map("pending_supervisor_review")
+  COMPLETED                 @map("completed")
+
+  @@map("task_status")
+}
+
+enum Rating {
+  SATISFIED    @map("satisfied")
+  NEUTRAL      @map("neutral")
+  DISSATISFIED @map("dissatisfied")
+
+  @@map("rating")
+}
+
+model SupportTicketAnswerAttachment {
+  id                    String              @id @default(uuid()) @map("id") @db.Uuid
+  attachmentId          String              @unique @map("attachment_id") @db.Uuid
+  attachment            Attachment          @relation(fields: [attachmentId], references: [id])
+  supportTicketAnswerId String              @unique @map("support_ticket_answer_id") @db.Uuid
+  supportTicketAnswer   SupportTicketAnswer @relation(fields: [supportTicketAnswerId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("support_ticket_answer_attachments")
+}
+
+model SupportTicketAttachment {
+  id              String        @id @default(uuid()) @map("id") @db.Uuid
+  attachmentId    String        @unique @map("attachment_id") @db.Uuid
+  attachment      Attachment    @relation(fields: [attachmentId], references: [id])
+  supportTicketId String        @unique @map("support_ticket_id") @db.Uuid
+  supportTicket   SupportTicket @relation(fields: [supportTicketId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("support_ticket_attachments")
+}
+
+enum SupportTicketStatus {
+  NEW      @map("new")
+  SEEN     @map("seen")
+  ANSWERED @map("answered")
+  CLOSED   @map("closed")
+
+  @@map("support_ticket_status")
+}
+
 model TicketAnswer {
-  id              String       @id @default(uuid()) @db.Uuid
-  ticketId String @db.Uuid @unique @map("ticket_id")
-  ticket Ticket @relation(fields: [ticketId], references: [id])
-  content String
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
+  id        String   @id @default(uuid()) @map("id") @db.Uuid
+  ticketId  String   @unique @map("ticket_id") @db.Uuid
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  content   String   @map("content") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("ticket_answers")
 }
 
-enum TicketStatus {
-  PENDING  @map("pending")
-  IN_PROGRESS @map("in_progress")
-  RESOLVED @map("resolved")
-  REJECTED @map("rejected")
-}
+enum UserRole {
+  SUPERVISOR @map("supervisor")
+  ADMIN      @map("admin")
+  EMPLOYEE   @map("employee")
+  DRIVER     @map("driver")
 
-enum Role {
-  MANAGER  @map("manager")
-  ADMIN    @map("admin")
-  EMPLOYEE @map("employee")
+  @@map("user_role")
 }
 
 model PushSubscription {
-  id             String    @id @default(uuid()) @db.Uuid
-  userId         String    @map("user_id")
-  endpoint       String
+  id             String    @id @default(uuid()) @map("id") @db.Uuid
+  userId         String    @map("user_id") @db.VarChar(255)
+  endpoint       String    @map("endpoint") @db.Text
   expirationTime DateTime? @map("expiration_time")
-  keys           Json
+  keys           Json      @map("keys")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
+  @@index([userId])
   @@map("push_subscriptions")
 }
 
 enum MessageRole {
   USER      @map("user")
   ASSISTANT @map("assistant")
+
+  @@map("message_role")
+}
+
+enum InteractionType {
+  LIKE    @map("like")
+  DISLIKE @map("dislike")
+  VIEW    @map("view")
+
+  @@map("interaction_type")
+}
+
+model Attachment {
+  id      String  @id @default(uuid()) @map("id") @db.Uuid
+  name    String  @map("name") @db.VarChar(255)
+  type    String  @map("type") @db.VarChar(255)
+  dataUrl String? @map("data_url") @db.Text
+
+  createdAt                     DateTime                       @default(now()) @map("created_at")
+  updatedAt                     DateTime                       @updatedAt @map("updated_at")
+  questionAttachment            QuestionAttachment?
+  supportTicketAttachment       SupportTicketAttachment?
+  supportTicketAnswerAttachment SupportTicketAnswerAttachment?
+  taskAttachment                TaskAttachment?
+  vehiclePhoto                  VehiclePhoto?
+  vehicleLicense                VehicleLicenseAttachment?
+  violation                     ViolationAttachment?
+  promotion                     PromotionAttachment?
+
+  @@map("attachments")
+}
+
+model Vehicle {
+  id                  String          @id @default(uuid()) @map("id") @db.Uuid
+  make                String          @map("make") @db.VarChar(255)
+  model               String          @map("model") @db.VarChar(255)
+  year                Int             @map("year")
+  plateNumber         String          @map("plate_number") @db.VarChar(255)
+  vin                 String          @map("vin") @db.VarChar(255)
+  status              VehicleStatus   @default(ACTIVE) @map("status")
+  photos              VehiclePhoto[]
+  driverId            String          @map("driver_id") @db.Uuid
+  driver              User            @relation(fields: [driverId], references: [id])
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+  notes               String?         @map("notes") @db.Text
+  nextMaintenanceDate DateTime?       @map("next_maintenance_date")
+  license             VehicleLicense?
+  violations          Violation[]
+
+  @@index([driverId, status])
+  @@map("vehicles")
+}
+
+model VehicleLicense {
+  id                    String                    @id @default(uuid()) @map("id") @db.Uuid
+  vehicleId             String                    @unique @map("vehicle_id") @db.Uuid
+  vehicle               Vehicle                   @relation(fields: [vehicleId], references: [id])
+  licenseNumber         String                    @map("license_number") @db.VarChar(255)
+  issueDate             DateTime                  @map("issue_date")
+  expiryDate            DateTime                  @map("expiry_date")
+  insurancePolicyNumber String?                   @map("insurance_policy_number") @db.VarChar(255)
+  insuranceExpiryDate   DateTime?                 @map("insurance_expiry_date")
+  status                VehicleLicenseStatus?     @map("status")
+  attachment            VehicleLicenseAttachment?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("vehicle_licenses")
+}
+
+model VehicleLicenseAttachment {
+  id               String         @id @default(uuid()) @map("id") @db.Uuid
+  vehicleLicenseId String         @unique @map("vehicle_license_id") @db.Uuid
+  vehicleLicense   VehicleLicense @relation(fields: [vehicleLicenseId], references: [id])
+  attachmentId     String         @unique @map("attachment_id") @db.Uuid
+  attachment       Attachment     @relation(fields: [attachmentId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("vehicle_license_attachments")
+}
+
+enum VehicleLicenseStatus {
+  ACTIVE        @map("active")
+  EXPIRING_SOON @map("expiring_soon")
+  EXPIRED       @map("expired")
+
+  @@map("vehicle_license_status")
+}
+
+model VehiclePhoto {
+  id           String     @id @default(uuid()) @map("id") @db.Uuid
+  vehicleId    String     @map("vehicle_id") @db.Uuid
+  vehicle      Vehicle    @relation(fields: [vehicleId], references: [id])
+  attachmentId String     @unique @map("attachment_id") @db.Uuid
+  attachment   Attachment @relation(fields: [attachmentId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([vehicleId])
+  @@map("vehicle_photos")
+}
+
+enum VehicleStatus {
+  ACTIVE         @map("active")
+  IN_MAINTENANCE @map("in_maintenance")
+  OUT_OF_SERVICE @map("out_of_service")
+
+  @@map("vehicle_status")
+}
+
+model Violation {
+  id             String               @id @default(uuid()) @map("id") @db.Uuid
+  driverId       String               @map("driver_id") @db.Uuid
+  driver         User                 @relation(fields: [driverId], references: [id])
+  vehicleId      String               @map("vehicle_id") @db.Uuid
+  vehicle        Vehicle              @relation(fields: [vehicleId], references: [id])
+  ruleId         String               @map("rule_id") @db.Uuid
+  rule           ViolationRule        @relation(fields: [ruleId], references: [id])
+  description    String               @map("description") @db.Text
+  amount         Float                @map("amount")
+  isPaid         Boolean              @default(false) @map("is_paid")
+  attachment     ViolationAttachment?
+  triggerEventId String               @map("trigger_event_id") @db.VarChar(255)
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  @@index([driverId])
+  @@index([vehicleId])
+  @@index([ruleId, isPaid])
+  @@map("violations")
+}
+
+model ViolationAttachment {
+  id           String     @id @default(uuid()) @map("id") @db.Uuid
+  violationId  String     @unique @map("violation_id") @db.Uuid
+  violation    Violation  @relation(fields: [violationId], references: [id])
+  attachmentId String     @unique @map("attachment_id") @db.Uuid
+  attachment   Attachment @relation(fields: [attachmentId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("violation_attachments")
+}
+
+model ViolationRule {
+  id          String        @id @default(uuid()) @map("id") @db.Uuid
+  type        ViolationType @map("type")
+  threshold   Int           @map("threshold")
+  fineAmount  Int           @map("fine_amount")
+  description String        @map("description") @db.Text
+  isEnabled   Boolean       @default(true) @map("is_enabled")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  violations  Violation[]
+
+  @@map("violation_rules")
+}
+
+enum ViolationType {
+  SPEEDING           @map("speeding")
+  MISSED_MAINTENANCE @map("missed_maintenance")
+
+  @@map("violation_type")
+}
+
+model EmployeeRequest {
+  id String @id @default(uuid()) @map("id") @db.Uuid
+
+  requestedBySupervisor   User   @relation("SupervisorRequests", fields: [requestedBySupervisorId], references: [id])
+  requestedBySupervisorId String @map("requested_by_supervisor_id") @db.Uuid
+
+  newEmployeeEmail       String  @map("new_employee_email") @db.VarChar(255)
+  newEmployeeFullName    String? @map("new_employee_full_name") @db.VarChar(255)
+  newEmployeeDesignation String? @map("new_employee_designation") @db.VarChar(255)
+
+  status RequestStatus @default(PENDING) @map("status")
+
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  resolvedAt        DateTime? @map("resolved_at")
+  resolvedByAdmin   User?     @relation("AdminResolutions", fields: [resolvedByAdminId], references: [id])
+  resolvedByAdminId String?   @map("resolved_by_admin_id") @db.Uuid
+
+  rejectionReason          String? @map("rejection_reason") @db.Text
+  acknowledgedBySupervisor Boolean @default(false) @map("acknowledged_by_supervisor")
+
+  @@index([requestedBySupervisorId])
+  @@index([resolvedByAdminId, status])
+  @@map("employee_requests")
+}
+
+enum RequestStatus {
+  PENDING  @map("pending")
+  APPROVED @map("approved")
+  REJECTED @map("rejected")
+
+  @@map("request_status")
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid()) @map("id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @map("user_id") @db.Uuid
+
+  activity String @map("activity") @db.VarChar(255)
+  details  String @map("details") @db.Text
+
+  itemId String @map("item_id") @db.VarChar(255)
+
+  @@index([userId])
+  @@map("activity_logs")
+}
+
+model Promotion {
+  id    String @id @default(uuid()) @map("id") @db.Uuid
+  title String @map("title") @db.VarChar(255)
+
+  attachment   PromotionAttachment?
+  attachmentId String               @map("attachment_id") @db.Uuid
+
+  audience AudienceType @map("audience")
+  isActive Boolean      @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  startDate DateTime? @map("start_date")
+  endDate   DateTime? @map("end_date")
+
+  createdBy       User   @relation(fields: [createdByUserId], references: [id])
+  createdByUserId String @map("created_by_user_id") @db.Uuid
+
+  @@index([createdByUserId, isActive])
+  @@map("promotions")
+}
+
+model PromotionAttachment {
+  id           String     @id @default(uuid()) @map("id") @db.Uuid
+  promotionId  String     @unique @map("promotion_id") @db.Uuid
+  promotion    Promotion  @relation(fields: [promotionId], references: [id])
+  attachmentId String     @unique @map("attachment_id") @db.Uuid
+  attachment   Attachment @relation(fields: [attachmentId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("promotion_attachments")
+}
+
+enum AudienceType {
+  CUSTOMER   @map("customer")
+  SUPERVISOR @map("supervisor")
+  EMPLOYEE   @map("employee")
+  ALL        @map("all")
+
+  @@map("audience_type")
 }
