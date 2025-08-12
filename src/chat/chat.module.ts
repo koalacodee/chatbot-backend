@@ -15,6 +15,7 @@ import { AskController } from './interface/http/chat.controller';
 import { KnowledgeChunkModule } from 'src/knowledge-chunks/knowledge-chunk.module';
 import { GetAllConversationsUseCase } from './application/use-cases/get-all-conversations.use-case';
 import { GetConversationUseCase } from './application/use-cases/get-conversation.use-case';
+import { QuestionModule } from 'src/questions/question.module';
 
 @Module({
   providers: [
@@ -49,6 +50,7 @@ import { GetConversationUseCase } from './application/use-cases/get-conversation
       },
     }),
     KnowledgeChunkModule,
+    QuestionModule,
   ],
   controllers: [AskController],
 })

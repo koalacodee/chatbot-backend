@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './common/prisma/prisma.module';
@@ -16,23 +14,12 @@ import { TicketModule } from './tickets/ticket.module';
 import { PushManagerModule } from './common/push-manager/push-manager.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { QuestionModule } from './questions/question.module';
+import { SupportTicketModule } from './support-tickets/support-tickets.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    // ThrottlerModule.forRootAsync({
-    //   imports: [ConfigModule],
-    //   inject: [ConfigService],
-    //   useFactory: (configService: ConfigService) => ({
-    //     throttlers: [
-    //       {
-    //         limit: configService.get<number>('THROTTLER_LIMIT'),
-    //         ttl: configService.get<number>('THROTTLER_TTL'),
-    //       },
-    //     ],
-    //   }),
-    // }),
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -56,7 +43,7 @@ import { QuestionModule } from './questions/question.module';
     TicketModule,
     PushManagerModule,
     QuestionModule,
+    SupportTicketModule,
   ],
-  // providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

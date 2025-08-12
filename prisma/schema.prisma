@@ -146,9 +146,6 @@ model Question {
   updatedAt        DateTime        @updatedAt @map("updated_at")
   creatorId        String          @map("creator_id") @db.Uuid
   creator          User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-
-  attachmentId String?               @unique @map("attachment_id") @db.Uuid
-  attachment   QuestionAttachment?
   interactions QuestionInteraction[]
 
   @@index([departmentId])
@@ -173,18 +170,7 @@ model QuestionInteraction {
   @@map("question_interactions")
 }
 
-model QuestionAttachment {
-  id           String     @id @default(uuid()) @map("id") @db.Uuid
-  attachmentId String     @unique @map("attachment_id") @db.Uuid
-  attachment   Attachment @relation(fields: [attachmentId], references: [id])
-  questionId   String     @unique @map("question_id") @db.Uuid
-  question     Question   @relation(fields: [questionId], references: [id])
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("question_attachments")
-}
+// Removed QuestionAttachment junction; attachments now reference their targets via Attachment.targetId
 
 model KnowledgeChunk {
   id              String           @id @default(uuid()) @map("id") @db.Uuid
@@ -278,7 +264,6 @@ model SupportTicket {
   description  String                   @map("description") @db.Text
   departmentId String                   @map("department_id") @db.Uuid
   department   Department               @relation(fields: [departmentId], references: [id])
-  attachment   SupportTicketAttachment?
   status       SupportTicketStatus      @default(NEW) @map("status")
   createdAt    DateTime                 @default(now()) @map("created_at")
   updatedAt    DateTime                 @updatedAt @map("updated_at")
@@ -295,7 +280,6 @@ model SupportTicketAnswer {
   supportTicketId String                         @unique @map("support_ticket_id") @db.Uuid
   supportTicket   SupportTicket                  @relation(fields: [supportTicketId], references: [id])
   content         String                         @map("content") @db.Text
-  attachment      SupportTicketAnswerAttachment?
   answererId      String                         @map("answerer_id") @db.Uuid
   answerer        User                           @relation("AnswererOfSupportTicketAnswer", fields: [answererId], references: [id])
   assignedId      String?                        @map("assigned_id") @db.Uuid
@@ -325,7 +309,6 @@ model Task {
   createdAt     DateTime         @default(now()) @map("created_at")
   updatedAt     DateTime         @updatedAt @map("updated_at")
   completedAt   DateTime?        @map("completed_at")
-  attachments   TaskAttachment[]
   assignerNotes String           @map("assigner_notes") @db.Text
   feedback      String           @map("feedback") @db.Text
 
@@ -336,19 +319,7 @@ model Task {
   @@map("tasks")
 }
 
-model TaskAttachment {
-  id           String             @id @default(uuid()) @map("id") @db.Uuid
-  taskId       String             @unique @map("task_id") @db.Uuid
-  task         Task               @relation(fields: [taskId], references: [id])
-  attachmentId String             @unique @map("attachment_id") @db.Uuid
-  attachment   Attachment         @relation(fields: [attachmentId], references: [id])
-  type         TaskAttachmentType @map("type")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("task_attachments")
-}
+// Removed TaskAttachment junction; attachments now reference their targets via Attachment.targetId
 
 enum TaskAttachmentType {
   ASSIGNER @map("assigner")
@@ -375,31 +346,9 @@ enum Rating {
   @@map("rating")
 }
 
-model SupportTicketAnswerAttachment {
-  id                    String              @id @default(uuid()) @map("id") @db.Uuid
-  attachmentId          String              @unique @map("attachment_id") @db.Uuid
-  attachment            Attachment          @relation(fields: [attachmentId], references: [id])
-  supportTicketAnswerId String              @unique @map("support_ticket_answer_id") @db.Uuid
-  supportTicketAnswer   SupportTicketAnswer @relation(fields: [supportTicketAnswerId], references: [id])
+// Removed SupportTicketAnswerAttachment junction
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("support_ticket_answer_attachments")
-}
-
-model SupportTicketAttachment {
-  id              String        @id @default(uuid()) @map("id") @db.Uuid
-  attachmentId    String        @unique @map("attachment_id") @db.Uuid
-  attachment      Attachment    @relation(fields: [attachmentId], references: [id])
-  supportTicketId String        @unique @map("support_ticket_id") @db.Uuid
-  supportTicket   SupportTicket @relation(fields: [supportTicketId], references: [id])
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("support_ticket_attachments")
-}
+// Removed SupportTicketAttachment junction
 
 enum SupportTicketStatus {
   NEW      @map("new")
@@ -466,16 +415,11 @@ model Attachment {
 
   createdAt                     DateTime                       @default(now()) @map("created_at")
   updatedAt                     DateTime                       @updatedAt @map("updated_at")
-  questionAttachment            QuestionAttachment?
-  supportTicketAttachment       SupportTicketAttachment?
-  supportTicketAnswerAttachment SupportTicketAnswerAttachment?
-  taskAttachment                TaskAttachment?
-  vehiclePhoto                  VehiclePhoto?
-  vehicleLicense                VehicleLicenseAttachment?
-  violation                     ViolationAttachment?
-  promotion                     PromotionAttachment?
+  // Generic target reference; indexed for fast lookup
+  targetId                      String                        @map("target_id") @db.Uuid
 
   @@map("attachments")
+  @@index([targetId])
 }
 
 model Vehicle {
@@ -486,7 +430,6 @@ model Vehicle {
   plateNumber         String          @map("plate_number") @db.VarChar(255)
   vin                 String          @map("vin") @db.VarChar(255)
   status              VehicleStatus   @default(ACTIVE) @map("status")
-  photos              VehiclePhoto[]
   driverId            String          @map("driver_id") @db.Uuid
   driver              User            @relation(fields: [driverId], references: [id])
   createdAt           DateTime        @default(now()) @map("created_at")
@@ -510,7 +453,7 @@ model VehicleLicense {
   insurancePolicyNumber String?                   @map("insurance_policy_number") @db.VarChar(255)
   insuranceExpiryDate   DateTime?                 @map("insurance_expiry_date")
   status                VehicleLicenseStatus?     @map("status")
-  attachment            VehicleLicenseAttachment?
+  // attachment moved to Attachment with targetId
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -518,18 +461,7 @@ model VehicleLicense {
   @@map("vehicle_licenses")
 }
 
-model VehicleLicenseAttachment {
-  id               String         @id @default(uuid()) @map("id") @db.Uuid
-  vehicleLicenseId String         @unique @map("vehicle_license_id") @db.Uuid
-  vehicleLicense   VehicleLicense @relation(fields: [vehicleLicenseId], references: [id])
-  attachmentId     String         @unique @map("attachment_id") @db.Uuid
-  attachment       Attachment     @relation(fields: [attachmentId], references: [id])
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("vehicle_license_attachments")
-}
+// Removed VehicleLicenseAttachment junction
 
 enum VehicleLicenseStatus {
   ACTIVE        @map("active")
@@ -539,19 +471,7 @@ enum VehicleLicenseStatus {
   @@map("vehicle_license_status")
 }
 
-model VehiclePhoto {
-  id           String     @id @default(uuid()) @map("id") @db.Uuid
-  vehicleId    String     @map("vehicle_id") @db.Uuid
-  vehicle      Vehicle    @relation(fields: [vehicleId], references: [id])
-  attachmentId String     @unique @map("attachment_id") @db.Uuid
-  attachment   Attachment @relation(fields: [attachmentId], references: [id])
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@index([vehicleId])
-  @@map("vehicle_photos")
-}
+// Removed VehiclePhoto junction
 
 enum VehicleStatus {
   ACTIVE         @map("active")
@@ -572,7 +492,6 @@ model Violation {
   description    String               @map("description") @db.Text
   amount         Float                @map("amount")
   isPaid         Boolean              @default(false) @map("is_paid")
-  attachment     ViolationAttachment?
   triggerEventId String               @map("trigger_event_id") @db.VarChar(255)
   createdAt      DateTime             @default(now()) @map("created_at")
   updatedAt      DateTime             @updatedAt @map("updated_at")
@@ -583,18 +502,7 @@ model Violation {
   @@map("violations")
 }
 
-model ViolationAttachment {
-  id           String     @id @default(uuid()) @map("id") @db.Uuid
-  violationId  String     @unique @map("violation_id") @db.Uuid
-  violation    Violation  @relation(fields: [violationId], references: [id])
-  attachmentId String     @unique @map("attachment_id") @db.Uuid
-  attachment   Attachment @relation(fields: [attachmentId], references: [id])
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("violation_attachments")
-}
+// Removed ViolationAttachment junction
 
 model ViolationRule {
   id          String        @id @default(uuid()) @map("id") @db.Uuid
@@ -672,9 +580,6 @@ model Promotion {
   id    String @id @default(uuid()) @map("id") @db.Uuid
   title String @map("title") @db.VarChar(255)
 
-  attachment   PromotionAttachment?
-  attachmentId String               @map("attachment_id") @db.Uuid
-
   audience AudienceType @map("audience")
   isActive Boolean      @default(true) @map("is_active")
 
@@ -690,18 +595,7 @@ model Promotion {
   @@map("promotions")
 }
 
-model PromotionAttachment {
-  id           String     @id @default(uuid()) @map("id") @db.Uuid
-  promotionId  String     @unique @map("promotion_id") @db.Uuid
-  promotion    Promotion  @relation(fields: [promotionId], references: [id])
-  attachmentId String     @unique @map("attachment_id") @db.Uuid
-  attachment   Attachment @relation(fields: [attachmentId], references: [id])
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("promotion_attachments")
-}
+// Removed PromotionAttachment junction
 
 enum AudienceType {
   CUSTOMER   @map("customer")

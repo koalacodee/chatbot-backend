@@ -2,19 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { QuestionRepository } from '../../domain/repositories/question.repository';
 import { Question } from '../../domain/entities/question.entity';
-
+import { Question as PrismaQuestion } from '@prisma/client';
 @Injectable()
 export class PrismaQuestionRepository extends QuestionRepository {
   constructor(private readonly prisma: PrismaService) {
     super();
   }
 
-  private toDomain(q: any): Question {
+  private toDomain(q: PrismaQuestion): Question {
     return Question.create({
       id: q.id,
       text: q.text,
       departmentId: q.departmentId,
       knowledgeChunkId: q.knowledgeChunkId,
+      answer: q.answer,
     });
   }
 

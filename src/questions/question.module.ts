@@ -30,5 +30,6 @@ import { DepartmentModule } from '../department/department.module';
   ],
   controllers: [QuestionController],
   imports: [KnowledgeChunkModule, DepartmentModule],
+  exports: [QuestionRepository],
 })
 export class QuestionModule {}
