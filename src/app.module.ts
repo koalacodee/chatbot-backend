@@ -15,6 +15,8 @@ import { PushManagerModule } from './common/push-manager/push-manager.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { QuestionModule } from './questions/question.module';
 import { SupportTicketModule } from './support-tickets/support-tickets.module';
+import { GuestModule } from './guest/guest.module';
+import { TaskModule } from './task/task.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -44,6 +46,8 @@ import { SupportTicketModule } from './support-tickets/support-tickets.module';
     PushManagerModule,
     QuestionModule,
     SupportTicketModule,
+    GuestModule,
+    TaskModule,
   ],
 })
 export class AppModule {}
