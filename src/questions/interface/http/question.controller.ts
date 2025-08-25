@@ -18,12 +18,12 @@ import {
   DeleteQuestionUseCase,
   DeleteManyQuestionsUseCase,
   CountQuestionsUseCase,
+  GroupByDepartmentUseCase,
 } from '../../application/use-cases';
 import {
   CreateQuestionInputDto,
   UpdateQuestionInputDto,
   GetQuestionOutputDto,
-  GetAllQuestionsOutputDto,
   DeleteManyQuestionsInputDto,
 } from './dto';
 import { Question } from '../../domain/entities/question.entity';
@@ -41,31 +41,37 @@ export class QuestionController {
     private readonly deleteUseCase: DeleteQuestionUseCase,
     private readonly deleteManyUseCase: DeleteManyQuestionsUseCase,
     private readonly countUseCase: CountQuestionsUseCase,
+    private readonly getAllGroupedByDepartmentUseCase: GroupByDepartmentUseCase,
   ) {}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.MANAGER)
+  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post()
   async create(
     @Body() input: CreateQuestionInputDto,
     @Req() req: any,
   ): Promise<Question> {
-    return this.createUseCase.execute({ ...input, userId: req.user.id });
+    return this.createUseCase.execute({ ...input, creatorId: req.user.id });
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.MANAGER)
-  @Put()
+  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @Put(":id")
   async update(
-    @Body() input: UpdateQuestionInputDto,
+    @Body() dto: UpdateQuestionInputDto,
     @Req() req: any,
+    @Param("id") id: string,
   ): Promise<Question> {
-    const { id, ...dto } = input;
     return this.updateUseCase.execute(id, { ...dto, userId: req.user.id });
   }
 
+  @Get('grouped')
+  async getAllGroupedByDepartment(): Promise<any> {
+    return this.getAllGroupedByDepartmentUseCase.execute();
+  }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.MANAGER)
+  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get(':id')
   async get(
     @Param('id') id: string,
@@ -82,7 +88,7 @@ export class QuestionController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.MANAGER)
+  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Delete(':id')
   async delete(
     @Param('id') id: string,
@@ -92,7 +98,7 @@ export class QuestionController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.MANAGER)
+  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Delete('multiple')
   async deleteMany(
     @Body() input: DeleteManyQuestionsInputDto,
@@ -102,7 +108,7 @@ export class QuestionController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.MANAGER)
+  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('count')
   async count(): Promise<number> {
     return this.countUseCase.execute();

@@ -8,13 +8,12 @@ import { Conversation } from 'src/chat/domain/entities/conversation.entity';
 import { Message } from 'src/chat/domain/entities/message.entity';
 import { ConversationRepository } from 'src/chat/domain/repositories/conversation.repository';
 import { MessageRepository } from 'src/chat/domain/repositories/message.repository';
+import { GuestRepository } from 'src/guest/domain/repositories/guest.repository';
 import { KnowledgeChunkRepository } from 'src/knowledge-chunks/domain/repositories/knowledge-chunk.repository';
 import { QuestionRepository } from 'src/questions/domain/repositories/question.repository';
-import { UUID } from 'src/shared/value-objects/uuid.vo';
 
 interface AnswerFaqInput {
   id: string;
-  userId?: string;
   guestId?: string;
   conversationId?: string;
 }
@@ -27,13 +26,10 @@ export class AnswerFaqUseCase {
     private readonly messageRepo: MessageRepository,
     private readonly chatbot: ChatbotService,
     private readonly knowledgeChunk: KnowledgeChunkRepository,
+    private readonly guestRepo: GuestRepository,
   ) {}
 
-  async execute({ id, userId, guestId, conversationId }: AnswerFaqInput) {
-    if (!!guestId && !!userId) {
-      guestId = undefined;
-    }
-
+  async execute({ id, guestId, conversationId }: AnswerFaqInput) {
     const question = await this.questionsRepo.findById(id);
 
     if (!question) {
@@ -42,8 +38,7 @@ export class AnswerFaqUseCase {
 
     const conversation = await this.ensureConversation({
       id: conversationId,
-      type: guestId ? 'guest' : 'user',
-      userOrGuestId: guestId ? guestId : userId,
+      guestId,
     });
 
     if (question.answer) {
@@ -75,12 +70,10 @@ export class AnswerFaqUseCase {
 
   private async ensureConversation({
     id,
-    type,
-    userOrGuestId,
+    guestId,
   }: {
     id?: string;
-    type: 'user' | 'guest';
-    userOrGuestId: string;
+    guestId: string;
   }) {
     if (id) {
       return this.conversationRepo.findById(id).then((c) => {
@@ -90,14 +83,8 @@ export class AnswerFaqUseCase {
 
         console.log(c);
 
-        if (type === 'guest') {
-          if (c.guestId.toString() !== userOrGuestId) {
-            throw new ForbiddenException('conversation_not_owned');
-          }
-        } else {
-          if (c.userId.toString() !== userOrGuestId) {
-            throw new ForbiddenException('conversation_not_owned');
-          }
+        if (c.guest.id.value !== guestId) {
+          throw new ForbiddenException('conversation_not_owned');
         }
 
         return c;
@@ -106,8 +93,7 @@ export class AnswerFaqUseCase {
 
     return this.conversationRepo.save(
       Conversation.create({
-        userId: type === 'user' ? UUID.create(userOrGuestId) : undefined,
-        guestId: type === 'guest' ? UUID.create(userOrGuestId) : undefined,
+        guest: await this.guestRepo.findById(guestId),
       }),
     );
   }

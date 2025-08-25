@@ -8,6 +8,7 @@ interface UpdateQuestionDto {
   departmentId?: string;
   knowledgeChunkId?: string;
   userId: string;
+  answer?: string;
 }
 
 @Injectable()
@@ -21,11 +22,11 @@ export class UpdateQuestionUseCase {
     // Fetch the question to get departmentId
     const question = await this.questionRepo.findById(id);
     const departmentId = dto.departmentId || question.departmentId.value;
-    await this.accessControl.canAccessDepartment(dto.userId, departmentId);
     const update: any = { ...dto };
     if (dto.departmentId) update.departmentId = { value: dto.departmentId };
     if (dto.knowledgeChunkId)
       update.knowledgeChunkId = { value: dto.knowledgeChunkId };
+    if (dto.answer) update.answer = dto.answer;
     return this.questionRepo.update(id, update);
   }
 }

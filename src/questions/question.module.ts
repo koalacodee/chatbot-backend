@@ -13,6 +13,7 @@ import {
 } from './application/use-cases';
 import { KnowledgeChunkModule } from '../knowledge-chunks/knowledge-chunk.module';
 import { DepartmentModule } from '../department/department.module';
+import { GroupByDepartmentUseCase } from './application/use-cases/group-by-department.use-case';
 
 @Module({
   providers: [
@@ -27,6 +28,7 @@ import { DepartmentModule } from '../department/department.module';
     GetAllQuestionsUseCase,
     GetQuestionUseCase,
     UpdateQuestionUseCase,
+    GroupByDepartmentUseCase,
   ],
   controllers: [QuestionController],
   imports: [KnowledgeChunkModule, DepartmentModule],

@@ -8,8 +8,10 @@ export class GetAllQuestionsUseCase {
 
   async execute(departmentId?: string): Promise<Question[]> {
     const all = !departmentId
-      ? await this.questionRepo.findAll()
-      : await this.questionRepo.findByDepartmentId(departmentId);
+      ? await this.questionRepo.findAll({ includeDepartment: true })
+      : await this.questionRepo.findByDepartmentId(departmentId, {
+          includeDepartment: true,
+        });
 
     return all;
   }

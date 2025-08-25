@@ -13,10 +13,6 @@ export class DeleteQuestionUseCase {
   async execute(id: string, userId: string): Promise<Question | null> {
     const question = await this.questionRepo.findById(id);
     if (!question) return null;
-    await this.accessControl.canAccessDepartment(
-      userId,
-      question.departmentId.value,
-    );
     return this.questionRepo.removeById(id);
   }
 }

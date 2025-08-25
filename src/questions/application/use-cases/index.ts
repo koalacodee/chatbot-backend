@@ -5,3 +5,4 @@ export * from './delete-many-questions.use-case';
 export * from './get-all-questions.use-case';
 export * from './get-question.use-case';
 export * from './update-question.use-case';
+export * from './group-by-department.use-case';
