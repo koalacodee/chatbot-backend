@@ -29,9 +29,9 @@ export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
     });
   }
 
-  async deleteAllForUser(userId: string): Promise<void> {
+  async deleteAllForTarget(targetId: string): Promise<void> {
     await this.prisma.refreshToken.deleteMany({
-      where: { userId },
+      where: { targetId },
     });
   }
 
@@ -44,6 +44,9 @@ export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
 
   private mapToDomain(refreshToken: PrismaRefreshToken): RefreshToken {
     const { createdAt, revokedAt, ...rest } = refreshToken;
-    return new RefreshToken({ ...rest, isRevoked: !!revokedAt });
+    return new RefreshToken({
+      ...rest,
+      targetId: rest.targetId,
+    });
   }
 }

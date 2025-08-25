@@ -1,40 +1,53 @@
 import { randomUUID } from 'crypto';
+import { UUID } from 'src/shared/value-objects/uuid.vo';
 
 export interface CreateRefreshTokenOptions {
   id?: string;
   token: string;
-  userId: string;
   expiresAt: Date;
-  isRevoked?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+  revokedAt?: Date;
+  targetId: string;
 }
 
 export class RefreshToken {
   private readonly _id: string;
   private _token: string;
-  private _userId: string;
   private _expiresAt: Date;
-  private _isRevoked: boolean;
+  private _revokedAt: Date | null;
+  private _createdAt: Date;
+  private _updatedAt: Date;
+  private _targetId: UUID;
 
   constructor({
     token,
-    userId,
+    createdAt,
+    updatedAt,
+    targetId,
     expiresAt,
     id,
-    isRevoked,
+    revokedAt,
   }: CreateRefreshTokenOptions) {
     this._token = token;
-    this._userId = userId;
     this._expiresAt = expiresAt;
     this._id = id || randomUUID();
-    this._isRevoked = isRevoked || false;
+    this._revokedAt = this._revokedAt || null;
+    this._createdAt = createdAt || new Date();
+    this._updatedAt = updatedAt || new Date();
+    this._targetId = UUID.create(targetId);
   }
 
   get isRevoked() {
-    return this._isRevoked;
+    return !!this._revokedAt;
   }
 
-  set isRevoked(value: boolean) {
-    this._isRevoked = value;
+  get revokedAt(): Date | null {
+    return this._revokedAt;
+  }
+
+  set revokedAt(val: Date | null) {
+    this._revokedAt = val;
   }
 
   get id(): string {
@@ -49,12 +62,12 @@ export class RefreshToken {
     this._token = value;
   }
 
-  get userId(): string {
-    return this._userId;
+  get targetId(): UUID {
+    return this._targetId;
   }
 
-  set userId(value: string) {
-    this._userId = value;
+  set targetId(value: UUID) {
+    this._targetId = value;
   }
 
   get expiresAt(): Date {
@@ -65,6 +78,22 @@ export class RefreshToken {
     this._expiresAt = value;
   }
 
+  get createdAt(): Date {
+    return this._createdAt;
+  }
+
+  set createdAt(value: Date) {
+    this._createdAt = value;
+  }
+
+  get updatedAt(): Date {
+    return this._updatedAt;
+  }
+
+  set updatedAt(value: Date) {
+    this._updatedAt = value;
+  }
+
   get isExpired(): boolean {
     return this._expiresAt.getTime() < Date.now();
   }
@@ -72,9 +101,12 @@ export class RefreshToken {
   public toJSON() {
     return {
       id: this.id,
-      userId: this.userId,
       token: this.token,
       expiresAt: this.expiresAt,
+      revokedAt: this.revokedAt,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      targetId: this.targetId.value,
     };
   }
 }

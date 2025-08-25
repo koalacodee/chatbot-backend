@@ -25,7 +25,7 @@ export class TokenService {
 
     const refreshTokenEntity = new RefreshToken({
       token: refreshToken,
-      userId,
+      targetId: userId,
       expiresAt: refreshTokenExpiry,
     });
 
@@ -96,7 +96,7 @@ export class TokenService {
   }
 
   async revokeAllUserTokens(userId: string) {
-    await this.refreshTokenRepository.deleteAllForUser(userId);
+    await this.refreshTokenRepository.deleteAllForTarget(userId);
   }
 
   // Helper method to set refresh token cookie
@@ -104,9 +104,11 @@ export class TokenService {
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 7);
 
+    const NODE_ENV = this.config.get('NODE_ENV', 'development');
+
     res.cookie('refresh_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: NODE_ENV === 'production',
       sameSite: 'strict',
       expires: expiryDate,
       path: '/',
@@ -117,7 +119,7 @@ export class TokenService {
   clearRefreshTokenCookie(res: Response) {
     res.clearCookie('refresh_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: this.config.get('NODE_ENV', 'development') === 'production',
       sameSite: 'strict',
       path: '/',
     });

@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
-import { UserRepository } from '../shared/repositories/user.repository';
-import { PrismaUserRepository } from '../shared/infrastructure/repositories/prisma-user.repository';
 import { LoginUseCase } from './application/use-cases/login.use-case';
+import { RegisterGuestUseCase } from './application/use-cases/register-guest.use-case';
+import { LoginGuestUseCase } from './application/use-cases/login-guest.use-case';
+import { VerifyLoginUseCase } from './application/use-cases/verify-login.use-case';
+import { VerifyRegisterUseCase } from './application/use-cases/verify-register.use-case';
+import { GetAuthorizedUserUseCase } from './application/use-cases/get-authorized-user.use-case';
 import { JwtStrategy } from './infrastructure/strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './infrastructure/strategies/refresh-token.strategy';
 import { ConfigService } from '@nestjs/config';
@@ -30,6 +33,11 @@ import { AuthController } from './interface/http/auth.controller';
     LoginUseCase,
     RefreshTokenUseCase,
     LogoutUseCase,
+    RegisterGuestUseCase,
+    LoginGuestUseCase,
+    VerifyLoginUseCase,
+    VerifyRegisterUseCase,
+    GetAuthorizedUserUseCase,
     JwtStrategy,
     RefreshTokenStrategy,
     TokenService,

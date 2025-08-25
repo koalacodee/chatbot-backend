@@ -7,7 +7,7 @@ export abstract class RefreshTokenRepository {
 
   abstract deleteByToken(token: string): Promise<void>;
 
-  abstract deleteAllForUser(userId: string): Promise<void>;
+  abstract deleteAllForTarget(userId: string): Promise<void>;
 
   abstract revokeToken(token: string): Promise<void>;
 }

@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { TokenService } from '../../infrastructure/services/token.service';
 
 interface LoginInput {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -15,11 +15,16 @@ export class LoginUseCase {
   ) {}
 
   async execute(input: LoginInput) {
-    const user = await this.userRepo.findByEmail(input.email);
+    const user = await this.userRepo.findByUsername(input.username);
+
+    if (!user) {
+      throw new NotFoundException({user: "user_not_found"})
+    }
+
     await user.password.verify(input.password);
 
     const { password, ...userData } = user.toJSON();
-    
+
     // Generate tokens
     const tokens = await this.tokenService.generateTokens(
       userData.id,

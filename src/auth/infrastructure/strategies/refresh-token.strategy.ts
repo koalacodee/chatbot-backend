@@ -56,11 +56,15 @@ export class RefreshTokenStrategy extends PassportStrategy(
     }
 
     // Verify the token belongs to the user in the payload
-    if (storedToken.userId !== payload.sub) {
+    if (storedToken.targetId.toString() !== payload.sub) {
       throw new UnauthorizedException('Invalid token owner');
     }
 
     const user = await this.userRepository.findById(payload.sub);
+
+    if (!user) {
+      throw new UnauthorizedException("user_not_found")
+    }
 
     return {
       id: user.id,
