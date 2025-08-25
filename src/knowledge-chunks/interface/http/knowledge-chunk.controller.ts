@@ -46,7 +46,7 @@ export class KnowledgeChunkController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.MANAGER, Roles.ADMIN)
+  @UseRoles(Roles.ADMIN, Roles.ADMIN)
   async create(
     @Body() input: CreateKnowledgeChunkInputDto,
     @Req() req: any,
@@ -55,7 +55,7 @@ export class KnowledgeChunkController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.MANAGER, Roles.ADMIN)
+  @UseRoles(Roles.ADMIN, Roles.ADMIN)
   @Put()
   async update(
     @Body() input: UpdateKnowledgeChunkInputDto,
@@ -66,7 +66,7 @@ export class KnowledgeChunkController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.MANAGER, Roles.ADMIN)
+  @UseRoles(Roles.ADMIN, Roles.ADMIN)
   @Get(':id')
   async get(
     @Param('id') id: string,
@@ -76,14 +76,14 @@ export class KnowledgeChunkController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.MANAGER, Roles.ADMIN)
+  @UseRoles(Roles.ADMIN, Roles.ADMIN)
   @Get()
   async getAll(@Req() req: any): Promise<GetAllKnowledgeChunksOutputDto> {
     return this.getAllUseCase.execute(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.MANAGER, Roles.ADMIN)
+  @UseRoles(Roles.ADMIN, Roles.ADMIN)
   @Get('by-department')
   async findByDepartment(
     @Query() input: FindKnowledgeChunksByDepartmentInputDto,
@@ -92,7 +92,7 @@ export class KnowledgeChunkController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.MANAGER, Roles.ADMIN)
+  @UseRoles(Roles.ADMIN, Roles.ADMIN)
   @Delete(':id')
   async delete(
     @Param('id') id: string,
@@ -102,7 +102,7 @@ export class KnowledgeChunkController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.MANAGER, Roles.ADMIN)
+  @UseRoles(Roles.ADMIN, Roles.ADMIN)
   @Delete('multiple')
   async deleteMany(
     @Body() input: DeleteManyKnowledgeChunksInputDto,
@@ -112,7 +112,7 @@ export class KnowledgeChunkController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.MANAGER, Roles.ADMIN)
+  @UseRoles(Roles.ADMIN, Roles.ADMIN)
   @Get('count')
   async count(): Promise<number> {
     return this.countUseCase.execute();

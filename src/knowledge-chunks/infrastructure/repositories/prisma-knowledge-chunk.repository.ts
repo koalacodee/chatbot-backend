@@ -27,13 +27,13 @@ export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
       departmentId: chunk.department.id.toString(),
       pointId: chunk.pointId,
     };
-    const upserted = await this.prisma.knowledgeChunk.upsert({
+    const upsert = await this.prisma.knowledgeChunk.upsert({
       where: { id: data.id },
       update: data,
       create: data,
       include: { department: true },
     });
-    return this.toDomain(upserted);
+    return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<KnowledgeChunk | null> {
