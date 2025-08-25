@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
+import { Roles } from 'src/shared/value-objects/role.vo';
 
 @Injectable()
 export class AccessControlService {
@@ -26,7 +27,7 @@ export class AccessControlService {
       throw new NotFoundException({ user: 'user_not_found' });
     }
 
-    if (user.role.getRole() === 'MANAGER') {
+    if (user.role.getRole() === Roles.ADMIN) {
       return true;
     }
 
