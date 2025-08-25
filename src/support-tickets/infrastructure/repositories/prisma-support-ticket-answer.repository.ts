@@ -3,22 +3,33 @@ import { PrismaService } from 'src/common/prisma/prisma.service';
 import { SupportTicketAnswerRepository } from '../../domain/repositories/support-ticket-answer.repository';
 import { SupportTicketAnswer } from '../../domain/entities/support-ticket-answer.entity';
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
-import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { User } from 'src/shared/entities/user.entity';
+import { Roles } from 'src/shared/value-objects/role.vo';
+import { Employee } from 'src/employee/domain/entities/employee.entity';
+import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
+import { Admin } from 'src/admin/domain/entities/admin.entity';
+import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
+import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
+import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 
 @Injectable()
 export class PrismaSupportTicketAnswerRepository extends SupportTicketAnswerRepository {
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly employeeRepository: EmployeeRepository,
+    private readonly supervisorRepository: SupervisorRepository,
+    private readonly adminRepository: AdminRepository,
+  ) {
     super();
   }
 
   private async toDomain(row: any): Promise<SupportTicketAnswer> {
     const ticket = SupportTicket.fromPersistence({
-      id: UUID.create(row.supportTicket.id),
-      guestId: UUID.create(row.supportTicket.guestId),
+      id: row.supportTicket.id,
+      guestId: row.supportTicket.guestId,
       subject: row.supportTicket.subject,
       description: row.supportTicket.description,
-      departmentId: UUID.create(row.supportTicket.departmentId),
+      departmentId: row.supportTicket.departmentId,
       status: row.supportTicket.status,
       createdAt: row.supportTicket.createdAt,
       updatedAt: row.supportTicket.updatedAt,
@@ -30,10 +41,7 @@ export class PrismaSupportTicketAnswerRepository extends SupportTicketAnswerRepo
       content: row.content,
       // attachment intentionally not eagerly loaded; use AttachmentRepository by targetId when needed
       answerer: row.answerer
-        ? await User.create(row.answerer, false)
-        : undefined,
-      assigned: row.assigned
-        ? await User.create(row.assigned, false)
+        ? await this.getAnswererByUser(await User.create(row.answerer, false))
         : undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -41,42 +49,81 @@ export class PrismaSupportTicketAnswerRepository extends SupportTicketAnswerRepo
     });
   }
 
+  private async getAnswererByUser(
+    user: User,
+  ): Promise<Employee | Supervisor | Admin> {
+    switch (user.role.getRole()) {
+      case Roles.ADMIN:
+        return this.adminRepository.findByUserId(user.id);
+      case Roles.SUPERVISOR:
+        return this.supervisorRepository.findByUserId(user.id);
+      case Roles.EMPLOYEE:
+        return this.employeeRepository.findByUserId(user.id);
+      default:
+        throw new Error(`Unknown role: ${user.role.getRole()}`);
+    }
+  }
+
   async save(answer: SupportTicketAnswer): Promise<SupportTicketAnswer> {
     const data = {
       id: answer.id.toString(),
       supportTicketId: answer.supportTicket.id.toString(),
       content: answer.content,
-      answererId: answer.answerer.id.toString(),
-      assignedId: answer.assigned.id.toString(),
+      answererAdminId:
+        answer.answerer instanceof Admin ? answer.answerer.id.toString() : null,
+      answererEmployeeId:
+        answer.answerer instanceof Employee
+          ? answer.answerer.id.toString()
+          : null,
+      answererSupervisorId:
+        answer.answerer instanceof Supervisor
+          ? answer.answerer.id.toString()
+          : null,
       createdAt: answer.createdAt,
       updatedAt: new Date(),
       rating: answer.rating,
     } as const;
 
-    const upserted = await this.prisma.supportTicketAnswer.upsert({
+    const upsert = await this.prisma.supportTicketAnswer.upsert({
       where: { id: data.id },
       update: {
         content: data.content,
-        answererId: data.answererId,
-        assignedId: data.assignedId,
+        answererAdminId:
+          answer.answerer instanceof Admin
+            ? answer.answerer.id.toString()
+            : null,
+        answererEmployeeId:
+          answer.answerer instanceof Employee
+            ? answer.answerer.id.toString()
+            : null,
+        answererSupervisorId:
+          answer.answerer instanceof Supervisor
+            ? answer.answerer.id.toString()
+            : null,
         updatedAt: data.updatedAt,
         rating: data.rating,
       },
       create: data,
       include: {
         supportTicket: true,
-        answerer: true,
-        assigned: true,
+        answererAdmin: true,
+        answererEmployee: true,
+        answererSupervisor: true,
       },
     });
 
-    return this.toDomain(upserted);
+    return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<SupportTicketAnswer | null> {
     const row = await this.prisma.supportTicketAnswer.findUnique({
       where: { id },
-      include: { supportTicket: true, answerer: true, assigned: true },
+      include: {
+        supportTicket: true,
+        answererAdmin: true,
+        answererEmployee: true,
+        answererSupervisor: true,
+      },
     });
     return row ? this.toDomain(row) : null;
   }
@@ -86,7 +133,12 @@ export class PrismaSupportTicketAnswerRepository extends SupportTicketAnswerRepo
   ): Promise<SupportTicketAnswer[]> {
     const rows = await this.prisma.supportTicketAnswer.findMany({
       where: { supportTicketId },
-      include: { supportTicket: true, answerer: true, assigned: true },
+      include: {
+        supportTicket: true,
+        answererAdmin: true,
+        answererEmployee: true,
+        answererSupervisor: true,
+      },
       orderBy: { createdAt: 'asc' },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
@@ -108,5 +160,31 @@ export class PrismaSupportTicketAnswerRepository extends SupportTicketAnswerRepo
 
   async count(): Promise<number> {
     return this.prisma.supportTicketAnswer.count();
+  }
+
+  async findByIds(ids: string[]): Promise<SupportTicketAnswer[]> {
+    const rows = await this.prisma.supportTicketAnswer.findMany({
+      where: { id: { in: ids } },
+      include: {
+        supportTicket: true,
+        answererAdmin: true,
+        answererEmployee: true,
+        answererSupervisor: true,
+      },
+    });
+    return Promise.all(rows.map((r) => this.toDomain(r)));
+  }
+
+  async findBySupportTicketIds(ids: string[]): Promise<SupportTicketAnswer[]> {
+    const rows = await this.prisma.supportTicketAnswer.findMany({
+      where: { supportTicketId: { in: ids } },
+      include: {
+        supportTicket: true,
+        answererAdmin: true,
+        answererEmployee: true,
+        answererSupervisor: true,
+      },
+    });
+    return Promise.all(rows.map((r) => this.toDomain(r)));
   }
 }

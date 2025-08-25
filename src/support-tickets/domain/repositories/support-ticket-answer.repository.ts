@@ -3,6 +3,8 @@ import { SupportTicketAnswer } from '../entities/support-ticket-answer.entity';
 export abstract class SupportTicketAnswerRepository {
   abstract save(answer: SupportTicketAnswer): Promise<SupportTicketAnswer>;
   abstract findById(id: string): Promise<SupportTicketAnswer | null>;
+  abstract findByIds(ids: string[]): Promise<SupportTicketAnswer[]>;
+  abstract findBySupportTicketIds(ids: string[]): Promise<SupportTicketAnswer[]>;
   abstract findBySupportTicketId(
     supportTicketId: string,
   ): Promise<SupportTicketAnswer[]>;

@@ -1,7 +1,9 @@
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { SupportTicket } from './support-ticket.entity';
-import { User } from 'src/shared/entities/user.entity';
-import { Attachment } from 'src/shared/entities/attachment.entity';
+import { Attachment } from 'src/files/domain/entities/attachment.entity';
+import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
+import { Admin } from 'src/admin/domain/entities/admin.entity';
+import { Employee } from 'src/employee/domain/entities/employee.entity';
 
 enum Rating {
   SATISFIED = 'SATISFIED',
@@ -14,8 +16,7 @@ export interface SupportTicketAnswerOptions {
   supportTicket: SupportTicket;
   content: string;
   attachment?: Attachment;
-  answerer: User;
-  assigned: User;
+  answerer: Employee | Supervisor | Admin;
   createdAt?: Date;
   updatedAt?: Date;
   rating?: Rating;
@@ -26,8 +27,7 @@ export class SupportTicketAnswer {
   private _supportTicket: SupportTicket;
   private _content: string;
   private _attachment?: Attachment;
-  private _answerer: User;
-  private _assigned: User;
+  private _answerer: Employee | Supervisor | Admin;
   private _createdAt: Date;
   private _updatedAt: Date;
   private _rating: Rating;
@@ -38,7 +38,6 @@ export class SupportTicketAnswer {
     this._content = options.content;
     this._attachment = options.attachment;
     this._answerer = options.answerer;
-    this._assigned = options.assigned;
     this._createdAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
     this._rating = options.rating;
@@ -68,20 +67,12 @@ export class SupportTicketAnswer {
     this._content = content;
   }
 
-  get answerer(): User {
+  get answerer(): Employee | Supervisor | Admin {
     return this._answerer;
   }
 
-  set answerer(answerer: User) {
+  set answerer(answerer: Employee | Supervisor | Admin) {
     this._answerer = answerer;
-  }
-
-  get assigned(): User {
-    return this._assigned;
-  }
-
-  set assigned(assigned: User) {
-    this._assigned = assigned;
   }
 
   get createdAt(): Date {
@@ -126,8 +117,7 @@ export class SupportTicketAnswer {
       supportTicketId: this.supportTicket.id,
       content: this.content,
       attachment: this.attachment?.toJSON(),
-      answerer: this.answerer.toJSON(),
-      assigned: this.assigned.toJSON(),
+      answerer: this.answerer,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
       rating: this._rating,

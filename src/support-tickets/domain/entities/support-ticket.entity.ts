@@ -1,6 +1,10 @@
+import { SupportTicketAnswer } from '@prisma/client';
+import { Employee } from 'src/employee/domain/entities/employee.entity';
+import { Guest } from 'src/guest/domain/entities/guest.entity';
+import { User } from 'src/shared/entities/user.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 
-enum SupportTicketStatus {
+export enum SupportTicketStatus {
   NEW = 'NEW',
   SEEN = 'SEEN',
   ANSWERED = 'ANSWERED',
@@ -10,19 +14,25 @@ enum SupportTicketStatus {
 export class SupportTicket {
   private _id: UUID;
   private _guestId: UUID;
+  private _guest?: Guest;
   private _subject: string;
   private _description: string;
   private _departmentId: UUID;
+  private _answer?: SupportTicketAnswer;
+  private _assignee?: Employee;
   private _status: SupportTicketStatus;
   private _createdAt: Date;
   private _updatedAt: Date;
 
   private constructor(options: SupportTicketOptions) {
-    this._id = options.id;
-    this._guestId = options.guestId;
+    this._id = UUID.create(options.id);
+    this._guestId = UUID.create(options.guestId);
+    this._guest = options.guest;
     this._subject = options.subject;
     this._description = options.description;
-    this._departmentId = options.departmentId;
+    this._departmentId = UUID.create(options.departmentId);
+    this._answer = options.answer;
+    this._assignee = options.assignee;
     this._status = options.status;
     this._createdAt = options.createdAt;
     this._updatedAt = options.updatedAt;
@@ -92,16 +102,35 @@ export class SupportTicket {
     this._updatedAt = value;
   }
 
+  get answer(): SupportTicketAnswer | undefined {
+    return this._answer;
+  }
+
+  set answer(value: SupportTicketAnswer | undefined) {
+    this._answer = value;
+  }
+
+  get assignee(): Employee | undefined {
+    return this._assignee;
+  }
+
+  set assignee(newAssignee: Employee | undefined) {
+    this._assignee = newAssignee;
+  }
+
   toJSON(): Record<string, unknown> {
     return {
-      id: this._id,
-      guestId: this._guestId,
+      id: this._id.toString(),
+      guestId: this._guestId.toString(),
+      guest: this._guest.withoutPassword(),
       subject: this._subject,
       description: this._description,
-      departmentId: this._departmentId,
+      departmentId: this._departmentId.toString(),
+      answer: this._answer,
+      assignee: this._assignee?.toJSON(),
       status: this._status,
-      createdAt: this._createdAt,
-      updatedAt: this._updatedAt,
+      createdAt: this._createdAt.toISOString(),
+      updatedAt: this._updatedAt.toISOString(),
     };
   }
 
@@ -114,8 +143,11 @@ export class SupportTicket {
       id: data.id,
       guestId: data.guestId,
       subject: data.subject,
+      guest: data.guest,
       description: data.description,
       departmentId: data.departmentId,
+      answer: data.answer,
+      assignee: data.assignee,
       status: data.status,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
@@ -124,11 +156,14 @@ export class SupportTicket {
 
   static toPersistence(supportTicket: SupportTicket): SupportTicketPersistence {
     return {
-      id: supportTicket.id,
-      guestId: supportTicket.guestId,
+      id: supportTicket.id.toString(),
+      guestId: supportTicket.guestId.toString(),
       subject: supportTicket.subject,
+      guest: supportTicket._guest,
       description: supportTicket.description,
-      departmentId: supportTicket.departmentId,
+      departmentId: supportTicket.departmentId.toString(),
+      answer: supportTicket._answer,
+      assignee: supportTicket._assignee,
       status: supportTicket.status,
       createdAt: supportTicket.createdAt,
       updatedAt: supportTicket.updatedAt,
@@ -137,22 +172,28 @@ export class SupportTicket {
 }
 
 export interface SupportTicketOptions {
-  id: UUID;
-  guestId: UUID;
+  id?: string;
+  guestId: string;
+  guest?: Guest;
   subject: string;
   description: string;
-  departmentId: UUID;
+  departmentId: string;
+  answer?: SupportTicketAnswer;
+  assignee?: Employee;
   status: SupportTicketStatus;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface SupportTicketPersistence {
-  id: UUID;
-  guestId: UUID;
+  id: string;
+  guestId: string;
+  guest?: Guest;
   subject: string;
   description: string;
-  departmentId: UUID;
+  departmentId: string;
+  answer?: SupportTicketAnswer;
+  assignee?: Employee;
   status: SupportTicketStatus;
   createdAt: Date;
   updatedAt: Date;
