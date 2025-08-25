@@ -2,8 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { PromotionRepository } from '../../domain/repositories/promotion.repository';
 import { Promotion } from '../../domain/entities/promotion.entity';
-import { AudienceType as PrismaAudienceType } from '@prisma/client';
+import {
+  AudienceType,
+  AudienceType as PrismaAudienceType,
+} from '@prisma/client';
 import { User } from 'src/shared/entities/user.entity';
+import { Roles } from 'src/shared/value-objects/role.vo';
 
 @Injectable()
 export class PrismaPromotionRepository extends PromotionRepository {
@@ -12,7 +16,6 @@ export class PrismaPromotionRepository extends PromotionRepository {
   }
 
   private async toDomain(row: any): Promise<Promotion> {
-    const createdBy: User = await User.create(row.createdBy, false);
     return Promotion.create({
       id: row.id,
       title: row.title,
@@ -22,12 +25,13 @@ export class PrismaPromotionRepository extends PromotionRepository {
       updatedAt: row.updatedAt,
       startDate: row.startDate ?? undefined,
       endDate: row.endDate ?? undefined,
-      createdBy,
+      createdByAdmin: row.createdByAdmin,
+      createdBySupervisor: row.createdBySupervisor,
     });
   }
 
   async save(promotion: Promotion): Promise<Promotion> {
-    const upserted = await this.prisma.promotion.upsert({
+    const upsert = await this.prisma.promotion.upsert({
       where: { id: promotion.id.toString() },
       update: {
         title: promotion.title,
@@ -38,7 +42,16 @@ export class PrismaPromotionRepository extends PromotionRepository {
         startDate: promotion.startDate,
         endDate: promotion.endDate ?? null,
         updatedAt: new Date(),
-        createdBy: { connect: { id: promotion.createdBy.id.toString() } },
+        createdByAdmin: promotion.createdByAdmin
+          ? {
+              connect: { id: promotion.createdByAdmin.id.toString() },
+            }
+          : undefined,
+        createdBySupervisor: promotion.createdBySupervisor
+          ? {
+              connect: { id: promotion.createdBySupervisor.id.toString() },
+            }
+          : undefined,
       },
       create: {
         id: promotion.id.toString(),
@@ -51,18 +64,27 @@ export class PrismaPromotionRepository extends PromotionRepository {
         updatedAt: new Date(),
         startDate: promotion.startDate,
         endDate: promotion.endDate ?? null,
-        createdBy: { connect: { id: promotion.createdBy.id.toString() } },
+        createdByAdmin: promotion.createdByAdmin
+          ? {
+              connect: { id: promotion.createdByAdmin.id.toString() },
+            }
+          : undefined,
+        createdBySupervisor: promotion.createdBySupervisor
+          ? {
+              connect: { id: promotion.createdBySupervisor.id.toString() },
+            }
+          : undefined,
       },
-      include: { createdBy: true },
+      include: { createdByAdmin: true, createdBySupervisor: true },
     });
 
-    return this.toDomain(upserted);
+    return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<Promotion | null> {
     const row = await this.prisma.promotion.findUnique({
       where: { id },
-      include: { createdBy: true },
+      include: { createdByAdmin: true, createdBySupervisor: true },
     });
     return row ? this.toDomain(row) : null;
   }
@@ -72,7 +94,7 @@ export class PrismaPromotionRepository extends PromotionRepository {
       skip: offset,
       take: limit,
       orderBy: { createdAt: 'desc' },
-      include: { createdBy: true },
+      include: { createdByAdmin: true, createdBySupervisor: true },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
@@ -97,7 +119,7 @@ export class PrismaPromotionRepository extends PromotionRepository {
     const rows = await this.prisma.promotion.findMany({
       where: { audience: audience as any },
       orderBy: { createdAt: 'desc' },
-      include: { createdBy: true },
+      include: { createdByAdmin: true, createdBySupervisor: true },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
@@ -106,7 +128,7 @@ export class PrismaPromotionRepository extends PromotionRepository {
     const rows = await this.prisma.promotion.findMany({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
-      include: { createdBy: true },
+      include: { createdByAdmin: true, createdBySupervisor: true },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
@@ -115,8 +137,56 @@ export class PrismaPromotionRepository extends PromotionRepository {
     const rows = await this.prisma.promotion.findMany({
       where: { isActive: true, audience: audience as any },
       orderBy: { createdAt: 'desc' },
-      include: { createdBy: true },
+      include: { createdByAdmin: true, createdBySupervisor: true },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
+  }
+
+  async getPromotionForUser(role: Roles): Promise<Promotion | null> {
+    if (role === Roles.ADMIN) {
+      return null;
+    }
+
+    const roleToAudienceMap: Record<Roles, AudienceType> = {
+      GUEST: 'CUSTOMER',
+      SUPERVISOR: 'SUPERVISOR',
+      EMPLOYEE: 'EMPLOYEE',
+      DRIVER: 'EMPLOYEE',
+      ADMIN: undefined,
+    };
+
+    const now = new Date();
+
+    const promotion = await this.prisma.promotion.findFirst({
+      where: {
+        isActive: true,
+        OR: [{ audience: roleToAudienceMap[role] }, { audience: 'ALL' }],
+        AND: [
+          {
+            OR: [{ startDate: null }, { startDate: { lte: now } }],
+          },
+          {
+            OR: [
+              { endDate: null },
+              {
+                endDate: {
+                  gte: new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate(),
+                    23,
+                    59,
+                    59,
+                    999,
+                  ),
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    return promotion ? this.toDomain(promotion) : null;
   }
 }

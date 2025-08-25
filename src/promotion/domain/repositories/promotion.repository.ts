@@ -1,3 +1,4 @@
+import { Roles } from 'src/shared/value-objects/role.vo';
 import { Promotion } from '../entities/promotion.entity';
 
 export abstract class PromotionRepository {
@@ -11,4 +12,5 @@ export abstract class PromotionRepository {
   abstract findByAudience(audience: string): Promise<Promotion[]>;
   abstract findActive(): Promise<Promotion[]>;
   abstract findActiveByAudience(audience: string): Promise<Promotion[]>;
+  abstract getPromotionForUser(role: Roles): Promise<Promotion | null>;
 }

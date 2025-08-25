@@ -1,7 +1,9 @@
+import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { User } from 'src/shared/entities/user.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
+import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 
-enum AudienceType {
+export enum AudienceType {
   CUSTOMER = 'CUSTOMER',
   SUPERVISOR = 'SUPERVISOR',
   EMPLOYEE = 'EMPLOYEE',
@@ -17,7 +19,8 @@ interface PromotionOptions {
   updatedAt?: Date;
   startDate?: Date;
   endDate?: Date;
-  createdBy: User;
+  createdByAdmin?: Admin;
+  createdBySupervisor?: Supervisor;
 }
 
 export class Promotion {
@@ -29,7 +32,8 @@ export class Promotion {
   private _updatedAt: Date;
   private _startDate: Date;
   private _endDate: Date;
-  private _createdBy: User;
+  private _createdByAdmin?: Admin;
+  private _createdBySupervisor?: Supervisor;
 
   private constructor(options: PromotionOptions) {
     this._id = UUID.create(options.id);
@@ -40,7 +44,8 @@ export class Promotion {
     this._updatedAt = options.updatedAt || new Date();
     this._startDate = options.startDate || new Date();
     this._endDate = options.endDate;
-    this._createdBy = options.createdBy;
+    this._createdByAdmin = options.createdByAdmin;
+    this._createdBySupervisor = options.createdBySupervisor;
   }
 
   public static create(options: PromotionOptions): Promotion {
@@ -87,12 +92,24 @@ export class Promotion {
     return this._startDate;
   }
 
+  public set startDate(newDate: Date) {
+    this._startDate = newDate;
+  }
+
   public get endDate(): Date | undefined {
     return this._endDate;
   }
 
-  public get createdBy(): User {
-    return this._createdBy;
+  public set endDate(newDate: Date) {
+    this._endDate = newDate;
+  }
+
+  public get createdByAdmin(): Admin {
+    return this._createdByAdmin;
+  }
+
+  public get createdBySupervisor(): Supervisor {
+    return this._createdBySupervisor;
   }
 
   public toJSON(): PromotionOptions {
@@ -105,7 +122,8 @@ export class Promotion {
       updatedAt: this._updatedAt,
       startDate: this._startDate,
       endDate: this._endDate,
-      createdBy: this._createdBy,
+      createdByAdmin: this._createdByAdmin,
+      createdBySupervisor: this._createdBySupervisor,
     };
   }
 }
