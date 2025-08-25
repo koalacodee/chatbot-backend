@@ -4,7 +4,6 @@ import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RbacModule } from './rbac';
-import { UsersModule } from './users/users.module';
 import { BullModule } from '@nestjs/bullmq';
 import { DepartmentModule } from './department/department.module';
 import { QdrantModule } from './common/qdrant/qdrant.module';
@@ -17,6 +16,17 @@ import { QuestionModule } from './questions/question.module';
 import { SupportTicketModule } from './support-tickets/support-tickets.module';
 import { GuestModule } from './guest/guest.module';
 import { TaskModule } from './task/task.module';
+import { VehicleLicenseModule } from './vehicle-license/vehicle-license.module';
+import { VehicleModule } from './vehicle/vehicle.module';
+import { ViolationModule } from './violation/violation.module';
+import { PromotionModule } from './promotion/promotion.module';
+import { FileModule } from './files/files.module';
+import { AdminModule } from './admin/admin.module';
+import { SupervisorModule } from './supervisor/supervisor.module';
+import { EmployeeModule } from './employee/employee.module';
+import { ActivityLogModule } from './activity-log/activity-log.module';
+import { DriverModule } from './driver/driver.module';
+import { EmployeeRequestModule } from './employee-request/employee-request.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,7 +47,6 @@ import { TaskModule } from './task/task.module';
     AuthModule,
     PrismaModule,
     RbacModule,
-    UsersModule,
     DepartmentModule,
     QdrantModule,
     KnowledgeChunkModule,
@@ -48,6 +57,17 @@ import { TaskModule } from './task/task.module';
     SupportTicketModule,
     GuestModule,
     TaskModule,
+    VehicleLicenseModule,
+    VehicleModule,
+    ViolationModule,
+    PromotionModule,
+    FileModule,
+    AdminModule,
+    SupervisorModule,
+    EmployeeModule,
+    ActivityLogModule,
+    DriverModule,
+    EmployeeRequestModule,
   ],
 })
 export class AppModule {}
