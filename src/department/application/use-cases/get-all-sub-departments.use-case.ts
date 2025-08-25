@@ -2,14 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { DepartmentRepository } from '../../domain/repositories/department.repository';
 
 @Injectable()
-export class GetAllDepartmentsUseCase {
+export class GetAllSubDepartmentsUseCase {
   constructor(private readonly departmentRepo: DepartmentRepository) {}
 
   async execute(): Promise<any[]> {
     return this.departmentRepo
-      .findAllDepartments({
+      .findAllSubDepartments({
         includeQuestions: true,
-        includeSubDepartments: true,
       })
       .then((depts) => depts.map((dept) => dept.toJSON()));
   }

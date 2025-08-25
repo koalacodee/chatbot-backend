@@ -3,14 +3,10 @@ import { DepartmentRepository } from '../../domain/repositories/department.repos
 import { Department } from '../../domain/entities/department.entity';
 
 @Injectable()
-export class GetDepartmentUseCase {
-  constructor(private readonly departmentRepo: DepartmentRepository) {}
+export class DeleteMainDepartmentUseCase {
+  constructor(private readonly departmentRepository: DepartmentRepository) {}
 
   async execute(id: string): Promise<Department | null> {
-    return this.departmentRepo.findById(id, {
-      includeKnowledgeChunks: true,
-      includeQuestions: true,
-      includeSubDepartments: true,
-    });
+    return this.departmentRepository.removeMainDepartmentById(id);
   }
 }

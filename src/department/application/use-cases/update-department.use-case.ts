@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { DepartmentRepository } from '../../domain/repositories/department.repository';
-import { Department } from '../../domain/entities/department.entity';
+import {
+  Department,
+  DepartmentVisibility,
+} from '../../domain/entities/department.entity';
 
 interface UpdateDepartmentDto {
   name?: string;
+  visibility?: DepartmentVisibility;
 }
 
 @Injectable()

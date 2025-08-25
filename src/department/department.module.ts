@@ -6,28 +6,14 @@ import { QuestionRepository } from '../questions/domain/repositories/question.re
 import { PrismaQuestionRepository } from '../questions/infrastructure/repositories/prisma-question.repository';
 import { DepartmentRepository } from './domain/repositories/department.repository';
 import { PrismaDepartmentRepository } from './infrastructure/repositories/prisma-department.repository';
-import {
-  CountDepartmentsUseCase,
-  CreateDepartmentUseCase,
-  UpdateDepartmentUseCase,
-  DeleteDepartmentUseCase,
-  DeleteManyDepartmentsUseCase,
-  GetAllDepartmentsUseCase,
-  GetDepartmentUseCase,
-} from './application/use-cases';
+import * as UseCases from './application/use-cases';
 @Module({
   controllers: [DepartmentController],
   providers: [
     { provide: QuestionRepository, useClass: PrismaQuestionRepository },
     { provide: DepartmentRepository, useClass: PrismaDepartmentRepository },
     { provide: EmbeddingService, useClass: JinaAiEmbeddingService },
-    CountDepartmentsUseCase,
-    CreateDepartmentUseCase,
-    UpdateDepartmentUseCase,
-    DeleteDepartmentUseCase,
-    DeleteManyDepartmentsUseCase,
-    GetAllDepartmentsUseCase,
-    GetDepartmentUseCase,
+    ...Object.values(UseCases),
   ],
   exports: [DepartmentRepository],
 })
