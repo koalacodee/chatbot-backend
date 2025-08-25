@@ -1,9 +1,11 @@
-import { Department } from 'src/department/domain/entities/department.entity';
-import { Attachment } from 'src/shared/entities/attachment.entity';
-import { User } from 'src/shared/entities/user.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
+import { Attachment } from 'src/files/domain/entities/attachment.entity';
+import { Employee } from 'src/employee/domain/entities/employee.entity';
+import { Admin } from 'src/admin/domain/entities/admin.entity';
+import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
+import { Department } from 'src/department/domain/entities/department.entity';
 
-enum TaskStatus {
+export enum TaskStatus {
   TODO = 'TODO',
   SEEN = 'SEEN',
   PENDING_REVIEW = 'PENDING_REVIEW',
@@ -11,21 +13,30 @@ enum TaskStatus {
   COMPLETED = 'COMPLETED',
 }
 
+export enum TaskAssignmentType {
+  INDIVIDUAL = 'INDIVIDUAL',
+  DEPARTMENT = 'DEPARTMENT',
+  SUB_DEPARTMENT = 'SUB_DEPARTMENT',
+}
+
 export interface TaskOptions {
   id?: string;
   title: string;
   description: string;
-  department: Department;
-  assignee: User;
-  assigner: User;
-  approver?: User;
+  assignee?: Employee;
+  assigner: Admin | Supervisor;
+  approver?: Admin | Supervisor;
+  performer?: Admin | Supervisor | Employee;
   status: TaskStatus;
+  assignmentType: TaskAssignmentType;
+  targetDepartment?: Department;
+  targetSubDepartment?: Department;
   createdAt?: Date;
   updatedAt?: Date;
   completedAt?: Date;
   notes?: string;
   feedback?: string;
-  assigneeAttachment?: Attachment;
+  performerAttachment?: Attachment;
   assignerAttachment?: Attachment;
 }
 
@@ -33,34 +44,40 @@ export class Task {
   private readonly _id: UUID;
   private _title: string;
   private _description: string;
-  private _department: Department;
-  private _assignee: User;
-  private _assigner: User;
-  private _approver: User;
+  private _assignee?: Employee;
+  private _assigner: Admin | Supervisor;
+  private _approver?: Admin | Supervisor;
+  private _performer?: Admin | Supervisor | Employee;
   private _status: TaskStatus;
+  private _assignmentType: TaskAssignmentType;
+  private _targetDepartment?: Department;
+  private _targetSubDepartment?: Department;
   private _createAt: Date;
   private _updatedAt: Date;
-  private _completedAt: Date;
-  private _notes: string;
-  private _feedback: string;
-  private _assigneeAttachment?: Attachment;
+  private _completedAt?: Date;
+  private _notes?: string;
+  private _feedback?: string;
+  private _performerAttachment?: Attachment;
   private _assignerAttachment?: Attachment;
 
   private constructor(options: TaskOptions) {
     this._id = UUID.create(options.id);
     this._title = options.title;
     this._description = options.description;
-    this._department = options.department;
     this._assignee = options.assignee;
     this._assigner = options.assigner;
     this._approver = options.approver;
+    this._performer = options.performer;
     this._status = options.status;
+    this._assignmentType = options.assignmentType;
+    this._targetDepartment = options.targetDepartment;
+    this._targetSubDepartment = options.targetSubDepartment;
     this._createAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
     this._completedAt = options.completedAt ?? undefined;
     this._notes = options.notes ?? undefined;
     this._feedback = options.feedback ?? undefined;
-    this._assigneeAttachment = options.assigneeAttachment;
+    this._performerAttachment = options.performerAttachment;
     this._assignerAttachment = options.assignerAttachment;
   }
 
@@ -88,35 +105,27 @@ export class Task {
     this._description = value;
   }
 
-  get department(): Department {
-    return this._department;
-  }
-
-  set department(value: Department) {
-    this._department = value;
-  }
-
-  get assignee(): User {
+  get assignee(): Employee {
     return this._assignee;
   }
 
-  set assignee(value: User) {
+  set assignee(value: Employee) {
     this._assignee = value;
   }
 
-  get assigner(): User {
+  get assigner(): Admin | Supervisor {
     return this._assigner;
   }
 
-  set assigner(value: User) {
+  set assigner(value: Admin | Supervisor) {
     this._assigner = value;
   }
 
-  get approver(): User {
+  get approver(): Admin | Supervisor {
     return this._approver;
   }
 
-  set approver(value: User) {
+  set approver(value: Admin | Supervisor) {
     this._approver = value;
   }
 
@@ -168,12 +177,12 @@ export class Task {
     this._feedback = value;
   }
 
-  get assigneeAttachment(): Attachment | undefined {
-    return this._assigneeAttachment;
+  get performerAttachment(): Attachment | undefined {
+    return this._performerAttachment;
   }
 
-  set assigneeAttachment(value: Attachment | undefined) {
-    this._assigneeAttachment = value;
+  set performerAttachment(value: Attachment | undefined) {
+    this._performerAttachment = value;
   }
 
   get assignerAttachment(): Attachment | undefined {
@@ -184,23 +193,58 @@ export class Task {
     this._assignerAttachment = value;
   }
 
-  toJSON() {
+  get performer(): Admin | Supervisor | Employee | undefined {
+    return this._performer;
+  }
+
+  set performer(value: Admin | Supervisor | Employee | undefined) {
+    this._performer = value;
+  }
+
+  get assignmentType(): TaskAssignmentType {
+    return this._assignmentType;
+  }
+
+  set assignmentType(value: TaskAssignmentType) {
+    this._assignmentType = value;
+  }
+
+  get targetDepartment(): Department | undefined {
+    return this._targetDepartment;
+  }
+
+  set targetDepartment(value: Department | undefined) {
+    this._targetDepartment = value;
+  }
+
+  get targetSubDepartment(): Department | undefined {
+    return this._targetSubDepartment;
+  }
+
+  set targetSubDepartment(value: Department | undefined) {
+    this._targetSubDepartment = value;
+  }
+
+  toJSON(): any {
     return {
       id: this.id.toString(),
       title: this.title,
       description: this.description,
-      department: this.department.toJSON(),
-      assignee: this.assignee.toJSON(),
-      assigner: this.assigner.toJSON(),
-      approver: this.approver.toJSON(),
+      assignee: this.assignee?.toJSON(),
+      assigner: this.assigner?.toJSON(),
+      approver: this.approver?.toJSON(),
+      performer: this.performer?.toJSON(),
       status: this.status,
+      assignmentType: this.assignmentType,
+      targetDepartment: this.targetDepartment?.toJSON(),
+      targetSubDepartment: this.targetSubDepartment?.toJSON(),
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
-      completedAt: this.completedAt.toISOString(),
+      completedAt: this.completedAt?.toISOString(),
       notes: this.notes,
       feedback: this.feedback,
-      assigneeAttachment: this.assigneeAttachment.toJSON(),
-      assignerAttachment: this.assignerAttachment.toJSON(),
+      performerAttachment: this.performerAttachment?.toJSON(),
+      assignerAttachment: this.assignerAttachment?.toJSON(),
     };
   }
 }

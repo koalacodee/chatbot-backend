@@ -1,36 +1,73 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { TaskRepository } from '../../domain/repositories/task.repository';
-import { Task } from '../../domain/entities/task.entity';
+import { Task, TaskAssignmentType } from '../../domain/entities/task.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
-import { User } from 'src/shared/entities/user.entity';
+import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
+import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
+import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
+import { Employee } from 'src/employee/domain/entities/employee.entity';
 
 @Injectable()
 export class PrismaTaskRepository extends TaskRepository {
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly employeeRepository: EmployeeRepository,
+    private readonly supervisorRepository: SupervisorRepository,
+    private readonly adminRepository: AdminRepository,
+  ) {
     super();
   }
 
   private async toDomain(row: any): Promise<Task> {
-    const [assignee, assigner, approver] = await Promise.all([
-      row.assignee ? User.create(row.assignee, false) : undefined,
-      row.assigner ? User.create(row.assigner, false) : undefined,
-      row.approver ? User.create(row.approver, false) : undefined,
+    const [
+      assignee,
+      assignerSupervisor,
+      assignerAdmin,
+      approverAdmin,
+      approverSupervisor,
+      targetDepartment,
+      targetSubDepartment,
+    ] = await Promise.all([
+      row.assignee ? Employee.create(row.assignee) : undefined,
+      row.assignerSupervisor
+        ? this.supervisorRepository.findById(row.assignerSupervisor.id)
+        : undefined,
+      row.assignerAdmin
+        ? this.adminRepository.findById(row.assignerAdmin.id)
+        : undefined,
+      row.approverAdmin
+        ? this.adminRepository.findById(row.approverAdmin.id)
+        : undefined,
+      row.approverSupervisor
+        ? this.supervisorRepository.findById(row.approverSupervisor.id)
+        : undefined,
+      row.targetDepartment
+        ? Department.create(row.targetDepartment)
+        : undefined,
+      row.targetSubDepartment
+        ? Department.create(row.targetSubDepartment)
+        : undefined,
     ]);
+
+    const assigner = assignerSupervisor ?? assignerAdmin;
+    const approver = approverAdmin ?? approverSupervisor;
 
     return Task.create({
       id: row.id,
       title: row.title,
       description: row.description,
-      department: Department.create(row.department),
-      assignee: assignee!,
-      assigner: assigner!,
+      assignee: assignee,
+      assigner: assigner,
       approver: approver,
       status: row.status,
+      assignmentType: row.assignmentType as TaskAssignmentType,
+      targetDepartment: targetDepartment,
+      targetSubDepartment: targetSubDepartment,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       completedAt: row.completedAt ?? undefined,
-      notes: row.notes ?? undefined,
+      notes: row.assignerNotes ?? undefined,
       feedback: row.feedback ?? undefined,
       // attachments handled separately via AttachmentRepository by targetId
     });
@@ -41,11 +78,27 @@ export class PrismaTaskRepository extends TaskRepository {
       id: task.id.toString(),
       title: task.title,
       description: task.description,
-      departmentId: task.department.id.toString(),
-      assigneeId: task.assignee.id.toString(),
-      assignerId: task.assigner.id.toString(),
-      approverId: task.approver ? task.approver.id.toString() : null,
+      assigneeId: task.assignee?.id.toString() ?? null,
+      assignerSupervisorId:
+        task.assigner && 'supervisor' in task.assigner
+          ? task.assigner.id.toString()
+          : null,
+      assignerAdminId:
+        task.assigner && 'admin' in task.assigner
+          ? task.assigner.id.toString()
+          : null,
+      approverAdminId:
+        task.approver && 'admin' in task.approver
+          ? task.approver.id.toString()
+          : null,
+      approverSupervisorId:
+        task.approver && 'supervisor' in task.approver
+          ? task.approver.id.toString()
+          : null,
       status: task.status,
+      assignmentType: task.assignmentType,
+      targetDepartmentId: task.targetDepartment?.id.toString() ?? null,
+      targetSubDepartmentId: task.targetSubDepartment?.id.toString() ?? null,
       createdAt: task.createdAt,
       updatedAt: new Date(),
       completedAt: task.completedAt ?? null,
@@ -53,16 +106,20 @@ export class PrismaTaskRepository extends TaskRepository {
       feedback: task.feedback ?? null,
     } as const;
 
-    const upserted = await this.prisma.task.upsert({
+    const upsert = await this.prisma.task.upsert({
       where: { id: data.id },
       update: {
         title: data.title,
         description: data.description,
-        departmentId: data.departmentId,
         assigneeId: data.assigneeId,
-        assignerId: data.assignerId,
-        approverId: data.approverId,
+        assignerSupervisorId: data.assignerSupervisorId,
+        assignerAdminId: data.assignerAdminId,
+        approverAdminId: data.approverAdminId,
+        approverSupervisorId: data.approverSupervisorId,
         status: data.status,
+        assignmentType: data.assignmentType,
+        targetDepartmentId: data.targetDepartmentId,
+        targetSubDepartmentId: data.targetSubDepartmentId,
         updatedAt: data.updatedAt,
         completedAt: data.completedAt,
         assignerNotes: data.assignerNotes,
@@ -70,24 +127,30 @@ export class PrismaTaskRepository extends TaskRepository {
       },
       create: data,
       include: {
-        department: true,
         assignee: true,
-        assigner: true,
-        approver: true,
+        assignerSupervisor: true,
+        assignerAdmin: true,
+        approverAdmin: true,
+        approverSupervisor: true,
+        targetDepartment: true,
+        targetSubDepartment: true,
       },
     });
 
-    return this.toDomain(upserted);
+    return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<Task | null> {
     const row = await this.prisma.task.findUnique({
       where: { id },
       include: {
-        department: true,
         assignee: true,
-        assigner: true,
-        approver: true,
+        assignerAdmin: true,
+        assignerSupervisor: true,
+        approverAdmin: true,
+        approverSupervisor: true,
+        targetDepartment: true,
+        targetSubDepartment: true,
       },
     });
     return row ? this.toDomain(row) : null;
@@ -99,10 +162,13 @@ export class PrismaTaskRepository extends TaskRepository {
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        department: true,
         assignee: true,
-        assigner: true,
-        approver: true,
+        assignerAdmin: true,
+        assignerSupervisor: true,
+        approverAdmin: true,
+        approverSupervisor: true,
+        targetDepartment: true,
+        targetSubDepartment: true,
       },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
@@ -126,12 +192,18 @@ export class PrismaTaskRepository extends TaskRepository {
 
   async findByAssignee(assigneeId: string): Promise<Task[]> {
     const rows = await this.prisma.task.findMany({
-      where: { assigneeId },
+      where: {
+        assigneeId,
+        assignmentType: 'INDIVIDUAL',
+      },
       include: {
-        department: true,
         assignee: true,
-        assigner: true,
-        approver: true,
+        assignerAdmin: true,
+        assignerSupervisor: true,
+        approverAdmin: true,
+        approverSupervisor: true,
+        targetDepartment: true,
+        targetSubDepartment: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -140,15 +212,189 @@ export class PrismaTaskRepository extends TaskRepository {
 
   async findByDepartment(departmentId: string): Promise<Task[]> {
     const rows = await this.prisma.task.findMany({
-      where: { departmentId },
+      where: {
+        OR: [
+          { targetDepartmentId: departmentId },
+          { targetSubDepartmentId: departmentId },
+        ],
+      },
       include: {
-        department: true,
         assignee: true,
-        assigner: true,
-        approver: true,
+        assignerSupervisor: true,
+        assignerAdmin: true,
+        approverAdmin: true,
+        approverSupervisor: true,
+        targetDepartment: true,
+        targetSubDepartment: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+    return Promise.all(rows.map((r) => this.toDomain(r)));
+  }
+
+  async findByAssignmentType(
+    assignmentType: string,
+    targetId?: string,
+  ): Promise<Task[]> {
+    const whereClause: any = { assignmentType };
+
+    if (targetId) {
+      if (assignmentType === 'DEPARTMENT') {
+        whereClause.targetDepartmentId = targetId;
+      } else if (assignmentType === 'SUB_DEPARTMENT') {
+        whereClause.targetSubDepartmentId = targetId;
+      } else if (assignmentType === 'INDIVIDUAL') {
+        whereClause.assigneeId = targetId;
+      }
+    }
+
+    const rows = await this.prisma.task.findMany({
+      where: whereClause,
+      include: {
+        assignee: true,
+        assignerAdmin: true,
+        assignerSupervisor: true,
+        approverAdmin: true,
+        approverSupervisor: true,
+        targetDepartment: true,
+        targetSubDepartment: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return Promise.all(rows.map((r) => this.toDomain(r)));
+  }
+
+  async findDepartmentLevelTasks(departmentId?: string): Promise<Task[]> {
+    const whereClause: any = { assignmentType: 'DEPARTMENT' };
+
+    if (departmentId) {
+      whereClause.targetDepartmentId = departmentId;
+    }
+
+    const rows = await this.prisma.task.findMany({
+      where: whereClause,
+      include: {
+        assignerAdmin: true,
+        assignerSupervisor: true,
+        approverAdmin: true,
+        approverSupervisor: true,
+        targetDepartment: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return Promise.all(rows.map((r) => this.toDomain(r)));
+  }
+
+  async findSubDepartmentLevelTasks(subDepartmentId?: string): Promise<Task[]> {
+    const whereClause: any = { assignmentType: 'SUB_DEPARTMENT' };
+
+    if (subDepartmentId) {
+      whereClause.targetSubDepartmentId = subDepartmentId;
+    }
+
+    const rows = await this.prisma.task.findMany({
+      where: whereClause,
+      include: {
+        assignerAdmin: true,
+        assignerSupervisor: true,
+        approverAdmin: true,
+        approverSupervisor: true,
+        targetSubDepartment: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return Promise.all(rows.map((r) => this.toDomain(r)));
+  }
+
+  async findSubIndividualsLevelTasks(individualId?: string): Promise<Task[]> {
+    const whereClause: any = { assignmentType: 'INDIVIDUAL' };
+
+    if (individualId) {
+      whereClause.assigneeId = individualId;
+    }
+
+    const rows = await this.prisma.task.findMany({
+      where: whereClause,
+      include: {
+        assignee: { include: { user: true } },
+        assignerAdmin: true,
+        assignerSupervisor: true,
+        approverAdmin: true,
+        approverSupervisor: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return Promise.all(rows.map((r) => this.toDomain(r)));
+  }
+
+  async findTeamTasks(options: {
+    employeeId?: string;
+    subDepartmentId?: string;
+    departmentId?: string;
+    status?: string[];
+    offset?: number;
+    limit?: number;
+  }): Promise<Task[]> {
+    const {
+      employeeId,
+      subDepartmentId,
+      departmentId,
+      status,
+      offset,
+      limit,
+    } = options;
+
+    const whereClause: any = {};
+    const orConditions: any[] = [];
+
+    // Build OR conditions based on provided filters
+    if (employeeId) {
+      orConditions.push({
+        assigneeId: employeeId,
+        assignmentType: 'INDIVIDUAL',
+      });
+    }
+
+    if (subDepartmentId) {
+      orConditions.push({
+        targetSubDepartmentId: subDepartmentId,
+        assignmentType: 'SUB_DEPARTMENT',
+      });
+    }
+
+    if (departmentId) {
+      orConditions.push({
+        targetDepartmentId: departmentId,
+        assignmentType: 'DEPARTMENT',
+      });
+    }
+
+    // If no specific filters provided, get all tasks
+    if (orConditions.length > 0) {
+      whereClause.OR = orConditions;
+    }
+
+    // Add status filter if provided
+    if (status && status.length > 0) {
+      whereClause.status = { in: status };
+    }
+
+    const rows = await this.prisma.task.findMany({
+      where: whereClause,
+      skip: offset,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        assignee: true,
+        assignerAdmin: true,
+        assignerSupervisor: true,
+        approverAdmin: true,
+        approverSupervisor: true,
+        targetDepartment: true,
+        targetSubDepartment: true,
+      },
+    });
+
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
 }
