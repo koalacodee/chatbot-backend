@@ -45,7 +45,6 @@ RUN \
 # Copy prisma, source, TS config, and your SPAs
 COPY prisma ./prisma
 COPY src ./src
-COPY .env .
 COPY tsconfig*.json ./
 
 # Generate Prisma Client (for build)
@@ -87,7 +86,6 @@ ENV BUN_INSTALL="/root/.bun" \
 # Copy only runtime artifacts from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/.env .env
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/prisma ./prisma
 
