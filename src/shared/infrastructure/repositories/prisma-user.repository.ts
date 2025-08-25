@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { User } from 'src/shared/entities/user.entity';
+import { Roles } from 'src/shared/value-objects/role.vo';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class PrismaUserRepository extends UserRepository {
@@ -17,8 +19,9 @@ export class PrismaUserRepository extends UserRepository {
     if (existing) {
       const toUpdate: Partial<Record<keyof User, any>> = {};
 
-      for (const key of Object.keys(user.toJSON()) as Array<keyof User>) {
-        const newValue = user[key].toString();
+      for (const key of Object.keys(user.toJSON())) {
+        if (!user[key]) continue;
+        const newValue = user[key].toString ? user[key].toString() : user[key];
         const oldValue = existing[key];
 
         if (JSON.stringify(newValue) !== JSON.stringify(oldValue)) {
@@ -30,25 +33,12 @@ export class PrismaUserRepository extends UserRepository {
         return this.mapToDomain(existing);
       }
 
-      if ('departmentId' in toUpdate) {
-        const { departmentId, ...rest } = toUpdate;
-        return this.mapToDomain(
-          await this.prisma.user.update({
-            where: { id: user.id },
-            data: {
-              ...rest,
-              department: { connect: { id: departmentId } },
-            },
-          }),
-        );
-      } else {
-        return this.mapToDomain(
-          await this.prisma.user.update({
-            where: { id: user.id },
-            data: toUpdate,
-          }),
-        );
-      }
+      return this.mapToDomain(
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: toUpdate,
+        }),
+      );
     }
 
     // create logic
@@ -59,8 +49,10 @@ export class PrismaUserRepository extends UserRepository {
           name: user.name,
           email: user.email.toString(),
           password: user.password.toString(),
-          role: user.role.getRole(),
-          department: { connect: { id: user.departmentId.toString() } },
+          role: user.role.getRole() as UserRole,
+          username: user.username,
+          employeeId: user.employeeId,
+          jobTitle: user.jobTitle,
         },
       }),
     );
@@ -71,16 +63,15 @@ export class PrismaUserRepository extends UserRepository {
     return count > 0;
   }
 
-  async findByEmail(email: string): Promise<User> {
+  async findByEmail(email: string): Promise<User | null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) throw new NotFoundException({ email: 'user_not_found' });
-    return await this.mapToDomain(user);
+
+    return (await user) ? this.mapToDomain(user) : null;
   }
 
-  async findById(id: string): Promise<User> {
+  async findById(id: string): Promise<User | null> {
     const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException({ email: 'user_not_found' });
-    return await this.mapToDomain(user);
+    return (await user) ? this.mapToDomain(user) : null;
   }
 
   private async mapToDomain(user: any): Promise<User> {
@@ -91,8 +82,49 @@ export class PrismaUserRepository extends UserRepository {
         password: user.password,
         role: user.role,
         id: user.id,
+        username: user.username,
+        jobTitle: user.jobTitle,
+        employeeId: user.employeeId,
       },
       false,
     );
+  }
+
+  async existsById(id: string): Promise<boolean> {
+    const count = await this.prisma.user.count({ where: { id } });
+    return count > 0;
+  }
+
+  async searchSupervisors(search: string): Promise<User[]> {
+    const users = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { name: { contains: search } },
+          { id: search },
+          { email: { contains: search } },
+        ],
+        role: Roles.SUPERVISOR,
+      },
+    });
+    return Promise.all(users.map((user) => this.mapToDomain(user)));
+  }
+
+  async findByUsername(username: string): Promise<User | null> {
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    return user ? this.mapToDomain(user) : null;
+  }
+
+  async findByEmployeeId(employeeId: string): Promise<User | null> {
+    const user = await this.prisma.user.findUnique({ where: { employeeId } });
+    return user ? this.mapToDomain(user) : null;
+  }
+
+  async findBySupervisorId(id: string): Promise<User> {
+    const user = await this.prisma.user.findFirst({
+      where: { supervisor: { id } },
+    });
+    console.log(user);
+
+    return user ? this.mapToDomain(user) : null;
   }
 }

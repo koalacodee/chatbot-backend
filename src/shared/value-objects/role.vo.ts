@@ -1,9 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 
 export enum Roles {
-  MANAGER = 'MANAGER',
+  SUPERVISOR = 'SUPERVISOR',
   ADMIN = 'ADMIN',
   EMPLOYEE = 'EMPLOYEE',
+  DRIVER = 'DRIVER',
+  GUEST = 'GUEST',
 }
 
 export class Role {

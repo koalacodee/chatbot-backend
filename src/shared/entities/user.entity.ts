@@ -9,8 +9,11 @@ import { UUID } from '../value-objects/uuid.vo';
 export interface UserOptions {
   name: string;
   email: string;
+  username: string;
   password: string;
   role: Roles;
+  employeeId?: string;
+  jobTitle?: string;
   departmentId?: string;
   id?: string;
 }
@@ -19,23 +22,32 @@ export class User {
   private _id: string;
   private _name: string;
   private _email: Email;
+  private _username: string;
   private _password: Password;
   private _role: Role;
+  private _employeeId?: string;
+  private _jobTitle?: string;
   private _departmentId?: UUID;
 
   private constructor(
     id: string,
     name: string,
     email: Email,
+    username: string,
     password: Password,
     role: Role,
+    employeeId?: string,
+    jobTitle?: string,
     departmentId?: UUID,
   ) {
     this._id = id;
     this._name = name;
     this._email = email;
+    this._username = username;
     this._password = password;
     this._role = role;
+    this._employeeId = employeeId;
+    this._jobTitle = jobTitle;
     this._departmentId = departmentId;
   }
 
@@ -53,8 +65,11 @@ export class User {
       options.id || randomUUID(),
       options.name,
       email,
+      options.username,
       password,
       role,
+      options.employeeId,
+      options.jobTitle,
       options.departmentId ? UUID.create(options.departmentId) : undefined,
     );
   }
@@ -72,12 +87,24 @@ export class User {
     return this._email;
   }
 
+  get username(): string {
+    return this._username;
+  }
+
   get password(): Password {
     return this._password;
   }
 
   get role(): Role {
     return this._role;
+  }
+
+  get employeeId(): string | undefined {
+    return this._employeeId;
+  }
+
+  get jobTitle(): string | undefined {
+    return this._jobTitle;
   }
 
   get departmentId(): UUID | undefined {
@@ -104,9 +131,19 @@ export class User {
     this._departmentId = newDepartmentId;
   }
 
-  async changePassword(oldPlain: string, newPlain: string) {
-    await this._password.verify(oldPlain);
+  set employeeId(value: string) {
+    this._employeeId = value;
+  }
 
+  set jobTitle(value: string) {
+    this._jobTitle = value;
+  }
+
+  set username(value: string) {
+    this._username = value;
+  }
+
+  async changePassword(newPlain: string) {
     this._password = await Password.fromPlain(newPlain);
   }
 
@@ -116,8 +153,24 @@ export class User {
       id: this._id,
       name: this._name,
       email: this._email.toString(),
+      username: this._username,
       password: this._password.toString(),
       role: this._role.toString(),
+      employeeId: this._employeeId,
+      jobTitle: this._jobTitle,
+      departmentId: this._departmentId,
+    };
+  }
+
+  withoutPassword() {
+    return {
+      id: this._id,
+      name: this._name,
+      email: this._email.toString(),
+      username: this._username,
+      role: this._role.toString(),
+      employeeId: this._employeeId,
+      jobTitle: this._jobTitle,
       departmentId: this._departmentId,
     };
   }
