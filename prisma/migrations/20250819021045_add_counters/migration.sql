@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "questions" ADD COLUMN     "dissatisfaction" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "satisfaction" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "views" INTEGER NOT NULL DEFAULT 0;
