@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/prisma/prisma.service';
-import { ViolationRepository } from '../../domain/repositories/violation.repository';
+import {
+  ViolationFilters,
+  ViolationRepository,
+} from '../../domain/repositories/violation.repository';
 import { Violation } from '../../domain/entities/violation.entity';
 import { ViolationRule } from '../../domain/entities/violation-rule.entity';
 import { Vehicle } from 'src/vehicle/domain/entities/vehicle.entity';
-import { VehicleLicense } from 'src/vehicle/domain/entities/vehicle-license.entity';
 import { User } from 'src/shared/entities/user.entity';
+import { VehicleLicense } from 'src/vehicle-license/domain/entities/vehicle-license.entity';
 
 @Injectable()
 export class PrismaViolationRepository extends ViolationRepository {
@@ -82,7 +85,7 @@ export class PrismaViolationRepository extends ViolationRepository {
   }
 
   async save(violation: Violation): Promise<Violation> {
-    const upserted = await this.prisma.violation.upsert({
+    const upsert = await this.prisma.violation.upsert({
       where: { id: violation.id },
       update: {
         description: violation.description,
@@ -113,7 +116,7 @@ export class PrismaViolationRepository extends ViolationRepository {
       },
     });
 
-    return this.toDomain(upserted);
+    return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<Violation | null> {
@@ -154,8 +157,16 @@ export class PrismaViolationRepository extends ViolationRepository {
     return count > 0;
   }
 
-  async count(): Promise<number> {
-    return this.prisma.violation.count();
+  async count(filters: ViolationFilters): Promise<number> {
+    return this.prisma.violation.count({
+      where: {
+        OR: [
+          { vehicleId: filters.vehicleId },
+          { driverId: filters.driverId },
+          { isPaid: filters.status === 'paid' ? true : false },
+        ],
+      },
+    });
   }
 
   async findByDriverId(driverId: string): Promise<Violation[]> {
@@ -195,5 +206,26 @@ export class PrismaViolationRepository extends ViolationRepository {
       orderBy: { createdAt: 'desc' },
     });
     return Promise.all(rows.map((r: any) => this.toDomain(r)));
+  }
+
+  async findWithFilters(
+    filters: ViolationFilters,
+    offset?: number,
+    limit?: number,
+  ): Promise<Violation[]> {
+    const orConditions = [];
+    if (filters.vehicleId) orConditions.push({ vehicleId: filters.vehicleId });
+    if (filters.driverId) orConditions.push({ driverId: filters.driverId });
+    if (filters.status)
+      orConditions.push({ isPaid: filters.status === 'paid' });
+
+    const violations = await this.prisma.violation.findMany({
+      where: orConditions.length ? { OR: orConditions } : undefined,
+      skip: offset,
+      take: limit,
+    });
+
+    // assuming toDomain is async
+    return Promise.all(violations.map(this.toDomain));
   }
 }

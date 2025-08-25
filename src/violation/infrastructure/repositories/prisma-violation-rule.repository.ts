@@ -23,7 +23,7 @@ export class PrismaViolationRuleRepository extends ViolationRuleRepository {
   }
 
   async save(rule: ViolationRule): Promise<ViolationRule> {
-    const upserted = await this.prisma.violationRule.upsert({
+    const upsert = await this.prisma.violationRule.upsert({
       where: { id: rule.id },
       update: {
         type: PrismaViolationType[
@@ -45,7 +45,7 @@ export class PrismaViolationRuleRepository extends ViolationRuleRepository {
         isEnabled: rule.isEnabled,
       },
     });
-    return this.toDomain(upserted);
+    return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<ViolationRule | null> {
