@@ -16,6 +16,7 @@ import { KnowledgeChunkModule } from 'src/knowledge-chunks/knowledge-chunk.modul
 import { GetAllConversationsUseCase } from './application/use-cases/get-all-conversations.use-case';
 import { GetConversationUseCase } from './application/use-cases/get-conversation.use-case';
 import { QuestionModule } from 'src/questions/question.module';
+import { GuestModule } from 'src/guest/guest.module';
 
 @Module({
   providers: [

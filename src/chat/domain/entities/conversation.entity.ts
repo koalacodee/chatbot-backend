@@ -1,11 +1,11 @@
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { Message } from './message.entity';
 import { RetrievedChunk } from './retrieved-chunk.entity';
+import { Guest } from 'src/guest/domain/entities/guest.entity';
 
 interface ConversationOptions {
   id?: UUID;
-  userId?: UUID;
-  guestId?: UUID;
+  guest: Guest;
   startedAt?: Date;
   endedAt?: Date;
   updatedAt?: Date;
@@ -15,8 +15,7 @@ interface ConversationOptions {
 
 export class Conversation {
   private readonly _id: UUID;
-  private _userId?: UUID;
-  private _guestId?: UUID;
+  private _guest: Guest;
   private _startedAt: Date;
   private _updatedAt: Date;
   private _endedAt?: Date;
@@ -24,8 +23,7 @@ export class Conversation {
   private _retrievedChunks: RetrievedChunk[];
   private constructor(options: ConversationOptions) {
     this._id = options.id || UUID.create();
-    this._userId = options.userId;
-    this._guestId = options.guestId;
+    this._guest = options.guest;
     this._startedAt = options.startedAt || new Date();
     this._endedAt = options.endedAt;
     this._updatedAt = options.updatedAt || new Date();
@@ -38,12 +36,8 @@ export class Conversation {
     return this._id;
   }
 
-  get userId(): UUID | undefined {
-    return this._userId;
-  }
-
-  get guestId(): UUID | undefined {
-    return this._guestId;
+  get guest(): Guest {
+    return this._guest;
   }
 
   get startedAt(): Date {
@@ -67,12 +61,8 @@ export class Conversation {
   }
 
   // Setters
-  set userId(value: UUID | undefined) {
-    this._userId = value;
-  }
-
-  set guestId(value: UUID | undefined) {
-    this._guestId = value;
+  set guest(value: Guest) {
+    this._guest = value;
   }
 
   set endedAt(value: Date | undefined) {
@@ -109,8 +99,7 @@ export class Conversation {
   toJSON() {
     return {
       id: this._id.value,
-      userId: this._userId?.value,
-      guestId: this._guestId?.value,
+      guestId: this._guest.id.value,
       startedAt: this._startedAt.toISOString(),
       endedAt: this._endedAt?.toISOString(),
       messages: this._messages.map((msg) => msg.toJSON()),

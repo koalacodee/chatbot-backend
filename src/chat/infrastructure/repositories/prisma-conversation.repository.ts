@@ -13,8 +13,7 @@ export class PrismaConversationRepository extends ConversationRepository {
   private toDomain(conversation: any): Conversation {
     return Conversation.create({
       id: conversation.id,
-      userId: conversation.userId,
-      guestId: conversation.guestId,
+      guest: conversation.guest,
       startedAt: conversation.startedAt,
       updatedAt: conversation.updatedAt,
       endedAt: conversation.endedAt,
@@ -39,20 +38,17 @@ export class PrismaConversationRepository extends ConversationRepository {
       startedAt: conversation.startedAt,
       updatedAt: conversation.updatedAt,
       endedAt: conversation.endedAt,
-      user: conversation.userId
-        ? { connect: { id: conversation.userId.toString() } }
-        : undefined,
-      guestId: conversation.guestId
-        ? conversation.guestId.toString()
+      guest: conversation.guest
+        ? { connect: { id: conversation.guest.id.value } }
         : undefined,
     };
-    const upserted = await this.prisma.conversation.upsert({
+    const upsert = await this.prisma.conversation.upsert({
       where: { id: data.id },
       update: data,
       create: data,
       include: { messages: { orderBy: { createdAt: 'desc' } } },
     });
-    return this.toDomain(upserted);
+    return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<Conversation | null> {
@@ -84,13 +80,10 @@ export class PrismaConversationRepository extends ConversationRepository {
     return this.prisma.conversation.count();
   }
 
-  async findByGuestOrUser(
-    userId?: string,
-    guestId?: string,
-  ): Promise<Conversation[] | null> {
+  async findByUser(userId?: string): Promise<Conversation[] | null> {
     const conversation = await this.prisma.conversation.findMany({
       where: {
-        OR: [{ userId: userId }, { guestId: guestId }],
+        OR: [{ guest: { id: userId } }],
       },
       include: { messages: { orderBy: { createdAt: 'desc' } } },
       orderBy: { updatedAt: 'desc' },

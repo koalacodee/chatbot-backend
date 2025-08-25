@@ -15,17 +15,14 @@ interface GetConversationInput {
 export class GetConversationUseCase {
   constructor(private readonly conversationRepo: ConversationRepository) {}
 
-  async execute({ id, userId, guestId }: GetConversationInput) {
+  async execute({ id, guestId }: GetConversationInput) {
     const conversation = await this.conversationRepo.findById(id);
 
     if (!conversation) {
       throw new NotFoundException({ id: 'conversation_not_found' });
     }
 
-    if (conversation.userId && conversation.userId.toString() !== userId) {
-      throw new ForbiddenException('conversation_not_owned');
-    }
-    if (conversation.guestId && conversation.guestId.toString() !== guestId) {
+    if (conversation.guest.id.value !== guestId) {
       throw new ForbiddenException('conversation_not_owned');
     }
 

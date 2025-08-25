@@ -26,12 +26,12 @@ export class PrismaRetrievedChunkRepository extends RetrievedChunkRepository {
       score: chunk.score,
       retrievedAt: chunk.retrievedAt,
     };
-    const upserted = await this.prisma.retrievedChunk.upsert({
+    const upsert = await this.prisma.retrievedChunk.upsert({
       where: { id: data.id },
       update: data,
       create: data,
     });
-    return this.toDomain(upserted);
+    return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<RetrievedChunk | null> {

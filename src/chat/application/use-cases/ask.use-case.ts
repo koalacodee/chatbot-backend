@@ -14,15 +14,14 @@ import { Vector } from 'src/shared/value-objects/vector.vo';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { Conversation } from 'src/chat/domain/entities/conversation.entity';
-import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomInt } from 'crypto';
 import { QuestionRepository } from 'src/questions/domain/repositories/question.repository';
+import { GuestRepository } from 'src/guest/domain/repositories/guest.repository';
 
 interface AskUseCaseInput {
   question: string;
   conversationId?: string;
-  userId?: string;
   guestId?: string;
   faqId?: string;
 }
@@ -39,26 +38,15 @@ export class AskUseCase {
     private readonly conversationRepo: ConversationRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly questionRepo: QuestionRepository,
+    private readonly guestRepo: GuestRepository,
     @InjectQueue('chat') private readonly queue: Queue,
   ) {}
 
-  async execute({
-    question,
-    conversationId,
-    userId,
-    guestId,
-    faqId,
-  }: AskUseCaseInput) {
+  async execute({ question, conversationId, guestId, faqId }: AskUseCaseInput) {
     this.logger.log(
-      `Starting execute with question: ${question}, conversationId: ${conversationId}, userId: ${userId}, guestId: ${guestId}, faqId: ${faqId}`,
+      `Starting execute with question: ${question}, conversationId: ${conversationId}, faqId: ${faqId}`,
     );
 
-    if (userId && guestId) {
-      this.logger.log(
-        'Both userId and guestId provided, defaulting to userId only',
-      );
-      guestId = undefined;
-    }
     if (!faqId && !question)
       throw new BadRequestException('Either faqId or question is required');
 
@@ -73,7 +61,6 @@ export class AskUseCase {
         faqId,
         conversationExists,
         conversationId,
-        userId,
         guestId,
       );
     }
@@ -83,7 +70,6 @@ export class AskUseCase {
       question,
       conversationExists,
       conversationId,
-      userId,
       guestId,
     );
   }
@@ -92,7 +78,6 @@ export class AskUseCase {
     faqId: string,
     conversationExists: boolean | null,
     conversationId?: string,
-    userId?: string,
     guestId?: string,
   ) {
     this.logger.log(`Starting FAQ path handling for faqId: ${faqId}`);
@@ -130,12 +115,11 @@ export class AskUseCase {
 
     if (!conversationExists && chunks.length === 0) {
       this.logger.log('No relevant chunks found, creating support ticket');
-      return this.createTicketAndReturn(faq.text, userId, guestId);
+      return this.createTicketAndReturn(faq.text, guestId);
     }
 
     const conversation = await this.getOrCreateConversation(
       conversationId,
-      userId,
       guestId,
     );
     this.logger.log(`Processing chat with conversation id: ${conversation.id}`);
@@ -146,7 +130,6 @@ export class AskUseCase {
     question: string,
     conversationExists: boolean | null,
     conversationId?: string,
-    userId?: string,
     guestId?: string,
   ) {
     this.logger.log('Starting normal question path handling');
@@ -156,12 +139,11 @@ export class AskUseCase {
 
     if (!conversationExists && chunks.length === 0) {
       this.logger.log('No relevant chunks found, creating support ticket');
-      return this.createTicketAndReturn(question, userId, guestId);
+      return this.createTicketAndReturn(question, guestId);
     }
 
     const conversation = await this.getOrCreateConversation(
       conversationId,
-      userId,
       guestId,
     );
     this.logger.log(`Processing chat with conversation id: ${conversation.id}`);
@@ -187,17 +169,12 @@ export class AskUseCase {
     return chunks;
   }
 
-  private createTicketAndReturn(
-    question: string,
-    userId?: string,
-    guestId?: string,
-  ) {
+  private createTicketAndReturn(question: string, guestId?: string) {
     const ticket = randomInt(1e7, 1e8);
     this.logger.log(`Creating support ticket with code: ${ticket}`);
 
     this.eventEmitter.emit('chatbot.unanswered', {
       question,
-      userId,
       guestId,
       ticketCode: ticket,
     });
@@ -232,29 +209,25 @@ export class AskUseCase {
 
   private async getOrCreateConversation(
     conversationId: string | undefined,
-    userId?: string,
     guestId?: string,
   ) {
     this.logger.log(
-      `Getting or creating conversation for ${userId ? 'user' : 'guest'}`,
+      `Getting or creating conversation for ${guestId ? 'guest' : 'user'}`,
     );
     return this.ensureConversation({
       id: conversationId,
-      type: userId ? 'user' : 'guest',
-      userOrGuestId: userId ?? guestId,
+      guestId,
     });
   }
 
   private async ensureConversation({
     id,
-    type,
-    userOrGuestId,
+    guestId,
   }: {
     id?: string;
-    type: 'user' | 'guest';
-    userOrGuestId: string;
+    guestId?: string;
   }) {
-    this.logger.log(`Ensuring conversation: ${id || 'new'} for ${type}`);
+    this.logger.log(`Ensuring conversation: ${id || 'new'} for ${guestId}`);
 
     if (id) {
       const c = await this.conversationRepo.findById(id);
@@ -262,14 +235,7 @@ export class AskUseCase {
         this.logger.warn(`Conversation not found: ${id}`);
         throw new NotFoundException('conversation_not_found');
       }
-
-      if (type === 'guest' && c.guestId.toString() !== userOrGuestId) {
-        this.logger.warn(
-          `Unauthorized guest access attempt for conversation: ${id}`,
-        );
-        throw new ForbiddenException('conversation_not_owned');
-      }
-      if (type === 'user' && c.userId.toString() !== userOrGuestId) {
+      if (c.guest.id.value !== guestId) {
         this.logger.warn(
           `Unauthorized user access attempt for conversation: ${id}`,
         );
@@ -282,8 +248,7 @@ export class AskUseCase {
     this.logger.log('Creating new conversation');
     return this.conversationRepo.save(
       Conversation.create({
-        userId: type === 'user' ? UUID.create(userOrGuestId) : undefined,
-        guestId: type === 'guest' ? UUID.create(userOrGuestId) : undefined,
+        guest: await this.guestRepo.findById(guestId),
       }),
     );
   }

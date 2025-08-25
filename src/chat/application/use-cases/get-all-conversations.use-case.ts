@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { ConversationRepository } from 'src/chat/domain/repositories/conversation.repository';
 
 interface GetAllConversationsInput {
-  userId?: string;
   guestId?: string;
 }
 
@@ -10,13 +9,9 @@ interface GetAllConversationsInput {
 export class GetAllConversationsUseCase {
   constructor(private readonly conversationRepo: ConversationRepository) {}
 
-  async execute({ userId, guestId }: GetAllConversationsInput) {
-    if (!!userId && !!guestId) {
-      guestId = undefined;
-    }
-
+  async execute({ guestId }: GetAllConversationsInput) {
     return this.conversationRepo
-      .findByGuestOrUser(userId, guestId)
+      .findByUser(guestId)
       .then((conversations) =>
         conversations.map((conversation) => conversation.toJSON()),
       );
