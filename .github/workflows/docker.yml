@@ -28,7 +28,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/nestjs-bun:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/chatbot-backend:latest
 
       - name: Chill & Celebrate 🎉
         run: echo "Docker image built and pushed successfully! Time to chill 😎"
