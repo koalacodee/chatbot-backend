@@ -9,5 +9,6 @@ export abstract class GuestRepository {
   abstract removeById(id: string): Promise<Guest | null>;
   abstract exists(id: string): Promise<boolean>;
   abstract existsByEmail(email: string): Promise<boolean>;
+  abstract existsByPhone(email: string): Promise<boolean>;
   abstract count(): Promise<number>;
 }

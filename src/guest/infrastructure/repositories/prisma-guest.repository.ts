@@ -2,11 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { GuestRepository } from '../../domain/repositories/guest.repository';
 import { Guest } from '../../domain/entities/guest.entity';
-import { Email } from 'src/shared/value-objects/email.vo';
-import { RefreshToken } from 'src/auth/domain/entities/refresh-token.entity';
-import { Conversation } from 'src/chat/domain/entities/conversation.entity';
-import { Interaction } from 'src/shared/entities/interactions.entity';
-import { SupportTicket } from 'src/support-tickets/domain/entities/support-ticket.entity';
 
 @Injectable()
 export class PrismaGuestRepository extends GuestRepository {
@@ -15,24 +10,7 @@ export class PrismaGuestRepository extends GuestRepository {
   }
 
   private toDomain(row: any): Guest {
-    return Guest.create({
-      id: row.id,
-      name: row.name,
-      email: Email.create(row.email),
-      phone: row.phone,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      tokens: row.refreshTokens.map((token) => new RefreshToken(token)),
-      conversations: row.conversations.map((conversation) =>
-        Conversation.create(conversation),
-      ),
-      interactions: row.interactions.map(
-        (interaction) => new Interaction(interaction),
-      ),
-      supportTickets: row.supportTickets.map((ticket) =>
-        SupportTicket.create(ticket),
-      ),
-    });
+    return Guest.fromJSON(row);
   }
 
   async save(guest: Guest): Promise<Guest> {
@@ -45,7 +23,7 @@ export class PrismaGuestRepository extends GuestRepository {
       updatedAt: new Date(),
     };
 
-    const upserted = await this.prisma.guest.upsert({
+    const upsert = await this.prisma.guest.upsert({
       where: { id: data.id },
       update: {
         name: data.name,
@@ -56,13 +34,12 @@ export class PrismaGuestRepository extends GuestRepository {
       create: data,
       include: {
         conversations: true,
-        refreshTokens: true,
         interactions: true,
         supportTickets: true,
       },
     });
 
-    return this.toDomain(upserted);
+    return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<Guest | null> {
@@ -70,7 +47,6 @@ export class PrismaGuestRepository extends GuestRepository {
       where: { id },
       include: {
         conversations: true,
-        refreshTokens: true,
         interactions: true,
         supportTickets: true,
       },
@@ -83,7 +59,6 @@ export class PrismaGuestRepository extends GuestRepository {
       where: { email },
       include: {
         conversations: true,
-        refreshTokens: true,
         interactions: true,
         supportTickets: true,
       },
@@ -96,7 +71,6 @@ export class PrismaGuestRepository extends GuestRepository {
       where: { phone },
       include: {
         conversations: true,
-        refreshTokens: true,
         interactions: true,
         supportTickets: true,
       },
@@ -111,7 +85,6 @@ export class PrismaGuestRepository extends GuestRepository {
       orderBy: { createdAt: 'desc' },
       include: {
         conversations: true,
-        refreshTokens: true,
         interactions: true,
         supportTickets: true,
       },
@@ -138,5 +111,10 @@ export class PrismaGuestRepository extends GuestRepository {
 
   async count(): Promise<number> {
     return this.prisma.guest.count();
+  }
+
+  async existsByPhone(phone: string): Promise<boolean> {
+    const count = await this.prisma.guest.count({ where: { phone } });
+    return count > 0;
   }
 }

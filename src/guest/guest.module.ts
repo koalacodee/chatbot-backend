@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { GuestRepository } from './domain/repositories/guest.repository';
 import { PrismaGuestRepository } from './infrastructure/repositories/prisma-guest.repository';
 
+@Global()
 @Module({
   providers: [
     {
