@@ -6,7 +6,6 @@ import {
   Param,
   UseGuards,
   Req,
-  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,10 +20,7 @@ import {
   CreateTicketDto,
   CreateTicketResponseDto,
 } from './dtos/create-ticket.dto';
-import {
-  TrackTicketDto,
-  TrackTicketResponseDto,
-} from './dtos/track-ticket.dto';
+import { TrackTicketResponseDto } from './dtos/track-ticket.dto';
 import {
   AnswerTicketDto,
   AnswerTicketResponseDto,
@@ -32,9 +28,7 @@ import {
 import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/rbac/guards/roles.guard';
 import { UseRoles } from 'src/rbac/decorators/roles.decorator';
-import { Request } from 'express';
 import { Roles } from 'src/shared/value-objects/role.vo';
-import { GuestInterceptor } from 'src/chat/infrastructure/interceptors/guest.interceptor';
 
 @ApiTags('tickets')
 @Controller('tickets')
@@ -59,12 +53,12 @@ export class TicketController {
     @Body() createTicketDto: CreateTicketDto,
     @Req() req: any,
   ): Promise<CreateTicketResponseDto> {
-    const user = req.user as any;
+    const guest = req.guest as any;
 
     return this.createTicketUseCase.execute({
       departmentId: createTicketDto.departmentId,
       question: createTicketDto.question,
-      userId: user?.id,
+      guestId: guest?.id,
     });
   }
 
@@ -77,8 +71,6 @@ export class TicketController {
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'Department or user not found' })
-  // @UseGuards(JwtAuthGuard)
-  @UseInterceptors(GuestInterceptor)
   async createTicketGuest(
     @Body() createTicketDto: CreateTicketDto,
     @Req() req: any,
@@ -106,11 +98,11 @@ export class TicketController {
     @Param('ticketCode') ticketCode: string,
     @Req() req: any,
   ): Promise<TrackTicketResponseDto> {
-    const user = req.user as any;
+    const guest = req.guest as any;
 
     return this.trackTicketUseCase.execute({
       ticketCode,
-      userId: user?.id,
+      guestId: guest?.id,
     });
   }
 
@@ -123,7 +115,6 @@ export class TicketController {
   })
   @ApiResponse({ status: 403, description: 'Access denied' })
   @ApiResponse({ status: 404, description: 'Ticket not found' })
-  @UseInterceptors(GuestInterceptor)
   async trackTicketGuest(
     @Param('ticketCode') ticketCode: string,
     @Req() req: any,
@@ -138,7 +129,7 @@ export class TicketController {
 
   @Post(':ticketId/answer')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.MANAGER, Roles.ADMIN)
+  @UseRoles(Roles.ADMIN, Roles.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Answer a ticket (Admin/Manager only)' })
   @ApiResponse({

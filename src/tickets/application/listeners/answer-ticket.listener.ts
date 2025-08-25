@@ -73,7 +73,7 @@ export class AnswerTicketListener {
     );
 
     answeredTickets.forEach(
-      (ticket) => (ticket.status = TicketStatusEnum.RESOLVED),
+      (ticket) => (ticket.status = TicketStatusEnum.CLOSED),
     );
     if (answeredTickets.length === 0) {
       this.logger.log('No tickets to answer');
@@ -86,21 +86,13 @@ export class AnswerTicketListener {
     const answeredIds = answeredTickets.map((t) => t.id.value);
     this.eventEmitter.emit(TICKET_EVENTS.ANSWERED, { ticketIds: answeredIds });
 
-    const userIds: string[] = [];
     const guestIds: string[] = [];
     for (const ticket of answeredTickets) {
-      if (ticket.user) userIds.push(ticket.user.id);
-      else guestIds.push(ticket.guestId.toString());
+      guestIds.push(ticket.guest.id.value);
     }
 
-    this.logger.log(
-      `Sending notifications to ${userIds.length} users and ${guestIds.length} guests`,
-    );
+    this.logger.log(`Sending notifications to ${guestIds.length} guests`);
     await Promise.all([
-      this.pushNotification.sendToUsers(userIds, {
-        title: 'Ticket Answered',
-        body: 'Your ticket has been answered by a knowledge chunk.',
-      }),
       this.pushNotification.sendToGuests(guestIds, {
         title: 'Ticket Answered',
         body: 'Your ticket has been answered by a knowledge chunk.',

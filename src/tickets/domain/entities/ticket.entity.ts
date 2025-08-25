@@ -8,11 +8,11 @@ import {
 } from '../value-objects/ticket-status.vo';
 import { Point } from 'src/shared/entities/point.entity';
 import { Answer } from './answer.entity';
+import { Guest } from 'src/guest/domain/entities/guest.entity';
 
 export interface TicketCreateRaw {
   id?: string | UUID;
-  user?: User;
-  guestId?: string | UUID;
+  guest?: Guest;
   question: string;
   department: Department;
   ticketCode?: string | TicketCode;
@@ -27,8 +27,7 @@ export interface TicketCreateRaw {
 
 export class Ticket {
   private readonly _id: UUID;
-  private _user?: User;
-  private _guestId?: UUID;
+  private _guest?: Guest;
   private _question: string;
   private _department: Department;
   private readonly _ticketCode: TicketCode;
@@ -43,7 +42,7 @@ export class Ticket {
   private constructor(options: {
     id: UUID;
     user?: User;
-    guestId?: UUID;
+    guest?: Guest;
     question: string;
     department: Department;
     ticketCode?: TicketCode;
@@ -56,8 +55,7 @@ export class Ticket {
     updatedAt?: Date;
   }) {
     this._id = options.id;
-    this._user = options.user;
-    this._guestId = options.guestId;
+    this._guest = options.guest;
     this._question = options.question;
     this._department = options.department;
     this._ticketCode = options.ticketCode ?? TicketCode.create();
@@ -70,12 +68,12 @@ export class Ticket {
     this._updatedAt = options.updatedAt ?? new Date();
   }
 
-  static create(raw: TicketCreateRaw): Ticket {
+  static async create(raw: TicketCreateRaw): Promise<Ticket> {
     const id = raw.id instanceof UUID ? raw.id : UUID.create(raw.id);
-    const guestId = raw.guestId
-      ? raw.guestId instanceof UUID
-        ? raw.guestId
-        : UUID.create(raw.guestId)
+    const guest = raw.guest
+      ? raw.guest instanceof Guest
+        ? raw.guest
+        : await Guest.create(raw.guest)
       : undefined;
     const ticketCode =
       raw.ticketCode instanceof TicketCode
@@ -92,8 +90,7 @@ export class Ticket {
 
     return new Ticket({
       id,
-      user: raw.user,
-      guestId,
+      guest,
       question: raw.question,
       department: raw.department,
       ticketCode,
@@ -112,12 +109,8 @@ export class Ticket {
     return this._id;
   }
 
-  get user(): User | undefined {
-    return this._user;
-  }
-
-  get guestId(): UUID | undefined {
-    return this._guestId;
+  get guest(): Guest | undefined {
+    return this._guest;
   }
 
   get question(): string {
@@ -160,14 +153,10 @@ export class Ticket {
     return this._updatedAt;
   }
 
-  // Setters
-  set user(user: User | undefined) {
-    this._user = user;
-    this._updatedAt = new Date();
-  }
+  // Sette
 
-  set guestId(guestId: UUID | undefined) {
-    this._guestId = guestId;
+  set guest(guest: Guest | undefined) {
+    this._guest = guest;
     this._updatedAt = new Date();
   }
 
@@ -224,8 +213,7 @@ export class Ticket {
   public toPersistence() {
     return {
       id: this._id.toString(),
-      userId: this._user?.id.toString(),
-      guestId: this._guestId?.toString(),
+      guest: this._guest,
       question: this._question,
       departmentId: this._department.id.toString(),
       ticketCode: this._ticketCode.value,

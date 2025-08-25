@@ -1,8 +1,7 @@
 export enum TicketStatusEnum {
-  RESOLVED = 'RESOLVED',
   IN_PROGRESS = 'IN_PROGRESS',
   PENDING = 'PENDING',
-  REJECTED = 'REJECTED',
+  CLOSED = 'CLOSED',
 }
 
 export class TicketStatus {

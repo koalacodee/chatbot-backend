@@ -65,7 +65,7 @@ export class AnswerTicketUseCase {
     const savedAnswer = await this.answerRepository.save(answer);
 
     // Update ticket status to answered
-    ticket.status = TicketStatusEnum.RESOLVED;
+    ticket.status = TicketStatusEnum.CLOSED;
     await this.ticketRepository.save(ticket);
 
     // Add answer to ticket entity

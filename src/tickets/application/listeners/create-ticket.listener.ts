@@ -10,6 +10,7 @@ import { PointRepository } from 'src/shared/repositories/point.repository';
 import { EmbeddingService } from 'src/shared/embedding/embedding-service.interface';
 import { Vector } from 'src/shared/value-objects/vector.vo';
 import { Point } from 'src/shared/entities/point.entity';
+import { GuestRepository } from 'src/guest/domain/repositories/guest.repository';
 
 @Injectable()
 export class CreateTicketListener {
@@ -27,6 +28,7 @@ export class CreateTicketListener {
     private readonly userRepo: UserRepository,
     private readonly pointRepo: PointRepository,
     private readonly embeddingService: EmbeddingService,
+    private readonly guestRepo: GuestRepository,
   ) {}
 
   @OnEvent('chatbot.unanswered')
@@ -81,7 +83,8 @@ export class CreateTicketListener {
     }
 
     const user = userId ? await this.userRepo.findById(userId) : undefined;
-    const isGuest = !userId && guestId;
+    const guest =
+      !userId && guestId ? await this.guestRepo.findById(guestId) : undefined;
 
     try {
       // Create vector embedding for the question
@@ -98,11 +101,10 @@ export class CreateTicketListener {
       const savedPoint = await this.pointRepo.save(point, 'tickets');
 
       // Create the ticket with the associated point
-      const newTicket = Ticket.create({
+      const newTicket = await Ticket.create({
         department: matchedDepartment,
         question,
-        guestId: isGuest ? guestId : undefined,
-        user: user,
+        guest,
         ticketCode: `${ticketCode}`,
         pointId: savedPoint.id.value,
       });
@@ -118,11 +120,10 @@ export class CreateTicketListener {
       this.logger.error(`Failed to create ticket with point: ${error.message}`);
 
       // Fallback: create ticket without point if embedding fails
-      const newTicket = Ticket.create({
+      const newTicket = await Ticket.create({
         department: matchedDepartment,
         question,
-        guestId: isGuest ? guestId : undefined,
-        user: user,
+        guest,
         ticketCode: `${ticketCode}`,
       });
 

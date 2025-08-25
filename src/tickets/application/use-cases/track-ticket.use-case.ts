@@ -8,7 +8,6 @@ import { TicketRepository } from 'src/tickets/domain/repositories/ticket.reposit
 
 interface TrackTicketInput {
   ticketCode: string;
-  userId?: string;
   guestId?: string;
 }
 
@@ -19,10 +18,7 @@ export class TrackTicketUseCase {
     private readonly answerRepo: AnswerRepository,
   ) {}
 
-  async execute({ ticketCode, userId, guestId }: TrackTicketInput) {
-    if (!!guestId && !!userId) {
-      guestId = undefined;
-    }
+  async execute({ ticketCode, guestId }: TrackTicketInput) {
     const ticket = await this.ticketRepo.findByTicketCode(ticketCode);
 
     console.log(ticket);
@@ -31,10 +27,7 @@ export class TrackTicketUseCase {
       throw new NotFoundException({ ticket: 'ticket_not_found' });
     }
 
-    if (
-      (ticket.user && ticket.user.id !== userId) ||
-      ticket.guestId.toString() !== guestId
-    ) {
+    if (ticket.guest?.id.toString() !== guestId) {
       throw new ForbiddenException({ ticket: 'not_owned' });
     }
 
