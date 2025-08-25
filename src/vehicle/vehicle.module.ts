@@ -1,17 +1,35 @@
 import { Module } from '@nestjs/common';
 import { VehicleRepository } from './domain/repositories/vehicle.repository';
-import { VehicleLicenseRepository } from './domain/repositories/vehicle-license.repository';
 import { PrismaVehicleRepository } from './infrastructure/repositories/prisma-vehicle.repository';
-import { PrismaVehicleLicenseRepository } from './infrastructure/repositories/prisma-vehicle-license.repository';
+import { VehicleController } from './interface/http/vehicle.controller';
+import {
+  CreateVehicleUseCase,
+  UpdateVehicleUseCase,
+  GetVehicleUseCase,
+  GetAllVehiclesUseCase,
+  DeleteVehicleUseCase,
+  CountVehiclesUseCase,
+  AssignDriverToVehicleUseCase,
+  UpdateVehicleStatusUseCase,
+  SearchVehiclesUseCase,
+} from './application/use-cases';
+import { VehicleLicenseModule } from 'src/vehicle-license/vehicle-license.module';
 
 @Module({
+  controllers: [VehicleController],
   providers: [
     { provide: VehicleRepository, useClass: PrismaVehicleRepository },
-    {
-      provide: VehicleLicenseRepository,
-      useClass: PrismaVehicleLicenseRepository,
-    },
+    CreateVehicleUseCase,
+    UpdateVehicleUseCase,
+    GetVehicleUseCase,
+    GetAllVehiclesUseCase,
+    DeleteVehicleUseCase,
+    CountVehiclesUseCase,
+    AssignDriverToVehicleUseCase,
+    UpdateVehicleStatusUseCase,
+    SearchVehiclesUseCase,
   ],
-  exports: [VehicleRepository, VehicleLicenseRepository],
+  exports: [VehicleRepository],
+  imports: [VehicleLicenseModule],
 })
 export class VehicleModule {}

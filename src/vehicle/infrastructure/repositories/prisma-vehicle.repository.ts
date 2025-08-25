@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { VehicleRepository } from '../../domain/repositories/vehicle.repository';
 import { Vehicle } from '../../domain/entities/vehicle.entity';
-import { VehicleLicense } from '../../domain/entities/vehicle-license.entity';
+import { VehicleLicense } from 'src/vehicle-license/domain/entities/vehicle-license.entity';
 import { VehicleStatus as PrismaVehicleStatus } from '@prisma/client';
 
 @Injectable()
@@ -13,10 +13,26 @@ export class PrismaVehicleRepository extends VehicleRepository {
 
   private toDomain(row: any): Vehicle {
     // Map license first using minimal structure expected by VehicleLicense
+    const vehicle = Vehicle.create({
+      id: row.id,
+      make: row.make,
+      model: row.model,
+      year: row.year,
+      plateNumber: row.plateNumber,
+      vin: row.vin,
+      status: row.status,
+      driver: row.driver ?? null,
+      license: undefined as any, // temporarily set; corrected below
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      notes: row.notes ?? undefined,
+      nextMaintenanceDate: row.nextMaintenanceDate ?? undefined,
+    });
+
     const license: VehicleLicense | undefined = row.license
       ? VehicleLicense.create({
           id: row.license.id,
-          vehicle: undefined as unknown as Vehicle, // will be replaced after vehicle instance creation
+          vehicle: undefined as any,
           licenseNumber: row.license.licenseNumber,
           issueDate: row.license.issueDate,
           expiryDate: row.license.expiryDate,
@@ -28,32 +44,18 @@ export class PrismaVehicleRepository extends VehicleRepository {
         })
       : undefined;
 
-    const vehicle = Vehicle.create({
-      id: row.id,
-      make: row.make,
-      model: row.model,
-      year: row.year,
-      plateNumber: row.plateNumber,
-      vin: row.vin,
-      status: row.status,
-      driver: row.driver ?? null,
-      license: license as any, // temporarily set; corrected below
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      notes: row.notes ?? undefined,
-      nextMaintenanceDate: row.nextMaintenanceDate ?? undefined,
-    });
-
     // Fix back-reference in license if present
     if (license) {
-      license.vehicle = vehicle;
+      vehicle.license = license;
     }
 
     return vehicle;
   }
 
   async save(vehicle: Vehicle): Promise<Vehicle> {
-    const upserted = await this.prisma.vehicle.upsert({
+    const { vehicle: _, ...primaryLicenseData } = vehicle.license.toJSON();
+
+    const upsert = await this.prisma.vehicle.upsert({
       where: { id: vehicle.id.toString() },
       update: {
         make: vehicle.make,
@@ -68,6 +70,20 @@ export class PrismaVehicleRepository extends VehicleRepository {
         ...(vehicle.driver
           ? { driver: { connect: { id: vehicle.driver.id } } }
           : {}),
+        license: {
+          upsert: vehicle.license
+            ? {
+                where: { id: vehicle.license.id.toString() },
+                update: primaryLicenseData,
+                create: {
+                  ...primaryLicenseData,
+                  issueDate: primaryLicenseData.issueDate || new Date(),
+                  expiryDate: primaryLicenseData.expiryDate || new Date(),
+                  licenseNumber: primaryLicenseData.licenseNumber || '',
+                },
+              }
+            : undefined,
+        },
       },
       create: {
         id: vehicle.id.toString(),
@@ -82,14 +98,22 @@ export class PrismaVehicleRepository extends VehicleRepository {
         createdAt: vehicle.createdAt,
         updatedAt: new Date(),
         driver: { connect: { id: vehicle.driver.id } },
+        license: {
+          create: {
+            ...primaryLicenseData,
+            issueDate: primaryLicenseData.issueDate || new Date(),
+            expiryDate: primaryLicenseData.expiryDate || new Date(),
+            licenseNumber: primaryLicenseData.licenseNumber || '',
+          },
+        },
       },
-      include: {
-        driver: true,
-        license: true,
-      },
+      // include: {
+      //   driver: true,
+      //   license: true,
+      // },
     });
 
-    return this.toDomain(upserted);
+    return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<Vehicle | null> {
@@ -105,7 +129,20 @@ export class PrismaVehicleRepository extends VehicleRepository {
       skip: offset,
       take: limit,
       orderBy: { createdAt: 'desc' },
-      include: { driver: true, license: true },
+      include: {
+        driver: { include: { user: { select: { name: true } } } },
+        license: {
+          select: {
+            id: true,
+            licenseNumber: true,
+            issueDate: true,
+            expiryDate: true,
+            insurancePolicyNumber: true,
+            insuranceExpiryDate: true,
+            status: true,
+          },
+        },
+      },
     });
     return rows.map((r) => this.toDomain(r));
   }
@@ -141,5 +178,66 @@ export class PrismaVehicleRepository extends VehicleRepository {
       include: { driver: true, license: true },
     });
     return row ? this.toDomain(row) : null;
+  }
+
+  async findFiltered(
+    status?: any,
+    assignedDriverId?: string,
+    offset?: number,
+    limit?: number,
+  ): Promise<Vehicle[]> {
+    const where: any = {};
+    if (status) {
+      // Accept either Prisma enum string or domain-like key
+      where.status = (PrismaVehicleStatus as any)[status] ?? status;
+    }
+    if (assignedDriverId) {
+      where.driverId = assignedDriverId;
+    }
+    const rows = await this.prisma.vehicle.findMany({
+      where,
+      skip: offset,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        driver: { include: { user: { select: { name: true } } } },
+        license: {
+          select: {
+            id: true,
+            licenseNumber: true,
+            issueDate: true,
+            expiryDate: true,
+            insurancePolicyNumber: true,
+            insuranceExpiryDate: true,
+            status: true,
+          },
+        },
+      },
+    });
+    return rows.map((r) => this.toDomain(r));
+  }
+
+  async search(
+    query: string,
+    offset?: number,
+    limit?: number,
+  ): Promise<Vehicle[]> {
+    const q = query?.trim();
+    if (!q) return [];
+    const rows = await this.prisma.vehicle.findMany({
+      where: {
+        OR: [
+          { make: { contains: q, mode: 'insensitive' } },
+          { model: { contains: q, mode: 'insensitive' } },
+          { plateNumber: { contains: q, mode: 'insensitive' } },
+          { vin: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      skip: offset,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: { driver: true, license: true },
+    });
+    return rows.map((r) => this.toDomain(r));
   }
 }

@@ -1,11 +1,11 @@
 import { User } from '@prisma/client';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
-import { VehicleLicense } from './vehicle-license.entity';
+import { VehicleLicense } from 'src/vehicle-license/domain/entities/vehicle-license.entity';
 
-enum VehicleStatus {
+export enum VehicleStatus {
   ACTIVE = 'ACTIVE',
-  EXPIRING_SOON = 'EXPIRING_SOON',
-  EXPIRED = 'EXPIRED',
+  IN_MAINTENANCE = 'IN_MAINTENANCE',
+  OUT_OF_SERVICE = 'OUT_OF_SERVICE',
 }
 
 interface VehicleOptions {
@@ -144,7 +144,7 @@ export class Vehicle {
 
   public toJSON() {
     return {
-      id: this._id,
+      id: this._id.toString(),
       make: this._make,
       model: this._model,
       year: this._year,

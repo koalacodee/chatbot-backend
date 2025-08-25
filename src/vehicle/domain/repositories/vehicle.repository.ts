@@ -10,4 +10,11 @@ export abstract class VehicleRepository {
 
   abstract findByDriverId(driverId: string): Promise<Vehicle[]>;
   abstract findByPlateNumber(plateNumber: string): Promise<Vehicle | null>;
+  abstract findFiltered(
+    status?: any,
+    assignedDriverId?: string,
+    offset?: number,
+    limit?: number,
+  ): Promise<Vehicle[]>;
+  abstract search(query: string, offset?: number, limit?: number): Promise<Vehicle[]>;
 }
