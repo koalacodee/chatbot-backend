@@ -1,8 +1,10 @@
+import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { User } from 'src/shared/entities/user.entity';
 import { Email } from 'src/shared/value-objects/email.vo';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
+import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 
-enum RequestStatus {
+export enum RequestStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
@@ -10,30 +12,38 @@ enum RequestStatus {
 
 interface EmployeeRequestOptions {
   id?: string;
-  requestedBySupervisor: User;
+  requestedBySupervisor: Supervisor;
   newEmployeeEmail: Email;
-  newEmployeeFullName?: string;
+  newEmployeeFullName: string;
+  newEmployeeUsername: string;
+  newEmployeeJobTitle: string;
+  temporaryPassword: string;
+  newEmployeeId?: string;
   newEmployeeDesignation?: string;
   status: RequestStatus;
   createdAt?: Date;
   updatedAt?: Date;
   resolvedAt?: Date;
-  resolvedByAdmin?: User;
+  resolvedByAdmin?: Admin;
   rejectionReason?: string;
   acknowledgedBySupervisor?: boolean;
 }
 
 export class EmployeeRequest {
   private _id: UUID;
-  private _requestedBySupervisor: User;
-  private _newEmployeeEmail: Email;
-  private _newEmployeeFullName?: string;
-  private _newEmployeeDesignation?: string;
+  private _requestedBySupervisor: Supervisor;
+  private readonly _newEmployeeEmail: Email;
+  private readonly _newEmployeeFullName: string;
+  private readonly _newEmployeeUsername: string;
+  private readonly _newEmployeeJobTitle: string;
+  private readonly _temporaryPassword: string;
+  private readonly _newEmployeeDesignation?: string;
+  private readonly _newEmployeeId?: string;
   private _status: RequestStatus;
   private _createdAt: Date;
   private _updatedAt: Date;
   private _resolvedAt?: Date;
-  private _resolvedByAdmin?: User;
+  private _resolvedByAdmin?: Admin;
   private _rejectionReason?: string;
   private _acknowledgedBySupervisor: boolean;
 
@@ -42,7 +52,11 @@ export class EmployeeRequest {
     this._requestedBySupervisor = options.requestedBySupervisor;
     this._newEmployeeEmail = options.newEmployeeEmail;
     this._newEmployeeFullName = options.newEmployeeFullName;
+    this._newEmployeeUsername = options.newEmployeeUsername;
+    this._newEmployeeJobTitle = options.newEmployeeJobTitle;
+    this._temporaryPassword = options.temporaryPassword;
     this._newEmployeeDesignation = options.newEmployeeDesignation;
+    this._newEmployeeId = options.newEmployeeId;
     this._status = options.status;
     this._createdAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
@@ -60,11 +74,11 @@ export class EmployeeRequest {
     return this._id.value;
   }
 
-  public get requestedBySupervisor(): User {
+  public get requestedBySupervisor(): Supervisor {
     return this._requestedBySupervisor;
   }
 
-  public set requestedBySupervisor(value: User) {
+  public set requestedBySupervisor(value: Supervisor) {
     this._requestedBySupervisor = value;
   }
 
@@ -72,24 +86,28 @@ export class EmployeeRequest {
     return this._newEmployeeEmail;
   }
 
-  public set newEmployeeEmail(value: Email) {
-    this._newEmployeeEmail = value;
-  }
-
-  public get newEmployeeFullName(): string | undefined {
+  public get newEmployeeFullName(): string {
     return this._newEmployeeFullName;
   }
 
-  public set newEmployeeFullName(value: string | undefined) {
-    this._newEmployeeFullName = value;
+  public get newEmployeeUsername(): string {
+    return this._newEmployeeUsername;
+  }
+
+  public get newEmployeeJobTitle(): string {
+    return this._newEmployeeJobTitle;
+  }
+
+  public get temporaryPassword(): string {
+    return this._temporaryPassword;
   }
 
   public get newEmployeeDesignation(): string | undefined {
     return this._newEmployeeDesignation;
   }
 
-  public set newEmployeeDesignation(value: string | undefined) {
-    this._newEmployeeDesignation = value;
+  public get newEmployeeId(): string | undefined {
+    return this._newEmployeeId;
   }
 
   public get status(): RequestStatus {
@@ -124,11 +142,11 @@ export class EmployeeRequest {
     this._resolvedAt = value;
   }
 
-  public get resolvedByAdmin(): User | undefined {
+  public get resolvedByAdmin(): Admin | undefined {
     return this._resolvedByAdmin;
   }
 
-  public set resolvedByAdmin(value: User | undefined) {
+  public set resolvedByAdmin(value: Admin | undefined) {
     this._resolvedByAdmin = value;
   }
 
@@ -154,6 +172,10 @@ export class EmployeeRequest {
       requestedBySupervisor: this._requestedBySupervisor,
       newEmployeeEmail: this._newEmployeeEmail,
       newEmployeeFullName: this._newEmployeeFullName,
+      newEmployeeUsername: this._newEmployeeUsername,
+      newEmployeeJobTitle: this._newEmployeeJobTitle,
+      newEmployeeId: this._newEmployeeId,
+      temporaryPassword: this._temporaryPassword,
       newEmployeeDesignation: this._newEmployeeDesignation,
       status: this._status,
       createdAt: this._createdAt,
