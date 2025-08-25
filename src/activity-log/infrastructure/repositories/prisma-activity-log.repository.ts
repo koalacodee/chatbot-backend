@@ -24,7 +24,7 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
   }
 
   async save(log: ActivityLog): Promise<ActivityLog> {
-    const upserted = await this.prisma.activityLog.upsert({
+    const upsert = await this.prisma.activityLog.upsert({
       where: { id: log.id },
       update: {
         activity: log.activity,
@@ -45,11 +45,14 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
       include: { user: true },
     });
 
-    return this.toDomain(upserted);
+    return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<ActivityLog | null> {
-    const row = await this.prisma.activityLog.findUnique({ where: { id }, include: { user: true } });
+    const row = await this.prisma.activityLog.findUnique({
+      where: { id },
+      include: { user: true },
+    });
     return row ? this.toDomain(row) : null;
   }
 
@@ -79,7 +82,11 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
     return this.prisma.activityLog.count();
   }
 
-  async findByUserId(userId: string, offset?: number, limit?: number): Promise<ActivityLog[]> {
+  async findByUserId(
+    userId: string,
+    offset?: number,
+    limit?: number,
+  ): Promise<ActivityLog[]> {
     const rows = await this.prisma.activityLog.findMany({
       where: { userId },
       skip: offset,
@@ -90,7 +97,11 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
 
-  async findByItemId(itemId: string, offset?: number, limit?: number): Promise<ActivityLog[]> {
+  async findByItemId(
+    itemId: string,
+    offset?: number,
+    limit?: number,
+  ): Promise<ActivityLog[]> {
     const rows = await this.prisma.activityLog.findMany({
       where: { itemId },
       skip: offset,
