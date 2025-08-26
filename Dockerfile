@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install curl, node‑build deps, unzip
 RUN apt-get update && apt-get install -y \
-      curl gnupg ca-certificates build-essential unzip \
+      curl gnupg ca-certificates build-essential unzip netcat-openbsd \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x via NodeSource
@@ -73,7 +73,7 @@ WORKDIR /app
 
 # Install curl/unzip (bun installer needs them)
 RUN apt-get update && apt-get install -y \
-      curl unzip ca-certificates \
+      curl unzip ca-certificates netcat-openbsd \
   && rm -rf /var/lib/apt/lists/*
 
 # Install bun runtime via official install script
