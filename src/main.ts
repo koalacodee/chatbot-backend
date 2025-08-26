@@ -28,7 +28,7 @@ async function bootstrap() {
   // Configure CORS
   app.enableCors({
     origin: configService.get<string>('CORS_ORIGINS').split(','),
-    credentials: true,
+    credentials: configService.get<boolean>('CORS_CREDENTIALS', false),
     methods: configService.get<string>('CORS_METHODS').split(','),
   });
 
