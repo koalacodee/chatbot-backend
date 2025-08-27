@@ -25,9 +25,11 @@ async function bootstrap() {
   app.use(compression());
   app.use(morgan(configService.get('MORGAN_FORMAT')));
 
+  const origins = configService.get<string>('CORS_ORIGINS');
+
   // Configure CORS
   app.enableCors({
-    origin: configService.get<string>('CORS_ORIGINS').split(','),
+    origin: origins?.split(',') ?? '*',
     credentials: true,
     methods: configService.get<string>('CORS_METHODS').split(','),
   });

@@ -27,7 +27,7 @@ import {
   DeleteManyQuestionsInputDto,
 } from './dto';
 import { Question } from '../../domain/entities/question.entity';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 
@@ -44,7 +44,7 @@ export class QuestionController {
     private readonly getAllGroupedByDepartmentUseCase: GroupByDepartmentUseCase,
   ) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post()
   async create(
@@ -54,13 +54,13 @@ export class QuestionController {
     return this.createUseCase.execute({ ...input, creatorId: req.user.id });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
-  @Put(":id")
+  @Put(':id')
   async update(
     @Body() dto: UpdateQuestionInputDto,
     @Req() req: any,
-    @Param("id") id: string,
+    @Param('id') id: string,
   ): Promise<Question> {
     return this.updateUseCase.execute(id, { ...dto, userId: req.user.id });
   }
@@ -70,7 +70,7 @@ export class QuestionController {
     return this.getAllGroupedByDepartmentUseCase.execute();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get(':id')
   async get(
@@ -87,7 +87,7 @@ export class QuestionController {
       .then((qs) => qs.map((qs) => qs.toJSON()));
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Delete(':id')
   async delete(
@@ -97,7 +97,7 @@ export class QuestionController {
     return this.deleteUseCase.execute(id, req.user.id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Delete('multiple')
   async deleteMany(
@@ -107,7 +107,7 @@ export class QuestionController {
     return this.deleteManyUseCase.execute(input.ids, req.user.id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('count')
   async count(): Promise<number> {

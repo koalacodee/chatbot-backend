@@ -110,6 +110,7 @@ export class PrismaQuestionRepository extends QuestionRepository {
     if (update.satisfaction) data.satisfaction = update.satisfaction;
     if (update.dissatisfaction) data.dissatisfaction = update.dissatisfaction;
     if (update.views) data.views = update.views;
+    if (update.answer) data.answer = update.answer;
     const updated = await this.prisma.question.update({ where: { id }, data });
     return this.toDomain(updated);
   }

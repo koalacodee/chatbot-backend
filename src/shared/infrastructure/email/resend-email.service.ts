@@ -36,13 +36,14 @@ export class ResendEmailService {
     console.log(options);
 
     try {
-      await this.resend.emails.send({
+      const res = await this.resend.emails.send({
         from: this.defaultFrom,
         to: options.to,
         subject: options.subject,
         html: options.html,
       });
       this.logger.log(`Email sent to ${options.to}`);
+      console.log(res);
     } catch (error) {
       this.logger.error(
         `Failed to send email to ${options.to}: ${error.message}`,

@@ -24,7 +24,7 @@ import { AddDriverBySupervisorDto } from './dto/add-driver-by-supervisor.dto';
 import { RolesGuard } from 'src/rbac/guards/roles.guard';
 import { UseRoles } from 'src/rbac/decorators/roles.decorator';
 import { Roles as RoleEnum } from 'src/shared/value-objects/role.vo';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 
 @Controller('drivers')
 export class DriverController {
@@ -99,7 +99,7 @@ export class DriverController {
   }
 
   @Post('supervisor/add')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(RoleEnum.SUPERVISOR)
   @HttpCode(HttpStatus.CREATED)
   async addDriverBySupervisor(

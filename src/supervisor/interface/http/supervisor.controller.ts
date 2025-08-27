@@ -12,7 +12,7 @@ import {
   Put,
 } from '@nestjs/common';
 import { AddSupervisorByAdminUseCase } from '../../application/use-cases/add-supervisor-by-admin.use-case';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { AddSupervisorByAdminDto } from './dtos/add-supervisor-by-admin.dto';
@@ -36,7 +36,7 @@ export class SupervisorController {
     private readonly updateSupervisorUseCase: UpdateSupervisorUseCase,
   ) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('search')
   async search(@Query() query: SearchSupervisorQuery): Promise<any> {
@@ -46,7 +46,7 @@ export class SupervisorController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   async addSupervisorByAdmin(
@@ -71,7 +71,7 @@ export class SupervisorController {
   }
 
   @Get('can-delete/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN)
   @HttpCode(HttpStatus.OK)
   async canDelete(@Param('id') id: string): Promise<any> {
@@ -79,7 +79,7 @@ export class SupervisorController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN)
   @HttpCode(HttpStatus.OK)
   async delete(@Param('id') id: string): Promise<any> {
@@ -87,7 +87,7 @@ export class SupervisorController {
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN)
   @HttpCode(HttpStatus.OK)
   async update(

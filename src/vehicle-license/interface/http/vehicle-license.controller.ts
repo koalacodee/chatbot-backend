@@ -14,7 +14,7 @@ import {
   UpdateLicenseUseCase,
 } from '../../application/use-cases';
 import { VehicleLicense } from '../../domain/entities/vehicle-license.entity';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 
@@ -49,7 +49,7 @@ export class VehicleLicenseController {
     private readonly updateLicenseUseCase: UpdateLicenseUseCase,
   ) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get()
   async getAll(@Query() query: GetAllLicensesQuery): Promise<any[]> {
@@ -62,14 +62,14 @@ export class VehicleLicenseController {
     });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get(':id')
   async get(@Param('id') licenseId: string): Promise<VehicleLicense> {
     return this.getSingleLicenseUseCase.execute({ licenseId });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('sorted/by-expiry')
   async getSortedByExpiry(@Query() query: SortByExpiryQuery): Promise<any[]> {
@@ -78,7 +78,7 @@ export class VehicleLicenseController {
     });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Put()
   async update(@Body() dto: UpdateLicenseDto): Promise<any> {

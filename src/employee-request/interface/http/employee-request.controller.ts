@@ -10,7 +10,7 @@ import {
   Delete,
   Req,
 } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { SubmitEmployeeRequestUseCase } from '../../application/use-cases/submit-employee-request.use-case';
 import { ApproveEmployeeRequestUseCase } from '../../application/use-cases/approve-employee-request.use-case';
 import { RejectEmployeeRequestUseCase } from '../../application/use-cases/reject-employee-request.use-case';
@@ -24,7 +24,7 @@ import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 
 @Controller('employee-requests')
-@UseGuards(JwtAuthGuard)
+@UseGuards(UserJwtAuthGuard)
 export class EmployeeRequestController {
   constructor(
     private readonly submitEmployeeRequestUseCase: SubmitEmployeeRequestUseCase,

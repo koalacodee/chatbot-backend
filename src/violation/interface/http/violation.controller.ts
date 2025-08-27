@@ -15,7 +15,7 @@ import {
   MarkViolationAsPaidUseCase,
   MarkViolationAsPendingUseCase,
 } from '../../application/use-cases';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 
@@ -47,14 +47,14 @@ export class ViolationController {
     private readonly markViolationAsPendingUseCase: MarkViolationAsPendingUseCase,
   ) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post()
   async create(@Body() dto: CreateViolationDto): Promise<any> {
     return this.createViolationUseCase.execute(dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Get()
   async getAll(@Query() query: GetViolationsQuery): Promise<any> {
@@ -67,7 +67,7 @@ export class ViolationController {
     });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Delete(':id')
   async delete(
@@ -76,14 +76,14 @@ export class ViolationController {
     return this.deleteViolationUseCase.execute({ violationId });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post(':id/mark-paid')
   async markAsPaid(@Param('id') violationId: string): Promise<any> {
     return this.markViolationAsPaidUseCase.execute({ violationId });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post(':id/mark-pending')
   async markAsPending(@Param('id') violationId: string): Promise<any> {

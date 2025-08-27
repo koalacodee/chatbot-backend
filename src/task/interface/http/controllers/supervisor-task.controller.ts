@@ -16,7 +16,7 @@ import { GetSubDepartmentTasksUseCase } from '../../../application/use-cases/get
 import { GetIndividualLevelTasksUseCase } from '../../../application/use-cases/get-individual-level-tasks.use-case';
 import { GetTasksByRoleDto } from '../dto/get-tasks-by-role.dto';
 import { RolesGuard, UseRoles } from 'src/rbac';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { Roles } from 'src/shared/value-objects/role.vo';
 
 @ApiTags('Supervisor Tasks')
@@ -39,7 +39,7 @@ export class SupervisorTaskController {
     status: 403,
     description: 'Forbidden - Supervisor access required',
   })
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.SUPERVISOR)
   async getSubDepartmentTasks(@Query() query: GetTasksByRoleDto) {
     const tasks = await this.getSubDepartmentTasksUseCase.execute({
@@ -66,7 +66,7 @@ export class SupervisorTaskController {
     status: 403,
     description: 'Forbidden - Supervisor access required',
   })
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.SUPERVISOR)
   async getEmployeeLevelTasks(@Query() query: GetTasksByRoleDto) {
     const tasks = await this.getIndividualLevelTasksUseCase.execute({

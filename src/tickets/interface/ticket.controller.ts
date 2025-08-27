@@ -25,7 +25,7 @@ import {
   AnswerTicketDto,
   AnswerTicketResponseDto,
 } from './dtos/answer-ticket.dto';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/rbac/guards/roles.guard';
 import { UseRoles } from 'src/rbac/decorators/roles.decorator';
 import { Roles } from 'src/shared/value-objects/role.vo';
@@ -48,7 +48,7 @@ export class TicketController {
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'Department or user not found' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(UserJwtAuthGuard)
   async createTicket(
     @Body() createTicketDto: CreateTicketDto,
     @Req() req: any,
@@ -93,7 +93,7 @@ export class TicketController {
   })
   @ApiResponse({ status: 403, description: 'Access denied' })
   @ApiResponse({ status: 404, description: 'Ticket not found' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(UserJwtAuthGuard)
   async trackTicket(
     @Param('ticketCode') ticketCode: string,
     @Req() req: any,
@@ -128,7 +128,7 @@ export class TicketController {
   }
 
   @Post(':ticketId/answer')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Answer a ticket (Admin/Manager only)' })

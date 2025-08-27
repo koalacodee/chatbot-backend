@@ -34,7 +34,7 @@ import {
 } from './dto';
 import { GetTeamTasksDto } from './dto/get-team-tasks.dto';
 import { Task, TaskAssignmentType } from '../../domain/entities/task.entity';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { TaskStatus } from '@prisma/client';
@@ -56,7 +56,7 @@ export class TaskController {
     private readonly getTeamTasksUseCase: GetTeamTasksUseCase,
   ) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post()
   async create(
@@ -72,7 +72,7 @@ export class TaskController {
     });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Put()
   async update(@Body() input: UpdateTaskInputDto): Promise<Task> {
@@ -85,14 +85,14 @@ export class TaskController {
     } as any);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get(':id')
   async get(@Param('id') id: string): Promise<Task> {
     return this.getUseCase.execute(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get()
   async getAll(
@@ -107,7 +107,7 @@ export class TaskController {
   }
 
   // Filtered retrieval
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('search/filters')
   async getWithFilters(@Query() query: GetTasksWithFiltersDto): Promise<any[]> {
@@ -118,24 +118,22 @@ export class TaskController {
     return tasks.map((t) => t.toJSON());
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Get('team-tasks')
-  async getTeamTasks(
-    @Query() query: GetTeamTasksDto,
-  ): Promise<any[]> {
+  async getTeamTasks(@Query() query: GetTeamTasksDto): Promise<any[]> {
     const tasks = await this.getTeamTasksUseCase.execute(query);
     return tasks.map((t) => t.toJSON());
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Delete(':id')
   async delete(@Param('id') id: string): Promise<Task | null> {
     return this.deleteUseCase.execute(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('count/all')
   async count(): Promise<number> {
@@ -143,7 +141,7 @@ export class TaskController {
   }
 
   // Submit for review
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Post(':id/submit-review')
   async submitForReview(
@@ -159,7 +157,7 @@ export class TaskController {
   }
 
   // Approve
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post(':id/approve')
   async approve(
@@ -173,7 +171,7 @@ export class TaskController {
   }
 
   // Reject
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post(':id/reject')
   async reject(
@@ -187,7 +185,7 @@ export class TaskController {
   }
 
   // Mark seen
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Post(':id/seen')
   async markSeen(@Param('id') id: string): Promise<Task> {

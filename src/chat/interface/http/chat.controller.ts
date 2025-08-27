@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { AskUseCase } from 'src/chat/application/use-cases/ask.use-case';
 import { AskDto } from './dto/ask.dto';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { GetAllConversationsUseCase } from 'src/chat/application/use-cases/get-all-conversations.use-case';
 import { GetConversationUseCase } from 'src/chat/application/use-cases/get-conversation.use-case';
 import { UseRoles } from 'src/rbac';
@@ -23,7 +23,7 @@ export class AskController {
     private readonly getConversationUseCase: GetConversationUseCase,
   ) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(UserJwtAuthGuard)
   @UseRoles(Roles.GUEST)
   @Post('ask')
   async ask(@Body() dto: AskDto, @Req() req: any) {
@@ -38,7 +38,7 @@ export class AskController {
   }
 
   @Get('conversations')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(UserJwtAuthGuard)
   @UseRoles(Roles.GUEST)
   async getConversations(@Req() req: any) {
     const conversation = await this.getAllConversationsUseCase.execute({
@@ -48,7 +48,7 @@ export class AskController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(UserJwtAuthGuard)
   @UseRoles(Roles.GUEST)
   async getConversation(@Param('id') id: string, @Req() req) {
     return this.getConversationUseCase.execute({ id, guestId: req.guest.id });

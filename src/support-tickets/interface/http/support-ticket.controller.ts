@@ -28,7 +28,7 @@ import {
   GetFrequentTicketSubjectsUseCase,
 } from '../../application/use-cases';
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { AnswerTicketDto } from './dto/answer-ticket.use-case';
@@ -85,10 +85,10 @@ export class SupportTicketController {
     private readonly countOpenTicketsUseCase: CountOpenTicketsUseCase,
     private readonly countAnsweredPendingUseCase: CountAnsweredPendingUseCase,
     private readonly getFrequentTicketSubjectsUseCase: GetFrequentTicketSubjectsUseCase,
-    private readonly answerTicketUseCase: AnswerTicketUseCase
+    private readonly answerTicketUseCase: AnswerTicketUseCase,
   ) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(UserJwtAuthGuard)
   @Post()
   async create(
     @Body() dto: CreateSupportTicketDto,
@@ -102,14 +102,14 @@ export class SupportTicketController {
     });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Get(':id')
   async get(@Param('id') id: string): Promise<SupportTicket> {
     return this.getUseCase.execute(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Get()
   async getAll(
@@ -122,36 +122,45 @@ export class SupportTicketController {
     );
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Put()
   async update(@Body() dto: UpdateSupportTicketDto): Promise<SupportTicket> {
     const { id, ...updateData } = dto;
     return this.updateUseCase.execute(id, updateData);
   }
-  
-  @UseGuards(JwtAuthGuard, RolesGuard)
+
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
-  @Put(":id/answer")
-  async answerTicket(@Body() dto: AnswerTicketDto, @Param('id') id: string, @Req() req: any): Promise<SupportTicketAnswer> {
-    return this.answerTicketUseCase.execute({ticketId: id, content: dto.content, userId: req.user.id, userRole: req.user.role})
+  @Put(':id/answer')
+  async answerTicket(
+    @Body() dto: AnswerTicketDto,
+    @Param('id') id: string,
+    @Req() req: any,
+  ): Promise<SupportTicketAnswer> {
+    return this.answerTicketUseCase.execute({
+      ticketId: id,
+      content: dto.content,
+      userId: req.user.id,
+      userRole: req.user.role,
+    });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Delete(':id')
   async delete(@Param('id') id: string): Promise<SupportTicket | null> {
     return this.deleteUseCase.execute(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Get('count/all')
   async count(): Promise<number> {
     return this.countUseCase.execute();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post(':id/assign')
   async assign(
@@ -161,21 +170,21 @@ export class SupportTicketController {
     return this.assignTicketUseCase.execute({ ticketId, userId: dto.userId });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Put(':id/close')
   async close(@Param('id') ticketId: string): Promise<void> {
     return this.closeTicketUseCase.execute({ ticketId });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Put(':id/reopen')
   async reopen(@Param('id') ticketId: string): Promise<void> {
     return this.reopenTicketUseCase.execute({ ticketId });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Post(':id/reply')
   async reply(
@@ -192,35 +201,35 @@ export class SupportTicketController {
     });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Post(':id/mark-seen')
   async markAsSeen(@Param('id') ticketId: string): Promise<void> {
     return this.markTicketAsSeenUseCase.execute({ ticketId });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Get('search')
   async search(@Query() query: SearchTicketsDto): Promise<any> {
     return this.searchTicketsUseCase.execute(query);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('count/open')
   async countOpen(): Promise<number> {
     return this.countOpenTicketsUseCase.execute();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('count/answered-pending')
   async countAnsweredPending(): Promise<number> {
     return this.countAnsweredPendingUseCase.execute();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('frequent-subjects')
   async getFrequentSubjects(): Promise<any> {

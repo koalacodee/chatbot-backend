@@ -16,7 +16,7 @@ import { DeleteEmployeeUseCase } from '../../application/use-cases/delete-employ
 import { GetEmployeeByUserIdUseCase } from '../../application/use-cases/get-employee-by-user-id.use-case';
 import { CreateEmployeeDto } from '../dtos/create-employee.dto';
 import { UpdateEmployeeDto } from '../dtos/update-employee.dto';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { GetEmployeesBySubDepartmentUseCase } from 'src/employee/application/use-cases/get-employees-by-sub-department.use-case';
@@ -128,14 +128,14 @@ export class EmployeeController {
   }
 
   @Get('sub-department/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   async getBySupDepartment(@Param('id') subDepartmentId: string): Promise<any> {
     return this.getEmployeesBySubDepartmentUseCase.execute({ subDepartmentId });
   }
 
   @Get('can-delete/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   async canDeleteEmployee(@Param('id') id: string) {
     return this.canDeleteEmployeeUseCase.execute({ employeeId: id });

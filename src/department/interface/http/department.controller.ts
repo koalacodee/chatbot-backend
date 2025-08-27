@@ -31,7 +31,7 @@ import { GetDepartmentOutputDto } from './dto/get-department.dto';
 import { GetAllDepartmentsOutputDto } from './dto/get-all-departments.dto';
 import { DeleteManyDepartmentsInputDto } from './dto/delete-many-departments.dto';
 import { Department } from '../../domain/entities/department.entity';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { CreateSubDepartmentDto } from './dto/create-sub-department.dto';
@@ -53,14 +53,14 @@ export class DepartmentController {
     private readonly canDeleteUseCase: CanDeleteUseCase,
   ) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN)
   @Post()
   async create(@Body() input: CreateDepartmentInputDto): Promise<Department> {
     return this.createDepartmentUseCase.execute(input);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post('sub-department')
   async createSubDepartment(
@@ -69,7 +69,7 @@ export class DepartmentController {
     return this.createSubDepartmentUseCase.execute(input);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN)
   @Put('main/:id')
   async updateMainDepartment(
@@ -79,7 +79,7 @@ export class DepartmentController {
     return this.updateMainDepartmentUseCase.execute(id, input);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Put('sub/:id')
   async updateSubDepartment(
@@ -109,7 +109,7 @@ export class DepartmentController {
     return this.getAllDepartmentsUseCase.execute();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN)
   @Delete('main/:id')
   async deleteMainDepartment(
@@ -118,7 +118,7 @@ export class DepartmentController {
     return this.deleteMainDepartmentUseCase.execute(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN)
   @Delete('main/multiple')
   async deleteMultipleMainDepartments(
@@ -127,7 +127,7 @@ export class DepartmentController {
     return this.deleteManyDepartmentsUseCase.execute(input.ids);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Delete('sub/:id')
   async deleteSubDepartment(
@@ -136,7 +136,7 @@ export class DepartmentController {
     return this.deleteSubDepartmentUseCase.execute(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Delete('sub/multiple')
   async deleteMultipleSubDepartments(
@@ -145,14 +145,14 @@ export class DepartmentController {
     return this.deleteManyDepartmentsUseCase.execute(input.ids);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN)
   @Get('count')
   async count(): Promise<number> {
     return this.countDepartmentsUseCase.execute();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('can-delete/:id')
   async canDelete(@Param('id') id: string) {

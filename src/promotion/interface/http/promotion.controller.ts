@@ -18,7 +18,7 @@ import {
   TogglePromotionActiveUseCase,
   UpdatePromotionUseCase,
 } from '../../application/use-cases';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { CreatePromotionDto } from './dtos/create-promotion.dto';
@@ -44,7 +44,7 @@ export class PromotionController {
     private readonly updatePromotionUseCase: UpdatePromotionUseCase,
   ) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post()
   async create(@Body() dto: CreatePromotionDto, @Req() req: any) {
@@ -56,7 +56,7 @@ export class PromotionController {
     });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Put()
   async update(@Body() dto: UpdatePromotionDto) {
@@ -78,20 +78,20 @@ export class PromotionController {
     return this.getPromotionUseCase.execute(id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(UserJwtAuthGuard)
   @Get('user/:userId')
   async getForUser(@Param('userId') userId: string) {
     return this.getPromotionForUserUseCase.execute({ userId });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post(':id/toggle-active')
   async toggleActive(@Param('id') id: string) {
     return this.togglePromotionActiveUseCase.execute(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Delete(':id')
   async delete(@Param('id') id: string) {

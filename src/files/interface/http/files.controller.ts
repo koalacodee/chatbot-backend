@@ -15,7 +15,7 @@ import { UploadFileUseCase } from 'src/files/application/use-cases/upload-file.u
 import { DeleteFileUseCase } from 'src/files/application/use-cases/delete-file.use-case';
 import { GenTokenUseCase } from 'src/files/application/use-cases/gen-token.use-case';
 import { FileUploadGuard } from 'src/files/infrastructure/guards/file-upload.guard';
-import { JwtAuthGuard } from 'src/auth/infrastructure/guards/jwt-auth.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 
@@ -57,14 +57,14 @@ export class FilesController {
     );
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Delete(':filename')
   async delete(@Param('filename') filename: string): Promise<void> {
     return this.deleteFileUseCase.execute({ filename });
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
   @Post('token')
   async generateToken(@Body() dto: { targetId: string }): Promise<any> {
