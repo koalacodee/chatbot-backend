@@ -82,7 +82,7 @@ export class GuestRefreshTokenStrategy extends PassportStrategy(
     }
 
     return {
-      id: guest.id,
+      id: guest.id.toString(),
       email: guest.email.toString(),
       role: 'guest',
       refreshToken,

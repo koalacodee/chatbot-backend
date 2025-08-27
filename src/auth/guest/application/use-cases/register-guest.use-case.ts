@@ -53,6 +53,6 @@ export class RegisterGuestUseCase {
       ),
     ]);
 
-    return { guest: guest.toJSON() };
+    return { guest: guest.withoutPassword() };
   }
 }

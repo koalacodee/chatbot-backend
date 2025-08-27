@@ -32,7 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Return user data that will be attached to the request object
     return {
-      id: user.id,
+      id: user.id.toString(),
       email: user.email.toString(),
       role: user.role.toString(),
     };

@@ -32,7 +32,7 @@ export class GuestJwtStrategy extends PassportStrategy(Strategy, 'guest-jwt') {
 
     // Return guest data that will be attached to the request object
     return {
-      id: guest.id,
+      id: guest.id.toString(),
       email: guest.email.toString(),
       role: Roles.GUEST,
     };

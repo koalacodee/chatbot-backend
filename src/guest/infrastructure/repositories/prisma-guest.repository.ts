@@ -19,6 +19,7 @@ export class PrismaGuestRepository extends GuestRepository {
       name: guest.name,
       email: guest.email.getValue(),
       phone: guest.phone,
+      password: guest.password.getHash(),
       createdAt: guest.createdAt,
       updatedAt: new Date(),
     };
@@ -29,6 +30,7 @@ export class PrismaGuestRepository extends GuestRepository {
         name: data.name,
         email: data.email,
         phone: data.phone,
+        password: data.password,
         updatedAt: data.updatedAt,
       },
       create: data,
