@@ -98,6 +98,15 @@ export class GuestController {
   }
 
   @UseGuards(GuestRefreshTokenGuard)
+  @Post('check')
+  @HttpCode(200)
+  async handleCheckAuth(@Req() req: Request) {
+    return {
+      success: true,
+    };
+  }
+
+  @UseGuards(GuestRefreshTokenGuard)
   @Post('logout')
   @HttpCode(200)
   async handleLogout(
