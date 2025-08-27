@@ -9,6 +9,7 @@ import {
   UseGuards,
   Req,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   CreateQuestionUseCase,
@@ -19,6 +20,8 @@ import {
   DeleteManyQuestionsUseCase,
   CountQuestionsUseCase,
   GroupByDepartmentUseCase,
+  RecordRatingUseCase,
+  RecordViewUseCase,
 } from '../../application/use-cases';
 import {
   CreateQuestionInputDto,
@@ -30,6 +33,10 @@ import { Question } from '../../domain/entities/question.entity';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { ViewFaqsDto } from './dto/view-faqs.dto';
+import { ViewFaqsUseCase } from 'src/questions/application/use-cases/view-faqs.use-case';
+import { GuestAuth } from 'src/auth/guest/infrastructure/decorators/guest-auth.decorator';
+import { RecordInteractionDto } from './dto/record-interaction.dto';
 
 @Controller('questions')
 export class QuestionController {
@@ -42,7 +49,51 @@ export class QuestionController {
     private readonly deleteManyUseCase: DeleteManyQuestionsUseCase,
     private readonly countUseCase: CountQuestionsUseCase,
     private readonly getAllGroupedByDepartmentUseCase: GroupByDepartmentUseCase,
+    private readonly viewFaqsUseCase: ViewFaqsUseCase,
+    private readonly recordRatingUseCase: RecordRatingUseCase,
+    private readonly recordViewUseCase: RecordViewUseCase,
   ) {}
+
+  @Get('view')
+  @GuestAuth()
+  async viewFaqs(@Query() query: ViewFaqsDto, @Req() req: any): Promise<any> {
+    return this.viewFaqsUseCase.execute({ ...query, guestId: req.user.id });
+  }
+
+  @GuestAuth()
+  @Post(':type/:faqId')
+  async recordInteraction(
+    @Param() params: RecordInteractionDto,
+    @Req() req: any,
+  ) {
+    const { faqId } = params;
+    const handlers: Record<string, () => Promise<any>> = {
+      satisfaction: () =>
+        this.recordRatingUseCase.execute({
+          guestId: req.user.id,
+          faqId,
+          satisfactionType: 'satisfied',
+        }),
+      dissatisfaction: () =>
+        this.recordRatingUseCase.execute({
+          guestId: req.user.id,
+          faqId,
+          satisfactionType: 'dissatisfied',
+        }),
+      view: () =>
+        this.recordViewUseCase.execute({
+          guestId: req.user.id,
+          faqId,
+        }),
+    };
+
+    const handler = handlers[params.type];
+    if (!handler) {
+      throw new BadRequestException('Invalid interaction type');
+    }
+
+    return handler();
+  }
 
   @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)

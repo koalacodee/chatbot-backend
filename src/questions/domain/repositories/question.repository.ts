@@ -21,6 +21,15 @@ export interface FaqStats {
   faqSatisfactionRate: number | null;
 }
 
+export interface ViewdFaqDto {
+  id: string;
+  text: string;
+  answer: string | null;
+  department_id: string;
+  isRated: boolean;
+  isViewed: boolean;
+}
+
 export abstract class QuestionRepository {
   abstract save(question: Question): Promise<Question>;
   abstract findById(
@@ -58,4 +67,21 @@ export abstract class QuestionRepository {
     queryDto?: QuestionQueryDto,
   ): Promise<FaqStats>;
   abstract groupByDepartment(): Promise<any[]>;
+  abstract viewFaqs(options?: {
+    guestId: string;
+    limit?: number;
+    page?: number;
+    departmentId?: string;
+  }): Promise<ViewdFaqDto[]>;
+
+  abstract recordRating(options: {
+    guestId: string;
+    faqId: string;
+    satisfactionType: 'SATISFACTION' | 'DISSATISFACTION';
+  }): Promise<void>;
+
+  abstract recordView(options: {
+    guestId: string;
+    faqId: string;
+  }): Promise<void>;
 }

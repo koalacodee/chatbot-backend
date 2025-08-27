@@ -4,6 +4,7 @@ import {
   FaqStats,
   QuestionQueryDto,
   QuestionRepository,
+  ViewdFaqDto,
 } from '../../domain/repositories/question.repository';
 import { Question } from '../../domain/entities/question.entity';
 @Injectable()
@@ -318,5 +319,156 @@ export class PrismaQuestionRepository extends QuestionRepository {
       WHERE pd.parent_id IS NULL
       GROUP BY pd.id, pd.name;
     `);
+  }
+
+  async viewFaqs(options?: {
+    limit?: number;
+    page?: number;
+    departmentId?: string;
+    guestId: string;
+  }): Promise<any[]> {
+    const { limit = 10, page = 1, departmentId, guestId } = options;
+
+    const faqs = await this.prisma.$queryRawUnsafe<ViewdFaqDto[]>(
+      `
+      WITH faqs_cte AS (
+        SELECT 
+          q.id,
+          q.text,
+          q.answer,
+          q.department_id,
+          q.created_at,
+          -- check if guest rated this question
+          CASE 
+            WHEN qi.id IS NOT NULL THEN TRUE 
+            ELSE FALSE 
+          END AS "isRated",
+          -- check if guest viewed this question
+          CASE 
+            WHEN qv.id IS NOT NULL THEN TRUE
+            ELSE FALSE
+          END AS "isViewed"
+        FROM questions q
+        -- left join for interactions
+        LEFT JOIN question_interactions qi
+          ON qi.question_id = q.id AND qi.guest_id = $1::uuid
+        -- left join for views
+        LEFT JOIN question_views qv
+          ON qv.question_id = q.id AND qv.guest_id = $1::uuid
+        WHERE ($2::uuid IS NULL OR q.department_id = $2::uuid)
+      )
+      SELECT *
+      FROM faqs_cte
+      ORDER BY created_at DESC
+      LIMIT $3 OFFSET $4;
+      `,
+      guestId,
+      departmentId,
+      limit,
+      (page - 1) * limit,
+    );
+
+    return faqs;
+  }
+
+  async recordRating({
+    guestId,
+    faqId,
+    satisfactionType,
+  }: {
+    guestId: string;
+    faqId: string;
+    satisfactionType: 'SATISFACTION' | 'DISSATISFACTION';
+  }) {
+    await this.prisma.$transaction(async (tx) => {
+      const previousReaction = await tx.questionInteraction.findUnique({
+        where: {
+          questionId_guestId: {
+            questionId: faqId,
+            guestId,
+          },
+        },
+      });
+
+      // اعمل upsert للتفاعل الجديد
+      await tx.questionInteraction.upsert({
+        where: {
+          questionId_guestId: {
+            questionId: faqId,
+            guestId,
+          },
+        },
+        create: {
+          guestId,
+          questionId: faqId,
+          type: satisfactionType,
+        },
+        update: {
+          type: satisfactionType,
+        },
+      });
+
+      // logic لحساب increment/decrement
+      let satisfactionChange = 0;
+      let dissatisfactionChange = 0;
+
+      if (!previousReaction) {
+        // أول مرة يتفاعل
+        if (satisfactionType === 'SATISFACTION') satisfactionChange = 1;
+        if (satisfactionType === 'DISSATISFACTION') dissatisfactionChange = 1;
+      } else if (previousReaction.type !== satisfactionType) {
+        // غير رأيه
+        if (satisfactionType === 'SATISFACTION') {
+          satisfactionChange = 1;
+          dissatisfactionChange = -1;
+        } else {
+          satisfactionChange = -1;
+          dissatisfactionChange = 1;
+        }
+      }
+
+      await tx.question.update({
+        where: { id: faqId },
+        data: {
+          satisfaction: { increment: satisfactionChange },
+          dissatisfaction: { increment: dissatisfactionChange },
+        },
+      });
+    });
+  }
+
+  async recordView({
+    guestId,
+    faqId,
+  }: {
+    guestId: string;
+    faqId: string;
+  }): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const previousView = await tx.questionView.findUnique({
+        where: {
+          questionId_guestId: {
+            questionId: faqId,
+            guestId,
+          },
+        },
+      });
+
+      if (!previousView) {
+        await tx.questionView.create({
+          data: {
+            questionId: faqId,
+            guestId,
+          },
+        });
+
+        await tx.question.update({
+          where: { id: faqId },
+          data: {
+            views: { increment: 1 },
+          },
+        });
+      }
+    });
   }
 }
