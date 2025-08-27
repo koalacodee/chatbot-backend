@@ -1,8 +1,8 @@
 import { SupportTicketAnswer } from '@prisma/client';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Guest } from 'src/guest/domain/entities/guest.entity';
-import { User } from 'src/shared/entities/user.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
+import { TicketCode } from 'src/tickets/domain/value-objects/ticket-code.vo';
 
 export enum SupportTicketStatus {
   NEW = 'NEW',
@@ -23,6 +23,7 @@ export class SupportTicket {
   private _status: SupportTicketStatus;
   private _createdAt: Date;
   private _updatedAt: Date;
+  private _code: TicketCode;
 
   private constructor(options: SupportTicketOptions) {
     this._id = UUID.create(options.id);
@@ -36,6 +37,7 @@ export class SupportTicket {
     this._status = options.status;
     this._createdAt = options.createdAt;
     this._updatedAt = options.updatedAt;
+    this._code = options.code ?? TicketCode.create();
   }
 
   get id(): UUID {
@@ -118,11 +120,19 @@ export class SupportTicket {
     this._assignee = newAssignee;
   }
 
+  get code(): string {
+    return this._code.toString();
+  }
+
+  set code(value: string) {
+    this._code = TicketCode.create(value);
+  }
+
   toJSON(): Record<string, unknown> {
     return {
       id: this._id.toString(),
       guestId: this._guestId.toString(),
-      guest: this._guest.withoutPassword(),
+      guest: this._guest?.withoutPassword(),
       subject: this._subject,
       description: this._description,
       departmentId: this._departmentId.toString(),
@@ -131,15 +141,16 @@ export class SupportTicket {
       status: this._status,
       createdAt: this._createdAt.toISOString(),
       updatedAt: this._updatedAt.toISOString(),
+      code: this._code.toString(),
     };
   }
 
   static create(options: SupportTicketOptions): SupportTicket {
-    return new SupportTicket(options);
+    return new SupportTicket({ ...options, code: undefined });
   }
 
   static fromPersistence(data: SupportTicketPersistence): SupportTicket {
-    return SupportTicket.create({
+    return new SupportTicket({
       id: data.id,
       guestId: data.guestId,
       subject: data.subject,
@@ -151,6 +162,7 @@ export class SupportTicket {
       status: data.status,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
+      code: TicketCode.create(data.code),
     });
   }
 
@@ -167,6 +179,7 @@ export class SupportTicket {
       status: supportTicket.status,
       createdAt: supportTicket.createdAt,
       updatedAt: supportTicket.updatedAt,
+      code: supportTicket._code.toString(),
     };
   }
 }
@@ -183,6 +196,7 @@ export interface SupportTicketOptions {
   status: SupportTicketStatus;
   createdAt: Date;
   updatedAt: Date;
+  code?: TicketCode;
 }
 
 export interface SupportTicketPersistence {
@@ -197,4 +211,5 @@ export interface SupportTicketPersistence {
   status: SupportTicketStatus;
   createdAt: Date;
   updatedAt: Date;
+  code: string;
 }

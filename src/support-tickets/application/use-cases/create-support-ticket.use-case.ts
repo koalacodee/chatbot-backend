@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
 import { SupportTicketRepository } from '../../domain/repositories/support-ticket.repository';
-import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { GuestRepository } from 'src/guest/domain/repositories/guest.repository';
 
@@ -42,6 +41,8 @@ export class CreateSupportTicketUseCase {
       updatedAt: now,
     });
 
-    return this.supportTicketRepo.save(ticket);
+    await this.supportTicketRepo.save(ticket);
+
+    return ticket;
   }
 }

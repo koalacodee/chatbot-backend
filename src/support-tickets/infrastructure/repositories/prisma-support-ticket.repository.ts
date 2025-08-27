@@ -18,6 +18,8 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
   }
 
   private async toDomain(rec: any): Promise<SupportTicket> {
+    console.log(rec);
+
     return SupportTicket.fromPersistence({
       id: rec.id,
       guestId: rec.guestId,
@@ -34,6 +36,7 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       guest: rec.guest ? await Guest.create(rec.guest) : undefined,
       createdAt: rec.createdAt,
       updatedAt: rec.updatedAt,
+      code: rec.code,
     });
   }
 
@@ -48,6 +51,7 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       status: ticket.status,
       createdAt: ticket.createdAt,
       updatedAt: ticket.updatedAt,
+      code: ticket.code.toString(),
     };
 
     const upsert = await this.prisma.supportTicket.upsert({
@@ -179,5 +183,10 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       ORDER BY ts.count DESC
       LIMIT ${limit};
     `;
+  }
+
+  async findByCode(code: string): Promise<SupportTicket | null> {
+    const rec = await this.prisma.supportTicket.findUnique({ where: { code } });
+    return rec ? this.toDomain(rec) : null;
   }
 }

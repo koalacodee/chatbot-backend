@@ -26,6 +26,7 @@ import {
   CountOpenTicketsUseCase,
   CountAnsweredPendingUseCase,
   GetFrequentTicketSubjectsUseCase,
+  TrackTicketUseCase,
 } from '../../application/use-cases';
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
@@ -34,13 +35,9 @@ import { Roles } from 'src/shared/value-objects/role.vo';
 import { AnswerTicketDto } from './dto/answer-ticket.use-case';
 import { AnswerTicketUseCase } from 'src/support-tickets/application/use-cases/answer-ticket.use-case';
 import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
-
-interface CreateSupportTicketDto {
-  guestId: string;
-  subject: string;
-  description: string;
-  departmentId: string;
-}
+import { GuestAuth } from 'src/auth/guest/infrastructure/decorators/guest-auth.decorator';
+import { TrackTicketDto } from './dto/track-ticket.dto';
+import { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
 
 interface UpdateSupportTicketDto {
   id: string;
@@ -86,19 +83,32 @@ export class SupportTicketController {
     private readonly countAnsweredPendingUseCase: CountAnsweredPendingUseCase,
     private readonly getFrequentTicketSubjectsUseCase: GetFrequentTicketSubjectsUseCase,
     private readonly answerTicketUseCase: AnswerTicketUseCase,
+    private readonly trackTicketUseCase: TrackTicketUseCase,
   ) {}
 
-  @UseGuards(UserJwtAuthGuard)
+  @GuestAuth()
   @Post()
   async create(
     @Body() dto: CreateSupportTicketDto,
     @Req() req: any,
   ): Promise<SupportTicket> {
     return this.createUseCase.execute({
-      guestId: req.guest?.id || dto.guestId,
+      guestId: req.user?.id,
       subject: dto.subject,
       description: dto.description,
       departmentId: dto.departmentId,
+    });
+  }
+
+  @GuestAuth()
+  @Get('track/:code')
+  async track(
+    @Param() params: TrackTicketDto,
+    @Req() req: any,
+  ): Promise<SupportTicket> {
+    return this.trackTicketUseCase.execute({
+      code: params.code,
+      guestId: req.user?.id,
     });
   }
 

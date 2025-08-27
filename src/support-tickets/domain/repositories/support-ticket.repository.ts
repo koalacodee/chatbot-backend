@@ -26,4 +26,5 @@ export abstract class SupportTicketRepository {
   abstract getFrequentTicketSubjects(
     limit?: number,
   ): Promise<FrequentTicketSubject[]>;
+  abstract findByCode(code: string): Promise<SupportTicket | null>;
 }

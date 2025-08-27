@@ -33,6 +33,7 @@ export class PrismaSupportTicketAnswerRepository extends SupportTicketAnswerRepo
       status: row.supportTicket.status,
       createdAt: row.supportTicket.createdAt,
       updatedAt: row.supportTicket.updatedAt,
+      code: row.supportTicket.code,
     });
 
     return SupportTicketAnswer.create({
