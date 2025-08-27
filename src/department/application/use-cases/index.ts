@@ -12,3 +12,5 @@ export * from './update-main-department.use-case';
 export * from './update-sub-department.use-case';
 export * from './delete-main-department.use-case';
 export * from './delete-sub-department.use-case';
+export * from './view-main-departments.use-case';
+export * from './view-sub-departments.use-case';

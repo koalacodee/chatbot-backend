@@ -4,3 +4,5 @@ export * from './get-department.dto';
 export * from './get-all-departments.dto';
 export * from './delete-department.dto';
 export * from './delete-many-departments.dto';
+export * from './get-all-sub-departments.dto';
+export * from './paginate.dto';

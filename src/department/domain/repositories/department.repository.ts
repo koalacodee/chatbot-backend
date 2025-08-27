@@ -131,7 +131,8 @@ export abstract class DepartmentRepository {
   ): Promise<Department[]>;
 
   abstract findAllSubDepartments(
-    queryDto: Omit<DepartmentQueryDto, 'includeSubDepartments'>,
+    queryDto?: Omit<DepartmentQueryDto, 'includeSubDepartments'>,
+    departmentId?: string,
   ): Promise<Department[]>;
 
   abstract canDelete(departmentId: string): Promise<boolean>;
@@ -145,4 +146,15 @@ export abstract class DepartmentRepository {
    * Check if a department is a sub-department (has parent).
    */
   abstract isSubDepartment(id: string): Promise<boolean>;
+
+  abstract viewMainDepartments(options?: {
+    limit?: number;
+    page?: number;
+  }): Promise<Department[]>;
+
+  abstract viewSubDepartments(options?: {
+    limit?: number;
+    page?: number;
+    departmentId?: string;
+  }): Promise<Department[]>;
 }

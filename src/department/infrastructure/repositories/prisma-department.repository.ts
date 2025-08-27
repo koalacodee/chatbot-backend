@@ -246,9 +246,21 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
     return depts.map(this.toDomain);
   }
 
-  async findAllSubDepartments(): Promise<Department[]> {
+  async findAllSubDepartments(
+    queryDto?: Omit<DepartmentQueryDto, 'includeSubDepartments'>,
+    departmentId?: string,
+  ): Promise<Department[]> {
     const rows = await this.prisma.department.findMany({
-      where: { parentId: { not: null } },
+      where: {
+        AND: [
+          {
+            parentId: { not: null },
+          },
+          {
+            parentId: departmentId ?? undefined,
+          },
+        ],
+      },
       include: { parent: true },
     });
 
@@ -394,5 +406,37 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
       where: { id, parentId: { not: null } },
     });
     return count > 0;
+  }
+
+  async viewMainDepartments(options: {
+    limit?: number;
+    page?: number;
+  }): Promise<Department[]> {
+    const { limit = 10, page = 1 } = options;
+    const skip = (page - 1) * limit;
+    const depts = await this.prisma.department.findMany({
+      where: { parentId: null, visibility: 'PUBLIC' },
+      skip,
+      take: limit,
+    });
+    return depts.map(this.toDomain);
+  }
+
+  async viewSubDepartments(options: {
+    limit?: number;
+    page?: number;
+    departmentId?: string;
+  }): Promise<Department[]> {
+    const { limit = 10, page = 1, departmentId } = options;
+    const skip = (page - 1) * limit;
+    const depts = await this.prisma.department.findMany({
+      where: {
+        parentId: departmentId ?? undefined,
+        parent: { visibility: 'PUBLIC' },
+      },
+      skip,
+      take: limit,
+    });
+    return depts.map(this.toDomain);
   }
 }

@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   CreateDepartmentUseCase,
@@ -35,6 +36,10 @@ import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.g
 import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { CreateSubDepartmentDto } from './dto/create-sub-department.dto';
+import { GetAllSubDepartmentsDto } from './dto/get-all-sub-departments.dto';
+import { ViewMainDepartmentsUseCase } from 'src/department/application/use-cases/view-main-departments.use-case';
+import { ViewSubDepartmentsUseCase } from 'src/department/application/use-cases/view-sub-departments.use-case';
+import { PaginateDto } from './dto/paginate.dto';
 
 @Controller('department')
 export class DepartmentController {
@@ -51,7 +56,19 @@ export class DepartmentController {
     private readonly countDepartmentsUseCase: CountDepartmentsUseCase,
     private readonly getAllSubDepartmentsUseCase: GetAllSubDepartmentsUseCase,
     private readonly canDeleteUseCase: CanDeleteUseCase,
+    private readonly viewMainDepartmentsUseCase: ViewMainDepartmentsUseCase,
+    private readonly viewSubDepartmentsUseCase: ViewSubDepartmentsUseCase,
   ) {}
+
+  @Get('view/main')
+  async viewMainDepartments(@Query() queryDto: PaginateDto) {
+    return this.viewMainDepartmentsUseCase.execute(queryDto);
+  }
+
+  @Get('view/sub')
+  async viewSubDepartments(@Query() queryDto: GetAllSubDepartmentsDto) {
+    return this.viewSubDepartmentsUseCase.execute(queryDto);
+  }
 
   @UseGuards(UserJwtAuthGuard, RolesGuard)
   @UseRoles(Roles.ADMIN)
@@ -89,21 +106,31 @@ export class DepartmentController {
     return this.updateSubDepartmentUseCase.execute(id, input);
   }
 
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get()
   async getAllSubDepartments(): Promise<GetAllDepartmentsOutputDto> {
     return this.getAllDepartmentsUseCase.execute();
   }
 
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('sub-departments')
-  async getAllDepartments(): Promise<GetAllDepartmentsOutputDto> {
-    return this.getAllSubDepartmentsUseCase.execute();
+  async getAllDepartments(
+    @Query() queryDto: GetAllSubDepartmentsDto,
+  ): Promise<GetAllDepartmentsOutputDto> {
+    return this.getAllSubDepartmentsUseCase.execute(queryDto);
   }
 
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get(':id')
   async get(@Param('id') id: string): Promise<GetDepartmentOutputDto | null> {
     return this.getDepartmentUseCase.execute(id);
   }
 
+  @UseGuards(UserJwtAuthGuard, RolesGuard)
+  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Get('all')
   async getAll(): Promise<GetAllDepartmentsOutputDto> {
     return this.getAllDepartmentsUseCase.execute();
