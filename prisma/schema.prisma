@@ -148,6 +148,7 @@ model Guest {
   tickets        Ticket[]
   createdAt      DateTime              @default(now()) @map("created_at")
   updatedAt      DateTime              @updatedAt @map("updated_at")
+  questionViews  QuestionView[]
 
   @@map("guests")
 }
@@ -214,8 +215,9 @@ model Question {
   creatorEmployee     Employee?              @relation(fields: [creatorEmployeeId], references: [id], onDelete: Cascade)
   interactions        QuestionInteraction[]
   satisfaction        Int                    @default(0) @map("satisfaction")
-  dissatisfaction      Int                    @default(0) @map("dissatisfaction")
+  dissatisfaction     Int                    @default(0) @map("dissatisfaction")
   views               Int                    @default(0) @map("views")
+  questionViews       QuestionView[]
 
   @@index([departmentId])
   @@index([creatorSupervisorId])
@@ -237,6 +239,22 @@ model QuestionInteraction {
   @@index([questionId])
   @@index([guestId])
   @@map("question_interactions")
+}
+
+model QuestionView {
+  id        String          @id @default(uuid()) @map("id") @db.Uuid
+  questionId String          @map("question_id") @db.Uuid
+  question   Question @relation(fields: [questionId], references: [id])
+  guestId    String   @map("guest_id") @db.Uuid
+  guest      Guest    @relation(fields: [guestId], references: [id])
+
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  @@unique([questionId, guestId])
+  @@index([questionId])
+  @@index([guestId])
+  @@map("question_views")
 }
 
 // Removed QuestionAttachment junction; attachments now reference their targets via Attachment.targetId
@@ -344,6 +362,7 @@ model SupportTicket {
   answer       SupportTicketAnswer?
   assigneeId   String?              @map("assignee_id") @db.Uuid
   assignee     Employee?            @relation("AssigneeOfSupportTicket", fields: [assigneeId], references: [id])
+  code         String               @unique @map("code") @db.VarChar(10)
 
   @@index([guestId])
   @@index([departmentId, status])
@@ -506,8 +525,8 @@ enum MessageRole {
 }
 
 enum InteractionType {
-  LIKE    @map("like")
-  DISLIKE @map("dislike")
+  SATISFACTION    @map("satisfaction")
+  DISSATISFACTION @map("dissatisfaction")
   VIEW    @map("view")
 
   @@map("interaction_type")
