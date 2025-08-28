@@ -189,4 +189,70 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
     const rec = await this.prisma.supportTicket.findUnique({ where: { code } });
     return rec ? this.toDomain(rec) : null;
   }
+
+  async findGuestTicketsWithDetails(
+    guestId: string,
+    offset: number = 0,
+    limit: number = 10,
+  ): Promise<
+    {
+      id: string;
+      subject: string;
+      description: string;
+      answer?: string;
+      isRated: boolean;
+      departmentId: string;
+      createdAt: Date;
+      updatedAt: Date;
+      status: SupportTicketStatus;
+    }[]
+  > {
+    return this.prisma.$queryRaw`
+      WITH GuestTickets AS (
+        SELECT 
+          st.id,
+          st.subject,
+          st.description,
+          st.department_id as "departmentId",
+          st.created_at as "createdAt",
+          st.updated_at as "updatedAt",
+          st.guest_id,
+          st.status,
+          st.code
+        FROM support_tickets st
+        WHERE st.guest_id = ${guestId}::uuid
+      ),
+      TicketAnswers AS (
+        SELECT 
+          sta.support_ticket_id,
+          sta.content as answer
+        FROM support_ticket_answers sta
+      ),
+      TicketRatings AS (
+        SELECT 
+          sti.support_ticket_id,
+          CASE 
+            WHEN sti.id IS NOT NULL THEN true 
+            ELSE false 
+          END as "isRated"
+        FROM support_ticket_interactions sti
+      )
+      SELECT 
+        gt.id,
+        gt.subject,
+        gt.description,
+        ta.answer,
+        COALESCE(tr."isRated", false) as "isRated",
+        gt."departmentId",
+        gt."createdAt",
+        gt."updatedAt",
+        UPPER(gt.status::text) AS status,
+        gt.code
+      FROM GuestTickets gt
+      LEFT JOIN TicketAnswers ta ON ta.support_ticket_id = gt.id
+      LEFT JOIN TicketRatings tr ON tr.support_ticket_id = gt.id
+      ORDER BY gt."createdAt" DESC
+      LIMIT ${limit} OFFSET ${offset};
+    `;
+  }
 }

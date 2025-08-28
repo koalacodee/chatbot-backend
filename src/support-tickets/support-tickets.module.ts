@@ -6,6 +6,8 @@ import { PrismaSupportTicketAnswerRepository } from './infrastructure/repositori
 import { SupportTicketController } from './interface/http/support-ticket.controller';
 import * as UseCases from './application/use-cases';
 import { DepartmentModule } from 'src/department/department.module';
+import { PrismaSupportTicketInteractionRepository } from './infrastructure/repositories/prisma-support-ticket-interaction.repository';
+import { SupportTicketInteractionRepository } from './domain/repositories/support-ticket-interaction.repository';
 
 @Module({
   controllers: [SupportTicketController],
@@ -17,6 +19,10 @@ import { DepartmentModule } from 'src/department/department.module';
     {
       provide: SupportTicketAnswerRepository,
       useClass: PrismaSupportTicketAnswerRepository,
+    },
+    {
+      provide: SupportTicketInteractionRepository,
+      useClass: PrismaSupportTicketInteractionRepository,
     },
     ...Object.values(UseCases),
   ],

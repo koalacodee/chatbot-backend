@@ -6,9 +6,8 @@ import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 
 enum Rating {
-  SATISFIED = 'SATISFIED',
-  NEUTRAL = 'NEUTRAL',
-  DISSATISFIED = 'DISSATISFIED',
+  SATISFACTION = 'SATISFACTION',
+  DISSATISFACTION = 'DISSATISFACTION',
 }
 
 export interface SupportTicketAnswerOptions {

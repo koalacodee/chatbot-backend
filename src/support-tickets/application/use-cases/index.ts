@@ -15,3 +15,5 @@ export * from './count-answered-pending.use-case';
 export * from './get-frequent-ticket-subjects.use-case';
 export * from './answer-ticket.use-case';
 export * from './track-ticket.use-case';
+export * from './record-support-ticket-interaction.use-case';
+export * from './get-guest-tickets-with-details.use-case';

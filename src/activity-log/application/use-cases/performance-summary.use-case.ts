@@ -36,7 +36,7 @@ export class PerformanceSummaryUseCase {
       select: {
         createdAt: true,
         rating: true,
-        supportTicket: { select: { createdAt: true } },
+        supportTicket: { include: { interaction: true } },
       },
     });
     const ticketsAnswered = answers.length;
@@ -54,10 +54,10 @@ export class PerformanceSummaryUseCase {
         )
       : null;
     const satisfiedTickets = answers.filter(
-      (a) => a.rating === 'SATISFIED',
+      (a) => a.supportTicket.interaction.type === 'SATISFACTION',
     ).length;
     const dissatisfiedTickets = answers.filter(
-      (a) => a.rating === 'DISSATISFIED',
+      (a) => a.supportTicket.interaction.type === 'DISSATISFACTION',
     ).length;
 
     // Tasks performed and average task time

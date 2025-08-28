@@ -3,6 +3,7 @@ import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Guest } from 'src/guest/domain/entities/guest.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { TicketCode } from 'src/tickets/domain/value-objects/ticket-code.vo';
+import { SupportTicketInteraction } from './support-ticket-interaction.entity';
 
 export enum SupportTicketStatus {
   NEW = 'NEW',
@@ -24,6 +25,7 @@ export class SupportTicket {
   private _createdAt: Date;
   private _updatedAt: Date;
   private _code: TicketCode;
+  private _interaction?: SupportTicketInteraction;
 
   private constructor(options: SupportTicketOptions) {
     this._id = UUID.create(options.id);
@@ -38,6 +40,7 @@ export class SupportTicket {
     this._createdAt = options.createdAt;
     this._updatedAt = options.updatedAt;
     this._code = options.code ?? TicketCode.create();
+    this._interaction = options.interaction;
   }
 
   get id(): UUID {
@@ -128,6 +131,14 @@ export class SupportTicket {
     this._code = TicketCode.create(value);
   }
 
+  get interaction(): SupportTicketInteraction | undefined {
+    return this._interaction;
+  }
+
+  set interaction(value: SupportTicketInteraction | undefined) {
+    this._interaction = value;
+  }
+
   toJSON(): Record<string, unknown> {
     return {
       id: this._id.toString(),
@@ -142,6 +153,7 @@ export class SupportTicket {
       createdAt: this._createdAt.toISOString(),
       updatedAt: this._updatedAt.toISOString(),
       code: this._code.toString(),
+      interaction: this._interaction,
     };
   }
 
@@ -163,6 +175,7 @@ export class SupportTicket {
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       code: TicketCode.create(data.code),
+      interaction: data.interaction,
     });
   }
 
@@ -180,6 +193,7 @@ export class SupportTicket {
       createdAt: supportTicket.createdAt,
       updatedAt: supportTicket.updatedAt,
       code: supportTicket._code.toString(),
+      interaction: supportTicket.interaction,
     };
   }
 }
@@ -197,6 +211,7 @@ export interface SupportTicketOptions {
   createdAt: Date;
   updatedAt: Date;
   code?: TicketCode;
+  interaction?: SupportTicketInteraction;
 }
 
 export interface SupportTicketPersistence {
@@ -212,4 +227,5 @@ export interface SupportTicketPersistence {
   createdAt: Date;
   updatedAt: Date;
   code: string;
+  interaction?: SupportTicketInteraction;
 }

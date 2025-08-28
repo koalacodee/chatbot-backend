@@ -52,17 +52,17 @@ model Supervisor {
 }
 
 model Employee {
-  id                           String                @id @default(uuid()) @map("id") @db.Uuid
-  userId                       String                @unique @map("user_id") @db.Uuid
-  user                         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                           String                  @id @default(uuid()) @map("id") @db.Uuid
+  userId                       String                  @unique @map("user_id") @db.Uuid
+  user                         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   permissions                  EmployeePermissions[]
-  supervisorId                 String                @map("supervisor_id") @db.Uuid
-  supervisor                   Supervisor            @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
-  supportTicketAnswersAssigned SupportTicket[]       @relation("AssigneeOfSupportTicket")
-  assigneeTasks                Task[]                @relation("AssigneeOfTask")
+  supervisorId                 String                  @map("supervisor_id") @db.Uuid
+  supervisor                   Supervisor              @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  supportTicketAnswersAssigned SupportTicket[]         @relation("AssigneeOfSupportTicket")
+  assigneeTasks                Task[]                  @relation("AssigneeOfTask")
   questions                    Question[]
-  supportTicketAnswersAuthored SupportTicketAnswer[] @relation("AnswererOfSupportTicketAnswer")
-  performerTasks               Task[]                @relation("PerformerOfTask")
+  supportTicketAnswersAuthored SupportTicketAnswer[]   @relation("AnswererOfSupportTicketAnswer")
+  performerTasks               Task[]                  @relation("PerformerOfTask")
   subDepartments               EmployeeSubDepartment[]
 
   @@map("employees")
@@ -84,30 +84,30 @@ model Admin {
 }
 
 model Driver {
-  id                      String      @id @default(uuid()) @map("id") @db.Uuid
-  userId                  String      @unique @map("user_id") @db.Uuid
-  user                    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  supervisorId            String      @map("supervisor_id") @db.Uuid
-  supervisor              Supervisor  @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
-  licensingNumber         String      @unique @map("licensing_number") @db.VarChar(255)
-  drivingLicenseExpiry    DateTime    @map("driving_license_expiry") @db.Date
-  vehicles                Vehicle[]
-  violations              Violation[]
-  createdAt               DateTime    @default(now()) @map("created_at")
-  updatedAt               DateTime    @updatedAt @map("updated_at")
+  id                   String      @id @default(uuid()) @map("id") @db.Uuid
+  userId               String      @unique @map("user_id") @db.Uuid
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supervisorId         String      @map("supervisor_id") @db.Uuid
+  supervisor           Supervisor  @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  licensingNumber      String      @unique @map("licensing_number") @db.VarChar(255)
+  drivingLicenseExpiry DateTime    @map("driving_license_expiry") @db.Date
+  vehicles             Vehicle[]
+  violations           Violation[]
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
 
   @@index([supervisorId])
   @@map("drivers")
 }
 
 model EmployeeSubDepartment {
-  id            String   @id @default(uuid()) @map("id") @db.Uuid
-  employeeId    String   @map("employee_id") @db.Uuid
-  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  departmentId  String   @map("department_id") @db.Uuid
-  department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  assignedAt    DateTime @default(now()) @map("assigned_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id           String     @id @default(uuid()) @map("id") @db.Uuid
+  employeeId   String     @map("employee_id") @db.Uuid
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  departmentId String     @map("department_id") @db.Uuid
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  assignedAt   DateTime   @default(now()) @map("assigned_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
 
   @@unique([employeeId, departmentId])
   @@index([employeeId])
@@ -137,18 +137,19 @@ enum EmployeePermissions {
 }
 
 model Guest {
-  id             String                @id @default(uuid()) @map("id") @db.Uuid
-  name           String                @map("name") @db.VarChar(255)
-  email          String                @unique @map("email") @db.VarChar(255)
-  phone          String?               @unique @map("phone") @db.VarChar(255)
-  password       String?               @map("password") @db.Char(97)
-  conversations  Conversation[]
-  interactions   QuestionInteraction[]
-  supportTickets SupportTicket[]
-  tickets        Ticket[]
-  createdAt      DateTime              @default(now()) @map("created_at")
-  updatedAt      DateTime              @updatedAt @map("updated_at")
-  questionViews  QuestionView[]
+  id                        String                     @id @default(uuid()) @map("id") @db.Uuid
+  name                      String                     @map("name") @db.VarChar(255)
+  email                     String                     @unique @map("email") @db.VarChar(255)
+  phone                     String?                    @unique @map("phone") @db.VarChar(255)
+  password                  String?                    @map("password") @db.Char(97)
+  conversations             Conversation[]
+  interactions              QuestionInteraction[]
+  supportTickets            SupportTicket[]
+  tickets                   Ticket[]
+  supportTicketInteractions SupportTicketInteraction[]
+  createdAt                 DateTime                   @default(now()) @map("created_at")
+  updatedAt                 DateTime                   @updatedAt @map("updated_at")
+  questionViews             QuestionView[]
 
   @@map("guests")
 }
@@ -166,24 +167,24 @@ model RefreshToken {
 }
 
 model Department {
-  id              String           @id @default(uuid()) @map("id") @db.Uuid
-  name            String           @map("name") @db.VarChar(255)
-  visibility      DepartmentVisibility           @default(PUBLIC) @map("visibility")
+  id              String               @id @default(uuid()) @map("id") @db.Uuid
+  name            String               @map("name") @db.VarChar(255)
+  visibility      DepartmentVisibility @default(PUBLIC) @map("visibility")
   questions       Question[]
   knowledgeChunks KnowledgeChunk[]
   supervisors     Supervisor[]
   tickets         Ticket[]
 
   // Self-relation fields
-  parentId       String?         @map("parent_id") @db.Uuid
-  parent         Department?     @relation("DepartmentHierarchy", fields: [parentId], references: [id])
-  subDepartments Department[]    @relation("DepartmentHierarchy")
-  supportTickets SupportTicket[]
+  parentId               String?                 @map("parent_id") @db.Uuid
+  parent                 Department?             @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  subDepartments         Department[]            @relation("DepartmentHierarchy")
+  supportTickets         SupportTicket[]
   employeeSubDepartments EmployeeSubDepartment[]
-  
+
   // Task assignment relations
-  targetTasks           Task[] @relation("TargetDepartment")
-  targetSubDepartment   Task[] @relation("TargetSubDepartment")
+  targetTasks         Task[] @relation("TargetDepartment")
+  targetSubDepartment Task[] @relation("TargetSubDepartment")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -193,7 +194,7 @@ model Department {
 }
 
 enum DepartmentVisibility {
-  PUBLIC @map("public")
+  PUBLIC  @map("public")
   PRIVATE @map("private")
 }
 
@@ -207,16 +208,16 @@ model Question {
   knowledgeChunk      KnowledgeChunk?       @relation(fields: [knowledgeChunkId], references: [id])
   createdAt           DateTime              @default(now()) @map("created_at")
   updatedAt           DateTime              @updatedAt @map("updated_at")
-  creatorSupervisorId String?                @map("creator_supervisor_id") @db.Uuid
-  creatorSupervisor   Supervisor?            @relation(fields: [creatorSupervisorId], references: [id], onDelete: Cascade)
-  creatorAdminId      String?                @map("creator_admin_id") @db.Uuid
-  creatorAdmin        Admin?                 @relation(fields: [creatorAdminId], references: [id], onDelete: Cascade)
-  creatorEmployeeId   String?                @map("creator_employee_id") @db.Uuid
-  creatorEmployee     Employee?              @relation(fields: [creatorEmployeeId], references: [id], onDelete: Cascade)
+  creatorSupervisorId String?               @map("creator_supervisor_id") @db.Uuid
+  creatorSupervisor   Supervisor?           @relation(fields: [creatorSupervisorId], references: [id], onDelete: Cascade)
+  creatorAdminId      String?               @map("creator_admin_id") @db.Uuid
+  creatorAdmin        Admin?                @relation(fields: [creatorAdminId], references: [id], onDelete: Cascade)
+  creatorEmployeeId   String?               @map("creator_employee_id") @db.Uuid
+  creatorEmployee     Employee?             @relation(fields: [creatorEmployeeId], references: [id], onDelete: Cascade)
   interactions        QuestionInteraction[]
-  satisfaction        Int                    @default(0) @map("satisfaction")
-  dissatisfaction     Int                    @default(0) @map("dissatisfaction")
-  views               Int                    @default(0) @map("views")
+  satisfaction        Int                   @default(0) @map("satisfaction")
+  dissatisfaction     Int                   @default(0) @map("dissatisfaction")
+  views               Int                   @default(0) @map("views")
   questionViews       QuestionView[]
 
   @@index([departmentId])
@@ -242,14 +243,14 @@ model QuestionInteraction {
 }
 
 model QuestionView {
-  id        String          @id @default(uuid()) @map("id") @db.Uuid
-  questionId String          @map("question_id") @db.Uuid
+  id         String   @id @default(uuid()) @map("id") @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
   question   Question @relation(fields: [questionId], references: [id])
   guestId    String   @map("guest_id") @db.Uuid
   guest      Guest    @relation(fields: [guestId], references: [id])
 
-  createdAt DateTime        @default(now()) @map("created_at")
-  updatedAt DateTime        @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([questionId, guestId])
   @@index([questionId])
@@ -348,21 +349,22 @@ enum TicketStatus {
 }
 
 model SupportTicket {
-  id           String               @id @default(uuid()) @map("id") @db.Uuid
-  guestId      String               @map("guest_id") @db.Uuid
-  guest        Guest                @relation(fields: [guestId], references: [id])
-  subject      String               @map("subject") @db.VarChar(255)
-  description  String               @map("description") @db.Text
-  departmentId String               @map("department_id") @db.Uuid
-  department   Department           @relation(fields: [departmentId], references: [id])
-  status       SupportTicketStatus  @default(NEW) @map("status")
-  createdAt    DateTime             @default(now()) @map("created_at")
-  updatedAt    DateTime             @updatedAt @map("updated_at")
-  answeredAt   DateTime?            @map("answered_at")
+  id           String                    @id @default(uuid()) @map("id") @db.Uuid
+  guestId      String                    @map("guest_id") @db.Uuid
+  guest        Guest                     @relation(fields: [guestId], references: [id])
+  subject      String                    @map("subject") @db.VarChar(255)
+  description  String                    @map("description") @db.Text
+  departmentId String                    @map("department_id") @db.Uuid
+  department   Department                @relation(fields: [departmentId], references: [id])
+  status       SupportTicketStatus       @default(NEW) @map("status")
+  createdAt    DateTime                  @default(now()) @map("created_at")
+  updatedAt    DateTime                  @updatedAt @map("updated_at")
+  answeredAt   DateTime?                 @map("answered_at")
   answer       SupportTicketAnswer?
-  assigneeId   String?              @map("assignee_id") @db.Uuid
-  assignee     Employee?            @relation("AssigneeOfSupportTicket", fields: [assigneeId], references: [id])
-  code         String               @unique @map("code") @db.VarChar(10)
+  assigneeId   String?                   @map("assignee_id") @db.Uuid
+  assignee     Employee?                 @relation("AssigneeOfSupportTicket", fields: [assigneeId], references: [id])
+  code         String                    @unique @map("code") @db.VarChar(10)
+  interaction  SupportTicketInteraction?
 
   @@index([guestId])
   @@index([departmentId, status])
@@ -388,52 +390,74 @@ model SupportTicketAnswer {
   @@map("support_ticket_answers")
 }
 
+model SupportTicketInteraction {
+  id              String                       @id @default(uuid()) @map("id") @db.Uuid
+  supportTicketId String                       @unique @map("support_ticket_id") @db.Uuid
+  supportTicket   SupportTicket                @relation(fields: [supportTicketId], references: [id])
+  guestId         String?                      @map("guest_id") @db.Uuid
+  guest           Guest?                       @relation(fields: [guestId], references: [id])
+  type            SupportTicketInteractionType @map("type")
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
+
+  @@index([supportTicketId])
+  @@index([guestId])
+  @@map("support_ticket_interactions")
+}
+
+enum SupportTicketInteractionType {
+  SATISFACTION    @map("satisfaction")
+  DISSATISFACTION @map("dissatisfaction")
+
+  @@map("support_ticket_interaction_type")
+}
+
 enum TaskAssignmentType {
-  INDIVIDUAL      @map("individual")
-  DEPARTMENT      @map("department")
-  SUB_DEPARTMENT  @map("sub_department")
+  INDIVIDUAL     @map("individual")
+  DEPARTMENT     @map("department")
+  SUB_DEPARTMENT @map("sub_department")
 
   @@map("task_assignment_type")
 }
 
 model Task {
-  id                    String              @id @default(uuid()) @map("id") @db.Uuid
-  title                 String              @map("title") @db.VarChar(255)
-  description           String              @map("description") @db.Text
-  
-  assigneeId            String?             @map("assignee_id") @db.Uuid
-  assignee              Employee?           @relation("AssigneeOfTask", fields: [assigneeId], references: [id])
-  
-  assignerSupervisorId  String?             @map("assigner_supervisor_id") @db.Uuid
-  assignerSupervisor    Supervisor?         @relation("AssignerOfTask", fields: [assignerSupervisorId], references: [id])
-  assignerAdminId       String?             @map("assigner_admin_id") @db.Uuid
-  assignerAdmin         Admin?              @relation("AssignerOfTask", fields: [assignerAdminId], references: [id])
-  
-  approverSupervisorId  String?             @map("approver_supervisor_id") @db.Uuid
-  approverSupervisor    Supervisor?         @relation("ApproverOfTask", fields: [approverSupervisorId], references: [id])
-  approverAdminId       String?             @map("approver_admin_id") @db.Uuid
-  approverAdmin         Admin?              @relation("ApproverOfTask", fields: [approverAdminId], references: [id])
-  
-  status                TaskStatus          @default(TODO) @map("status")
-  assignmentType        TaskAssignmentType  @map("assignment_type")
-  
-  targetDepartmentId    String?             @map("target_department_id") @db.Uuid
-  targetDepartment      Department?         @relation("TargetDepartment", fields: [targetDepartmentId], references: [id])
-  targetSubDepartmentId String?             @map("target_sub_department_id") @db.Uuid
-  targetSubDepartment   Department?         @relation("TargetSubDepartment", fields: [targetSubDepartmentId], references: [id])
-  
-  createdAt             DateTime            @default(now()) @map("created_at")
-  updatedAt             DateTime            @updatedAt @map("updated_at")
-  completedAt           DateTime?           @map("completed_at")
-  assignerNotes         String?             @map("assigner_notes") @db.Text
-  feedback              String?             @map("feedback") @db.Text
-  
-  performerEmployeeId   String?             @map("performer_employee_id") @db.Uuid
-  performerEmployee     Employee?           @relation("PerformerOfTask", fields: [performerEmployeeId], references: [id])
-  performerSupervisorId String?             @map("performer_supervisor_id") @db.Uuid
-  performerSupervisor   Supervisor?         @relation("PerformerOfTask", fields: [performerSupervisorId], references: [id])
-  performerAdminId      String?             @map("performer_admin_id") @db.Uuid
-  performerAdmin        Admin?              @relation("PerformerOfTask", fields: [performerAdminId], references: [id])
+  id          String @id @default(uuid()) @map("id") @db.Uuid
+  title       String @map("title") @db.VarChar(255)
+  description String @map("description") @db.Text
+
+  assigneeId String?   @map("assignee_id") @db.Uuid
+  assignee   Employee? @relation("AssigneeOfTask", fields: [assigneeId], references: [id])
+
+  assignerSupervisorId String?     @map("assigner_supervisor_id") @db.Uuid
+  assignerSupervisor   Supervisor? @relation("AssignerOfTask", fields: [assignerSupervisorId], references: [id])
+  assignerAdminId      String?     @map("assigner_admin_id") @db.Uuid
+  assignerAdmin        Admin?      @relation("AssignerOfTask", fields: [assignerAdminId], references: [id])
+
+  approverSupervisorId String?     @map("approver_supervisor_id") @db.Uuid
+  approverSupervisor   Supervisor? @relation("ApproverOfTask", fields: [approverSupervisorId], references: [id])
+  approverAdminId      String?     @map("approver_admin_id") @db.Uuid
+  approverAdmin        Admin?      @relation("ApproverOfTask", fields: [approverAdminId], references: [id])
+
+  status         TaskStatus         @default(TODO) @map("status")
+  assignmentType TaskAssignmentType @map("assignment_type")
+
+  targetDepartmentId    String?     @map("target_department_id") @db.Uuid
+  targetDepartment      Department? @relation("TargetDepartment", fields: [targetDepartmentId], references: [id])
+  targetSubDepartmentId String?     @map("target_sub_department_id") @db.Uuid
+  targetSubDepartment   Department? @relation("TargetSubDepartment", fields: [targetSubDepartmentId], references: [id])
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  completedAt   DateTime? @map("completed_at")
+  assignerNotes String?   @map("assigner_notes") @db.Text
+  feedback      String?   @map("feedback") @db.Text
+
+  performerEmployeeId   String?     @map("performer_employee_id") @db.Uuid
+  performerEmployee     Employee?   @relation("PerformerOfTask", fields: [performerEmployeeId], references: [id])
+  performerSupervisorId String?     @map("performer_supervisor_id") @db.Uuid
+  performerSupervisor   Supervisor? @relation("PerformerOfTask", fields: [performerSupervisorId], references: [id])
+  performerAdminId      String?     @map("performer_admin_id") @db.Uuid
+  performerAdmin        Admin?      @relation("PerformerOfTask", fields: [performerAdminId], references: [id])
 
   @@index([assigneeId])
   @@index([assignerSupervisorId])
@@ -464,9 +488,8 @@ enum TaskStatus {
 }
 
 enum Rating {
-  SATISFIED    @map("satisfied")
-  NEUTRAL      @map("neutral")
-  DISSATISFIED @map("dissatisfied")
+  SATISFACTION    @map("satisfaction")
+  DISSATISFACTION @map("dissatisfaction")
 
   @@map("rating")
 }
@@ -527,7 +550,7 @@ enum MessageRole {
 enum InteractionType {
   SATISFACTION    @map("satisfaction")
   DISSATISFACTION @map("dissatisfaction")
-  VIEW    @map("view")
+  VIEW            @map("view")
 
   @@map("interaction_type")
 }
@@ -661,7 +684,7 @@ model EmployeeRequest {
   newEmployeeJobTitle    String  @map("new_employee_job_title") @db.VarChar(255)
   temporaryPassword      String  @map("temporary_password") @db.VarChar(255)
   newEmployeeDesignation String? @map("new_employee_designation") @db.VarChar(255)
-  newEmployeeId String? @map("new_employee_id") @db.VarChar(255)
+  newEmployeeId          String? @map("new_employee_id") @db.VarChar(255)
 
   status RequestStatus @default(PENDING) @map("status")
 

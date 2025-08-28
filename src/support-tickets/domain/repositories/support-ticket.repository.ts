@@ -27,4 +27,19 @@ export abstract class SupportTicketRepository {
     limit?: number,
   ): Promise<FrequentTicketSubject[]>;
   abstract findByCode(code: string): Promise<SupportTicket | null>;
+  
+  abstract findGuestTicketsWithDetails(
+    guestId: string,
+    offset?: number,
+    limit?: number,
+  ): Promise<{
+    id: string;
+    subject: string;
+    description: string;
+    answer?: string;
+    isRated: boolean;
+    departmentId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }[]>;
 }

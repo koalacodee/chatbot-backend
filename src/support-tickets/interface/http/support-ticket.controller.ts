@@ -27,6 +27,8 @@ import {
   CountAnsweredPendingUseCase,
   GetFrequentTicketSubjectsUseCase,
   TrackTicketUseCase,
+  RecordSupportTicketInteractionUseCase,
+  GetGuestTicketsWithDetailsUseCase,
 } from '../../application/use-cases';
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
@@ -38,6 +40,8 @@ import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support
 import { GuestAuth } from 'src/auth/guest/infrastructure/decorators/guest-auth.decorator';
 import { TrackTicketDto } from './dto/track-ticket.dto';
 import { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
+import { RecordTicketInteractionDto } from './dto/record-ticket-interaction.dto';
+import { GetGuestTicketsWithDetailsDto } from './dto/get-guest-tickets-with-details.dto';
 
 interface UpdateSupportTicketDto {
   id: string;
@@ -84,7 +88,35 @@ export class SupportTicketController {
     private readonly getFrequentTicketSubjectsUseCase: GetFrequentTicketSubjectsUseCase,
     private readonly answerTicketUseCase: AnswerTicketUseCase,
     private readonly trackTicketUseCase: TrackTicketUseCase,
+    private readonly recordInteractionUseCase: RecordSupportTicketInteractionUseCase,
+    private readonly getGuestTicketsWithDetailsUseCase: GetGuestTicketsWithDetailsUseCase,
   ) {}
+
+  @GuestAuth()
+  @Post(':type/:ticketId')
+  async recordInteraction(
+    @Param() params: RecordTicketInteractionDto,
+    @Req() req: any,
+  ) {
+    return this.recordInteractionUseCase.execute({
+      guestId: req.user.id,
+      supportTicketId: params.ticketId,
+      type: params.type,
+    });
+  }
+
+  @GuestAuth()
+  @Get('my-tickets')
+  async getGuestTicketsWithDetails(
+    @Query() query: GetGuestTicketsWithDetailsDto,
+    @Req() req: any,
+  ) {
+    return this.getGuestTicketsWithDetailsUseCase.execute({
+      guestId: req.user.id,
+      offset: query.offset,
+      limit: query.limit,
+    });
+  }
 
   @GuestAuth()
   @Post()

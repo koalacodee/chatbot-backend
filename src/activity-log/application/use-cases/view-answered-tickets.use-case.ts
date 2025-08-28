@@ -8,7 +8,7 @@ export interface ViewAnsweredTicketsInputDto {
 export interface AnsweredTicketRowDto {
   ticketId: string;
   subject: string;
-  customerRating: 'SATISFIED' | 'NEUTRAL' | 'DISSATISFIED' | null;
+  customerRating: 'SATISFACTION' | 'DISSATISFACTION' | null;
   responseTimeMs: number | null;
   dateAnswered: Date;
   user?: { id: string; name: string };
@@ -41,7 +41,10 @@ export class ViewAnsweredTicketsUseCase {
     const rows = await this.prisma.supportTicketAnswer.findMany({
       where,
       include: {
-        supportTicket: { select: { id: true, subject: true, createdAt: true } },
+        supportTicket: {
+          select: { id: true, subject: true, createdAt: true },
+          include: { interaction: { select: { type: true } } },
+        },
         answererAdmin: {
           select: { id: true, user: { select: { name: true } } },
         },
@@ -58,7 +61,7 @@ export class ViewAnsweredTicketsUseCase {
     return rows.map((a) => ({
       ticketId: a.supportTicket.id,
       subject: a.supportTicket.subject,
-      customerRating: a.rating ?? null,
+      customerRating: a.supportTicket.interaction.type ?? null,
       responseTimeMs: a.supportTicket.createdAt
         ? a.createdAt.getTime() - a.supportTicket.createdAt.getTime()
         : null,
