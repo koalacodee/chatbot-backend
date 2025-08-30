@@ -124,6 +124,8 @@ enum AdminPermissions {
   MANAGE_SUPERVISORS     @map("manage_supervisors")
   VIEW_USER_ACTIVITY     @map("view_user_activity")
   MANAGE_STAFF_DIRECTLY  @map("manage_staff_directly")
+  MANAGE_TASKS @map("manage_tasks")
+
 }
 
 enum EmployeePermissions {
@@ -132,6 +134,8 @@ enum EmployeePermissions {
   ADD_FAQS       @map("add_faqs")
   VIEW_ANALYTICS @map("view_analytics")
   CLOSE_TICKETS  @map("close_tickets")
+  MANAGE_KNOWLEDGE_CHUNKS @map("manage_knowledge_chunks")
+
 
   @@map("permissions")
 }
@@ -141,7 +145,6 @@ model Guest {
   name                      String                     @map("name") @db.VarChar(255)
   email                     String                     @unique @map("email") @db.VarChar(255)
   phone                     String?                    @unique @map("phone") @db.VarChar(255)
-  password                  String?                    @map("password") @db.Char(97)
   conversations             Conversation[]
   interactions              QuestionInteraction[]
   supportTickets            SupportTicket[]
@@ -177,7 +180,7 @@ model Department {
 
   // Self-relation fields
   parentId               String?                 @map("parent_id") @db.Uuid
-  parent                 Department?             @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  parent                 Department?             @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   subDepartments         Department[]            @relation("DepartmentHierarchy")
   supportTickets         SupportTicket[]
   employeeSubDepartments EmployeeSubDepartment[]
@@ -203,9 +206,9 @@ model Question {
   text                String                @map("text") @db.Text
   answer              String?               @map("answer") @db.Text
   departmentId        String                @map("department_id") @db.Uuid
-  department          Department            @relation(fields: [departmentId], references: [id])
+  department          Department            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   knowledgeChunkId    String?               @map("knowledge_chunk_id") @db.Uuid
-  knowledgeChunk      KnowledgeChunk?       @relation(fields: [knowledgeChunkId], references: [id])
+  knowledgeChunk      KnowledgeChunk?       @relation(fields: [knowledgeChunkId], references: [id], onDelete: Cascade)
   createdAt           DateTime              @default(now()) @map("created_at")
   updatedAt           DateTime              @updatedAt @map("updated_at")
   creatorSupervisorId String?               @map("creator_supervisor_id") @db.Uuid
@@ -232,9 +235,9 @@ model QuestionInteraction {
   updatedAt DateTime        @updatedAt @map("updated_at")
 
   questionId String   @map("question_id") @db.Uuid
-  question   Question @relation(fields: [questionId], references: [id])
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   guestId    String   @map("guest_id") @db.Uuid
-  guest      Guest    @relation(fields: [guestId], references: [id])
+  guest      Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
 
   @@unique([questionId, guestId])
   @@index([questionId])
@@ -245,9 +248,9 @@ model QuestionInteraction {
 model QuestionView {
   id         String   @id @default(uuid()) @map("id") @db.Uuid
   questionId String   @map("question_id") @db.Uuid
-  question   Question @relation(fields: [questionId], references: [id])
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   guestId    String   @map("guest_id") @db.Uuid
-  guest      Guest    @relation(fields: [guestId], references: [id])
+  guest      Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -258,13 +261,11 @@ model QuestionView {
   @@map("question_views")
 }
 
-// Removed QuestionAttachment junction; attachments now reference their targets via Attachment.targetId
-
 model KnowledgeChunk {
   id              String           @id @default(uuid()) @map("id") @db.Uuid
   content         String           @map("content") @db.Text
   departmentId    String           @map("department_id") @db.Uuid
-  department      Department       @relation(fields: [departmentId], references: [id])
+  department      Department       @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   pointId         String?          @map("point_id") @db.Uuid
   questions       Question[]
   retrievedChunks RetrievedChunk[]
@@ -280,7 +281,7 @@ model KnowledgeChunk {
 model Conversation {
   id        String    @id @default(uuid()) @map("id") @db.Uuid
   guestId   String    @map("guest_id") @db.Uuid
-  guest     Guest     @relation(fields: [guestId], references: [id])
+  guest     Guest?     @relation(fields: [guestId], references: [id], onDelete: Cascade)
   messages  Message[]
   createdAt DateTime  @default(now()) @map("created_at")
   startedAt DateTime  @default(now()) @map("started_at")
@@ -297,7 +298,7 @@ model Message {
   content        String          @map("content") @db.Text
   role           MessageRole     @map("role")
   conversationId String          @map("conversation_id") @db.Uuid
-  conversation   Conversation    @relation(fields: [conversationId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   retrievedChunk RetrievedChunk?
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
@@ -309,9 +310,9 @@ model Message {
 model RetrievedChunk {
   id               String         @id @default(uuid()) @map("id") @db.Uuid
   messageId        String         @unique @map("message_id") @db.Uuid
-  message          Message        @relation(fields: [messageId], references: [id])
+  message          Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
   knowledgeChunkId String         @map("knowledge_chunk_id") @db.Uuid
-  knowledgeChunk   KnowledgeChunk @relation(fields: [knowledgeChunkId], references: [id])
+  knowledgeChunk   KnowledgeChunk? @relation(fields: [knowledgeChunkId], references: [id], onDelete: Cascade)
   score            Float          @map("score")
   retrievedAt      DateTime       @default(now()) @map("retrieved_at")
   createdAt        DateTime       @default(now()) @map("created_at")
@@ -324,10 +325,10 @@ model RetrievedChunk {
 model Ticket {
   id              String        @id @default(uuid()) @map("id") @db.Uuid
   guestId         String?       @map("guest_id") @db.Uuid
-  guest           Guest?        @relation(fields: [guestId], references: [id])
+  guest           Guest?        @relation(fields: [guestId], references: [id], onDelete: Cascade)
   question        String        @map("question") @db.Text
   departmentId    String        @map("department_id") @db.Uuid
-  department      Department    @relation(fields: [departmentId], references: [id])
+  department   Department    @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   pointId         String?       @map("point_id") @db.Uuid
   ticketCode      String        @unique @map("ticket_code") @db.VarChar(255)
   createdAt       DateTime      @default(now()) @map("created_at")
@@ -351,18 +352,18 @@ enum TicketStatus {
 model SupportTicket {
   id           String                    @id @default(uuid()) @map("id") @db.Uuid
   guestId      String                    @map("guest_id") @db.Uuid
-  guest        Guest                     @relation(fields: [guestId], references: [id])
+  guest        Guest                     @relation(fields: [guestId], references: [id], onDelete: Cascade)
   subject      String                    @map("subject") @db.VarChar(255)
   description  String                    @map("description") @db.Text
   departmentId String                    @map("department_id") @db.Uuid
-  department   Department                @relation(fields: [departmentId], references: [id])
+  department   Department                @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   status       SupportTicketStatus       @default(NEW) @map("status")
   createdAt    DateTime                  @default(now()) @map("created_at")
   updatedAt    DateTime                  @updatedAt @map("updated_at")
   answeredAt   DateTime?                 @map("answered_at")
   answer       SupportTicketAnswer?
   assigneeId   String?                   @map("assignee_id") @db.Uuid
-  assignee     Employee?                 @relation("AssigneeOfSupportTicket", fields: [assigneeId], references: [id])
+  assignee     Employee?                 @relation("AssigneeOfSupportTicket", fields: [assigneeId], references: [id], onDelete: Cascade)
   code         String                    @unique @map("code") @db.VarChar(10)
   interaction  SupportTicketInteraction?
 
@@ -374,14 +375,14 @@ model SupportTicket {
 model SupportTicketAnswer {
   id                   String        @id @default(uuid()) @map("id") @db.Uuid
   supportTicketId      String        @unique @map("support_ticket_id") @db.Uuid
-  supportTicket        SupportTicket @relation(fields: [supportTicketId], references: [id])
+  supportTicket   SupportTicket @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
   content              String        @map("content") @db.Text
   answererSupervisorId String?       @map("answerer_supervisor_id") @db.Uuid
-  answererSupervisor   Supervisor?   @relation("AnswererOfSupportTicketAnswer", fields: [answererSupervisorId], references: [id])
+  answererSupervisor   Supervisor?   @relation("AnswererOfSupportTicketAnswer", fields: [answererSupervisorId], references: [id], onDelete: Cascade)
   answererEmployeeId   String?       @map("answerer_employee_id") @db.Uuid
-  answererEmployee     Employee?     @relation("AnswererOfSupportTicketAnswer", fields: [answererEmployeeId], references: [id])
+  answererEmployee     Employee?     @relation("AnswererOfSupportTicketAnswer", fields: [answererEmployeeId], references: [id], onDelete: Cascade)
   answererAdminId      String?       @map("answerer_admin_id") @db.Uuid
-  answererAdmin        Admin?        @relation("AnswererOfSupportTicketAnswer", fields: [answererAdminId], references: [id])
+  answererAdmin        Admin?        @relation("AnswererOfSupportTicketAnswer", fields: [answererAdminId], references: [id], onDelete: Cascade)
   createdAt            DateTime      @default(now()) @map("created_at")
   updatedAt            DateTime      @updatedAt @map("updated_at")
   rating               Rating?       @map("rating")
@@ -393,9 +394,9 @@ model SupportTicketAnswer {
 model SupportTicketInteraction {
   id              String                       @id @default(uuid()) @map("id") @db.Uuid
   supportTicketId String                       @unique @map("support_ticket_id") @db.Uuid
-  supportTicket   SupportTicket                @relation(fields: [supportTicketId], references: [id])
+  supportTicket   SupportTicket                @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
   guestId         String?                      @map("guest_id") @db.Uuid
-  guest           Guest?                       @relation(fields: [guestId], references: [id])
+  guest      Guest?                       @relation(fields: [guestId], references: [id], onDelete: Cascade)
   type            SupportTicketInteractionType @map("type")
   createdAt       DateTime                     @default(now()) @map("created_at")
   updatedAt       DateTime                     @updatedAt @map("updated_at")
@@ -426,25 +427,25 @@ model Task {
   description String @map("description") @db.Text
 
   assigneeId String?   @map("assignee_id") @db.Uuid
-  assignee   Employee? @relation("AssigneeOfTask", fields: [assigneeId], references: [id])
+  assignee     Employee? @relation("AssigneeOfTask", fields: [assigneeId], references: [id], onDelete: Cascade)
 
   assignerSupervisorId String?     @map("assigner_supervisor_id") @db.Uuid
-  assignerSupervisor   Supervisor? @relation("AssignerOfTask", fields: [assignerSupervisorId], references: [id])
+  assignerSupervisor   Supervisor? @relation("AssignerOfTask", fields: [assignerSupervisorId], references: [id], onDelete: Cascade)
   assignerAdminId      String?     @map("assigner_admin_id") @db.Uuid
-  assignerAdmin        Admin?      @relation("AssignerOfTask", fields: [assignerAdminId], references: [id])
+  assignerAdmin        Admin?      @relation("AssignerOfTask", fields: [assignerAdminId], references: [id], onDelete: Cascade)
 
   approverSupervisorId String?     @map("approver_supervisor_id") @db.Uuid
-  approverSupervisor   Supervisor? @relation("ApproverOfTask", fields: [approverSupervisorId], references: [id])
+  approverSupervisor   Supervisor? @relation("ApproverOfTask", fields: [approverSupervisorId], references: [id], onDelete: Cascade)
   approverAdminId      String?     @map("approver_admin_id") @db.Uuid
-  approverAdmin        Admin?      @relation("ApproverOfTask", fields: [approverAdminId], references: [id])
+  approverAdmin        Admin?      @relation("ApproverOfTask", fields: [approverAdminId], references: [id], onDelete: Cascade)
 
   status         TaskStatus         @default(TODO) @map("status")
   assignmentType TaskAssignmentType @map("assignment_type")
 
   targetDepartmentId    String?     @map("target_department_id") @db.Uuid
-  targetDepartment      Department? @relation("TargetDepartment", fields: [targetDepartmentId], references: [id])
+  targetDepartment      Department? @relation("TargetDepartment", fields: [targetDepartmentId], references: [id], onDelete: Cascade)
   targetSubDepartmentId String?     @map("target_sub_department_id") @db.Uuid
-  targetSubDepartment   Department? @relation("TargetSubDepartment", fields: [targetSubDepartmentId], references: [id])
+  targetSubDepartment   Department? @relation("TargetSubDepartment", fields: [targetSubDepartmentId], references: [id], onDelete: Cascade)
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -453,11 +454,11 @@ model Task {
   feedback      String?   @map("feedback") @db.Text
 
   performerEmployeeId   String?     @map("performer_employee_id") @db.Uuid
-  performerEmployee     Employee?   @relation("PerformerOfTask", fields: [performerEmployeeId], references: [id])
+  performerEmployee     Employee?   @relation("PerformerOfTask", fields: [performerEmployeeId], references: [id], onDelete: Cascade)
   performerSupervisorId String?     @map("performer_supervisor_id") @db.Uuid
-  performerSupervisor   Supervisor? @relation("PerformerOfTask", fields: [performerSupervisorId], references: [id])
+  performerSupervisor   Supervisor? @relation("PerformerOfTask", fields: [performerSupervisorId], references: [id], onDelete: Cascade)
   performerAdminId      String?     @map("performer_admin_id") @db.Uuid
-  performerAdmin        Admin?      @relation("PerformerOfTask", fields: [performerAdminId], references: [id])
+  performerAdmin        Admin?      @relation("PerformerOfTask", fields: [performerAdminId], references: [id], onDelete: Cascade)
 
   @@index([assigneeId])
   @@index([assignerSupervisorId])
@@ -510,7 +511,7 @@ enum SupportTicketStatus {
 model TicketAnswer {
   id        String   @id @default(uuid()) @map("id") @db.Uuid
   ticketId  String   @unique @map("ticket_id") @db.Uuid
-  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   content   String   @map("content") @db.Text
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -715,7 +716,7 @@ model ActivityLog {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String @map("user_id") @db.Uuid
 
   activity String @map("activity") @db.VarChar(255)
@@ -740,9 +741,9 @@ model Promotion {
   endDate   DateTime? @map("end_date")
 
   createdByAdminId      String?     @map("created_by_admin_id") @db.Uuid
-  createdByAdmin        Admin?      @relation(fields: [createdByAdminId], references: [id])
+  createdByAdmin        Admin?      @relation(fields: [createdByAdminId], references: [id], onDelete: Cascade)
   createdBySupervisorId String?     @map("created_by_supervisor_id") @db.Uuid
-  createdBySupervisor   Supervisor? @relation(fields: [createdBySupervisorId], references: [id])
+  createdBySupervisor   Supervisor? @relation(fields: [createdBySupervisorId], references: [id], onDelete: Cascade)
 
   @@index([createdByAdminId, isActive, createdBySupervisorId])
   @@map("promotions")
