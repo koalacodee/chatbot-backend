@@ -1,9 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { UserRepository } from 'src/shared/repositories/user.repository';
+import {
+  UserQuery,
+  UserRepository,
+} from 'src/shared/repositories/user.repository';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { User } from 'src/shared/entities/user.entity';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { UserRole } from '@prisma/client';
+import { Employee } from 'src/employee/domain/entities/employee.entity';
+import { Driver } from 'src/driver/domain/entities/driver.entity';
+import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
+import { Admin } from 'src/admin/domain/entities/admin.entity';
+import { Department } from 'src/department/domain/entities/department.entity';
 
 @Injectable()
 export class PrismaUserRepository extends UserRepository {
@@ -63,15 +71,35 @@ export class PrismaUserRepository extends UserRepository {
     return count > 0;
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+  async findByEmail(email: string, query: UserQuery): Promise<User | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: {
+        employee: query?.includeEntity,
+        supervisor: query?.includeEntity
+          ? { include: { departments: true } }
+          : undefined,
+        admin: query?.includeEntity,
+        driver: query?.includeEntity,
+      },
+    });
 
     return (await user) ? this.mapToDomain(user) : null;
   }
 
-  async findById(id: string): Promise<User | null> {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    return (await user) ? this.mapToDomain(user) : null;
+  async findById(id: string, query: UserQuery): Promise<User | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        employee: query?.includeEntity,
+        supervisor: query?.includeEntity
+          ? { include: { departments: true } }
+          : undefined,
+        admin: query?.includeEntity,
+        driver: query?.includeEntity,
+      },
+    });
+    return user ? this.mapToDomain(user) : null;
   }
 
   private async mapToDomain(user: any): Promise<User> {
@@ -85,6 +113,19 @@ export class PrismaUserRepository extends UserRepository {
         username: user.username,
         jobTitle: user.jobTitle,
         employeeId: user.employeeId,
+        employee: user.employee
+          ? await Employee.create(user.employee)
+          : undefined,
+        driver: user.driver ? Driver.create(user.driver) : undefined,
+        supervisor: user.supervisor
+          ? Supervisor.create({
+              ...user.supervisor,
+              departments: user.supervisor.departments.map((dept: any) =>
+                Department.create(dept),
+              ),
+            })
+          : undefined,
+        admin: user.admin ? Admin.create(user.admin) : undefined,
       },
       false,
     );
@@ -109,21 +150,54 @@ export class PrismaUserRepository extends UserRepository {
     return Promise.all(users.map((user) => this.mapToDomain(user)));
   }
 
-  async findByUsername(username: string): Promise<User | null> {
-    const user = await this.prisma.user.findUnique({ where: { username } });
+  async findByUsername(
+    username: string,
+    query: UserQuery,
+  ): Promise<User | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { username },
+      include: {
+        employee: query?.includeEntity,
+        supervisor: query?.includeEntity
+          ? { include: { departments: true } }
+          : undefined,
+        admin: query?.includeEntity,
+        driver: query?.includeEntity,
+      },
+    });
     return user ? this.mapToDomain(user) : null;
   }
 
-  async findByEmployeeId(employeeId: string): Promise<User | null> {
-    const user = await this.prisma.user.findUnique({ where: { employeeId } });
+  async findByEmployeeId(
+    employeeId: string,
+    query: UserQuery,
+  ): Promise<User | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { employeeId },
+      include: {
+        employee: query?.includeEntity,
+        supervisor: query?.includeEntity
+          ? { include: { departments: true } }
+          : undefined,
+        admin: query?.includeEntity,
+        driver: query?.includeEntity,
+      },
+    });
     return user ? this.mapToDomain(user) : null;
   }
 
-  async findBySupervisorId(id: string): Promise<User> {
+  async findBySupervisorId(id: string, query: UserQuery): Promise<User> {
     const user = await this.prisma.user.findFirst({
       where: { supervisor: { id } },
+      include: {
+        employee: query?.includeEntity,
+        supervisor: query?.includeEntity
+          ? { include: { departments: true } }
+          : undefined,
+        admin: query?.includeEntity,
+        driver: query?.includeEntity,
+      },
     });
-    console.log(user);
 
     return user ? this.mapToDomain(user) : null;
   }

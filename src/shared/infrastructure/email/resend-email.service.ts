@@ -33,8 +33,6 @@ export class ResendEmailService {
   }
 
   async sendEmail(options: SendEmailOptions): Promise<void> {
-    console.log(options);
-
     try {
       const res = await this.resend.emails.send({
         from: this.defaultFrom,
@@ -43,7 +41,6 @@ export class ResendEmailService {
         html: options.html,
       });
       this.logger.log(`Email sent to ${options.to}`);
-      console.log(res);
     } catch (error) {
       this.logger.error(
         `Failed to send email to ${options.to}: ${error.message}`,

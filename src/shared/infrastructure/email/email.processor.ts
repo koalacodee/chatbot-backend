@@ -11,8 +11,6 @@ export class EmailProcessor extends WorkerHost {
   async process(job: Job): Promise<void> {
     switch (job.name) {
       case 'send':
-        console.log('Sending');
-
         await this.email.sendEmail(job.data);
         break;
 
