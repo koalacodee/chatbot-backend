@@ -30,5 +30,6 @@ import { CalculateAgentPerformanceUseCase } from './application/use-cases';
     CalculateAgentPerformanceUseCase,
   ],
   controllers: [ActivityLogController],
+  exports: [ActivityLogRepository],
 })
 export class ActivityLogModule {}

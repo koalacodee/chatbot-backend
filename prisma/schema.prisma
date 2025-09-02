@@ -725,6 +725,8 @@ model ActivityLog {
   userId    String   @map("user_id") @db.Uuid
 
   @@index([userId])
+  @@index([type])
+  @@index([occurredAt])
   @@map("activity_logs")
 }
 
@@ -735,7 +737,7 @@ enum ActivityLogType {
   FAQ_CREATED       @map("faq_created")
   FAQ_UPDATED       @map("faq_updated")
   PROMOTION_CREATED @map("promotion_created")
-  STAFF_REQUEST     @map("staff_request")
+  STAFF_REQUEST_CREATED     @map("staff_request_created")
 }
 
 model Promotion {

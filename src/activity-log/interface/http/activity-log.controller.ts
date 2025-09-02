@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Query, Req } from '@nestjs/common';
 import {
   AggregateActivityFeedUseCase,
   CalculateAgentPerformanceUseCase,
@@ -12,9 +12,12 @@ import {
   ViewPromotionsCreatedUseCase,
   ViewStaffRequestsUseCase,
 } from '../../application/use-cases';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { RolesGuard, UseRoles } from 'src/rbac';
-import { Roles } from 'src/shared/value-objects/role.vo';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
+import {
+  EmployeePermissions,
+  SupervisorPermissions,
+} from 'src/rbac/decorators';
+import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 
 @Controller('activity-log')
 export class ActivityLogController {
@@ -32,8 +35,7 @@ export class ActivityLogController {
     private readonly viewStaffRequestsUseCase: ViewStaffRequestsUseCase,
   ) {}
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_USER_ACTIVITY)
   @Get('feed')
   async getActivityFeed(
     @Query('userId') userId?: string,
@@ -45,71 +47,55 @@ export class ActivityLogController {
     });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions()
   @Get('performance/:userId')
   async getAgentPerformance() {
     return this.calculateAgentPerformanceUseCase.execute();
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @EmployeePermissions()
   @Get('performance-summary')
   async getPerformanceSummary(@Req() req: any) {
     return this.performanceSummaryUseCase.execute({ userId: req.user.id });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Get('users/search')
   async searchUsers(@Query('q') searchQuery: string) {
     return this.searchUsersUseCase.execute({ searchQuery });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
-  @Get('users/:userId')
-  async selectUser(@Query('userId') userId: string) {
-    return this.selectUserUseCase.execute({ userId });
-  }
-
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions()
   @Get('answered-tickets/:userId')
   async getAnsweredTickets(@Query('userId') userId: string) {
     return this.viewAnsweredTicketsUseCase.execute({ userId });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_SUPERVISORS)
   @Get('approved-tasks/:userId')
   async getApprovedTasks(@Query('userId') userId: string) {
     return this.viewApprovedTasksUseCase.execute({ userId });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions()
   @Get('faq-contributions/:userId')
   async getFaqContributions(@Query('userId') userId: string) {
     return this.viewFaqContributionsUseCase.execute({ userId });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions()
   @Get('performed-tasks/:userId')
   async getPerformedTasks(@Query('userId') userId: string) {
     return this.viewPerformedTasksUseCase.execute({ userId });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Get('promotions-created/:userId')
   async getPromotionsCreated(@Query('userId') userId: string) {
     return this.viewPromotionsCreatedUseCase.execute({ userId });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Get('staff-requests/:userId')
   async getStaffRequests(@Query('userId') userId: string) {
     return this.viewStaffRequestsUseCase.execute({ userId });
