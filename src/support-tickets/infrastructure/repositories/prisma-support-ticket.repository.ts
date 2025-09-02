@@ -11,6 +11,8 @@ import {
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { User } from 'src/shared/entities/user.entity';
 import { Guest } from 'src/guest/domain/entities/guest.entity';
+import { Department } from 'src/department/domain/entities/department.entity';
+import { SupportTicketInteraction } from 'src/support-tickets/domain/entities/support-ticket-interaction.entity';
 @Injectable()
 export class PrismaSupportTicketRepository extends SupportTicketRepository {
   constructor(private readonly prisma: PrismaService) {
@@ -18,14 +20,15 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
   }
 
   private async toDomain(rec: any): Promise<SupportTicket> {
-    console.log(rec);
-
     return SupportTicket.fromPersistence({
       id: rec.id,
       guestId: rec.guestId,
       subject: rec.subject,
       description: rec.description,
       departmentId: rec.departmentId,
+      department: rec.department
+        ? Department.create(rec.department)
+        : undefined,
       assignee: rec.assignee
         ? await Employee.create({
             ...rec.assignee,
@@ -37,6 +40,9 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       createdAt: rec.createdAt,
       updatedAt: rec.updatedAt,
       code: rec.code,
+      interaction: rec.interaction
+        ? SupportTicketInteraction.create(rec.interaction)
+        : undefined,
     });
   }
 
@@ -66,22 +72,46 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
         updatedAt: new Date(),
       },
       create: data,
+      include: {
+        assignee: { include: { user: true } },
+        guest: true,
+        department: true,
+        interaction: true,
+      },
     });
 
     return this.toDomain(upsert);
   }
 
   async findById(id: string): Promise<SupportTicket | null> {
-    const rec = await this.prisma.supportTicket.findUnique({ where: { id } });
+    const rec = await this.prisma.supportTicket.findUnique({
+      where: { id },
+      include: {
+        assignee: { include: { user: true } },
+        guest: true,
+        department: true,
+        interaction: true,
+      },
+    });
     return rec ? this.toDomain(rec) : null;
   }
 
-  async findAll(offset?: number, limit?: number): Promise<SupportTicket[]> {
+  async findAll(
+    offset?: number,
+    limit?: number,
+    departmentIds?: string[],
+  ): Promise<SupportTicket[]> {
     const rows = await this.prisma.supportTicket.findMany({
+      where: departmentIds ? { departmentId: { in: departmentIds } } : {},
       skip: offset,
       take: limit,
       orderBy: { createdAt: 'desc' },
-      include: { assignee: { include: { user: true } }, guest: true },
+      include: {
+        assignee: { include: { user: true } },
+        guest: true,
+        department: true,
+        interaction: true,
+      },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
@@ -114,6 +144,12 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
     const rows = await this.prisma.supportTicket.findMany({
       where: { guestId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        assignee: { include: { user: true } },
+        guest: true,
+        department: true,
+        interaction: true,
+      },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
@@ -125,6 +161,12 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
     const rows = await this.prisma.supportTicket.findMany({
       where: { departmentId, ...(status ? { status } : {}) },
       orderBy: { createdAt: 'desc' },
+      include: {
+        assignee: { include: { user: true } },
+        guest: true,
+        department: true,
+        interaction: true,
+      },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
@@ -149,6 +191,12 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
         ],
       },
       orderBy: { createdAt: 'desc' },
+      include: {
+        assignee: { include: { user: true } },
+        guest: true,
+        department: true,
+        interaction: true,
+      },
     });
     return Promise.all(filteredTickets.map((r) => this.toDomain(r)));
   }
@@ -186,7 +234,15 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
   }
 
   async findByCode(code: string): Promise<SupportTicket | null> {
-    const rec = await this.prisma.supportTicket.findUnique({ where: { code } });
+    const rec = await this.prisma.supportTicket.findUnique({
+      where: { code },
+      include: {
+        assignee: { include: { user: true } },
+        guest: true,
+        department: true,
+        interaction: true,
+      },
+    });
     return rec ? this.toDomain(rec) : null;
   }
 

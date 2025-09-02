@@ -10,7 +10,7 @@ export interface FrequentTicketSubject {
 export abstract class SupportTicketRepository {
   abstract save(ticket: SupportTicket): Promise<SupportTicket>;
   abstract findById(id: string): Promise<SupportTicket | null>;
-  abstract findAll(offset?: number, limit?: number): Promise<SupportTicket[]>;
+  abstract findAll(offset?: number, limit?: number, departmentIds?: string[]): Promise<SupportTicket[]>;
   abstract removeById(id: string): Promise<SupportTicket | null>;
   abstract exists(id: string): Promise<boolean>;
   abstract count(): Promise<number>;

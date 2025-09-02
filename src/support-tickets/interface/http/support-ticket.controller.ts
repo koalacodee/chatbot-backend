@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   Req,
 } from '@nestjs/common';
 import {
@@ -30,10 +29,8 @@ import {
   RecordSupportTicketInteractionUseCase,
   GetGuestTicketsWithDetailsUseCase,
 } from '../../application/use-cases';
+import { GetEmployeesWithTicketHandlingPermissionsUseCase } from '../../application/use-cases/get-employees-with-ticket-handling-permissions.use-case';
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { RolesGuard, UseRoles } from 'src/rbac';
-import { Roles } from 'src/shared/value-objects/role.vo';
 import { AnswerTicketDto } from './dto/answer-ticket.use-case';
 import { AnswerTicketUseCase } from 'src/support-tickets/application/use-cases/answer-ticket.use-case';
 import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
@@ -42,6 +39,11 @@ import { TrackTicketDto } from './dto/track-ticket.dto';
 import { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
 import { RecordTicketInteractionDto } from './dto/record-ticket-interaction.dto';
 import { GetGuestTicketsWithDetailsDto } from './dto/get-guest-tickets-with-details.dto';
+import {
+  EmployeePermissions,
+  SupervisorPermissions,
+} from 'src/rbac/decorators';
+import { EmployeePermissionsEnum as EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 
 interface UpdateSupportTicketDto {
   id: string;
@@ -90,6 +92,7 @@ export class SupportTicketController {
     private readonly trackTicketUseCase: TrackTicketUseCase,
     private readonly recordInteractionUseCase: RecordSupportTicketInteractionUseCase,
     private readonly getGuestTicketsWithDetailsUseCase: GetGuestTicketsWithDetailsUseCase,
+    private readonly getEmployeesWithTicketHandlingPermissionsUseCase: GetEmployeesWithTicketHandlingPermissionsUseCase,
   ) {}
 
   @GuestAuth()
@@ -144,36 +147,35 @@ export class SupportTicketController {
     });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)
   @Get(':id')
-  async get(@Param('id') id: string): Promise<SupportTicket> {
-    return this.getUseCase.execute(id);
+  async get(@Param('id') id: string, @Req() req: any): Promise<SupportTicket> {
+    return this.getUseCase.execute(id, req.user.id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)
   @Get()
   async getAll(
+    @Req() req: any,
     @Query('offset') offset?: string,
     @Query('limit') limit?: string,
   ): Promise<SupportTicket[]> {
     return this.getAllUseCase.execute(
       offset ? parseInt(offset, 10) : undefined,
       limit ? parseInt(limit, 10) : undefined,
+      req.user.id,
     );
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
-  @Put()
-  async update(@Body() dto: UpdateSupportTicketDto): Promise<SupportTicket> {
-    const { id, ...updateData } = dto;
-    return this.updateUseCase.execute(id, updateData);
-  }
+  // @UseGuards(UserJwtAuthGuard, RolesGuard)
+  // @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  // @Put()
+  // async update(@Body() dto: UpdateSupportTicketDto): Promise<SupportTicket> {
+  //   const { id, ...updateData } = dto;
+  //   return this.updateUseCase.execute(id, updateData);
+  // }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)
   @Put(':id/answer')
   async answerTicket(
     @Body() dto: AnswerTicketDto,
@@ -188,46 +190,48 @@ export class SupportTicketController {
     });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions()
   @Delete(':id')
-  async delete(@Param('id') id: string): Promise<SupportTicket | null> {
-    return this.deleteUseCase.execute(id);
+  async delete(
+    @Param('id') id: string,
+    @Req() req: any,
+  ): Promise<SupportTicket | null> {
+    return this.deleteUseCase.execute(id, req.user.id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)
   @Get('count/all')
   async count(): Promise<number> {
     return this.countUseCase.execute();
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions()
   @Post(':id/assign')
   async assign(
     @Param('id') ticketId: string,
     @Body() dto: AssignTicketDto,
+    @Req() req: any,
   ): Promise<void> {
-    return this.assignTicketUseCase.execute({ ticketId, userId: dto.userId });
+    return this.assignTicketUseCase.execute({
+      ticketId,
+      userId: dto.userId,
+      currentUserId: req.user.id,
+    });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @SupervisorPermissions()
   @Put(':id/close')
-  async close(@Param('id') ticketId: string): Promise<void> {
-    return this.closeTicketUseCase.execute({ ticketId });
+  async close(@Param('id') ticketId: string, @Req() req: any): Promise<void> {
+    return this.closeTicketUseCase.execute({ ticketId, userId: req.user.id });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @SupervisorPermissions()
   @Put(':id/reopen')
-  async reopen(@Param('id') ticketId: string): Promise<void> {
-    return this.reopenTicketUseCase.execute({ ticketId });
+  async reopen(@Param('id') ticketId: string, @Req() req: any): Promise<void> {
+    return this.reopenTicketUseCase.execute({ ticketId, userId: req.user.id });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)
   @Post(':id/reply')
   async reply(
     @Param('id') ticketId: string,
@@ -243,38 +247,49 @@ export class SupportTicketController {
     });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)
   @Post(':id/mark-seen')
-  async markAsSeen(@Param('id') ticketId: string): Promise<void> {
-    return this.markTicketAsSeenUseCase.execute({ ticketId });
+  async markAsSeen(
+    @Param('id') ticketId: string,
+    @Req() req: any,
+  ): Promise<void> {
+    return this.markTicketAsSeenUseCase.execute({
+      ticketId,
+      userId: req.user.id,
+    });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)
   @Get('search')
   async search(@Query() query: SearchTicketsDto): Promise<any> {
     return this.searchTicketsUseCase.execute(query);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions()
   @Get('count/open')
   async countOpen(): Promise<number> {
     return this.countOpenTicketsUseCase.execute();
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions()
   @Get('count/answered-pending')
   async countAnsweredPending(): Promise<number> {
     return this.countAnsweredPendingUseCase.execute();
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions()
   @Get('frequent-subjects')
   async getFrequentSubjects(): Promise<any> {
     return this.getFrequentTicketSubjectsUseCase.execute({ limit: 10 });
+  }
+
+  @SupervisorPermissions()
+  @Get('employees/ticket-handlers')
+  async getEmployeesWithTicketHandlingPermissions(
+    @Req() req: any,
+  ): Promise<any> {
+    return this.getEmployeesWithTicketHandlingPermissionsUseCase.execute(
+      req.user.id,
+    );
   }
 }

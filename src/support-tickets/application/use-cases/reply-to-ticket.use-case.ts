@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
@@ -57,8 +58,11 @@ export class ReplyToTicketUseCase {
 
     if (!ticket) throw new NotFoundException({ ticket: 'not_found' });
     if (!user) throw new NotFoundException({ user: 'not_found' });
-    if (!newFawDepartment)
+    if (promoteToFaq && !newFawDepartment)
       throw new NotFoundException({ newFawDepartmentId: 'not_found' });
+
+    // Check department access
+    await this.checkDepartmentAccess(userId, ticket.departmentId.toString(), user.role.getRole());
 
     const answer = SupportTicketAnswer.create({
       content: reply,
@@ -85,5 +89,49 @@ export class ReplyToTicketUseCase {
           })
         : undefined,
     ]);
+  }
+
+  private async checkDepartmentAccess(
+    userId: string,
+    departmentId: string,
+    role: Roles,
+  ): Promise<void> {
+    let hasAccess = false;
+
+    if (role === Roles.ADMIN) {
+      hasAccess = true; // Admins have access to all departments
+    } else if (role === Roles.SUPERVISOR) {
+      const supervisor = await this.supervisorRepo.findByUserId(userId);
+      const supervisorDepartmentIds = supervisor.departments.map((d) =>
+        d.id.toString(),
+      );
+
+      // Check if supervisor has direct access to the department
+      hasAccess = supervisorDepartmentIds.includes(departmentId);
+
+      // If not direct access, check if it's a sub-department and supervisor has access to parent
+      if (!hasAccess) {
+        const department =
+          await this.departmentRepo.findSubDepartmentById(departmentId, {
+            includeParent: true,
+          });
+        if (department?.parent) {
+          hasAccess = supervisorDepartmentIds.includes(
+            department.parent.id.toString(),
+          );
+        }
+      }
+    } else if (role === Roles.EMPLOYEE) {
+      const employee = await this.employeeRepo.findByUserId(userId);
+      const employeeDepartmentIds =
+        employee?.subDepartments.map((dep) => dep.id.toString()) ??
+        employee?.supervisor?.departments.map((d) => d.id.toString()) ??
+        [];
+      hasAccess = employeeDepartmentIds.includes(departmentId);
+    }
+
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this department');
+    }
   }
 }

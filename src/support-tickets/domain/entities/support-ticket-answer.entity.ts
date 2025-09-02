@@ -113,13 +113,13 @@ export class SupportTicketAnswer {
   toJSON(): unknown {
     return {
       id: this.id,
-      supportTicketId: this.supportTicket.id,
-      content: this.content,
-      attachment: this.attachment?.toJSON(),
+      supportTicketId: this?.supportTicket?.id,
+      content: this?.content,
+      attachment: this?.attachment?.toJSON(),
       answerer: this.answerer,
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
-      rating: this._rating,
+      createdAt: this?.createdAt?.toISOString(),
+      updatedAt: this?.updatedAt?.toISOString(),
+      rating: this?._rating,
     };
   }
 }

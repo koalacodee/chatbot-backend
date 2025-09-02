@@ -1,6 +1,7 @@
 import { SupportTicketAnswer } from '@prisma/client';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Guest } from 'src/guest/domain/entities/guest.entity';
+import { Department } from 'src/department/domain/entities/department.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { TicketCode } from 'src/tickets/domain/value-objects/ticket-code.vo';
 import { SupportTicketInteraction } from './support-ticket-interaction.entity';
@@ -19,6 +20,7 @@ export class SupportTicket {
   private _subject: string;
   private _description: string;
   private _departmentId: UUID;
+  private _department?: Department;
   private _answer?: SupportTicketAnswer;
   private _assignee?: Employee;
   private _status: SupportTicketStatus;
@@ -34,6 +36,7 @@ export class SupportTicket {
     this._subject = options.subject;
     this._description = options.description;
     this._departmentId = UUID.create(options.departmentId);
+    this._department = options.department;
     this._answer = options.answer;
     this._assignee = options.assignee;
     this._status = options.status;
@@ -81,6 +84,14 @@ export class SupportTicket {
 
   set departmentId(value: UUID) {
     this._departmentId = value;
+  }
+
+  get department(): Department | undefined {
+    return this._department;
+  }
+
+  set department(value: Department | undefined) {
+    this._department = value;
   }
 
   get status(): SupportTicketStatus {
@@ -147,13 +158,14 @@ export class SupportTicket {
       subject: this._subject,
       description: this._description,
       departmentId: this._departmentId.toString(),
+      department: this._department?.toJSON(),
       answer: this._answer,
       assignee: this._assignee?.toJSON(),
       status: this._status,
       createdAt: this._createdAt.toISOString(),
       updatedAt: this._updatedAt.toISOString(),
       code: this._code.toString(),
-      interaction: this._interaction,
+      interaction: this._interaction?.toJSON(),
     };
   }
 
@@ -169,6 +181,7 @@ export class SupportTicket {
       guest: data.guest,
       description: data.description,
       departmentId: data.departmentId,
+      department: data.department,
       answer: data.answer,
       assignee: data.assignee,
       status: data.status,
@@ -187,6 +200,7 @@ export class SupportTicket {
       guest: supportTicket._guest,
       description: supportTicket.description,
       departmentId: supportTicket.departmentId.toString(),
+      department: supportTicket._department,
       answer: supportTicket._answer,
       assignee: supportTicket._assignee,
       status: supportTicket.status,
@@ -205,6 +219,7 @@ export interface SupportTicketOptions {
   subject: string;
   description: string;
   departmentId: string;
+  department?: Department;
   answer?: SupportTicketAnswer;
   assignee?: Employee;
   status: SupportTicketStatus;
@@ -221,6 +236,7 @@ export interface SupportTicketPersistence {
   subject: string;
   description: string;
   departmentId: string;
+  department?: Department;
   answer?: SupportTicketAnswer;
   assignee?: Employee;
   status: SupportTicketStatus;
