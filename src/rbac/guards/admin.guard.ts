@@ -14,7 +14,7 @@ export class AdminGuard implements CanActivate {
     if (!user || !user.role) {
       throw new ForbiddenException('No roles found for user');
     }
-    const hasAccess = user.role.getRole() === Roles.ADMIN;
+    const hasAccess = user.role === Roles.ADMIN;
     if (!hasAccess) {
       throw new ForbiddenException('Insufficient role');
     }

@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Roles } from 'src/shared/value-objects/role.vo';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 
 export const SUPERVISOR_PERMISSIONS_KEY = 'supervisor_permissions';
@@ -24,6 +25,10 @@ export class SupervisorPermissionsGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest();
+
+    if (user.role === Roles.ADMIN) {
+      return true;
+    }
 
     if (!user?.permissions) {
       throw new ForbiddenException('No permissions found for user');

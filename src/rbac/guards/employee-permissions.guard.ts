@@ -25,13 +25,13 @@ export class EmployeePermissionsGuard implements CanActivate {
 
     const { user } = context.switchToHttp().getRequest();
 
-    if (!user?.permissions) {
-      throw new ForbiddenException('No permissions found for user');
-    }
-
     // Skip validation if user is supervisor or admin
     if (user.role === 'SUPERVISOR' || user.role === 'ADMIN') {
       return true;
+    }
+
+    if (!user?.permissions) {
+      throw new ForbiddenException('No permissions found for user');
     }
 
     const hasAccess = requiredPermissions.every((p) =>
