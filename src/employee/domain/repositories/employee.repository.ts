@@ -11,6 +11,17 @@ export abstract class EmployeeRepository {
   abstract exists(id: string): Promise<boolean>;
   abstract count(): Promise<number>;
   abstract findByUserId(id: string): Promise<Employee | null>;
+  abstract findBySupervisorId(supervisorId: string): Promise<Employee[]>;
   abstract findBySubDepartment(id: string): Promise<Employee[]>;
   abstract canDeleteEmployee(id: string): Promise<boolean>;
+  abstract findByPermissions(permissions: string[]): Promise<Employee[]>;
+  abstract findByPermissionsAndDepartments(
+    permissions: string[],
+    departmentIds: string[],
+  ): Promise<Employee[]>;
+  abstract validateEmployeeAssignmentPermission(
+    employeeUserId: string,
+    requiredPermissions: string[],
+    supervisorDepartmentIds: string[],
+  ): Promise<boolean>;
 }

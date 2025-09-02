@@ -11,6 +11,7 @@ import { EmployeeController } from './infrastructure/controllers/employee.contro
 import { DepartmentModule } from 'src/department/department.module';
 import { GetEmployeesBySubDepartmentUseCase } from './application/use-cases/get-employees-by-sub-department.use-case';
 import { CanDeleteEmployeeUseCase } from './application/use-cases/can-delete-employee.use-case';
+import { GetEmployeesByPermissionsUseCase } from './application/use-cases/get-employees-by-permissions.use-case';
 
 @Global()
 @Module({
@@ -25,6 +26,7 @@ import { CanDeleteEmployeeUseCase } from './application/use-cases/can-delete-emp
     GetEmployeeByUserIdUseCase,
     GetEmployeesBySubDepartmentUseCase,
     CanDeleteEmployeeUseCase,
+    GetEmployeesByPermissionsUseCase,
   ],
   exports: [EmployeeRepository],
   imports: [DepartmentModule],

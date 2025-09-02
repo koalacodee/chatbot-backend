@@ -1,5 +1,5 @@
 import { IsArray, IsNotEmpty, IsString, IsUUID } from 'class-validator';
-import { EmployeePermissions } from '../../domain/entities/employee.entity';
+import { EmployeePermissionsEnum } from '../../domain/entities/employee.entity';
 
 export class CreateEmployeeDto {
   @IsNotEmpty()
@@ -8,7 +8,7 @@ export class CreateEmployeeDto {
 
   @IsArray()
   @IsNotEmpty()
-  permissions: EmployeePermissions[];
+  permissions: EmployeePermissionsEnum[];
 
   @IsNotEmpty()
   @IsUUID()

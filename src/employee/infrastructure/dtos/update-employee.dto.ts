@@ -1,10 +1,10 @@
 import { IsArray, IsOptional, IsString, IsUUID } from 'class-validator';
-import { EmployeePermissions } from '../../domain/entities/employee.entity';
+import { EmployeePermissionsEnum } from '../../domain/entities/employee.entity';
 
 export class UpdateEmployeeDto {
   @IsOptional()
   @IsArray()
-  permissions?: EmployeePermissions[];
+  permissions?: EmployeePermissionsEnum[];
 
   @IsOptional()
   @IsUUID()

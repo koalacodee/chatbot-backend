@@ -6,7 +6,7 @@ import {
   Param,
   Post,
   Put,
-  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { CreateEmployeeUseCase } from '../../application/use-cases/create-employee.use-case';
 import { GetEmployeeUseCase } from '../../application/use-cases/get-employee.use-case';
@@ -16,11 +16,12 @@ import { DeleteEmployeeUseCase } from '../../application/use-cases/delete-employ
 import { GetEmployeeByUserIdUseCase } from '../../application/use-cases/get-employee-by-user-id.use-case';
 import { CreateEmployeeDto } from '../dtos/create-employee.dto';
 import { UpdateEmployeeDto } from '../dtos/update-employee.dto';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { RolesGuard, UseRoles } from 'src/rbac';
-import { Roles } from 'src/shared/value-objects/role.vo';
 import { GetEmployeesBySubDepartmentUseCase } from 'src/employee/application/use-cases/get-employees-by-sub-department.use-case';
 import { CanDeleteEmployeeUseCase } from 'src/employee/application/use-cases/can-delete-employee.use-case';
+import { GetEmployeesByPermissionsUseCase } from 'src/employee/application/use-cases/get-employees-by-permissions.use-case';
+import { GetEmployeesByPermissionsDto } from '../dtos/get-employees-by-permissions.dto';
+import { SupervisorPermissions } from 'src/rbac/decorators';
+import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 
 @Controller('employees')
 export class EmployeeController {
@@ -33,16 +34,18 @@ export class EmployeeController {
     private readonly deleteEmployeeUseCase: DeleteEmployeeUseCase,
     private readonly getEmployeeByUserIdUseCase: GetEmployeeByUserIdUseCase,
     private readonly canDeleteEmployeeUseCase: CanDeleteEmployeeUseCase,
+    private readonly getEmployeesByPermissionsUseCase: GetEmployeesByPermissionsUseCase,
   ) {}
 
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_STAFF_DIRECTLY)
   @Post()
-  async create(@Body() createEmployeeDto: CreateEmployeeDto) {
+  async create(@Body() createEmployeeDto: CreateEmployeeDto, @Req() req: any) {
     const { employee } = await this.createEmployeeUseCase.execute({
       userId: createEmployeeDto.userId,
       permissions: createEmployeeDto.permissions,
       supervisorId: createEmployeeDto.supervisorId,
       subDepartmentIds: createEmployeeDto.subDepartmentIds,
-    });
+    }, req.user.id);
 
     return {
       id: employee.id,
@@ -53,14 +56,16 @@ export class EmployeeController {
     };
   }
 
+  @SupervisorPermissions()
   @Get()
-  async findAll(): Promise<any> {
-    return this.getAllEmployeesUseCase.execute();
+  async findAll(@Req() req: any): Promise<any> {
+    return this.getAllEmployeesUseCase.execute(req.user.id);
   }
 
+  @SupervisorPermissions()
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    const { employee } = await this.getEmployeeUseCase.execute({ id });
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    const { employee } = await this.getEmployeeUseCase.execute({ id }, req.user.id);
     if (!employee) {
       throw new Error('Employee not found');
     }
@@ -74,11 +79,12 @@ export class EmployeeController {
     };
   }
 
+  @SupervisorPermissions()
   @Get('user/:userId')
-  async findByUserId(@Param('userId') userId: string) {
+  async findByUserId(@Param('userId') userId: string, @Req() req: any) {
     const { employee } = await this.getEmployeeByUserIdUseCase.execute({
       userId,
-    });
+    }, req.user.id);
     if (!employee) {
       throw new Error('Employee not found');
     }
@@ -92,15 +98,17 @@ export class EmployeeController {
     };
   }
 
+  @SupervisorPermissions()
   @Put(':id')
   async update(
     @Param('id') id: string,
     @Body() updateEmployeeDto: UpdateEmployeeDto,
+    @Req() req: any,
   ) {
     const { employee } = await this.updateEmployeeUseCase.execute({
       id,
       ...updateEmployeeDto,
-    });
+    }, req.user.id);
 
     return {
       id: employee.id,
@@ -111,9 +119,10 @@ export class EmployeeController {
     };
   }
 
+  @SupervisorPermissions()
   @Delete(':id')
-  async remove(@Param('id') id: string) {
-    const { employee } = await this.deleteEmployeeUseCase.execute({ id });
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const { employee } = await this.deleteEmployeeUseCase.execute({ id }, req.user.id);
     if (!employee) {
       throw new Error('Employee not found');
     }
@@ -128,16 +137,25 @@ export class EmployeeController {
   }
 
   @Get('sub-department/:id')
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
-  async getBySupDepartment(@Param('id') subDepartmentId: string): Promise<any> {
-    return this.getEmployeesBySubDepartmentUseCase.execute({ subDepartmentId });
+  @SupervisorPermissions()
+  async getBySupDepartment(@Param('id') subDepartmentId: string, @Req() req: any): Promise<any> {
+    return this.getEmployeesBySubDepartmentUseCase.execute({ subDepartmentId }, req.user.id);
   }
 
   @Get('can-delete/:id')
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
-  async canDeleteEmployee(@Param('id') id: string) {
-    return this.canDeleteEmployeeUseCase.execute({ employeeId: id });
+  @SupervisorPermissions()
+  async canDeleteEmployee(@Param('id') id: string, @Req() req: any) {
+    return this.canDeleteEmployeeUseCase.execute({ employeeId: id }, req.user.id);
+  }
+
+  @Post('by-permissions')
+  @SupervisorPermissions()
+  async getByPermissions(
+    @Body() body: GetEmployeesByPermissionsDto,
+    @Req() req: any,
+  ): Promise<any> {
+    return this.getEmployeesByPermissionsUseCase.execute({
+      permissions: body.permissions,
+    }, req.user.id);
   }
 }

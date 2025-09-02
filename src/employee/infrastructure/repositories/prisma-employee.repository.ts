@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
-import { Employee } from '../../domain/entities/employee.entity';
+import {
+  Employee,
+  EmployeePermissionsEnum,
+} from '../../domain/entities/employee.entity';
 import { EmployeeRepository } from '../../domain/repositories/employee.repository';
 import { Department } from 'src/department/domain/entities/department.entity';
 import { User } from 'src/shared/entities/user.entity';
+import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 
 @Injectable()
 export class PrismaEmployeeRepository extends EmployeeRepository {
@@ -28,6 +32,12 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
       permissions: prismaEmployee.permissions,
       supervisorId: prismaEmployee.supervisorId,
       subDepartments: subDepartments,
+      supervisor: Supervisor.create({
+        ...prismaEmployee.supervisor,
+        departments: prismaEmployee?.supervisor?.departments?.map(
+          (dept) => Department.create,
+        ),
+      }),
     });
   }
 
@@ -84,7 +94,7 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
           },
         },
         user: true,
-        supervisor: true,
+        supervisor: { include: { departments: true } },
       },
     });
     return emp ? this.toDomain(emp) : null;
@@ -227,5 +237,97 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
       return false;
 
     return true; // no relations found
+  }
+
+  async findByPermissions(permissions: string[]): Promise<Employee[]> {
+    const items = await this.prisma.employee.findMany({
+      where: {
+        permissions: {
+          hasEvery: permissions as EmployeePermissionsEnum[],
+        },
+      },
+      include: {
+        subDepartments: {
+          include: {
+            department: true,
+          },
+        },
+        user: true,
+        supervisor: true,
+      },
+    });
+    return Promise.all(items.map((e) => this.toDomain(e)));
+  }
+
+  async findByPermissionsAndDepartments(
+    permissions: string[],
+    departmentIds: string[],
+  ): Promise<Employee[]> {
+    const items = await this.prisma.employee.findMany({
+      where: {
+        permissions: {
+          hasEvery: permissions as EmployeePermissionsEnum[],
+        },
+        subDepartments: {
+          some: {
+            departmentId: {
+              in: departmentIds,
+            },
+          },
+        },
+      },
+      include: {
+        subDepartments: {
+          include: {
+            department: true,
+          },
+        },
+        user: true,
+        supervisor: true,
+      },
+    });
+    return Promise.all(items.map((e) => this.toDomain(e)));
+  }
+
+  async validateEmployeeAssignmentPermission(
+    employeeUserId: string,
+    requiredPermissions: string[],
+    supervisorDepartmentIds: string[],
+  ): Promise<boolean> {
+    const employee = await this.prisma.employee.findFirst({
+      where: {
+        userId: employeeUserId,
+        permissions: {
+          hasEvery: requiredPermissions as EmployeePermissionsEnum[],
+        },
+        subDepartments: {
+          some: {
+            departmentId: {
+              in: supervisorDepartmentIds,
+            },
+          },
+        },
+      },
+    });
+
+    return !!employee;
+  }
+
+  async findBySupervisorId(supervisorId: string): Promise<Employee[]> {
+    const items = await this.prisma.employee.findMany({
+      where: {
+        supervisorId: supervisorId,
+      },
+      include: {
+        subDepartments: {
+          include: {
+            department: true,
+          },
+        },
+        user: true,
+        supervisor: true,
+      },
+    });
+    return Promise.all(items.map((e) => this.toDomain(e)));
   }
 }

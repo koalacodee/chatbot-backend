@@ -7,19 +7,20 @@ import { SupportTicket } from 'src/support-tickets/domain/entities/support-ticke
 import { Task } from 'src/task/domain/entities/task.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
 
-export enum EmployeePermissions {
+export enum EmployeePermissionsEnum {
   HANDLE_TICKETS = 'HANDLE_TICKETS',
   HANDLE_TASKS = 'HANDLE_TASKS',
   ADD_FAQS = 'ADD_FAQS',
   VIEW_ANALYTICS = 'VIEW_ANALYTICS',
   CLOSE_TICKETS = 'CLOSE_TICKETS',
+  MANAGE_KNOWLEDGE_CHUNKS = 'MANAGE_KNOWLEDGE_CHUNKS',
 }
 
 export interface EmployeeProps {
   id?: string;
   userId: string;
   user?: User;
-  permissions: EmployeePermissions[];
+  permissions: EmployeePermissionsEnum[];
   supervisorId: string;
   supervisor?: Supervisor;
   subDepartments: Department[];
@@ -34,7 +35,7 @@ export class Employee {
   private readonly _id: UUID;
   private _userId: UUID;
   private _user?: User;
-  private _permissions: EmployeePermissions[];
+  private _permissions: EmployeePermissionsEnum[];
   private _supervisorId: UUID;
   private _supervisor?: Supervisor;
   private _subDepartments: Department[];
@@ -90,11 +91,11 @@ export class Employee {
     this._user = value;
   }
 
-  get permissions(): EmployeePermissions[] {
+  get permissions(): EmployeePermissionsEnum[] {
     return this._permissions;
   }
 
-  set permissions(value: EmployeePermissions[]) {
+  set permissions(value: EmployeePermissionsEnum[]) {
     this._permissions = value;
   }
 
