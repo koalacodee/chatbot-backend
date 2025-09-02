@@ -3,7 +3,7 @@ import { uuidv7 } from 'uuidv7';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { User } from 'src/shared/entities/user.entity';
 import { Supervisor } from '../../domain/entities/supervisor.entity';
-import { SupervisorPermissions } from '../../domain/entities/supervisor.entity';
+import { SupervisorPermissionsEnum } from '../../domain/entities/supervisor.entity';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
@@ -16,7 +16,7 @@ export interface AddSupervisorByAdminRequest {
   employeeId?: string;
   jobTitle: string;
   departmentIds: string[];
-  permissions: SupervisorPermissions[];
+  permissions: SupervisorPermissionsEnum[];
 }
 
 interface AddSupervisorByAdminResponse {

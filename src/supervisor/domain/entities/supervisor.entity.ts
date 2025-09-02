@@ -7,22 +7,25 @@ import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support
 import { Task } from 'src/task/domain/entities/task.entity';
 import { User } from 'src/shared/entities/user.entity';
 
-export enum SupervisorPermissions {
+export enum SupervisorPermissionsEnum {
   VIEW_ALL_DASHBOARD = 'VIEW_ALL_DASHBOARD',
   MANAGE_DEPARTMENTS = 'MANAGE_DEPARTMENTS',
+  MANAGE_SUB_DEPARTMENTS = 'MANAGE_SUB_DEPARTMENTS',
   MANAGE_PROMOTIONS = 'MANAGE_PROMOTIONS',
   APPROVE_STAFF_REQUESTS = 'APPROVE_STAFF_REQUESTS',
   MANAGE_SITE_CONFIG = 'MANAGE_SITE_CONFIG',
   MANAGE_SUPERVISORS = 'MANAGE_SUPERVISORS',
   VIEW_USER_ACTIVITY = 'VIEW_USER_ACTIVITY',
   MANAGE_STAFF_DIRECTLY = 'MANAGE_STAFF_DIRECTLY',
+  MANAGE_DRIVERS = 'MANAGE_DRIVERS',
+  MANAGE_TASKS = 'MANAGE_TASKS',
 }
 
 interface SupervisorOptions {
   id: string;
   userId: string;
   user?: User;
-  permissions: SupervisorPermissions[];
+  permissions: SupervisorPermissionsEnum[];
   departments: Department[];
   assignedTasks: Task[];
   employeeRequests: EmployeeRequest[];
@@ -39,7 +42,7 @@ export class Supervisor {
   private readonly _id: UUID;
   private _userId: UUID;
   private _user?: User;
-  private _permissions: SupervisorPermissions[];
+  private _permissions: SupervisorPermissionsEnum[];
   private _departments: Department[];
   // private  _employees: Employee[];
   private _assignedTasks: Task[];
@@ -85,7 +88,7 @@ export class Supervisor {
     return this._user;
   }
 
-  get permissions(): SupervisorPermissions[] {
+  get permissions(): SupervisorPermissionsEnum[] {
     return this._permissions;
   }
 
@@ -137,7 +140,7 @@ export class Supervisor {
     this._user = value;
   }
 
-  set permissions(value: SupervisorPermissions[]) {
+  set permissions(value: SupervisorPermissionsEnum[]) {
     this._permissions = value;
   }
 
@@ -223,22 +226,22 @@ export class Supervisor {
     return {
       id: this.id.toString(),
       userId: this.userId.toString(),
-      user: this.user?.withoutPassword(),
+      user: this?.user?.withoutPassword(),
       permissions: this.permissions,
-      departments: this.departments?.map((dept) => dept?.toJSON()),
-      assignedTasks: this.assignedTasks?.map((task) => task?.toJSON()),
-      employeeRequests: this.employeeRequests?.map((request) =>
+      departments: this?.departments?.map((dept) => dept?.toJSON()),
+      assignedTasks: this?.assignedTasks?.map((task) => task?.toJSON()),
+      employeeRequests: this?.employeeRequests?.map((request) =>
         request?.toJSON(),
       ),
-      promotions: this.promotions?.map((promotion) => promotion?.toJSON()),
-      approvedTasks: this.approvedTasks?.map((task) => task?.toJSON()),
-      questions: this.questions?.map((question) => question?.toJSON()),
-      supportTicketAnswersAuthored: this.supportTicketAnswersAuthored?.map(
+      promotions: this?.promotions?.map((promotion) => promotion?.toJSON()),
+      approvedTasks: this?.approvedTasks?.map((task) => task?.toJSON()),
+      questions: this?.questions?.map((question) => question?.toJSON()),
+      supportTicketAnswersAuthored: this?.supportTicketAnswersAuthored?.map(
         (answer) => answer?.toJSON(),
       ),
-      performedTasks: this.performedTasks?.map((task) => task?.toJSON()),
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
+      performedTasks: this?.performedTasks?.map((task) => task?.toJSON()),
+      createdAt: this?.createdAt?.toISOString(),
+      updatedAt: this?.updatedAt?.toISOString(),
     };
   }
 }
@@ -247,7 +250,7 @@ export interface SupervisorPersistence {
   id: string;
   userId: string;
   user: User;
-  permissions: SupervisorPermissions[];
+  permissions: SupervisorPermissionsEnum[];
   departments: Department[];
   assignedTasks: Task[];
   employeeRequests: EmployeeRequest[];

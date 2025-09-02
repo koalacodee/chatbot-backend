@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
-import { Supervisor } from '../../domain/entities/supervisor.entity';
+import {
+  Supervisor,
+  SupervisorPermissionsEnum,
+} from '../../domain/entities/supervisor.entity';
 import { SupervisorRepository } from '../../domain/repository/supervisor.repository';
 import { Department } from 'src/department/domain/entities/department.entity';
 import { Task } from 'src/task/domain/entities/task.entity';
@@ -9,6 +12,7 @@ import { Question } from 'src/questions/domain/entities/question.entity';
 import { Promotion } from 'src/promotion/domain/entities/promotion.entity';
 import { EmployeeRequest } from 'src/employee-request/domain/entities/employee-request.entity';
 import { User } from 'src/shared/entities/user.entity';
+import { AdminPermissions } from '@prisma/client';
 
 @Injectable()
 export class PrismaSupervisorRepository extends SupervisorRepository {
@@ -46,7 +50,9 @@ export class PrismaSupervisorRepository extends SupervisorRepository {
     const savedSupervisor = await this.prisma.supervisor.upsert({
       where: { id: data.id },
       update: {
-        permissions: data.permissions,
+        permissions: data.permissions.map(
+          (perm: SupervisorPermissionsEnum) => AdminPermissions[perm],
+        ),
         user: { connect: { id: data.userId } },
         departments: {
           connect: data.departments.map((dept: Department) => ({
@@ -56,7 +62,9 @@ export class PrismaSupervisorRepository extends SupervisorRepository {
       },
       create: {
         id: data.id,
-        permissions: data.permissions,
+        permissions: data.permissions.map(
+          (perm: SupervisorPermissionsEnum) => AdminPermissions[perm],
+        ),
         user: { connect: { id: data.userId } },
         departments: {
           connect: data.departments.map((dept: any) => ({
@@ -132,7 +140,9 @@ export class PrismaSupervisorRepository extends SupervisorRepository {
     await this.prisma.supervisor.update({
       where: { id },
       data: {
-        permissions: data.permissions,
+        permissions: data.permissions.map(
+          (perm: SupervisorPermissionsEnum) => AdminPermissions[perm],
+        ),
         user: { connect: { id: data.userId } },
         departments: {
           connect: data.departments.map((dept: any) => ({

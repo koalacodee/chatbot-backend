@@ -1,5 +1,11 @@
-import { IsString, IsEmail, IsOptional, IsArray, IsEnum } from 'class-validator';
-import { SupervisorPermissions } from '../../../domain/entities/supervisor.entity';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsArray,
+  IsEnum,
+} from 'class-validator';
+import { SupervisorPermissionsEnum } from '../../../domain/entities/supervisor.entity';
 
 export class AddSupervisorByAdminDto {
   @IsString()
@@ -25,6 +31,6 @@ export class AddSupervisorByAdminDto {
   departmentIds: string[];
 
   @IsArray()
-  @IsEnum(SupervisorPermissions, { each: true })
-  permissions: SupervisorPermissions[];
+  @IsEnum(SupervisorPermissionsEnum, { each: true })
+  permissions: SupervisorPermissionsEnum[];
 }

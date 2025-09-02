@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Query,
-  UseGuards,
   Post,
   Body,
   HttpCode,
@@ -12,15 +11,13 @@ import {
   Put,
 } from '@nestjs/common';
 import { AddSupervisorByAdminUseCase } from '../../application/use-cases/add-supervisor-by-admin.use-case';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { RolesGuard, UseRoles } from 'src/rbac';
-import { Roles } from 'src/shared/value-objects/role.vo';
 import { AddSupervisorByAdminDto } from './dtos/add-supervisor-by-admin.dto';
 import { SearchSupervisorUseCase } from 'src/supervisor/application/use-cases/search-supervisor.use-case';
 import { CanDeleteUseCase } from 'src/supervisor/application/use-cases/can-delete.use-case';
 import { DeleteSupervisorUseCase } from 'src/supervisor/application/use-cases/delete-supervisor.use-case';
 import { UpdateSupervisorUseCase } from 'src/supervisor/application/use-cases/update-supervisor.use-case';
 import { UpdateSupervisorDto } from './dtos/update-supervisor.dto';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 
 interface SearchSupervisorQuery {
   search: string;
@@ -36,8 +33,7 @@ export class SupervisorController {
     private readonly updateSupervisorUseCase: UpdateSupervisorUseCase,
   ) {}
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Get('search')
   async search(@Query() query: SearchSupervisorQuery): Promise<any> {
     return this.searchSupervisorUseCase.execute({
@@ -46,8 +42,7 @@ export class SupervisorController {
   }
 
   @Post()
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN)
+  @AdminAuth()
   @HttpCode(HttpStatus.CREATED)
   async addSupervisorByAdmin(
     @Body() addSupervisorDto: AddSupervisorByAdminDto,
@@ -71,24 +66,21 @@ export class SupervisorController {
   }
 
   @Get('can-delete/:id')
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN)
+  @AdminAuth()
   @HttpCode(HttpStatus.OK)
   async canDelete(@Param('id') id: string): Promise<any> {
     return this.canDeleteUseCase.execute(id);
   }
 
   @Delete(':id')
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN)
+  @AdminAuth()
   @HttpCode(HttpStatus.OK)
   async delete(@Param('id') id: string): Promise<any> {
     return this.deleteSupervisorUseCase.execute(id);
   }
 
   @Put(':id')
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN)
+  @AdminAuth()
   @HttpCode(HttpStatus.OK)
   async update(
     @Param('id') id: string,
