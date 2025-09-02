@@ -26,9 +26,14 @@ import {
   AnswerTicketResponseDto,
 } from './dtos/answer-ticket.dto';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/rbac/guards/roles.guard';
-import { UseRoles } from 'src/rbac/decorators/roles.decorator';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
+import {
+  Permissions,
+  PermissionsEnum,
+} from 'src/rbac/decorators/permissions.decorator';
+import { EmployeePermissions } from 'src/rbac/decorators';
+import { EmployeePermissionsEnum as EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 
 @ApiTags('tickets')
 @Controller('tickets')
@@ -128,8 +133,8 @@ export class TicketController {
   }
 
   @Post(':ticketId/answer')
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.ADMIN)
+  @AdminAuth()
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Answer a ticket (Admin/Manager only)' })
   @ApiResponse({

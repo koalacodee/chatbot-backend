@@ -30,8 +30,6 @@ export class UpdateVehicleUseCase {
     const existing = await this.vehicleRepo.findById(id);
     if (!existing) throw new NotFoundException({ id: 'vehicle_not_found' });
 
-    console.log(existing);
-
     if (dto.make !== undefined) existing.make = dto.make;
     if (dto.model !== undefined) existing.model = dto.model;
     if (dto.year !== undefined) existing.year = dto.year;
@@ -47,7 +45,6 @@ export class UpdateVehicleUseCase {
       existing.nextMaintenanceDate = dto.nextMaintenanceDate ?? undefined;
 
     this.upsertLicense(dto.license, existing);
-    console.log(existing);
 
     return this.vehicleRepo.save(existing);
   }

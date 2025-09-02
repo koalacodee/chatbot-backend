@@ -21,10 +21,8 @@ import { DeleteDriverUseCase } from '../../application/use-cases/delete-driver.u
 import { GetDriverByUserIdUseCase } from '../../application/use-cases/get-driver-by-user-id.use-case';
 import { AddDriverBySupervisorUseCase } from '../../application/use-cases/add-driver-by-supervisor.use-case';
 import { AddDriverBySupervisorDto } from './dto/add-driver-by-supervisor.dto';
-import { RolesGuard } from 'src/rbac/guards/roles.guard';
-import { UseRoles } from 'src/rbac/decorators/roles.decorator';
-import { Roles as RoleEnum } from 'src/shared/value-objects/role.vo';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
+import { SupervisorPermissions } from 'src/rbac/decorators';
+import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 
 @Controller('drivers')
 export class DriverController {
@@ -38,6 +36,7 @@ export class DriverController {
     private readonly addDriverBySupervisorUseCase: AddDriverBySupervisorUseCase,
   ) {}
 
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_DRIVERS)
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createDriver(@Body() createDriverDto: CreateDriverDto): Promise<any> {
@@ -45,6 +44,7 @@ export class DriverController {
     return driver.toJSON();
   }
 
+  @SupervisorPermissions()
   @Get()
   @HttpCode(HttpStatus.OK)
   async getAllDrivers(): Promise<any> {
@@ -52,6 +52,7 @@ export class DriverController {
     return drivers.map((driver) => driver.toJSON());
   }
 
+  @SupervisorPermissions()
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   async getDriver(@Param('id') id: string): Promise<any> {
@@ -62,6 +63,7 @@ export class DriverController {
     return driver.toJSON();
   }
 
+  @SupervisorPermissions()
   @Get('user/:userId')
   @HttpCode(HttpStatus.OK)
   async getDriverByUserId(@Param('userId') userId: string): Promise<any> {
@@ -72,6 +74,7 @@ export class DriverController {
     return driver.toJSON();
   }
 
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_DRIVERS)
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   async updateDriver(
@@ -88,6 +91,7 @@ export class DriverController {
     return driver.toJSON();
   }
 
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_DRIVERS)
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async deleteDriver(@Param('id') id: string) {
@@ -99,8 +103,7 @@ export class DriverController {
   }
 
   @Post('supervisor/add')
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(RoleEnum.SUPERVISOR)
+  @SupervisorPermissions()
   @HttpCode(HttpStatus.CREATED)
   async addDriverBySupervisor(
     @Body() addDriverDto: AddDriverBySupervisorDto,

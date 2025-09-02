@@ -21,8 +21,6 @@ export class TrackTicketUseCase {
   async execute({ ticketCode, guestId }: TrackTicketInput) {
     const ticket = await this.ticketRepo.findByTicketCode(ticketCode);
 
-    console.log(ticket);
-
     if (!ticket) {
       throw new NotFoundException({ ticket: 'ticket_not_found' });
     }
@@ -39,8 +37,6 @@ export class TrackTicketUseCase {
       updatedAt: ticket.updatedAt,
       question: ticket.question,
       answer: await this.answerRepo.findByTicketId(ticket.id).then((ans) => {
-        console.log(ans);
-
         return ans ? ans.content : undefined;
       }),
     };

@@ -16,8 +16,12 @@ import {
   MarkViolationAsPendingUseCase,
 } from '../../application/use-cases';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
+import {
+  Permissions,
+  PermissionsEnum,
+} from 'src/rbac/decorators/permissions.decorator';
 
 interface CreateViolationDto {
   driverId: string;
@@ -47,15 +51,13 @@ export class ViolationController {
     private readonly markViolationAsPendingUseCase: MarkViolationAsPendingUseCase,
   ) {}
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Post()
   async create(@Body() dto: CreateViolationDto): Promise<any> {
     return this.createViolationUseCase.execute(dto);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @AdminAuth()
   @Get()
   async getAll(@Query() query: GetViolationsQuery): Promise<any> {
     return this.getViolationsUseCase.execute({
@@ -67,8 +69,7 @@ export class ViolationController {
     });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Delete(':id')
   async delete(
     @Param('id') violationId: string,
@@ -76,15 +77,13 @@ export class ViolationController {
     return this.deleteViolationUseCase.execute({ violationId });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Post(':id/mark-paid')
   async markAsPaid(@Param('id') violationId: string): Promise<any> {
     return this.markViolationAsPaidUseCase.execute({ violationId });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Post(':id/mark-pending')
   async markAsPending(@Param('id') violationId: string): Promise<any> {
     return this.markViolationAsPendingUseCase.execute({ violationId });

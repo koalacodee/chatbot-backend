@@ -28,8 +28,12 @@ import { DeleteManyKnowledgeChunksInputDto } from './dto/delete-many-knowledge-c
 import { FindKnowledgeChunksByDepartmentInputDto } from './dto/find-by-department.dto';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import {
+  EmployeePermissions,
+  SupervisorPermissions,
+} from 'src/rbac/decorators';
+import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 
 @Controller('knowledge-chunks')
 export class KnowledgeChunkController {
@@ -45,8 +49,7 @@ export class KnowledgeChunkController {
   ) {}
 
   @Post()
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.ADMIN)
+  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_KNOWLEDGE_CHUNKS)
   async create(
     @Body() input: CreateKnowledgeChunkInputDto,
     @Req() req: any,
@@ -54,8 +57,7 @@ export class KnowledgeChunkController {
     return this.createUseCase.execute({ ...input, userId: req.user.id });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.ADMIN)
+  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_KNOWLEDGE_CHUNKS)
   @Put()
   async update(
     @Body() input: UpdateKnowledgeChunkInputDto,
@@ -65,8 +67,7 @@ export class KnowledgeChunkController {
     return this.updateUseCase.execute(id, { ...dto, userId: req.user.id });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.ADMIN)
+  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_KNOWLEDGE_CHUNKS)
   @Get(':id')
   async get(
     @Param('id') id: string,
@@ -75,15 +76,13 @@ export class KnowledgeChunkController {
     return this.getUseCase.execute(id, req.user.id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.ADMIN)
+  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_KNOWLEDGE_CHUNKS)
   @Get()
   async getAll(@Req() req: any): Promise<GetAllKnowledgeChunksOutputDto> {
     return this.getAllUseCase.execute(req.user.id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.ADMIN)
+  @SupervisorPermissions()
   @Get('by-department')
   async findByDepartment(
     @Query() input: FindKnowledgeChunksByDepartmentInputDto,
@@ -91,8 +90,7 @@ export class KnowledgeChunkController {
     return this.findByDepartmentUseCase.execute(input);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.ADMIN)
+  @SupervisorPermissions()
   @Delete(':id')
   async delete(
     @Param('id') id: string,
@@ -101,8 +99,7 @@ export class KnowledgeChunkController {
     return this.deleteUseCase.execute(id, req.user.id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.ADMIN)
+  @SupervisorPermissions()
   @Delete('multiple')
   async deleteMany(
     @Body() input: DeleteManyKnowledgeChunksInputDto,
@@ -111,8 +108,7 @@ export class KnowledgeChunkController {
     return this.deleteManyUseCase.execute(input.ids, req.user.id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.ADMIN)
+  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_KNOWLEDGE_CHUNKS)
   @Get('count')
   async count(): Promise<number> {
     return this.countUseCase.execute();

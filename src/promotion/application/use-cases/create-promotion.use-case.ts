@@ -6,6 +6,7 @@ import { FilesService } from 'src/files/domain/services/files.service';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 interface CreatePromotionInputDto {
   title: string;
@@ -24,6 +25,7 @@ export class CreatePromotionUseCase {
     private readonly adminRepo: AdminRepository,
     private readonly supervisorRepo: SupervisorRepository,
     private readonly fileService: FilesService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(
@@ -49,6 +51,7 @@ export class CreatePromotionUseCase {
     });
 
     const saved = await this.promotionRepo.save(promotion);
+
     // attach media to saved promotion via generic Attachment table
     let uploadKey: string;
     if (dto.attach) {

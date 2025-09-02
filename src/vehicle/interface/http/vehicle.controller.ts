@@ -23,8 +23,8 @@ import {
 import { CreateVehicleInputDto, UpdateVehicleInputDto } from './dto';
 import { Vehicle, VehicleStatus } from '../../domain/entities/vehicle.entity';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 
 @Controller('vehicles')
 export class VehicleController {
@@ -40,8 +40,7 @@ export class VehicleController {
     private readonly searchUseCase: SearchVehiclesUseCase,
   ) {}
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Post(':id/assign-driver')
   async assignDriver(
     @Param('id') id: string,
@@ -53,8 +52,7 @@ export class VehicleController {
     });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Post(':id/update-status')
   async updateStatus(
     @Param('id') id: string,
@@ -66,8 +64,7 @@ export class VehicleController {
     });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Get('search')
   async search(
     @Query('q') q: string,
@@ -82,8 +79,7 @@ export class VehicleController {
     return results.map((v) => v.toJSON());
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Post()
   async create(@Body() input: CreateVehicleInputDto): Promise<Vehicle> {
     return this.createUseCase.execute({
@@ -92,8 +88,7 @@ export class VehicleController {
     });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Put(':id')
   async update(
     @Param('id') id: string,
@@ -108,15 +103,13 @@ export class VehicleController {
     } as any);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Get(':id')
   async get(@Param('id') id: string): Promise<Vehicle> {
     return this.getUseCase.execute(id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Get()
   async getAll(
     @Query('status') status?: string,
@@ -133,15 +126,13 @@ export class VehicleController {
     return list.map((v) => v.toJSON());
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Delete(':id')
   async delete(@Param('id') id: string): Promise<Vehicle | null> {
     return this.deleteUseCase.execute(id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @AdminAuth()
   @Get('count/all')
   async count(): Promise<number> {
     return this.countUseCase.execute();
