@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { PermissionsEnum } from 'src/rbac/decorators/permissions.decorator';
 
 export interface Tokens {
   accessToken: string;
@@ -10,6 +11,7 @@ export abstract class TokensService {
     guestId: string,
     email: string,
     role?: string,
+    permissions?: any,
   ): Tokens | Promise<Tokens>;
   protected abstract generateAccessToken(
     guestId: string,

@@ -51,10 +51,8 @@ export class UserAuthController {
   @UseGuards(UserRefreshTokenGuard)
   @Post('refresh')
   @HttpCode(200)
-  async handleRefreshToken(@Req() req: Request) {
-    const refreshToken = req.cookies['refresh_token'];
-    console.log(refreshToken);
-    return await this.refreshToken.execute({ refreshToken });
+  async handleRefreshToken(@Req() req: any) {
+    return await this.refreshToken.execute({ userId: req.user.id });
   }
 
   @UseGuards(UserRefreshTokenGuard)
@@ -92,8 +90,6 @@ export class UserAuthController {
 
     const COOKIE_SAMESITE = this.config.get('COOKIES_SAMESITE', 'strict');
     const COOKIE_SECURE = this.config.get('COOKIES_SECURE', true);
-
-    console.log(COOKIE_SAMESITE, COOKIE_SECURE);
 
     res.cookie('refresh_token', token, {
       httpOnly: true,

@@ -8,7 +8,6 @@ import { RedisService } from 'src/shared/infrastructure/redis';
 
 interface LoginGuestInput {
   identifier: string;
-  password: string;
 }
 
 @Injectable()
@@ -19,14 +18,13 @@ export class LoginGuestUseCase {
     private readonly redis: RedisService,
   ) {}
 
-  async execute({ identifier, password }: LoginGuestInput) {
+  async execute({ identifier }: LoginGuestInput) {
     const guest = await (isEmail(identifier)
       ? this.guestRepo.findByEmail(identifier)
       : this.guestRepo.findByPhone(identifier));
     if (!guest) {
       throw new NotFoundException({ guest: 'guest_not_found' });
     }
-    await guest.password.verify(password);
     const code = randomInt(100000, 1000000).toString();
     await Promise.all([
       this.redis.set(`guest:${code}:login`, guest.id.toString()),

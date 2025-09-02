@@ -5,7 +5,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly config: ConfigService,
@@ -13,7 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get('USER_ACCESS_TOKEN_SECRET'), // Use environment variable in production
+      secretOrKey: config.getOrThrow('USER_ACCESS_TOKEN_SECRET'), // Use environment variable in production
     });
   }
 
@@ -35,6 +35,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       id: user.id.toString(),
       email: user.email.toString(),
       role: user.role.toString(),
+      permissions: payload.permissions,
     };
   }
 }

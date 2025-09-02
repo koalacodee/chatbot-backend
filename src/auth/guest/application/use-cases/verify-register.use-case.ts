@@ -24,7 +24,7 @@ export class VerifyRegisterUseCase {
       this.guestRepo.save(guest),
       this.redis.del(`guest:${code}:reg`),
     ]);
-    const { password, ...userData } = guest.toJSON();
+    const userData = guest.toJSON();
     // Generate guest-specific tokens
     const tokens = await this.tokenService.generateTokens(
       userData.id,

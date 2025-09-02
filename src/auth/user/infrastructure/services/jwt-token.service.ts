@@ -5,6 +5,7 @@ import { RefreshTokenRepository } from 'src/auth/domain/repositories/refresh-tok
 import { Response } from 'express';
 import { RefreshToken } from 'src/auth/domain/entities/refresh-token.entity';
 import { TokensService } from 'src/auth/domain/services/tokens.service';
+import { PermissionsEnum } from 'src/rbac/decorators/permissions.decorator';
 
 @Injectable()
 export class JwtTokensService extends TokensService {
@@ -25,10 +26,15 @@ export class JwtTokensService extends TokensService {
     );
   }
 
-  async generateTokens(userId: string, email: string, role: string) {
+  async generateTokens(
+    userId: string,
+    email: string,
+    role: string,
+    permissions?: PermissionsEnum,
+  ) {
     const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken(userId, email, role),
-      this.generateRefreshToken(userId, email, role),
+      this.generateAccessToken(userId, email, role, permissions),
+      this.generateRefreshToken(userId, email, role, permissions),
     ]);
 
     // Store refresh token in the database
@@ -49,16 +55,26 @@ export class JwtTokensService extends TokensService {
     };
   }
 
-  async generateAccessToken(userId: string, email: string, role: string) {
-    const payload = { sub: userId, email, role };
+  async generateAccessToken(
+    userId: string,
+    email: string,
+    role: string,
+    permissions?: PermissionsEnum,
+  ) {
+    const payload = { sub: userId, email, role, permissions };
     return this.jwtService.signAsync(payload, {
       secret: this.ACCESS_TOKEN_SECRET,
       expiresIn: '30m', // Short-lived access token
     });
   }
 
-  async generateRefreshToken(userId: string, email: string, role: string) {
-    const payload = { sub: userId, email, role };
+  async generateRefreshToken(
+    userId: string,
+    email: string,
+    role: string,
+    permissions?: PermissionsEnum,
+  ) {
+    const payload = { sub: userId, email, role, permissions };
     return this.jwtService.signAsync(payload, {
       secret: this.REFRESH_TOKEN_SECRET,
       expiresIn: '7d', // Longer-lived refresh token
@@ -66,23 +82,12 @@ export class JwtTokensService extends TokensService {
   }
 
   async refreshTokens(refreshToken: string) {
-    // Verify the refresh token exists and is not revoked
-    const storedToken =
-      await this.refreshTokenRepository.findByToken(refreshToken);
-
-    if (!storedToken || storedToken.isRevoked) {
-      throw new Error('Invalid refresh token');
-    }
-
-    if (storedToken.isExpired) {
-      throw new Error('Refresh token expired');
-    }
-
     // Decode the token to get user information
-    const decoded = this.jwtService.decode(storedToken.token) as {
+    const decoded = this.jwtService.decode(refreshToken) as {
       sub: string;
       email: string;
       role: string;
+      permissions?: PermissionsEnum;
     };
 
     // Generate a new access token
@@ -90,12 +95,14 @@ export class JwtTokensService extends TokensService {
       decoded.sub,
       decoded.email,
       decoded.role,
+      decoded.permissions,
     );
 
     const newRefreshToken = await this.generateRefreshToken(
       decoded.sub,
       decoded.email,
       decoded.role,
+      decoded.permissions,
     );
 
     return { accessToken, refreshToken: newRefreshToken };

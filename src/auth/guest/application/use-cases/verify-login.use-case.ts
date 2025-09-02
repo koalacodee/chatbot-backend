@@ -20,9 +20,7 @@ export class VerifyLoginUseCase {
       return val;
     });
     await this.redis.del(`guest:${code}:login`);
-    const { password, ...guestData } = (
-      await this.guestRepo.findById(guestId)
-    ).toJSON();
+    const guestData = (await this.guestRepo.findById(guestId)).toJSON();
     // Generate guest-specific tokens
     const tokens = await this.tokenService.generateTokens(
       guestData.id,

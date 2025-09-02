@@ -35,11 +35,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
   async validate(req: Request, payload: any) {
     const refreshToken = req.cookies['refresh_token'];
 
-    console.log(refreshToken);
-
     if (!refreshToken) {
-      console.log('Refresh token not found');
-
       throw new UnauthorizedException('Refresh token not found');
     }
 
@@ -52,38 +48,26 @@ export class RefreshTokenStrategy extends PassportStrategy(
     const storedToken =
       await this.refreshTokenRepository.findByToken(refreshToken);
 
-    console.log(storedToken);
-
     if (!storedToken) {
-      console.log('Invalid refresh token');
-
       throw new UnauthorizedException('Invalid refresh token');
     }
 
     if (storedToken.isRevoked) {
-      console.log('Refresh token has been revoked');
-
       throw new UnauthorizedException('Refresh token has been revoked');
     }
 
     if (storedToken.isExpired) {
-      console.log('Refresh token has expired');
-
       throw new UnauthorizedException('Refresh token has expired');
     }
 
     // Verify the token belongs to the user in the payload
     if (storedToken.targetId.toString() !== payload.sub) {
-      console.log('Invalid token owner');
-
       throw new UnauthorizedException('Invalid token owner');
     }
 
     const user = await this.userRepository.findById(payload.sub);
 
     if (!user) {
-      console.log('User not found');
-
       throw new UnauthorizedException('user_not_found');
     }
 
@@ -91,7 +75,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
       id: user.id.toString(),
       email: user.email.toString(),
       role: user.role.toString(),
-      refreshToken,
+      permissions: payload.permissions,
     };
   }
 }

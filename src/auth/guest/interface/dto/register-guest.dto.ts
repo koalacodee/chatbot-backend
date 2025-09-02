@@ -23,8 +23,4 @@ export class RegisterGuestDto {
   @IsOptional()
   @IsPhoneNumber()
   phone?: string;
-
-  @IsNotEmpty({ message: 'password_required' })
-  @IsStrongPassword({}, { message: 'password_weak' })
-  password: string;
 }

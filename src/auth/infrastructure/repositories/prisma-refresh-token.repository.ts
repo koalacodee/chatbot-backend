@@ -8,8 +8,6 @@ export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async save(refreshToken: RefreshToken): Promise<void> {
-    console.log(refreshToken.toJSON());
-
     await this.prisma.refreshToken.create({
       data: refreshToken.toJSON(),
     });

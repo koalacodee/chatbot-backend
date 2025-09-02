@@ -10,7 +10,6 @@ interface RegisterGuestUseCaseProps {
   name: string;
   email: string;
   phone?: string;
-  password: string;
 }
 
 @Injectable()
@@ -21,7 +20,7 @@ export class RegisterGuestUseCase {
     private readonly email: ResendEmailService,
   ) {}
 
-  async execute({ name, email, phone, password }: RegisterGuestUseCaseProps) {
+  async execute({ name, email, phone }: RegisterGuestUseCaseProps) {
     const [existsByEmail, existsByPhone] = await Promise.all([
       this.guestRepo.existsByEmail(email),
       phone ? this.guestRepo.existsByPhone(phone) : false,
@@ -35,11 +34,10 @@ export class RegisterGuestUseCase {
       throw new ConflictException({ phone: 'already_exists' });
     }
 
-    const guest = await Guest.create({
+    const guest = Guest.create({
       name,
       email,
       phone,
-      password,
     });
 
     const code = randomInt(100000, 1000000).toString();

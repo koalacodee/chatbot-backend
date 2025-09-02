@@ -35,10 +35,7 @@ export class GuestRefreshTokenStrategy extends PassportStrategy(
   async validate(req: Request, payload: any) {
     const refreshToken = req.cookies['guest_refresh_token'];
 
-    console.log('Guest refresh token:', refreshToken);
-
     if (!refreshToken) {
-      console.log('Guest refresh token not found');
       throw new UnauthorizedException('Guest refresh token not found');
     }
 
@@ -51,33 +48,26 @@ export class GuestRefreshTokenStrategy extends PassportStrategy(
     const storedToken =
       await this.refreshTokenRepository.findByToken(refreshToken);
 
-    console.log('Stored guest token:', storedToken);
-
     if (!storedToken) {
-      console.log('Invalid guest refresh token');
       throw new UnauthorizedException('Invalid guest refresh token');
     }
 
     if (storedToken.isRevoked) {
-      console.log('Guest refresh token has been revoked');
       throw new UnauthorizedException('Guest refresh token has been revoked');
     }
 
     if (storedToken.isExpired) {
-      console.log('Guest refresh token has expired');
       throw new UnauthorizedException('Guest refresh token has expired');
     }
 
     // Verify the token belongs to the guest in the payload
     if (storedToken.targetId.toString() !== payload.sub) {
-      console.log('Invalid guest token owner');
       throw new UnauthorizedException('Invalid guest token owner');
     }
 
     const guest = await this.guestRepository.findById(payload.sub);
 
     if (!guest) {
-      console.log('Guest not found');
       throw new UnauthorizedException('guest_not_found');
     }
 
