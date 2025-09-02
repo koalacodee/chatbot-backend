@@ -6,6 +6,8 @@ import {
 } from '../../domain/entities/employee-request.entity';
 import { Email } from 'src/shared/value-objects/email.vo';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { StaffRequestedEvent } from '../listeners/staff-requested.listener';
 
 export interface SubmitEmployeeRequestDto {
   newEmployeeId?: string;
@@ -22,6 +24,7 @@ export class SubmitEmployeeRequestUseCase {
   constructor(
     private readonly employeeRequestRepository: EmployeeRequestRepository,
     private readonly supervisorRepository: SupervisorRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(
@@ -43,6 +46,18 @@ export class SubmitEmployeeRequestUseCase {
       status: RequestStatus.PENDING,
     });
 
-    return await this.employeeRequestRepository.save(employeeRequest);
+    const toReturn = await this.employeeRequestRepository.save(employeeRequest);
+
+    this.eventEmitter.emit(
+      StaffRequestedEvent.name,
+      new StaffRequestedEvent(
+        toReturn.id.toString(),
+        supervisor.id.toString(),
+        toReturn.createdAt,
+        toReturn.newEmployeeFullName,
+      ),
+    );
+
+    return toReturn;
   }
 }

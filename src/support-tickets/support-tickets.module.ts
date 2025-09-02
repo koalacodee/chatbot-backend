@@ -8,6 +8,8 @@ import * as UseCases from './application/use-cases';
 import { DepartmentModule } from 'src/department/department.module';
 import { PrismaSupportTicketInteractionRepository } from './infrastructure/repositories/prisma-support-ticket-interaction.repository';
 import { SupportTicketInteractionRepository } from './domain/repositories/support-ticket-interaction.repository';
+import { TicketAnsweredListener } from './application/listeners/ticket-answered.listener';
+import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 
 @Module({
   controllers: [SupportTicketController],
@@ -25,8 +27,9 @@ import { SupportTicketInteractionRepository } from './domain/repositories/suppor
       useClass: PrismaSupportTicketInteractionRepository,
     },
     ...Object.values(UseCases),
+    TicketAnsweredListener,
   ],
   exports: [SupportTicketRepository, SupportTicketAnswerRepository],
-  imports: [DepartmentModule],
+  imports: [DepartmentModule, ActivityLogModule],
 })
 export class SupportTicketModule {}

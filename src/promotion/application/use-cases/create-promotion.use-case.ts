@@ -7,6 +7,7 @@ import { AdminRepository } from 'src/admin/domain/repositories/admin.repository'
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PromotionCreatedEvent } from 'src/promotion/domain/events/promotion-created.event';
 
 interface CreatePromotionInputDto {
   title: string;
@@ -51,6 +52,17 @@ export class CreatePromotionUseCase {
     });
 
     const saved = await this.promotionRepo.save(promotion);
+
+    this.eventEmitter.emit(
+      PromotionCreatedEvent.name,
+      new PromotionCreatedEvent(
+        saved.title,
+        saved.id.toString(),
+        dto.createdByUserId,
+        saved.createdAt,
+        saved.audience,
+      ),
+    );
 
     // attach media to saved promotion via generic Attachment table
     let uploadKey: string;

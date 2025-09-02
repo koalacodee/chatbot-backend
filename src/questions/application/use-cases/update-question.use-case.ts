@@ -8,6 +8,7 @@ import { UserRepository } from 'src/shared/repositories/user.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { FaqUpdatedEvent } from '../listeners/faq-updated.listener';
 
 interface UpdateQuestionDto {
   text?: string;
@@ -21,7 +22,6 @@ interface UpdateQuestionDto {
 export class UpdateQuestionUseCase {
   constructor(
     private readonly questionRepo: QuestionRepository,
-    private readonly accessControl: AccessControlService,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
@@ -33,7 +33,6 @@ export class UpdateQuestionUseCase {
     // Fetch the question to get departmentId
     const question = await this.questionRepo.findById(id);
     const departmentId = dto.departmentId || question.departmentId.value;
-    const department = await this.departmentRepository.findById(departmentId);
 
     // Check department access
     const user = await this.userRepository.findById(dto.userId);
@@ -47,6 +46,16 @@ export class UpdateQuestionUseCase {
     if (dto.answer) update.answer = dto.answer;
 
     const updatedQuestion = await this.questionRepo.update(id, update);
+
+    this.eventEmitter.emit(
+      FaqUpdatedEvent.name,
+      new FaqUpdatedEvent(
+        updatedQuestion.text,
+        updatedQuestion.id.toString(),
+        dto.userId,
+        new Date(),
+      ),
+    );
 
     return updatedQuestion;
   }

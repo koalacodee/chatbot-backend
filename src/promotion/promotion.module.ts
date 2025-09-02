@@ -9,6 +9,8 @@ import { DeletePromotionUseCase } from './application/use-cases/delete-promotion
 import { TogglePromotionActiveUseCase } from './application/use-cases/toggle-promotion-active.use-case';
 import { PromotionController } from './interface/http/promotion.controller';
 import { GetPromotionForUserUseCase } from './application/use-cases';
+import { PromotionCreatedListener } from './application/listeners/promotion-created.listener';
+import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 
 @Module({
   providers: [
@@ -20,7 +22,9 @@ import { GetPromotionForUserUseCase } from './application/use-cases';
     UpdatePromotionUseCase,
     DeletePromotionUseCase,
     TogglePromotionActiveUseCase,
+    PromotionCreatedListener,
   ],
   controllers: [PromotionController],
+  imports: [ActivityLogModule],
 })
 export class PromotionModule {}

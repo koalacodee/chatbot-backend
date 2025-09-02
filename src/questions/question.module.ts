@@ -5,6 +5,9 @@ import { QuestionController } from './interface/http/question.controller';
 import * as UseCases from './application/use-cases';
 import { KnowledgeChunkModule } from '../knowledge-chunks/knowledge-chunk.module';
 import { DepartmentModule } from '../department/department.module';
+import { FaqCreatedListener } from './application/listeners/faq-created.listener';
+import { FaqUpdatedListener } from './application/listeners/faq-updated.listener';
+import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 
 @Module({
   providers: [
@@ -13,9 +16,11 @@ import { DepartmentModule } from '../department/department.module';
       useClass: PrismaQuestionRepository,
     },
     ...Object.values(UseCases),
+    FaqCreatedListener,
+    FaqUpdatedListener,
   ],
   controllers: [QuestionController],
-  imports: [KnowledgeChunkModule, DepartmentModule],
+  imports: [KnowledgeChunkModule, DepartmentModule, ActivityLogModule],
   exports: [QuestionRepository],
 })
 export class QuestionModule {}

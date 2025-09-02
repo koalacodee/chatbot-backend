@@ -7,12 +7,14 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
+import { Roles } from 'src/shared/value-objects/role.vo';
+import { Admin } from 'src/admin/domain/entities/admin.entity';
+import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 
 @Injectable()
 export class PrismaTaskRepository extends TaskRepository {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly employeeRepository: EmployeeRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly adminRepository: AdminRepository,
   ) {
@@ -70,6 +72,13 @@ export class PrismaTaskRepository extends TaskRepository {
       notes: row.assignerNotes ?? undefined,
       feedback: row.feedback ?? undefined,
       // attachments handled separately via AttachmentRepository by targetId
+      performer: row.performerAdmin
+        ? Admin.create(row.performerAdmin)
+        : row.performerSupervisor
+          ? Supervisor.create(row.performerSupervisor)
+          : row.performerEmployee
+            ? await Employee.create(row.performerEmployee)
+            : undefined,
     });
   }
 
@@ -104,6 +113,18 @@ export class PrismaTaskRepository extends TaskRepository {
       completedAt: task.completedAt ?? null,
       assignerNotes: task.notes ?? null,
       feedback: task.feedback ?? null,
+      performerAdminId:
+        task?.performer?.user?.role?.getRole() == Roles.ADMIN
+          ? task.performer?.user.id.toString()
+          : null,
+      performerSupervisorId:
+        task?.performer?.user?.role?.getRole() == Roles.SUPERVISOR
+          ? task.performer?.user.id.toString()
+          : null,
+      performerEmployeeId:
+        task?.performer?.user?.role?.getRole() == Roles.EMPLOYEE
+          ? task.performer?.user.id.toString()
+          : null,
     } as const;
 
     const upsert = await this.prisma.task.upsert({
@@ -124,6 +145,9 @@ export class PrismaTaskRepository extends TaskRepository {
         completedAt: data.completedAt,
         assignerNotes: data.assignerNotes,
         feedback: data.feedback,
+        performerAdminId: data.performerAdminId,
+        performerSupervisorId: data.performerSupervisorId,
+        performerEmployeeId: data.performerEmployeeId,
       },
       create: data,
       include: {
@@ -134,6 +158,9 @@ export class PrismaTaskRepository extends TaskRepository {
         approverSupervisor: true,
         targetDepartment: true,
         targetSubDepartment: true,
+        performerAdmin: true,
+        performerSupervisor: true,
+        performerEmployee: true,
       },
     });
 
@@ -156,15 +183,27 @@ export class PrismaTaskRepository extends TaskRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async findAll(offset?: number, limit?: number, departmentIds?: string[]): Promise<Task[]> {
+  async findAll(
+    offset?: number,
+    limit?: number,
+    departmentIds?: string[],
+  ): Promise<Task[]> {
     const whereClause: any = {};
-    
+
     if (departmentIds && departmentIds.length > 0) {
       whereClause.OR = [
         { targetDepartmentId: { in: departmentIds } },
         { targetSubDepartmentId: { in: departmentIds } },
-        { assignee: { subDepartments: { some: { id: { in: departmentIds } } } } },
-        { assignee: { supervisor: { departments: { some: { id: { in: departmentIds } } } } } },
+        {
+          assignee: { subDepartments: { some: { id: { in: departmentIds } } } },
+        },
+        {
+          assignee: {
+            supervisor: {
+              departments: { some: { id: { in: departmentIds } } },
+            },
+          },
+        },
       ];
     }
 
@@ -356,14 +395,8 @@ export class PrismaTaskRepository extends TaskRepository {
     offset?: number;
     limit?: number;
   }): Promise<Task[]> {
-    const {
-      employeeId,
-      subDepartmentId,
-      departmentId,
-      status,
-      offset,
-      limit,
-    } = options;
+    const { employeeId, subDepartmentId, departmentId, status, offset, limit } =
+      options;
 
     const whereClause: any = {};
     const orConditions: any[] = [];

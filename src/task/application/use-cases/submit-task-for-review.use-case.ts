@@ -14,6 +14,9 @@ import { AdminRepository } from 'src/admin/domain/repositories/admin.repository'
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { User } from 'src/shared/entities/user.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TaskPerformedEvent } from 'src/task/domain/events/task-performed.event';
+import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 
 interface SubmitTaskForReviewInputDto {
   taskId: string;
@@ -30,6 +33,8 @@ export class SubmitTaskForReviewUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly adminRepository: AdminRepository,
+    private readonly departmentRepository: DepartmentRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getSubmitterByUser(user: User) {
@@ -79,7 +84,24 @@ export class SubmitTaskForReviewUseCase {
       existing.status = TaskStatus.COMPLETED;
     }
 
-    return this.taskRepo.save(existing);
+    const [savedTask] = await Promise.all([
+      this.taskRepo.save(existing),
+      this.eventEmitter.emitAsync(
+        TaskPerformedEvent.name,
+        new TaskPerformedEvent(
+          existing.title,
+          existing.id.toString(),
+          dto.submittedBy,
+          new Date(),
+          existing?.targetDepartment?.id.toString() ??
+            existing?.targetSubDepartment?.id.toString() ??
+            undefined,
+          existing.status,
+        ),
+      ),
+    ]);
+
+    return savedTask;
   }
 
   private async checkTaskAccess(
@@ -96,6 +118,12 @@ export class SubmitTaskForReviewUseCase {
       const supervisorDepartmentIds = supervisor.departments.map((d) =>
         d.id.toString(),
       );
+      const allDepartments = await this.departmentRepository
+        .findAllSubDepartmentsByParentIds(supervisorDepartmentIds)
+        .then((subDepts) => [
+          ...subDepts.map(({ id }) => id.toString()),
+          ...supervisorDepartmentIds,
+        ]);
 
       // Check if task targets supervisor's departments
       const targetDepartmentId = task.targetDepartment?.id.toString();
@@ -104,18 +132,21 @@ export class SubmitTaskForReviewUseCase {
       // For individual-level tasks, check if the supervisor is supervising the assignee
       let isSupervisingAssignee = false;
       if (task.assignmentType === 'INDIVIDUAL' && task.assignee) {
-        const assigneeEmployee = await this.employeeRepository.findById(task.assignee.id.toString());
+        const assigneeEmployee = await this.employeeRepository.findById(
+          task.assignee.id.toString(),
+        );
         if (assigneeEmployee) {
-          isSupervisingAssignee = assigneeEmployee.supervisor.id.toString() === supervisor.id.toString();
+          isSupervisingAssignee =
+            assigneeEmployee.supervisor.id.toString() ===
+            supervisor.id.toString();
         }
       }
 
       hasAccess =
         isSupervisingAssignee ||
-        (targetDepartmentId &&
-          supervisorDepartmentIds.includes(targetDepartmentId)) ||
+        (targetDepartmentId && allDepartments.includes(targetDepartmentId)) ||
         (targetSubDepartmentId &&
-          supervisorDepartmentIds.includes(targetSubDepartmentId));
+          allDepartments.includes(targetSubDepartmentId));
     } else if (role === Roles.EMPLOYEE) {
       const employee = await this.employeeRepository.findByUserId(userId);
       const employeeDepartmentIds =

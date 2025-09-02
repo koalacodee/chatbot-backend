@@ -1,7 +1,6 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { QuestionRepository } from '../../domain/repositories/question.repository';
 import { Question } from '../../domain/entities/question.entity';
-import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
@@ -9,7 +8,7 @@ import { UserRepository } from 'src/shared/repositories/user.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { FaqCreatedDomainEvent } from 'src/shared/domain-events/faq-created.domain-event';
+import { FaqCreatedEvent } from 'src/questions/domain/events/faq-created.event';
 
 interface CreateQuestionDto {
   text: string;
@@ -23,7 +22,6 @@ interface CreateQuestionDto {
 export class CreateQuestionUseCase {
   constructor(
     private readonly questionRepo: QuestionRepository,
-    private readonly accessControl: AccessControlService,
     private readonly adminRepository: AdminRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
@@ -37,9 +35,6 @@ export class CreateQuestionUseCase {
     const userRole = user.role.getRole();
     // Check department access based on user role
     await this.checkDepartmentAccess(dto.creatorId, dto.departmentId, userRole);
-    const department = await this.departmentRepository.findById(
-      dto.departmentId,
-    );
 
     const question = Question.create({
       text: dto.text,
@@ -67,6 +62,16 @@ export class CreateQuestionUseCase {
     });
 
     const savedQuestion = await this.questionRepo.save(question);
+
+    this.eventEmitter.emit(
+      FaqCreatedEvent.name,
+      new FaqCreatedEvent(
+        savedQuestion.text,
+        savedQuestion.id.toString(),
+        dto.creatorId,
+        new Date(),
+      ),
+    );
 
     return savedQuestion;
   }

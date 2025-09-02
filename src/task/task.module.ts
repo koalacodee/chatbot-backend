@@ -24,9 +24,12 @@ import {
 import { GetDepartmentLevelTasksUseCase } from './application/use-cases/get-department-level-tasks.use-case';
 import { GetSubDepartmentTasksUseCase } from './application/use-cases/get-sub-department-tasks.use-case';
 import { GetIndividualLevelTasksUseCase } from './application/use-cases/get-individual-level-tasks.use-case';
+import { TaskApprovedListener } from './application/listeners/task-approved.listener';
+import { TaskPerformedListener } from './application/listeners/task-performed.listener';
+import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 
 @Module({
-  imports: [PrismaModule, DepartmentModule, SharedModule],
+  imports: [PrismaModule, DepartmentModule, SharedModule, ActivityLogModule],
   controllers: [TaskController, AdminTaskController, SupervisorTaskController],
   providers: [
     {
@@ -49,6 +52,8 @@ import { GetIndividualLevelTasksUseCase } from './application/use-cases/get-indi
     GetSubDepartmentTasksUseCase,
     GetIndividualLevelTasksUseCase,
     GetTeamTasksUseCase,
+    TaskApprovedListener,
+    TaskPerformedListener,
   ],
   exports: [TaskRepository],
 })

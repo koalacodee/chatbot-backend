@@ -7,6 +7,8 @@ import { RejectEmployeeRequestUseCase } from './application/use-cases/reject-emp
 import { GetEmployeeRequestsUseCase } from './application/use-cases/get-employee-requests.use-case';
 import { GetEmployeeRequestByIdUseCase } from './application/use-cases/get-employee-request-by-id.use-case';
 import { EmployeeRequestController } from './interface/http/employee-request.controller';
+import { StaffRequestedListener } from './application/listeners/staff-requested.listener';
+import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 
 @Module({
   controllers: [EmployeeRequestController],
@@ -16,8 +18,13 @@ import { EmployeeRequestController } from './interface/http/employee-request.con
     RejectEmployeeRequestUseCase,
     GetEmployeeRequestsUseCase,
     GetEmployeeRequestByIdUseCase,
-    { provide: EmployeeRequestRepository, useClass: PrismaEmployeeRequestRepository },
+    {
+      provide: EmployeeRequestRepository,
+      useClass: PrismaEmployeeRequestRepository,
+    },
+    StaffRequestedListener,
   ],
   exports: [EmployeeRequestRepository],
+  imports: [ActivityLogModule],
 })
 export class EmployeeRequestModule {}

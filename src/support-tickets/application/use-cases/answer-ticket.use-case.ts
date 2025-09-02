@@ -14,6 +14,8 @@ import { SupportTicketAnswerRepository } from 'src/support-tickets/domain/reposi
 import { SupportTicketRepository } from 'src/support-tickets/domain/repositories/support-ticket.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TicketAnsweredEvent } from 'src/support-tickets/domain/events/ticket-answered.event';
 
 interface AnswerTicketInput {
   ticketId: string;
@@ -30,8 +32,8 @@ export class AnswerTicketUseCase {
     private readonly adminRepository: AdminRepository,
     private readonly suprtvisorRepository: SupervisorRepository,
     private readonly ticketAnswerRepository: SupportTicketAnswerRepository,
-    private readonly userRepository: UserRepository,
     private readonly departmentRepository: DepartmentRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute({ ticketId, userId, content, userRole }: AnswerTicketInput) {
@@ -74,22 +76,30 @@ export class AnswerTicketUseCase {
       existingAnswer.answerer = answerer;
 
       savedAnswer = this.ticketAnswerRepository.save(existingAnswer);
-
-      return savedAnswer;
+    } else {
+      await Promise.all([
+        this.ticketAnswerRepository
+          .save(
+            SupportTicketAnswer.create({
+              content,
+              supportTicket: ticket,
+              answerer,
+            }),
+          )
+          .then((saved) => (savedAnswer = saved)),
+        this.ticketRepository.save(ticket),
+      ]);
     }
-
-    await Promise.all([
-      this.ticketAnswerRepository
-        .save(
-          SupportTicketAnswer.create({
-            content,
-            supportTicket: ticket,
-            answerer,
-          }),
-        )
-        .then((saved) => (savedAnswer = saved)),
-      this.ticketRepository.save(ticket),
-    ]);
+    this.eventEmitter.emitAsync(
+      TicketAnsweredEvent.name,
+      new TicketAnsweredEvent(
+        ticket.subject,
+        ticket.id.toString(),
+        userId,
+        new Date(),
+        ticket?.interaction?.type,
+      ),
+    );
 
     return savedAnswer;
   }

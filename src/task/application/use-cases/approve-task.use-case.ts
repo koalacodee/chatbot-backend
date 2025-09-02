@@ -1,10 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Task } from '../../domain/entities/task.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { TaskApprovedEvent } from 'src/task/domain/events/task-approved.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 interface ApproveTaskInputDto {
   taskId: string;
@@ -18,10 +25,12 @@ export class ApproveTaskUseCase {
     private readonly userRepo: UserRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(dto: ApproveTaskInputDto, userId?: string): Promise<Task> {
-    if (!dto.approverId) throw new BadRequestException({ approverId: 'required' });
+    if (!dto.approverId)
+      throw new BadRequestException({ approverId: 'required' });
 
     const [task, approver] = await Promise.all([
       this.taskRepo.findById(dto.taskId),
@@ -42,7 +51,21 @@ export class ApproveTaskUseCase {
     task.status = 'COMPLETED' as any;
     task.completedAt = new Date();
 
-    return this.taskRepo.save(task);
+    const [savedTask] = await Promise.all([
+      this.taskRepo.save(task),
+      this.eventEmitter.emitAsync(
+        TaskApprovedEvent.name,
+        new TaskApprovedEvent(
+          task.title,
+          task.id.toString(),
+          approver.id.toString(),
+          new Date(),
+          task?.performer?.id.toString(),
+        ),
+      ),
+    ]);
+
+    return savedTask;
   }
 
   private async checkTaskAccess(
@@ -56,29 +79,38 @@ export class ApproveTaskUseCase {
       hasAccess = true; // Admins have access to all tasks
     } else if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
-      const supervisorDepartmentIds = supervisor.departments.map((d) => d.id.toString());
-      
+      const supervisorDepartmentIds = supervisor.departments.map((d) =>
+        d.id.toString(),
+      );
+
       // Check if task targets supervisor's departments
       const targetDepartmentId = task.targetDepartment?.id.toString();
       const targetSubDepartmentId = task.targetSubDepartment?.id.toString();
-      
-      hasAccess = (targetDepartmentId && supervisorDepartmentIds.includes(targetDepartmentId)) ||
-                  (targetSubDepartmentId && supervisorDepartmentIds.includes(targetSubDepartmentId));
+
+      hasAccess =
+        (targetDepartmentId &&
+          supervisorDepartmentIds.includes(targetDepartmentId)) ||
+        (targetSubDepartmentId &&
+          supervisorDepartmentIds.includes(targetSubDepartmentId));
     } else if (role === Roles.EMPLOYEE) {
       const employee = await this.employeeRepository.findByUserId(userId);
       const employeeDepartmentIds =
         employee?.subDepartments.map((dep) => dep.id.toString()) ??
         employee?.supervisor?.departments.map((d) => d.id.toString()) ??
         [];
-      
+
       // Check if task targets employee's departments or is assigned to them
       const targetDepartmentId = task.targetDepartment?.id.toString();
       const targetSubDepartmentId = task.targetSubDepartment?.id.toString();
-      const isAssignedToEmployee = task.assignee?.id.toString() === employee?.id.toString();
-      
-      hasAccess = isAssignedToEmployee ||
-                  (targetDepartmentId && employeeDepartmentIds.includes(targetDepartmentId)) ||
-                  (targetSubDepartmentId && employeeDepartmentIds.includes(targetSubDepartmentId));
+      const isAssignedToEmployee =
+        task.assignee?.id.toString() === employee?.id.toString();
+
+      hasAccess =
+        isAssignedToEmployee ||
+        (targetDepartmentId &&
+          employeeDepartmentIds.includes(targetDepartmentId)) ||
+        (targetSubDepartmentId &&
+          employeeDepartmentIds.includes(targetSubDepartmentId));
     }
 
     if (!hasAccess) {
