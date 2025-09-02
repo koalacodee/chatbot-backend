@@ -14,3 +14,5 @@ export * from './delete-main-department.use-case';
 export * from './delete-sub-department.use-case';
 export * from './view-main-departments.use-case';
 export * from './view-sub-departments.use-case';
+export * from './generate-share-key.use-case';
+export * from './get-shared-department-data.use-case';

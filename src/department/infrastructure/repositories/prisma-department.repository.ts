@@ -271,7 +271,7 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
     id: string,
     queryDto?: DepartmentQueryDto,
   ): Promise<Department | null> {
-    const dept = await this.prisma.department.findUnique({
+    const dept = await this.prisma.department.findFirst({
       where: {
         id,
         parentId: null,
@@ -291,7 +291,7 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
     id: string,
     queryDto?: DepartmentQueryDto,
   ): Promise<Department | null> {
-    const dept = await this.prisma.department.findUnique({
+    const dept = await this.prisma.department.findFirst({
       where: {
         id,
         parentId: { not: null },
@@ -302,9 +302,12 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
         subDepartments: queryDto?.includeSubDepartments
           ? { include: { questions: true, knowledgeChunks: true } }
           : false,
+        parent: queryDto?.includeParent ?? false,
       },
     });
-    return dept ? this.toDomain(dept) : null;
+
+    if (!dept) return null;
+    return this.toDomain(dept);
   }
 
   async findAllDepartments(
@@ -322,8 +325,19 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
     return rows.map(this.toDomain);
   }
 
-  async canDelete(departmentId: string): Promise<boolean> {
+  async canDelete(
+    departmentId: string,
+    isSubDepartment: boolean = false,
+  ): Promise<boolean> {
     // helper function to check if relation exists
+    if (isSubDepartment) {
+      if (!(await this.findSubDepartmentById(departmentId))) return false;
+    } else {
+      if (!(await this.findMainDepartmentById(departmentId))) return false;
+    }
+
+    console.log('Validating Deletion');
+
     const hasRelation = async (promise: Promise<number>): Promise<boolean> =>
       (await promise) > 0;
 
@@ -368,10 +382,11 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
     )
       return false;
 
+    // Check employee relations through EmployeeSubDepartment junction table
     if (
       await hasRelation(
-        this.prisma.employee.count({
-          where: { subDepartments: { some: { id: departmentId } } },
+        this.prisma.employeeSubDepartment.count({
+          where: { departmentId },
         }),
       )
     )
@@ -438,5 +453,72 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
       take: limit,
     });
     return depts.map(this.toDomain);
+  }
+
+  async findSubDepartmentByParentId(parentId: string): Promise<Department[]> {
+    const depts = await this.prisma.department.findMany({
+      where: { parentId },
+    });
+    return depts.map(this.toDomain);
+  }
+
+  async findAllByDepartmentIds(
+    departmentIds: string[],
+    queryDto?: DepartmentQueryDto,
+  ): Promise<Department[]> {
+    const depts = await this.prisma.department.findMany({
+      where: { id: { in: departmentIds } },
+      include: {
+        questions: queryDto?.includeQuestions ?? false,
+        knowledgeChunks: queryDto?.includeKnowledgeChunks ?? false,
+        subDepartments: queryDto?.includeSubDepartments
+          ? { include: { questions: true, knowledgeChunks: true } }
+          : false,
+        parent: queryDto?.includeParent ?? false,
+      },
+    });
+    return depts.map(this.toDomain);
+  }
+
+  async findAllSubDepartmentsByParentIds(
+    parentDepartmentIds: string[],
+    queryDto?: Omit<DepartmentQueryDto, 'includeSubDepartments'>,
+  ): Promise<Department[]> {
+    const depts = await this.prisma.department.findMany({
+      where: {
+        parentId: { in: parentDepartmentIds },
+      },
+      include: {
+        questions: queryDto?.includeQuestions ?? false,
+        knowledgeChunks: queryDto?.includeKnowledgeChunks ?? false,
+        parent: queryDto?.includeParent ?? false,
+      },
+    });
+    return depts.map(this.toDomain);
+  }
+
+  async validateDepartmentAccess(
+    departmentId: string,
+    userDepartmentIds: string[],
+  ): Promise<boolean> {
+    // Check if the department is directly accessible
+    if (userDepartmentIds.includes(departmentId)) {
+      return true;
+    }
+
+    // Check if the department is a sub-department and the user has access to its parent
+    const department = await this.prisma.department.findUnique({
+      where: { id: departmentId },
+      include: { parent: true },
+    });
+
+    if (
+      department?.parent &&
+      userDepartmentIds.includes(department.parent.id)
+    ) {
+      return true;
+    }
+
+    return false;
   }
 }

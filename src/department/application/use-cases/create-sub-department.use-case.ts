@@ -21,6 +21,7 @@ export class CreateSubDepartmentUseCase {
     const subDept = Department.create({
       name: dto.name,
       parent,
+      visibility: parent.visibility,
     });
 
     await this.departmentRepo.save(subDept, { includeParent: true });

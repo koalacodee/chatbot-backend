@@ -135,7 +135,10 @@ export abstract class DepartmentRepository {
     departmentId?: string,
   ): Promise<Department[]>;
 
-  abstract canDelete(departmentId: string): Promise<boolean>;
+  abstract canDelete(
+    departmentId: string,
+    isSubDepartment?: boolean,
+  ): Promise<boolean>;
 
   /**
    * Check if a department is a main department (has no parent).
@@ -157,4 +160,33 @@ export abstract class DepartmentRepository {
     page?: number;
     departmentId?: string;
   }): Promise<Department[]>;
+
+  abstract findSubDepartmentByParentId(parentId: string): Promise<Department[]>;
+
+  /**
+   * Find all departments filtered by supervisor's assigned department IDs.
+   * Returns only departments that the supervisor has access to.
+   */
+  abstract findAllByDepartmentIds(
+    departmentIds: string[],
+    queryDto?: DepartmentQueryDto,
+  ): Promise<Department[]>;
+
+  /**
+   * Find all sub-departments filtered by parent department IDs.
+   * Returns only sub-departments whose parent is in the provided department IDs.
+   */
+  abstract findAllSubDepartmentsByParentIds(
+    parentDepartmentIds: string[],
+    queryDto?: Omit<DepartmentQueryDto, 'includeSubDepartments'>,
+  ): Promise<Department[]>;
+
+  /**
+   * Validate if a user has access to a specific department.
+   * Returns true if the user has access, false otherwise.
+   */
+  abstract validateDepartmentAccess(
+    departmentId: string,
+    userDepartmentIds: string[],
+  ): Promise<boolean>;
 }

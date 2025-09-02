@@ -11,6 +11,7 @@ interface ConstructDepartmentOptions {
   id?: string;
   name: string;
   visibility?: DepartmentVisibility;
+  parentId?: string;
   questions?: Question[];
   knowledgeChunks?: KnowledgeChunk[];
   subDepartments?: Department[];
@@ -22,6 +23,7 @@ export class Department {
   private _name: string;
   private _visibility: DepartmentVisibility;
   private _questions: Question[];
+  private _parentId?: UUID;
   private _knowledgeChunks: KnowledgeChunk[];
   private _subDepartments?: Department[];
   private _parent?: Department;
@@ -30,6 +32,7 @@ export class Department {
     id,
     name,
     visibility = DepartmentVisibility.PUBLIC,
+    parentId,
     questions,
     knowledgeChunks,
     subDepartments,
@@ -38,6 +41,7 @@ export class Department {
     this._id = UUID.create(id);
     this._name = name;
     this._visibility = visibility;
+    this._parentId = parentId ? UUID.create(parentId) : undefined;
     this._questions = questions || [];
     this._knowledgeChunks = knowledgeChunks || [];
     this._subDepartments = subDepartments || [];
@@ -59,6 +63,10 @@ export class Department {
 
   get questions(): Question[] {
     return [...this._questions];
+  }
+
+  get parentId(): UUID | undefined {
+    return this._parentId;
   }
 
   get knowledgeChunks(): KnowledgeChunk[] {
@@ -84,6 +92,10 @@ export class Department {
 
   set questions(newQuestions: Question[]) {
     this._questions = [...newQuestions];
+  }
+
+  set parentId(newParentId: UUID | undefined) {
+    this._parentId = newParentId;
   }
 
   set knowledgeChunks(newKnowledgeChunks: KnowledgeChunk[]) {
@@ -150,14 +162,16 @@ export class Department {
     knowledgeChunks: any[];
     subDepartments: any[];
     parent: any;
+    parentId: string;
   } {
     return {
-      id: this._id.toString(),
+      id: this._id?.toString(),
       name: this._name,
       visibility: this._visibility,
-      questions: this._questions.map((q) => q.toJSON()),
-      knowledgeChunks: this._knowledgeChunks.map((kc) => kc.toJSON()),
-      subDepartments: this._subDepartments.map((d) => d.toJSON()),
+      questions: this._questions?.map((q) => q.toJSON()),
+      parentId: this._parentId?.toString(),
+      knowledgeChunks: this._knowledgeChunks?.map((kc) => kc.toJSON()),
+      subDepartments: this._subDepartments?.map((d) => d.toJSON()),
       parent: this._parent?.toJSON(),
     };
   }
