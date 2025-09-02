@@ -272,53 +272,64 @@ export class PrismaQuestionRepository extends QuestionRepository {
     `;
   }
 
-  groupByDepartment(): Promise<any[]> {
-    return this.prisma.$queryRawUnsafe(`
-      WITH question_with_parent AS (
-        SELECT
-          q.id               AS question_id,
-          q.text             AS question_text,
-          q.views            AS question_views,
-          q.satisfaction     AS question_satisfaction,
-          q.dissatisfaction  AS question_dissatisfaction,
-          q.created_at  AS created_at,
-          q.updated_at  AS updated_at,
-          q.answer  AS answer,
-          d.id               AS department_id,
-          d.name             AS department_name,
-          COALESCE(d.parent_id, d.id) AS parent_department_id
-        FROM questions q
-        JOIN departments d ON q.department_id = d.id
-      )
+  groupByDepartment({
+    departmentIds,
+  }: {
+    departmentIds?: string[];
+  }): Promise<any[]> {
+    // Handle undefined departmentIds by providing an empty array with proper type casting
+    const deptIds = departmentIds || [];
+    const isUnrestricted = !departmentIds || departmentIds.length === 0;
+    
+    return this.prisma.$queryRaw<any[]>`
+    WITH question_with_parent AS (
       SELECT
-        pd.id   AS "departmentId",
-        pd.name AS "departmentName",
-        ARRAY_AGG(
-          JSONB_BUILD_OBJECT(
-            'id', qwp.question_id,
-            'text', qwp.question_text,
-            'views', qwp.question_views,
-            'satisfaction', qwp.question_satisfaction,
-            'dissatisfaction', qwp.question_dissatisfaction,
-            'created_at', qwp.created_at,
-            'updated_at', qwp.updated_at,
-            'answer', qwp.answer
-          )
-          || CASE 
-              WHEN qwp.department_id != pd.id 
-              THEN JSONB_BUILD_OBJECT(
-                      'departmentId', qwp.department_id,
-                      'departmentName', qwp.department_name
-                    )
-              ELSE '{}'::jsonb
-            END
-        ) AS questions
-      FROM question_with_parent qwp
-      JOIN departments pd 
-        ON qwp.parent_department_id = pd.id
-      WHERE pd.parent_id IS NULL
-      GROUP BY pd.id, pd.name;
-    `);
+        q.id               AS question_id,
+        q.text             AS question_text,
+        q.views            AS question_views,
+        q.satisfaction     AS question_satisfaction,
+        q.dissatisfaction  AS question_dissatisfaction,
+        q.created_at       AS created_at,
+        q.updated_at       AS updated_at,
+        q.answer           AS answer,
+        d.id               AS department_id,
+        d.name             AS department_name,
+        COALESCE(d.parent_id, d.id) AS parent_department_id
+      FROM questions q
+      JOIN departments d ON q.department_id = d.id
+      WHERE ${isUnrestricted} = true
+         OR d.id = ANY(${deptIds}::uuid[]) 
+         OR d.parent_id = ANY(${deptIds}::uuid[])
+    )
+    SELECT
+      pd.id   AS "departmentId",
+      pd.name AS "departmentName",
+      ARRAY_AGG(
+        JSONB_BUILD_OBJECT(
+          'id', qwp.question_id,
+          'text', qwp.question_text,
+          'views', qwp.question_views,
+          'satisfaction', qwp.question_satisfaction,
+          'dissatisfaction', qwp.question_dissatisfaction,
+          'created_at', qwp.created_at,
+          'updated_at', qwp.updated_at,
+          'answer', qwp.answer
+        )
+        || CASE 
+            WHEN qwp.department_id != pd.id 
+            THEN JSONB_BUILD_OBJECT(
+                    'departmentId', qwp.department_id,
+                    'departmentName', qwp.department_name
+                  )
+            ELSE '{}'::jsonb
+          END
+      ) AS questions
+    FROM question_with_parent qwp
+    JOIN departments pd 
+      ON qwp.parent_department_id = pd.id
+    WHERE pd.parent_id IS NULL
+    GROUP BY pd.id, pd.name;
+  `;
   }
 
   async viewFaqs(options?: {
@@ -326,8 +337,15 @@ export class PrismaQuestionRepository extends QuestionRepository {
     page?: number;
     departmentId?: string;
     guestId: string;
+    viewPrivate?: boolean;
   }): Promise<any[]> {
-    const { limit = 10, page = 1, departmentId, guestId } = options;
+    const {
+      limit = 10,
+      page = 1,
+      departmentId,
+      guestId,
+      viewPrivate,
+    } = options;
 
     const faqs = await this.prisma.$queryRawUnsafe<ViewdFaqDto[]>(
       `
@@ -355,7 +373,9 @@ export class PrismaQuestionRepository extends QuestionRepository {
         -- left join for views
         LEFT JOIN question_views qv
           ON qv.question_id = q.id AND qv.guest_id = $1::uuid
+        JOIN departments d ON q.department_id = d.id
         WHERE ($2::uuid IS NULL OR q.department_id = $2::uuid)
+        AND ($5::boolean = TRUE OR d.visibility = 'public')
       )
       SELECT *
       FROM faqs_cte
@@ -366,6 +386,7 @@ export class PrismaQuestionRepository extends QuestionRepository {
       departmentId,
       limit,
       (page - 1) * limit,
+      viewPrivate,
     );
 
     return faqs;
@@ -470,5 +491,25 @@ export class PrismaQuestionRepository extends QuestionRepository {
         });
       }
     });
+  }
+
+  async findByDepartmentIds(
+    departmentIds: string[],
+    queryDto?: QuestionQueryDto,
+  ): Promise<Question[]> {
+    const questions = await this.prisma.question.findMany({
+      where: {
+        departmentId: {
+          in: departmentIds,
+        },
+      },
+      include: {
+        department: queryDto?.includeDepartment
+          ? { include: { parent: true } }
+          : false,
+      },
+    });
+
+    return questions.map(this.toDomain);
   }
 }

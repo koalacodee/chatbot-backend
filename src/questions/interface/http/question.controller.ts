@@ -23,6 +23,7 @@ import {
   RecordRatingUseCase,
   RecordViewUseCase,
 } from '../../application/use-cases';
+import { GetSharedDepartmentFAQsUseCase } from '../../application/use-cases/get-shared-department-faqs.use-case';
 import {
   CreateQuestionInputDto,
   UpdateQuestionInputDto,
@@ -31,12 +32,18 @@ import {
 } from './dto';
 import { Question } from '../../domain/entities/question.entity';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { ViewFaqsDto } from './dto/view-faqs.dto';
+import { GetSharedDepartmentFaqsDto } from './dto/get-shared-department-faqs.dto';
 import { ViewFaqsUseCase } from 'src/questions/application/use-cases/view-faqs.use-case';
 import { GuestAuth } from 'src/auth/guest/infrastructure/decorators/guest-auth.decorator';
 import { RecordInteractionDto } from './dto/record-interaction.dto';
+import {
+  EmployeePermissions,
+  SupervisorPermissions,
+} from 'src/rbac/decorators';
+import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
+import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 
 @Controller('questions')
 export class QuestionController {
@@ -52,12 +59,26 @@ export class QuestionController {
     private readonly viewFaqsUseCase: ViewFaqsUseCase,
     private readonly recordRatingUseCase: RecordRatingUseCase,
     private readonly recordViewUseCase: RecordViewUseCase,
+    private readonly getSharedDepartmentFAQsUseCase: GetSharedDepartmentFAQsUseCase,
   ) {}
 
   @Get('view')
   @GuestAuth()
   async viewFaqs(@Query() query: ViewFaqsDto, @Req() req: any): Promise<any> {
     return this.viewFaqsUseCase.execute({ ...query, guestId: req.user.id });
+  }
+
+  @Get('shared')
+  @GuestAuth()
+  async getSharedDepartmentFaqs(
+    @Query() query: GetSharedDepartmentFaqsDto,
+    @Req() req: any,
+  ): Promise<any> {
+    return this.getSharedDepartmentFAQsUseCase.execute({
+      key: query.key,
+      guestId: req.user.id,
+      subDepartmentId: query.subDepartmentId,
+    });
   }
 
   @GuestAuth()
@@ -95,8 +116,16 @@ export class QuestionController {
     return handler();
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @EmployeePermissions(EmployeePermissionsEnum.ADD_FAQS)
+  @Get('grouped')
+  async getAllGroupedByDepartment(@Req() req: any): Promise<any> {
+    return this.getAllGroupedByDepartmentUseCase.execute({
+      userId: req.user.id,
+      role: req.user.role,
+    });
+  }
+
+  @EmployeePermissions(EmployeePermissionsEnum.ADD_FAQS)
   @Post()
   async create(
     @Body() input: CreateQuestionInputDto,
@@ -105,8 +134,7 @@ export class QuestionController {
     return this.createUseCase.execute({ ...input, creatorId: req.user.id });
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @EmployeePermissions(EmployeePermissionsEnum.ADD_FAQS)
   @Put(':id')
   async update(
     @Body() dto: UpdateQuestionInputDto,
@@ -116,13 +144,7 @@ export class QuestionController {
     return this.updateUseCase.execute(id, { ...dto, userId: req.user.id });
   }
 
-  @Get('grouped')
-  async getAllGroupedByDepartment(): Promise<any> {
-    return this.getAllGroupedByDepartmentUseCase.execute();
-  }
-
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @EmployeePermissions(EmployeePermissionsEnum.ADD_FAQS)
   @Get(':id')
   async get(
     @Param('id') id: string,
@@ -131,15 +153,18 @@ export class QuestionController {
     return this.getUseCase.execute(id, req.user.id);
   }
 
+  @EmployeePermissions(EmployeePermissionsEnum.ADD_FAQS)
   @Get()
-  async getAll(@Query('departmentId') departmentId: string): Promise<any> {
+  async getAll(
+    @Query('departmentId') departmentId: string,
+    @Req() req: any,
+  ): Promise<any> {
     return this.getAllUseCase
-      .execute(departmentId)
+      .execute(departmentId, req.user.id)
       .then((qs) => qs.map((qs) => qs.toJSON()));
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @EmployeePermissions(EmployeePermissionsEnum.ADD_FAQS)
   @Delete(':id')
   async delete(
     @Param('id') id: string,
@@ -148,8 +173,7 @@ export class QuestionController {
     return this.deleteUseCase.execute(id, req.user.id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @EmployeePermissions(EmployeePermissionsEnum.ADD_FAQS)
   @Delete('multiple')
   async deleteMany(
     @Body() input: DeleteManyQuestionsInputDto,
@@ -158,8 +182,7 @@ export class QuestionController {
     return this.deleteManyUseCase.execute(input.ids, req.user.id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @EmployeePermissions(EmployeePermissionsEnum.ADD_FAQS)
   @Get('count')
   async count(): Promise<number> {
     return this.countUseCase.execute();

@@ -1,11 +1,34 @@
 import { Injectable } from '@nestjs/common';
+import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { QuestionRepository } from 'src/questions/domain/repositories/question.repository';
+import { UserRepository } from 'src/shared/repositories/user.repository';
+import { Roles } from 'src/shared/value-objects/role.vo';
+import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
+
+interface GroupByDepartmentInput {
+  userId: string;
+  role: Roles;
+}
 
 @Injectable()
 export class GroupByDepartmentUseCase {
-  constructor(private readonly questionRepo: QuestionRepository) {}
+  constructor(
+    private readonly questionRepo: QuestionRepository,
+    private readonly supervisorRepository: SupervisorRepository,
+    private readonly employeeRepository: EmployeeRepository,
+  ) {}
 
-  async execute(): Promise<any[]> {
-    return this.questionRepo.groupByDepartment();
+  async execute({ userId, role }: GroupByDepartmentInput): Promise<any[]> {
+    let departmentIds: string[] | undefined = undefined;
+    if (role === Roles.SUPERVISOR) {
+      const supervisor = await this.supervisorRepository.findByUserId(userId);
+      departmentIds = supervisor.departments.map((d) => d.id.toString());
+    } else if (role === Roles.EMPLOYEE) {
+      const employee = await this.employeeRepository.findByUserId(userId);
+      departmentIds =
+        employee?.subDepartments.map((dep) => dep.id.toString()) ??
+        employee?.supervisor?.departments.map((d) => d.id.toString());
+    }
+    return this.questionRepo.groupByDepartment({ departmentIds });
   }
 }

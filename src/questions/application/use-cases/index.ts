@@ -12,3 +12,4 @@ export * from './get-faq-stats.use-case';
 export * from './group-questions.use-case';
 export * from './record-rating.use-case';
 export * from './record-view.use-case';
+export * from './get-shared-department-faqs.use-case';

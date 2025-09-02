@@ -81,8 +81,6 @@ export class AnswerFaqUseCase {
           throw new NotFoundException('conversation_not_found');
         }
 
-        console.log(c);
-
         if (c.guest.id.value !== guestId) {
           throw new ForbiddenException('conversation_not_owned');
         }

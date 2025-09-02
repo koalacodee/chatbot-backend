@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { QuestionRepository } from '../../domain/repositories/question.repository';
 import { Question } from '../../domain/entities/question.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
@@ -6,7 +6,10 @@ import { AdminRepository } from 'src/admin/domain/repositories/admin.repository'
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
+import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { FaqCreatedDomainEvent } from 'src/shared/domain-events/faq-created.domain-event';
 
 interface CreateQuestionDto {
   text: string;
@@ -25,17 +28,18 @@ export class CreateQuestionUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
+    private readonly departmentRepository: DepartmentRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(dto: CreateQuestionDto): Promise<Question> {
-    // await this.accessControl.canAccessDepartment(
-    //   dto.creatorId,
-    //   dto.departmentId,
-    // );
-
-    const userRole = (
-      await this.userRepository.findById(dto.creatorId)
-    ).role.getRole();
+    const user = await this.userRepository.findById(dto.creatorId);
+    const userRole = user.role.getRole();
+    // Check department access based on user role
+    await this.checkDepartmentAccess(dto.creatorId, dto.departmentId, userRole);
+    const department = await this.departmentRepository.findById(
+      dto.departmentId,
+    );
 
     const question = Question.create({
       text: dto.text,
@@ -61,6 +65,51 @@ export class CreateQuestionUseCase {
             ).id.toString()
           : undefined,
     });
-    return this.questionRepo.save(question);
+
+    const savedQuestion = await this.questionRepo.save(question);
+
+    return savedQuestion;
+  }
+
+  private async checkDepartmentAccess(
+    userId: string,
+    departmentId: string,
+    role: Roles,
+  ): Promise<void> {
+    let hasAccess = false;
+
+    if (role === Roles.ADMIN) {
+      hasAccess = true; // Admins have access to all departments
+    } else if (role === Roles.SUPERVISOR) {
+      const supervisor = await this.supervisorRepository.findByUserId(userId);
+      const supervisorDepartmentIds = supervisor.departments.map((d) =>
+        d.id.toString(),
+      );
+
+      // Check if supervisor has direct access to the department
+      hasAccess = supervisorDepartmentIds.includes(departmentId);
+
+      // If not direct access, check if it's a sub-department and supervisor has access to parent
+      if (!hasAccess) {
+        const department =
+          await this.departmentRepository.findById(departmentId);
+        if (department?.parent) {
+          hasAccess = supervisorDepartmentIds.includes(
+            department.parent.id.toString(),
+          );
+        }
+      }
+    } else if (role === Roles.EMPLOYEE) {
+      const employee = await this.employeeRepository.findByUserId(userId);
+      const employeeDepartmentIds =
+        employee?.subDepartments.map((dep) => dep.id.toString()) ??
+        employee?.supervisor?.departments.map((d) => d.id.toString()) ??
+        [];
+      hasAccess = employeeDepartmentIds.includes(departmentId);
+    }
+
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this department');
+    }
   }
 }

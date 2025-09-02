@@ -66,12 +66,15 @@ export abstract class QuestionRepository {
     limit?: number,
     queryDto?: QuestionQueryDto,
   ): Promise<FaqStats>;
-  abstract groupByDepartment(): Promise<any[]>;
+  abstract groupByDepartment(options: {
+    departmentIds?: string[];
+  }): Promise<any[]>;
   abstract viewFaqs(options?: {
     guestId: string;
     limit?: number;
     page?: number;
     departmentId?: string;
+    viewPrivate?: boolean;
   }): Promise<ViewdFaqDto[]>;
 
   abstract recordRating(options: {
@@ -84,4 +87,13 @@ export abstract class QuestionRepository {
     guestId: string;
     faqId: string;
   }): Promise<void>;
+
+  /**
+   * Find questions by multiple department IDs.
+   * Returns questions that belong to any of the provided department IDs.
+   */
+  abstract findByDepartmentIds(
+    departmentIds: string[],
+    queryDto?: QuestionQueryDto,
+  ): Promise<Question[]>;
 }
