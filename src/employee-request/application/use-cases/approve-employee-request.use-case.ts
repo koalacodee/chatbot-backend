@@ -34,6 +34,10 @@ export class ApproveEmployeeRequestUseCase {
     newUser: User;
     newEmployee: Employee;
   }> {
+    console.log(
+      `[ApproveEmployeeRequestUseCase] Approving employee request with ID: ${dto.employeeRequestId} by admin user ID: ${dto.approvedAdminUserID}`,
+    );
+
     const employeeRequest = await this.employeeRequestRepository.findById(
       dto.employeeRequestId,
     );
@@ -42,10 +46,16 @@ export class ApproveEmployeeRequestUseCase {
     );
 
     if (!employeeRequest) {
+      console.error(
+        `[ApproveEmployeeRequestUseCase] Employee request not found: ${dto.employeeRequestId}`,
+      );
       throw new NotFoundException('Employee request not found');
     }
 
     if (employeeRequest.status !== 'PENDING') {
+      console.warn(
+        `[ApproveEmployeeRequestUseCase] Employee request is not pending. Current status: ${employeeRequest.status}`,
+      );
       throw new BadRequestException('Employee request is not pending');
     }
 
@@ -54,6 +64,9 @@ export class ApproveEmployeeRequestUseCase {
       employeeRequest.newEmployeeEmail.toString(),
     );
     if (existingUser) {
+      console.warn(
+        `[ApproveEmployeeRequestUseCase] Email already exists: ${employeeRequest.newEmployeeEmail.toString()}`,
+      );
       throw new BadRequestException('Email already exists');
     }
 
@@ -62,10 +75,16 @@ export class ApproveEmployeeRequestUseCase {
       employeeRequest.newEmployeeUsername,
     );
     if (existingUserByUsername) {
+      console.warn(
+        `[ApproveEmployeeRequestUseCase] Username already exists: ${employeeRequest.newEmployeeUsername}`,
+      );
       throw new BadRequestException('Username already exists');
     }
 
     // Create new User
+    console.log(
+      `[ApproveEmployeeRequestUseCase] Creating new user for employee: ${employeeRequest.newEmployeeFullName} (${employeeRequest.newEmployeeEmail.toString()})`,
+    );
     const newUser = await User.create({
       name: employeeRequest.newEmployeeFullName,
       email: employeeRequest.newEmployeeEmail.toString(),
@@ -77,8 +96,14 @@ export class ApproveEmployeeRequestUseCase {
     });
 
     const savedUser = await this.userRepository.save(newUser);
+    console.log(
+      `[ApproveEmployeeRequestUseCase] New user saved with ID: ${savedUser.id}`,
+    );
 
     // Create new Employee
+    console.log(
+      `[ApproveEmployeeRequestUseCase] Creating new employee entity for user ID: ${savedUser.id}`,
+    );
     const newEmployee = await Employee.create({
       userId: savedUser.id,
       supervisorId: employeeRequest.requestedBySupervisor.id.toString(),
@@ -88,6 +113,9 @@ export class ApproveEmployeeRequestUseCase {
     });
 
     const savedEmployee = await this.employeeRepository.save(newEmployee);
+    console.log(
+      `[ApproveEmployeeRequestUseCase] New employee saved with ID: ${savedEmployee.id}`,
+    );
 
     // Update employee request status
     employeeRequest.status = RequestStatus.APPROVED;
@@ -95,6 +123,10 @@ export class ApproveEmployeeRequestUseCase {
     employeeRequest.resolvedAt = new Date();
     const updatedRequest =
       await this.employeeRequestRepository.save(employeeRequest);
+
+    console.log(
+      `[ApproveEmployeeRequestUseCase] Employee request ${dto.employeeRequestId} approved by admin user ID: ${dto.approvedAdminUserID}`,
+    );
 
     return {
       employeeRequest: updatedRequest,

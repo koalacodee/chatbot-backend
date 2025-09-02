@@ -10,6 +10,7 @@ import { User } from 'src/shared/entities/user.entity';
 import { RequestStatus as PrismaRequestStatus } from '@prisma/client';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { Admin } from 'src/admin/domain/entities/admin.entity';
+import { Department } from 'src/department/domain/entities/department.entity';
 
 @Injectable()
 export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
@@ -18,12 +19,23 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
   }
 
   private async toDomain(row: any): Promise<EmployeeRequest> {
-    const requestedBySupervisor: Supervisor = Supervisor.create({
-      ...row.requestedBySupervisor,
-      user: row.requestedBySupervisor.user
-        ? await User.create(row.requestedBySupervisor.user)
-        : undefined,
-    });
+    const requestedBySupervisor: Supervisor | undefined =
+      row.requestedBySupervisor
+        ? Supervisor.create({
+            ...row.requestedBySupervisor,
+            user: row.requestedBySupervisor.user
+              ? await User.create(row.requestedBySupervisor.user)
+              : undefined,
+            departments:
+              row.requestedBySupervisor.departments?.map((dept: any) =>
+                Department.create({
+                  id: dept.id,
+                  name: dept.name,
+                  visibility: dept.visibility,
+                }),
+              ) || [],
+          })
+        : undefined;
     const resolvedByAdmin: Admin | undefined = row.resolvedByAdmin
       ? Admin.create({
           ...row.resolvedByAdmin,
@@ -55,7 +67,7 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
 
   async save(request: EmployeeRequest): Promise<EmployeeRequest> {
     const upsert = await this.prisma.employeeRequest.upsert({
-      where: { id: request.id },
+      where: { id: request.id.toString() },
       update: {
         newEmployeeEmail: request.newEmployeeEmail.toString(),
         newEmployeeFullName: request.newEmployeeFullName ?? null,
@@ -80,7 +92,7 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
           : { resolvedByAdmin: { disconnect: true } }),
       },
       create: {
-        id: request.id,
+        id: request.id.toString(),
         newEmployeeEmail: request.newEmployeeEmail.toString(),
         newEmployeeFullName: request.newEmployeeFullName ?? null,
         newEmployeeDesignation: request.newEmployeeDesignation ?? null,
@@ -107,10 +119,6 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
             }
           : {}),
       },
-      include: {
-        requestedBySupervisor: true,
-        resolvedByAdmin: true,
-      },
     });
 
     return this.toDomain(upsert);
@@ -119,7 +127,15 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
   async findById(id: string): Promise<EmployeeRequest | null> {
     const row = await this.prisma.employeeRequest.findUnique({
       where: { id },
-      include: { requestedBySupervisor: true, resolvedByAdmin: true },
+      include: {
+        requestedBySupervisor: {
+          include: {
+            user: true,
+            departments: true,
+          },
+        },
+        resolvedByAdmin: true,
+      },
     });
     return row ? this.toDomain(row) : null;
   }
@@ -129,7 +145,15 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
       skip: offset,
       take: limit,
       orderBy: { createdAt: 'desc' },
-      include: { requestedBySupervisor: true, resolvedByAdmin: true },
+      include: {
+        requestedBySupervisor: {
+          include: {
+            user: true,
+            departments: true,
+          },
+        },
+        resolvedByAdmin: true,
+      },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
@@ -156,11 +180,19 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
     limit?: number,
   ): Promise<EmployeeRequest[]> {
     const rows = await this.prisma.employeeRequest.findMany({
-      where: { requestedBySupervisor: { user: { id: supervisorId } } },
+      where: { requestedBySupervisorId: supervisorId },
       skip: offset,
       take: limit,
       orderBy: { createdAt: 'desc' },
-      include: { requestedBySupervisor: true, resolvedByAdmin: true },
+      include: {
+        requestedBySupervisor: {
+          include: {
+            user: true,
+            departments: true,
+          },
+        },
+        resolvedByAdmin: true,
+      },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
@@ -169,14 +201,27 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
     statuses: RequestStatus[],
     offset?: number,
     limit?: number,
+    supervisorId?: string,
   ): Promise<EmployeeRequest[]> {
+    const where: any = { status: { in: statuses } };
+
+    // Add supervisor filter if provided
+    if (supervisorId) {
+      where.requestedBySupervisorId = supervisorId;
+    }
+
     const rows = await this.prisma.employeeRequest.findMany({
-      where: { status: { in: statuses } },
+      where,
       skip: offset,
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        requestedBySupervisor: { include: { user: true } },
+        requestedBySupervisor: {
+          include: {
+            user: true,
+            departments: true,
+          },
+        },
         resolvedByAdmin: { include: { user: true } },
       },
     });
@@ -193,7 +238,12 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        requestedBySupervisor: { include: { user: true } },
+        requestedBySupervisor: {
+          include: {
+            user: true,
+            departments: true,
+          },
+        },
         resolvedByAdmin: { include: { user: true } },
       },
     });
@@ -211,7 +261,15 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
       skip: offset,
       take: limit,
       orderBy: { createdAt: 'desc' },
-      include: { requestedBySupervisor: true, resolvedByAdmin: true },
+      include: {
+        requestedBySupervisor: {
+          include: {
+            user: true,
+            departments: true,
+          },
+        },
+        resolvedByAdmin: true,
+      },
     });
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }

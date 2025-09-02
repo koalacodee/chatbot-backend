@@ -20,8 +20,9 @@ import { User } from 'src/shared/entities/user.entity';
 import { CreateEmployeeRequestDto } from './dto/create-employee-request.dto';
 import { RejectEmployeeRequestDto } from './dto/reject-employee-request.dto';
 import { GetEmployeeRequestsDto } from './dto/get-employee-requests.dto';
-import { RolesGuard, UseRoles } from 'src/rbac';
-import { Roles } from 'src/shared/value-objects/role.vo';
+import { SupervisorPermissions } from 'src/rbac/decorators';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
+import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 
 @Controller('employee-requests')
 @UseGuards(UserJwtAuthGuard)
@@ -35,8 +36,7 @@ export class EmployeeRequestController {
   ) {}
 
   @Post()
-  @UseGuards(RolesGuard)
-  @UseRoles(Roles.SUPERVISOR)
+  @SupervisorPermissions()
   async create(
     @Body() createEmployeeRequestDto: CreateEmployeeRequestDto,
     @Req() req: any,
@@ -48,22 +48,19 @@ export class EmployeeRequestController {
   }
 
   @Get()
-  @UseGuards(RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
-  async findAll(@Query() query: GetEmployeeRequestsDto) {
-    return await this.getEmployeeRequestsUseCase.execute(query);
+  @SupervisorPermissions()
+  async findAll(@Query() query: GetEmployeeRequestsDto, @Req() req: any) {
+    return await this.getEmployeeRequestsUseCase.execute(query, req.user.id);
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
-  async findOne(@Param('id') id: string) {
-    return await this.getEmployeeRequestByIdUseCase.execute(id);
+  @SupervisorPermissions()
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    return await this.getEmployeeRequestByIdUseCase.execute(id, req.user.id);
   }
 
   @Patch(':id/approve')
-  @UseGuards(RolesGuard)
-  @UseRoles(Roles.ADMIN)
+  @SupervisorPermissions(SupervisorPermissionsEnum.APPROVE_STAFF_REQUESTS)
   async approve(@Param('id') id: string, @Req() req: any) {
     return await this.approveEmployeeRequestUseCase.execute({
       employeeRequestId: id,
@@ -72,8 +69,7 @@ export class EmployeeRequestController {
   }
 
   @Patch(':id/reject')
-  @UseGuards(RolesGuard)
-  @UseRoles(Roles.ADMIN)
+  @SupervisorPermissions(SupervisorPermissionsEnum.APPROVE_STAFF_REQUESTS)
   async reject(
     @Param('id') id: string,
     @Body() rejectEmployeeRequestDto: RejectEmployeeRequestDto,

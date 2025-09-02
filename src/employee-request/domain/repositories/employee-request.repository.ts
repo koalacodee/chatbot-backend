@@ -20,6 +20,7 @@ export abstract class EmployeeRequestRepository {
     status: RequestStatus[],
     offset?: number,
     limit?: number,
+    supervisorId?: string,
   ): Promise<EmployeeRequest[]>;
   abstract findPending(
     offset?: number,
