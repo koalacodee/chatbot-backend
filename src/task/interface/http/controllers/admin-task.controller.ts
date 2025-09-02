@@ -14,9 +14,7 @@ import {
 } from '@nestjs/swagger';
 import { GetDepartmentLevelTasksUseCase } from '../../../application/use-cases/get-department-level-tasks.use-case';
 import { GetTasksByRoleDto } from '../dto/get-tasks-by-role.dto';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { RolesGuard, UseRoles } from 'src/rbac';
-import { Roles } from 'src/shared/value-objects/role.vo';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 
 @ApiTags('Admin Tasks')
 @ApiBearerAuth()
@@ -37,8 +35,7 @@ export class AdminTaskController {
     status: 403,
     description: 'Forbidden - Admin access required',
   })
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN)
+  @AdminAuth()
   async getDepartmentLevelTasks(@Query() query: GetTasksByRoleDto) {
     const tasks = await this.getDepartmentLevelTasksUseCase.execute({
       departmentId: query.departmentId,

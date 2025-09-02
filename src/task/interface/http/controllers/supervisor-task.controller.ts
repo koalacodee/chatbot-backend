@@ -15,9 +15,8 @@ import {
 import { GetSubDepartmentTasksUseCase } from '../../../application/use-cases/get-sub-department-tasks.use-case';
 import { GetIndividualLevelTasksUseCase } from '../../../application/use-cases/get-individual-level-tasks.use-case';
 import { GetTasksByRoleDto } from '../dto/get-tasks-by-role.dto';
-import { RolesGuard, UseRoles } from 'src/rbac';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { Roles } from 'src/shared/value-objects/role.vo';
+import { SupervisorPermissions } from 'src/rbac/decorators';
+import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 
 @ApiTags('Supervisor Tasks')
 @ApiBearerAuth()
@@ -39,8 +38,7 @@ export class SupervisorTaskController {
     status: 403,
     description: 'Forbidden - Supervisor access required',
   })
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   async getSubDepartmentTasks(@Query() query: GetTasksByRoleDto) {
     const tasks = await this.getSubDepartmentTasksUseCase.execute({
       subDepartmentId: query.subDepartmentId,
@@ -66,8 +64,7 @@ export class SupervisorTaskController {
     status: 403,
     description: 'Forbidden - Supervisor access required',
   })
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   async getEmployeeLevelTasks(@Query() query: GetTasksByRoleDto) {
     const tasks = await this.getIndividualLevelTasksUseCase.execute({
       assigneeId: query.assigneeId,

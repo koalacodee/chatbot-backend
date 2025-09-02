@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   Req,
 } from '@nestjs/common';
 import {
@@ -35,10 +34,15 @@ import {
 import { GetTeamTasksDto } from './dto/get-team-tasks.dto';
 import { Task, TaskAssignmentType } from '../../domain/entities/task.entity';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { RolesGuard, UseRoles } from 'src/rbac';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { TaskStatus } from '@prisma/client';
-
+import {
+  EmployeePermissions,
+  SupervisorPermissions,
+} from 'src/rbac/decorators';
+import { EmployeePermissionsEnum as EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
+import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 @Controller('tasks')
 export class TaskController {
   constructor(
@@ -56,139 +60,159 @@ export class TaskController {
     private readonly getTeamTasksUseCase: GetTeamTasksUseCase,
   ) {}
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
   @Post()
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   async create(
     @Body() input: CreateTaskInputDto,
     @Req() req: any,
   ): Promise<Task> {
-    return this.createUseCase.execute({
-      ...input,
-      assignerId: req.user.id,
-      assignerRole: req.user.role.getRole(),
-      assignmentType: TaskAssignmentType[input.assignmentType],
-      status: input.status ?? TaskStatus.TODO,
-    });
+    return this.createUseCase.execute(
+      {
+        ...input,
+        assignerId: req.user.id,
+        assignerRole: req.user.role,
+        assignmentType: TaskAssignmentType[input.assignmentType],
+        status: input.status ?? TaskStatus.TODO,
+      },
+      req.user.id,
+    );
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Put()
-  async update(@Body() input: UpdateTaskInputDto): Promise<Task> {
+  async update(
+    @Body() input: UpdateTaskInputDto,
+    @Req() req: any,
+  ): Promise<Task> {
     const { id, completedAt, ...rest } = input;
-    return this.updateUseCase.execute(id, {
-      ...rest,
-      completedAt: completedAt
-        ? new Date(completedAt)
-        : (completedAt ?? undefined),
-    } as any);
+    return this.updateUseCase.execute(
+      id,
+      {
+        ...rest,
+        completedAt: completedAt
+          ? new Date(completedAt)
+          : (completedAt ?? undefined),
+      } as any,
+      req.user.id,
+    );
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Get(':id')
-  async get(@Param('id') id: string): Promise<Task> {
-    return this.getUseCase.execute(id);
+  async getTask(@Param('id') id: string, @Req() req: any): Promise<Task> {
+    return this.getUseCase.execute(id, req.user.id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Get()
   async getAll(
+    @Req() req: any,
     @Query('offset') offset?: string,
     @Query('limit') limit?: string,
   ): Promise<any[]> {
     const list = await this.getAllUseCase.execute(
       offset ? parseInt(offset, 10) : undefined,
       limit ? parseInt(limit, 10) : undefined,
+      req.user.id,
     );
     return list.map((t) => t.toJSON());
   }
 
   // Filtered retrieval
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Get('search/filters')
-  async getWithFilters(@Query() query: GetTasksWithFiltersDto): Promise<any[]> {
-    const tasks = await this.getTasksWithFiltersUseCase.execute({
-      ...query,
-      // class-transformer handles numeric conversion for offset/limit
-    });
+  async getWithFilters(
+    @Query() query: GetTasksWithFiltersDto,
+    @Req() req: any,
+  ): Promise<any[]> {
+    const tasks = await this.getTasksWithFiltersUseCase.execute(
+      {
+        ...query,
+        // class-transformer handles numeric conversion for offset/limit
+      },
+      req.user.id,
+    );
     return tasks.map((t) => t.toJSON());
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Get('team-tasks')
-  async getTeamTasks(@Query() query: GetTeamTasksDto): Promise<any[]> {
-    const tasks = await this.getTeamTasksUseCase.execute(query);
+  async getTeamTasks(
+    @Query() query: GetTeamTasksDto,
+    @Req() req: any,
+  ): Promise<any[]> {
+    const tasks = await this.getTeamTasksUseCase.execute(query, req.user.id);
     return tasks.map((t) => t.toJSON());
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Delete(':id')
-  async delete(@Param('id') id: string): Promise<Task | null> {
-    return this.deleteUseCase.execute(id);
+  async delete(@Param('id') id: string, @Req() req: any): Promise<Task | null> {
+    return this.deleteUseCase.execute(id, req.user.id);
   }
 
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Get('count/all')
-  async count(): Promise<number> {
-    return this.countUseCase.execute();
+  async count(@Req() req: any): Promise<number> {
+    return this.countUseCase.execute(req.user.id);
   }
 
   // Submit for review
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TASKS)
   @Post(':id/submit-review')
   async submitForReview(
     @Param('id') id: string,
     @Body() input: SubmitTaskForReviewInputDto,
     @Req() req: any,
   ): Promise<Task> {
-    return this.submitForReviewUseCase.execute({
-      taskId: id,
-      submittedBy: req.user.id,
-      notes: input.notes,
-    });
+    return this.submitForReviewUseCase.execute(
+      {
+        taskId: id,
+        submittedBy: req.user.id,
+        notes: input.notes,
+      },
+      req.user.id,
+    );
   }
 
   // Approve
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Post(':id/approve')
   async approve(
     @Param('id') id: string,
     @Body() input: ApproveTaskInputDto,
+    @Req() req: any,
   ): Promise<Task> {
-    return this.approveTaskUseCase.execute({
-      taskId: id,
-      approverId: input.approverId,
-    });
+    return this.approveTaskUseCase.execute(
+      {
+        taskId: id,
+        approverId: input.approverId,
+      },
+      req.user.id,
+    );
   }
 
   // Reject
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Post(':id/reject')
   async reject(
     @Param('id') id: string,
     @Body() input: RejectTaskInputDto,
+    @Req() req: any,
   ): Promise<Task> {
-    return this.rejectTaskUseCase.execute({
-      taskId: id,
-      feedback: input.feedback,
-    });
+    return this.rejectTaskUseCase.execute(
+      {
+        taskId: id,
+        feedback: input.feedback,
+      },
+      req.user.id,
+    );
   }
 
   // Mark seen
-  @UseGuards(UserJwtAuthGuard, RolesGuard)
-  @UseRoles(Roles.ADMIN, Roles.SUPERVISOR, Roles.EMPLOYEE)
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TASKS)
   @Post(':id/seen')
-  async markSeen(@Param('id') id: string): Promise<Task> {
-    return this.markTaskSeenUseCase.execute({ taskId: id });
+  async markSeen(@Param('id') id: string, @Req() req: any): Promise<Task> {
+    return this.markTaskSeenUseCase.execute({ taskId: id }, req.user.id);
   }
 }

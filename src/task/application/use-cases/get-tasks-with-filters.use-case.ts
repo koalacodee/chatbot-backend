@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Task } from '../../domain/entities/task.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
+import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
+import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
+import { UserRepository } from 'src/shared/repositories/user.repository';
+import { Roles } from 'src/shared/value-objects/role.vo';
 
 interface GetTasksWithFiltersInputDto {
   assigneeId?: string;
@@ -12,10 +16,23 @@ interface GetTasksWithFiltersInputDto {
 
 @Injectable()
 export class GetTasksWithFiltersUseCase {
-  constructor(private readonly taskRepo: TaskRepository) {}
+  constructor(
+    private readonly taskRepo: TaskRepository,
+    private readonly supervisorRepository: SupervisorRepository,
+    private readonly employeeRepository: EmployeeRepository,
+    private readonly userRepository: UserRepository,
+  ) {}
 
-  async execute(dto: GetTasksWithFiltersInputDto): Promise<Task[]> {
+  async execute(dto: GetTasksWithFiltersInputDto, userId?: string): Promise<Task[]> {
     const { assigneeId, departmentId, status, offset, limit } = dto;
+
+    // Apply department filtering if userId is provided
+    let departmentIds: string[] | undefined = undefined;
+    if (userId) {
+      const user = await this.userRepository.findById(userId);
+      const userRole = user.role.getRole();
+      departmentIds = await this.getUserDepartmentIds(userId, userRole);
+    }
 
     // Choose the most selective repository method available, then filter in-memory for the rest.
     let base: Task[];
@@ -24,7 +41,7 @@ export class GetTasksWithFiltersUseCase {
     } else if (departmentId && !assigneeId) {
       base = await this.taskRepo.findByDepartment(departmentId);
     } else {
-      base = await this.taskRepo.findAll();
+      base = await this.taskRepo.findAll(undefined, undefined, departmentIds);
     }
 
     let filtered = base;
@@ -46,5 +63,20 @@ export class GetTasksWithFiltersUseCase {
     const start = offset ?? 0;
     const end = limit ? start + limit : undefined;
     return filtered.slice(start, end);
+  }
+
+  private async getUserDepartmentIds(userId: string, role: Roles): Promise<string[]> {
+    if (role === Roles.ADMIN) {
+      return []; // Admins see all tasks (no filtering)
+    } else if (role === Roles.SUPERVISOR) {
+      const supervisor = await this.supervisorRepository.findByUserId(userId);
+      return supervisor.departments.map((d) => d.id.toString());
+    } else if (role === Roles.EMPLOYEE) {
+      const employee = await this.employeeRepository.findByUserId(userId);
+      return employee?.subDepartments.map((dep) => dep.id.toString()) ??
+             employee?.supervisor?.departments.map((d) => d.id.toString()) ??
+             [];
+    }
+    return [];
   }
 }

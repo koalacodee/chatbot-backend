@@ -3,7 +3,7 @@ import { Task } from '../entities/task.entity';
 export abstract class TaskRepository {
   abstract save(task: Task): Promise<Task>;
   abstract findById(id: string): Promise<Task | null>;
-  abstract findAll(offset?: number, limit?: number): Promise<Task[]>;
+  abstract findAll(offset?: number, limit?: number, departmentIds?: string[]): Promise<Task[]>;
   abstract removeById(id: string): Promise<Task | null>;
   abstract exists(id: string): Promise<boolean>;
   abstract count(): Promise<number>;

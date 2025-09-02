@@ -156,13 +156,34 @@ export class PrismaTaskRepository extends TaskRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async findAll(offset?: number, limit?: number): Promise<Task[]> {
+  async findAll(offset?: number, limit?: number, departmentIds?: string[]): Promise<Task[]> {
+    const whereClause: any = {};
+    
+    if (departmentIds && departmentIds.length > 0) {
+      whereClause.OR = [
+        { targetDepartmentId: { in: departmentIds } },
+        { targetSubDepartmentId: { in: departmentIds } },
+        { assignee: { subDepartments: { some: { id: { in: departmentIds } } } } },
+        { assignee: { supervisor: { departments: { some: { id: { in: departmentIds } } } } } },
+      ];
+    }
+
     const rows = await this.prisma.task.findMany({
+      where: whereClause,
       skip: offset,
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        assignee: true,
+        assignee: {
+          include: {
+            subDepartments: true,
+            supervisor: {
+              include: {
+                departments: true,
+              },
+            },
+          },
+        },
         assignerAdmin: true,
         assignerSupervisor: true,
         approverAdmin: true,

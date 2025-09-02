@@ -1,10 +1,12 @@
 import {
   Injectable,
   NotFoundException,
+  ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
 import { Task, TaskAssignmentType } from '../../domain/entities/task.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
+import { CreateTaskInputDto as CreateTaskDto } from '../../interface/http/dto/create-task.dto';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
@@ -40,7 +42,7 @@ export class CreateTaskUseCase {
     private readonly adminRepository: AdminRepository,
   ) {}
 
-  async execute(dto: CreateTaskInputDto): Promise<Task> {
+  async execute(dto: CreateTaskInputDto, userId?: string): Promise<Task> {
     // Validate required fields based on assignment type
     const validationErrors: any = {};
 
@@ -63,6 +65,18 @@ export class CreateTaskUseCase {
 
     if (Object.keys(validationErrors).length > 0) {
       throw new BadRequestException(validationErrors);
+    }
+
+    // Security check: Ensure assigner is the requesting user
+    if (userId && dto.assignerId !== userId) {
+      throw new ForbiddenException('You can only create tasks as yourself');
+    }
+
+    // Check department access if userId is provided
+    if (userId) {
+      const user = await this.userRepo.findById(userId);
+      const userRole = user.role.getRole();
+      await this.checkDepartmentAccess(userId, dto, userRole);
     }
 
     const [
@@ -120,5 +134,75 @@ export class CreateTaskUseCase {
     });
 
     return this.taskRepo.save(task);
+  }
+
+  private async checkDepartmentAccess(
+    userId: string,
+    dto: CreateTaskInputDto,
+    role: Roles,
+  ): Promise<void> {
+    if (role === Roles.ADMIN) {
+      return; // Admins can create tasks for any department
+    }
+
+    if (role === Roles.SUPERVISOR) {
+      const supervisor = await this.supervisorRepository.findByUserId(userId);
+
+      // Supervisors cannot create department-level tasks
+      if (dto.assignmentType === 'DEPARTMENT') {
+        throw new ForbiddenException(
+          'Supervisors can only create individual tasks and sub-department tasks',
+        );
+      }
+
+      // For individual tasks, check if assignee is supervised by this supervisor
+      if (dto.assignmentType === 'INDIVIDUAL' && dto.assigneeId) {
+        const assignee = await this.employeeRepository.findById(dto.assigneeId);
+        if (!assignee) {
+          throw new NotFoundException({ assigneeId: 'not_found' });
+        }
+
+        if (assignee.supervisorId.toString() !== supervisor.id.toString()) {
+          throw new ForbiddenException(
+            'You can only assign tasks to employees you directly supervise',
+          );
+        }
+      }
+
+      // For sub-department tasks, check sub-department access through parent
+      if (
+        dto.assignmentType === 'SUB_DEPARTMENT' &&
+        dto.targetSubDepartmentId
+      ) {
+        const supervisorDepartmentIds = supervisor.departments.map((d) =>
+          d.id.toString(),
+        );
+
+        // Check if supervisor has access to the sub-department through parent department
+        const hasAccess = await this.departmentRepo.validateDepartmentAccess(
+          dto.targetSubDepartmentId,
+          supervisorDepartmentIds,
+        );
+
+        if (!hasAccess) {
+          throw new ForbiddenException(
+            'You do not have access to create tasks for this sub-department',
+          );
+        }
+      }
+    } else if (role === Roles.EMPLOYEE) {
+      // Employees typically shouldn't create tasks, but if they can, limit to their own tasks
+      if (dto.assignmentType === 'INDIVIDUAL' && dto.assigneeId) {
+        // Employees can only assign tasks to themselves
+        if (dto.assigneeId !== userId) {
+          throw new ForbiddenException('You can only assign tasks to yourself');
+        }
+      } else {
+        // Employees cannot create department-wide tasks
+        throw new ForbiddenException(
+          'You do not have permission to create department-wide tasks',
+        );
+      }
+    }
   }
 }

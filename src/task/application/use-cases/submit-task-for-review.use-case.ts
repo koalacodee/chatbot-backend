@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Task, TaskStatus } from '../../domain/entities/task.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
@@ -44,14 +45,25 @@ export class SubmitTaskForReviewUseCase {
     }
   }
 
-  async execute(dto: SubmitTaskForReviewInputDto): Promise<Task> {
+  async execute(
+    dto: SubmitTaskForReviewInputDto,
+    userId?: string,
+  ): Promise<Task> {
     const [existing, submitter] = await Promise.all([
       this.taskRepo.findById(dto.taskId),
-      this.userRepo.findById(dto.submittedBy).then(user => this.getSubmitterByUser(user))
-,
+      this.userRepo
+        .findById(dto.submittedBy)
+        .then((user) => this.getSubmitterByUser(user)),
     ]);
     if (!existing) throw new NotFoundException({ id: 'task_not_found' });
     if (!submitter) throw new NotFoundException({ submittedBy: 'not_found' });
+
+    // Check department access if userId is provided
+    if (userId) {
+      const user = await this.userRepo.findById(userId);
+      const userRole = user.role.getRole();
+      await this.checkTaskAccess(userId, existing, userRole);
+    }
 
     // Update notes if provided
     if (dto.notes !== undefined) existing.notes = dto.notes;
@@ -68,5 +80,67 @@ export class SubmitTaskForReviewUseCase {
     }
 
     return this.taskRepo.save(existing);
+  }
+
+  private async checkTaskAccess(
+    userId: string,
+    task: Task,
+    role: Roles,
+  ): Promise<void> {
+    let hasAccess = false;
+
+    if (role === Roles.ADMIN) {
+      hasAccess = true; // Admins have access to all tasks
+    } else if (role === Roles.SUPERVISOR) {
+      const supervisor = await this.supervisorRepository.findByUserId(userId);
+      const supervisorDepartmentIds = supervisor.departments.map((d) =>
+        d.id.toString(),
+      );
+
+      // Check if task targets supervisor's departments
+      const targetDepartmentId = task.targetDepartment?.id.toString();
+      const targetSubDepartmentId = task.targetSubDepartment?.id.toString();
+
+      // For individual-level tasks, check if the supervisor is supervising the assignee
+      let isSupervisingAssignee = false;
+      if (task.assignmentType === 'INDIVIDUAL' && task.assignee) {
+        const assigneeEmployee = await this.employeeRepository.findById(task.assignee.id.toString());
+        if (assigneeEmployee) {
+          isSupervisingAssignee = assigneeEmployee.supervisor.id.toString() === supervisor.id.toString();
+        }
+      }
+
+      hasAccess =
+        isSupervisingAssignee ||
+        (targetDepartmentId &&
+          supervisorDepartmentIds.includes(targetDepartmentId)) ||
+        (targetSubDepartmentId &&
+          supervisorDepartmentIds.includes(targetSubDepartmentId));
+    } else if (role === Roles.EMPLOYEE) {
+      const employee = await this.employeeRepository.findByUserId(userId);
+      const employeeDepartmentIds =
+        employee?.subDepartments.map((dep) => dep.id.toString()) ??
+        employee?.supervisor?.departments.map((d) => d.id.toString()) ??
+        [];
+
+      // Check if task targets employee's departments or is assigned to them
+      const targetDepartmentId = task.targetDepartment?.id.toString();
+      const targetSubDepartmentId = task.targetSubDepartment?.id.toString();
+      const isAssignedToEmployee =
+        task.assignee?.id.toString() === employee?.id.toString();
+
+      hasAccess =
+        isAssignedToEmployee ||
+        (targetDepartmentId &&
+          employeeDepartmentIds.includes(targetDepartmentId)) ||
+        (targetSubDepartmentId &&
+          employeeDepartmentIds.includes(targetSubDepartmentId));
+    }
+
+    if (!hasAccess) {
+      throw new ForbiddenException(
+        'You do not have access to submit this task for review',
+      );
+    }
   }
 }
