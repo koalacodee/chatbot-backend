@@ -1,16 +1,9 @@
-import { Controller, Get, Query, Req } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req } from '@nestjs/common';
 import {
   AggregateActivityFeedUseCase,
   CalculateAgentPerformanceUseCase,
   PerformanceSummaryUseCase,
   SearchUsersUseCase,
-  SelectUserUseCase,
-  ViewAnsweredTicketsUseCase,
-  ViewApprovedTasksUseCase,
-  ViewFaqContributionsUseCase,
-  ViewPerformedTasksUseCase,
-  ViewPromotionsCreatedUseCase,
-  ViewStaffRequestsUseCase,
 } from '../../application/use-cases';
 import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 import {
@@ -18,6 +11,7 @@ import {
   SupervisorPermissions,
 } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
+import { GetAnalyticsOverviewUseCase } from 'src/activity-log/application/use-cases/get-analytics-overview.use-case';
 
 @Controller('activity-log')
 export class ActivityLogController {
@@ -26,13 +20,7 @@ export class ActivityLogController {
     private readonly calculateAgentPerformanceUseCase: CalculateAgentPerformanceUseCase,
     private readonly performanceSummaryUseCase: PerformanceSummaryUseCase,
     private readonly searchUsersUseCase: SearchUsersUseCase,
-    private readonly selectUserUseCase: SelectUserUseCase,
-    private readonly viewAnsweredTicketsUseCase: ViewAnsweredTicketsUseCase,
-    private readonly viewApprovedTasksUseCase: ViewApprovedTasksUseCase,
-    private readonly viewFaqContributionsUseCase: ViewFaqContributionsUseCase,
-    private readonly viewPerformedTasksUseCase: ViewPerformedTasksUseCase,
-    private readonly viewPromotionsCreatedUseCase: ViewPromotionsCreatedUseCase,
-    private readonly viewStaffRequestsUseCase: ViewStaffRequestsUseCase,
+    private readonly getAnalyticsOverviewUseCase: GetAnalyticsOverviewUseCase,
   ) {}
 
   @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_USER_ACTIVITY)
@@ -48,9 +36,9 @@ export class ActivityLogController {
   }
 
   @SupervisorPermissions()
-  @Get('performance/:userId')
-  async getAgentPerformance() {
-    return this.calculateAgentPerformanceUseCase.execute();
+  @Get('performance')
+  async getAgentPerformance(@Query('userId') userId: string) {
+    return this.calculateAgentPerformanceUseCase.execute({ userId });
   }
 
   @EmployeePermissions()
@@ -65,39 +53,9 @@ export class ActivityLogController {
     return this.searchUsersUseCase.execute({ searchQuery });
   }
 
-  @SupervisorPermissions()
-  @Get('answered-tickets/:userId')
-  async getAnsweredTickets(@Query('userId') userId: string) {
-    return this.viewAnsweredTicketsUseCase.execute({ userId });
-  }
-
-  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_SUPERVISORS)
-  @Get('approved-tasks/:userId')
-  async getApprovedTasks(@Query('userId') userId: string) {
-    return this.viewApprovedTasksUseCase.execute({ userId });
-  }
-
-  @SupervisorPermissions()
-  @Get('faq-contributions/:userId')
-  async getFaqContributions(@Query('userId') userId: string) {
-    return this.viewFaqContributionsUseCase.execute({ userId });
-  }
-
-  @SupervisorPermissions()
-  @Get('performed-tasks/:userId')
-  async getPerformedTasks(@Query('userId') userId: string) {
-    return this.viewPerformedTasksUseCase.execute({ userId });
-  }
-
   @AdminAuth()
-  @Get('promotions-created/:userId')
-  async getPromotionsCreated(@Query('userId') userId: string) {
-    return this.viewPromotionsCreatedUseCase.execute({ userId });
-  }
-
-  @AdminAuth()
-  @Get('staff-requests/:userId')
-  async getStaffRequests(@Query('userId') userId: string) {
-    return this.viewStaffRequestsUseCase.execute({ userId });
+  @Get('analytics-overview')
+  async getAnalyticsOverview() {
+    return this.getAnalyticsOverviewUseCase.execute();
   }
 }
