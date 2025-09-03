@@ -36,8 +36,8 @@ import { EmployeeRequestModule } from './employee-request/employee-request.modul
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         connection: {
-          port: config.get('REDIS_PORT'),
-          host: config.get('REDIS_HOST'),
+          port: config.getOrThrow('REDIS_PORT'),
+          host: config.getOrThrow('REDIS_HOST'),
           password: config.get('REDIS_PASSWORD'),
           username: config.get('REDIS_USER'),
         },
