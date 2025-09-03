@@ -23,40 +23,43 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
       name: dept.name,
       visibility: dept.visibility,
       parent: dept.parent ? Department.create(dept.parent) : undefined,
-      questions:
-        dept.questions?.map((q: any) =>
-          Question.create({
-            id: q.id,
-            text: q.text,
-            departmentId: q.departmentId,
-            knowledgeChunkId: q.knowledgeChunkId,
-            creatorEmployeeId: q.creatorEmployeeId,
-            creatorAdminId: q.creatorAdminId,
-            creatorSupervisorId: q.creatorSupervisorId,
-            satisfaction: q.satisfaction,
-            dissatisfaction: q.dissatisfaction,
-            views: q.views,
-          }),
-        ) || [],
-      knowledgeChunks:
-        dept.knowledgeChunks?.map((kc: any) =>
-          KnowledgeChunk.create({
-            id: kc.id,
-            content: kc.content,
-            point: undefined,
-            department: undefined as unknown as Department,
-          }),
-        ) || [],
-      subDepartments:
-        dept.subDepartments?.map((sd: any) =>
-          Department.create({
-            id: sd.id,
-            name: sd.name,
-            visibility: sd.visibility as DepartmentVisibility,
-            questions: sd.questions,
-            knowledgeChunks: sd.knowledgeChunks,
-          }),
-        ) || [],
+      questions: dept.questions
+        ? dept.questions?.map((q: any) =>
+            Question.create({
+              id: q.id,
+              text: q.text,
+              departmentId: q.departmentId,
+              knowledgeChunkId: q.knowledgeChunkId,
+              creatorEmployeeId: q.creatorEmployeeId,
+              creatorAdminId: q.creatorAdminId,
+              creatorSupervisorId: q.creatorSupervisorId,
+              satisfaction: q.satisfaction,
+              dissatisfaction: q.dissatisfaction,
+              views: q.views,
+            }),
+          ) || []
+        : [],
+      knowledgeChunks: dept.knowledgeChunks
+        ? dept.knowledgeChunks?.map((kc: any) =>
+            KnowledgeChunk.create({
+              id: kc.id,
+              content: kc.content,
+              point: undefined,
+              department: undefined as unknown as Department,
+            }),
+          ) || []
+        : [],
+      subDepartments: dept.subDepartments
+        ? dept.subDepartments?.map((sd: any) =>
+            Department.create({
+              id: sd.id,
+              name: sd.name,
+              visibility: sd.visibility as DepartmentVisibility,
+              questions: sd.questions,
+              knowledgeChunks: sd.knowledgeChunks,
+            }),
+          ) || []
+        : [],
     });
   }
 
@@ -279,9 +282,7 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
       include: {
         questions: queryDto?.includeQuestions ?? false,
         knowledgeChunks: queryDto?.includeKnowledgeChunks ?? false,
-        subDepartments: queryDto?.includeSubDepartments
-          ? { include: { questions: true, knowledgeChunks: true } }
-          : false,
+        subDepartments: queryDto?.includeSubDepartments ?? false,
       },
     });
     return dept ? this.toDomain(dept) : null;

@@ -20,11 +20,17 @@ import {
   CanDeleteUseCase,
   UpdateSubDepartmentUseCase,
   GenerateShareKeyUseCase,
+  UpdateMainDepartmentUseCase,
+  DeleteMainDepartmentUseCase,
+  DeleteSubDepartmentUseCase,
 } from '../../application/use-cases';
 import { GetSharedDepartmentDataUseCase } from '../../application/use-cases/get-shared-department-data.use-case';
-import { UpdateMainDepartmentUseCase } from '../../application/use-cases/update-main-department.use-case';
-import { DeleteMainDepartmentUseCase } from '../../application/use-cases/delete-main-department.use-case';
-import { DeleteSubDepartmentUseCase } from '../../application/use-cases/delete-sub-department.use-case';
+import { GetSharedDepartmentSubDepartmentsUseCase } from '../../application/use-cases/get-shared-department-sub-departments.use-case';
+import { GetSharedDepartmentFaqsUseCase } from '../../application/use-cases/get-shared-department-faqs.use-case';
+import { GetSharedSubDepartmentFaqsUseCase } from '../../application/use-cases/get-shared-sub-department-faqs.use-case';
+import { ViewMainDepartmentsUseCase } from 'src/department/application/use-cases/view-main-departments.use-case';
+import { ViewSubDepartmentsUseCase } from 'src/department/application/use-cases/view-sub-departments.use-case';
+
 import { CreateDepartmentInputDto } from './dto/create-department.dto';
 import {
   UpdateDepartmentInputDto,
@@ -40,8 +46,6 @@ import { CreateSubDepartmentDto } from './dto/create-sub-department.dto';
 import { GetAllSubDepartmentsDto } from './dto/get-all-sub-departments.dto';
 import { PaginateDto } from './dto/paginate.dto';
 import { GetSharedDepartmentDataDto } from './dto/get-shared-department-data.dto';
-import { ViewMainDepartmentsUseCase } from 'src/department/application/use-cases/view-main-departments.use-case';
-import { ViewSubDepartmentsUseCase } from 'src/department/application/use-cases/view-sub-departments.use-case';
 
 @Controller('department')
 export class DepartmentController {
@@ -62,6 +66,9 @@ export class DepartmentController {
     private readonly viewSubDepartmentsUseCase: ViewSubDepartmentsUseCase,
     private readonly generateShareKeyUseCase: GenerateShareKeyUseCase,
     private readonly getSharedDepartmentDataUseCase: GetSharedDepartmentDataUseCase,
+    private readonly getSharedDepartmentSubDepartmentsUseCase: GetSharedDepartmentSubDepartmentsUseCase,
+    private readonly getSharedDepartmentFaqsUseCase: GetSharedDepartmentFaqsUseCase,
+    private readonly getSharedSubDepartmentFaqsUseCase: GetSharedSubDepartmentFaqsUseCase,
   ) {}
 
   @Get('view/main')
@@ -74,9 +81,27 @@ export class DepartmentController {
     return this.viewSubDepartmentsUseCase.execute(queryDto);
   }
 
-  @Get('shared')
-  async getSharedDepartmentData(@Query() query: GetSharedDepartmentDataDto) {
-    return this.getSharedDepartmentDataUseCase.execute(query);
+  @Get('shared/sub-departments')
+  async getSharedDepartmentSubDepartments(
+    @Query() query: GetSharedDepartmentDataDto,
+  ) {
+    return this.getSharedDepartmentSubDepartmentsUseCase.execute(query);
+  }
+
+  @Get('shared/faqs')
+  async getSharedDepartmentFaqs(@Query() query: GetSharedDepartmentDataDto) {
+    return this.getSharedDepartmentFaqsUseCase.execute(query);
+  }
+
+  @Get('shared/sub-department/:subId/faqs')
+  async getSharedSubDepartmentFaqs(
+    @Query() query: GetSharedDepartmentDataDto,
+    @Param('subId') subDepartmentId: string,
+  ) {
+    return this.getSharedSubDepartmentFaqsUseCase.execute({
+      key: query.key,
+      subDepartmentId,
+    });
   }
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_DEPARTMENTS)
@@ -203,7 +228,10 @@ export class DepartmentController {
 
   @SupervisorPermissions()
   @Post('share/:id')
-  async generateShareKey(@Param('id') id: string) {
-    return this.generateShareKeyUseCase.execute({ departmentId: id });
+  async generateShareKey(@Param('id') id: string, @Req() req: any) {
+    return this.generateShareKeyUseCase.execute({
+      departmentId: id,
+      userId: req.user.id,
+    });
   }
 }

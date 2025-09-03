@@ -16,3 +16,6 @@ export * from './view-main-departments.use-case';
 export * from './view-sub-departments.use-case';
 export * from './generate-share-key.use-case';
 export * from './get-shared-department-data.use-case';
+export * from './get-shared-department-sub-departments.use-case';
+export * from './get-shared-department-faqs.use-case';
+export * from './get-shared-sub-department-faqs.use-case';

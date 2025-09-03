@@ -168,10 +168,10 @@ export class Department {
       id: this._id?.toString(),
       name: this._name,
       visibility: this._visibility,
-      questions: this._questions?.map((q) => q.toJSON()),
+      questions: this._questions?.map((q) => typeof q?.toJSON === 'function' ? q.toJSON() : q),
       parentId: this._parentId?.toString(),
-      knowledgeChunks: this._knowledgeChunks?.map((kc) => kc.toJSON()),
-      subDepartments: this._subDepartments?.map((d) => d.toJSON()),
+      knowledgeChunks: this._knowledgeChunks?.map((kc) => typeof kc?.toJSON === 'function' ? kc.toJSON() : kc),
+      subDepartments: this._subDepartments?.map((d) => typeof d?.toJSON === 'function' ? d.toJSON() : d),
       parent: this._parent?.toJSON(),
     };
   }
