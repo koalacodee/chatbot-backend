@@ -6,6 +6,7 @@ export class TicketAnsweredEvent {
     public readonly id: string,
     public readonly answeredById: string,
     public readonly answeredAt: Date,
+    public readonly code: string,
     public readonly rating?: InteractionType,
   ) {}
 }

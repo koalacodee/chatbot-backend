@@ -19,4 +19,5 @@ export abstract class UserRepository {
     query?: UserQuery,
   ): Promise<User | null>;
   abstract save(user: User): Promise<User>;
+  abstract search(query: string): Promise<User[]>;
 }

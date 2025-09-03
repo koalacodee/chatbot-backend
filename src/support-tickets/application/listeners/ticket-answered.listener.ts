@@ -3,22 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { ActivityLog } from 'src/activity-log/domain/entities/activity-log.entity';
 import { ActivityLogType } from 'src/activity-log/domain/entities/activity-log.entity';
 import { ActivityLogRepository } from 'src/activity-log/domain/repositories/activity-log.repository';
-
-export enum InteractionType {
-  INTERNAL_NOTE = 'INTERNAL_NOTE',
-  PUBLIC_REPLY = 'PUBLIC_REPLY',
-  RATING_REQUEST = 'RATING_REQUEST',
-}
-
-export class TicketAnsweredEvent {
-  public constructor(
-    public readonly title: string,
-    public readonly id: string,
-    public readonly answeredById: string,
-    public readonly answeredAt: Date,
-    public readonly rating?: InteractionType,
-  ) {}
-}
+import { TicketAnsweredEvent } from 'src/support-tickets/domain/events/ticket-answered.event';
 
 @Injectable()
 export class TicketAnsweredListener {
@@ -33,6 +18,7 @@ export class TicketAnsweredListener {
       userId: event.answeredById,
       meta: {
         rating: event.rating,
+        code: event.code,
       },
       occurredAt: event.answeredAt,
     });

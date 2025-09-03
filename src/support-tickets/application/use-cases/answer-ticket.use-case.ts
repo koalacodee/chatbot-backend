@@ -97,6 +97,7 @@ export class AnswerTicketUseCase {
         ticket.id.toString(),
         userId,
         new Date(),
+        ticket?.code,
         ticket?.interaction?.type,
       ),
     );
