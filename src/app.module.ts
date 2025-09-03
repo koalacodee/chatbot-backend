@@ -39,6 +39,7 @@ import { EmployeeRequestModule } from './employee-request/employee-request.modul
           port: config.get('REDIS_PORT'),
           host: config.get('REDIS_HOST'),
           password: config.get('REDIS_PASSWORD'),
+          username: config.get('REDIS_USER'),
         },
       }),
     }),

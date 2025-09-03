@@ -11,10 +11,12 @@ export class RedisService implements OnModuleDestroy {
     const host = config.get<string>('REDIS_HOST', '127.0.0.1');
     const port = config.get<number>('REDIS_PORT', 6379);
     const password = config.get<string>('REDIS_PASSWORD');
+    const username = config.get('REDIS_USER', 'default');
     this.client = new Redis({
       host,
       port,
       password: password || undefined,
+      username,
     });
     this.client.on('connect', () => this.logger.log('Connected to Redis'));
     this.client.on('error', (err) => this.logger.error('Redis error', err));
