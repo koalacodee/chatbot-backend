@@ -40,6 +40,7 @@ import { EmployeeRequestModule } from './employee-request/employee-request.modul
           host: config.getOrThrow('REDIS_HOST'),
           password: config.get('REDIS_PASSWORD'),
           username: config.get('REDIS_USER'),
+          family: parseInt(config.get('REDIS_IP_FAMILY', '4')),
         },
       }),
     }),

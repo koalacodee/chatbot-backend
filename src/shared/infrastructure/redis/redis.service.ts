@@ -17,6 +17,7 @@ export class RedisService implements OnModuleDestroy {
       port,
       password: password || undefined,
       username,
+      family: parseInt(config.get('REDIS_IP_FAMILY', '4')),
     });
     this.client.on('connect', () => this.logger.log('Connected to Redis'));
     this.client.on('error', (err) => this.logger.error('Redis error', err));
