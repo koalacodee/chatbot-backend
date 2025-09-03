@@ -224,6 +224,8 @@ model Question {
   questionViews       QuestionView[]
 
   @@index([departmentId])
+  @@index([views])
+  @@index([departmentId, views])
   @@index([creatorSupervisorId])
   @@map("questions")
 }
@@ -368,7 +370,8 @@ model SupportTicket {
   interaction  SupportTicketInteraction?
 
   @@index([guestId])
-  @@index([departmentId, status])
+  @@index([departmentId])
+  @@index([status])
   @@map("support_tickets")
 }
 
