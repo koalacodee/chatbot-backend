@@ -6,6 +6,7 @@ import {
   AllGroupedActivities,
   DashboardAggregatedResult,
   PaginatedResult,
+  QueryOutput,
   UserPerformanceArgs,
   UserPerformanceRow,
 } from '../../domain/repositories/activity-log.repository';
@@ -65,6 +66,32 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
     });
 
     return this.toDomain(upsert);
+  }
+
+  async saveMany(logs: ActivityLog[]): Promise<ActivityLog[]> {
+    const promises = logs.map((log) => {
+      const data = {
+        id: log.id,
+        title: log.title,
+        meta: { ...log.meta },
+        itemId: log.itemId,
+        type: log.type,
+        createdAt: log.createdAt,
+        updatedAt: log.updatedAt,
+        occurredAt: log.occurredAt,
+        user: { connect: { id: log.userId } },
+      };
+
+      return this.prisma.activityLog.upsert({
+        where: { id: log.id },
+        update: data,
+        create: data,
+        include: { user: true },
+      });
+    });
+
+    const result = await this.prisma.$transaction(promises);
+    return Promise.all(result.map((r) => this.toDomain(r)));
   }
 
   async findById(id: string): Promise<ActivityLog | null> {
@@ -207,7 +234,7 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
 
   async getAgentPerformance(
     options: UserPerformanceArgs,
-  ): Promise<PaginatedResult> {
+  ): Promise<QueryOutput> {
     // decode cursor
     let cursorRow: number | null = null;
     if (options.cursor) {
@@ -221,87 +248,42 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
       }
     }
 
-    const sqlRows = await this.prisma.$queryRaw<
-      readonly (UserPerformanceRow & { row_num: bigint })[]
-    >`
-        WITH ranked AS (
-          SELECT
-            u.id,
-            u.username,
-            u.role,
-            COALESCE(stats.answered, 0)      AS answered,
-            COALESCE(stats.satisfied, 0)     AS satisfied,
-            COALESCE(stats.dissatisfied, 0)  AS dissatisfied,
-            COALESCE(
-              ROUND(
-                100.0 * stats.satisfied
-                / NULLIF(stats.satisfied + stats.dissatisfied, 0)
-              ),
-              0
-            )                                AS satisfaction_rate,
-            ROW_NUMBER() OVER (ORDER BY stats.answered DESC, u.id ASC) AS row_num
-          FROM users u
-          JOIN (
+    const sqlRows = await this.prisma.$queryRaw<[QueryOutput]>`
+        WITH
+        user_rows AS (
             SELECT
-              COALESCE(
-                a.answerer_employee_id,
-                a.answerer_supervisor_id,
-                a.answerer_admin_id
-              ) AS user_id,
-              COUNT(*) FILTER (WHERE st.id IS NOT NULL) AS answered,
-              SUM(CASE WHEN sti.type = 'satisfaction'    THEN 1 ELSE 0 END) AS satisfied,
-              SUM(CASE WHEN sti.type = 'dissatisfaction' THEN 1 ELSE 0 END) AS dissatisfied
-            FROM support_ticket_answers a
-            LEFT JOIN support_tickets st
-                   ON st.id = a.support_ticket_id
-            LEFT JOIN support_ticket_interactions sti
-                   ON sti.support_ticket_id = st.id
-                  AND sti.type IN ('satisfaction', 'dissatisfaction')
-            GROUP BY user_id
-          ) stats ON stats.user_id = u.id
-          WHERE ${options.userId ? Prisma.sql`u.id = ${options.userId}` : Prisma.sql`TRUE`}
+                u.id::text          AS id,
+                u.name,
+                LOWER(u.role::text) AS role
+            FROM users u
+        ),
+        ticket_rows AS (
+            SELECT
+                st.id::text                                           AS id,
+                COALESCE(
+                    emp.user_id::text,
+                    sup.user_id::text,
+                    adm.user_id::text
+                )                                                     AS "answeredByUserId",
+                LOWER(sti.type::text)                               AS "customerRating",
+                ROUND(EXTRACT(EPOCH FROM (sta.created_at - st.created_at))) AS "repliedInSeconds"
+            FROM support_tickets st
+            JOIN support_ticket_answers sta
+              ON sta.support_ticket_id = st.id
+            JOIN support_ticket_interactions sti
+              ON sti.support_ticket_id = st.id
+            LEFT JOIN employees   emp ON emp.id  = sta.answerer_employee_id
+            LEFT JOIN supervisors sup ON sup.id = sta.answerer_supervisor_id
+            LEFT JOIN admins      adm ON adm.id  = sta.answerer_admin_id
+            WHERE sti.type IS NOT NULL
         )
-        SELECT *
-        FROM ranked
-        WHERE
-          ${
-            cursorRow !== null
-              ? options.direction === 'forward'
-                ? Prisma.sql`row_num > ${cursorRow}`
-                : Prisma.sql`row_num < ${cursorRow}`
-              : Prisma.sql`TRUE`
-          }
-        ORDER BY
-          ${
-            options.direction === 'forward'
-              ? Prisma.sql`row_num ASC`
-              : Prisma.sql`row_num DESC`
-          }
-        LIMIT ${options.limit + 1};   -- fetch one extra to determine nextCursor
-      `;
-
-    console.log(sqlRows);
-
-    // re-order if we went backwards
-    const ordered =
-      options.direction === 'backward'
-        ? sqlRows.slice().reverse()
-        : [...sqlRows];
-
-    const hasMore = ordered.length > options.limit;
-    const rows = hasMore ? ordered.slice(0, options.limit) : ordered;
-    const lastRow = rows[rows.length - 1];
-
-    let nextCursor: string | null = null;
-    if (hasMore && lastRow) {
-      nextCursor = Buffer.from(String(lastRow.row_num)).toString('base64');
-    }
+        SELECT
+            (SELECT json_agg(u.*) FROM user_rows  u) AS users,
+            (SELECT json_agg(t.*) FROM ticket_rows t) AS tickets;
+        `;
 
     // strip internal row_num before returning
-    return {
-      rows: rows.map(({ row_num: _rn, ...r }) => r),
-      nextCursor,
-    };
+    return sqlRows[0];
   }
 
   async getAnalyticsOverview() {

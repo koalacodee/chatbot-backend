@@ -97,8 +97,25 @@ export interface DashboardAggregatedResult {
   activePromotion: ActivePromotion | null;
 }
 
+export interface UserRow {
+  id: string;
+  name: string;
+  role: 'employee' | 'supervisor' | 'admin' | 'driver';
+}
+
+export interface TicketRow {
+  id: string;
+  answeredByUserId: string;
+  customerRating: 'satisfaction' | 'dissatisfaction';
+}
+
+export interface QueryOutput {
+  users: UserRow[];
+  tickets: TicketRow[];
+}
 export abstract class ActivityLogRepository {
   abstract save(log: ActivityLog): Promise<ActivityLog>;
+  abstract saveMany(logs: ActivityLog[]): Promise<ActivityLog[]>;
   abstract findById(id: string): Promise<ActivityLog | null>;
   abstract findAll(offset?: number, limit?: number): Promise<ActivityLog[]>;
   abstract removeById(id: string): Promise<ActivityLog | null>;
@@ -122,6 +139,6 @@ export abstract class ActivityLogRepository {
   }): Promise<AllGroupedActivities>;
   abstract getAgentPerformance(
     options: UserPerformanceArgs,
-  ): Promise<PaginatedResult>;
+  ): Promise<QueryOutput>;
   abstract getAnalyticsOverview(): Promise<DashboardAggregatedResult>;
 }

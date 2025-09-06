@@ -85,6 +85,10 @@ export class ActivityLog {
     return this._occurredAt;
   }
 
+  public set meta(newMeta: Record<string, any>) {
+    this._meta = newMeta;
+  }
+
   public toJSON() {
     return {
       id: this.id,
