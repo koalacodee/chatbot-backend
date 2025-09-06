@@ -17,12 +17,13 @@ import { User } from 'src/shared/entities/user.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TaskPerformedEvent } from 'src/task/domain/events/task-performed.event';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface SubmitTaskForReviewInputDto {
   taskId: string;
   submittedBy: string;
   notes?: string; // optional notes to store on the task (assigner notes per schema)
-  // Attachments would be handled via dedicated Attachment use cases/repos; omitted here by design.
+  attach?: boolean;
 }
 
 @Injectable()
@@ -35,6 +36,7 @@ export class SubmitTaskForReviewUseCase {
     private readonly adminRepository: AdminRepository,
     private readonly departmentRepository: DepartmentRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly filesService: FilesService,
   ) {}
 
   async getSubmitterByUser(user: User) {
@@ -53,7 +55,7 @@ export class SubmitTaskForReviewUseCase {
   async execute(
     dto: SubmitTaskForReviewInputDto,
     userId?: string,
-  ): Promise<Task> {
+  ): Promise<{ task: Task; uploadKey?: string }> {
     const [existing, submitter] = await Promise.all([
       this.taskRepo.findById(dto.taskId),
       this.userRepo
@@ -84,8 +86,9 @@ export class SubmitTaskForReviewUseCase {
       existing.status = TaskStatus.COMPLETED;
     }
 
-    const [savedTask] = await Promise.all([
+    const [savedTask, uploadKey] = await Promise.all([
       this.taskRepo.save(existing),
+      this.filesService.genUploadKey(existing.id.toString()),
       this.eventEmitter.emitAsync(
         TaskPerformedEvent.name,
         new TaskPerformedEvent(
@@ -97,11 +100,12 @@ export class SubmitTaskForReviewUseCase {
             existing?.targetSubDepartment?.id.toString() ??
             undefined,
           existing.status,
+          Math.round((Date.now() - existing.createdAt.getTime()) / 1000),
         ),
       ),
     ]);
 
-    return savedTask;
+    return { task: savedTask, uploadKey };
   }
 
   private async checkTaskAccess(

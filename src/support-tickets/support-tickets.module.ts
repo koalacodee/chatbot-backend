@@ -10,6 +10,7 @@ import { PrismaSupportTicketInteractionRepository } from './infrastructure/repos
 import { SupportTicketInteractionRepository } from './domain/repositories/support-ticket-interaction.repository';
 import { TicketAnsweredListener } from './application/listeners/ticket-answered.listener';
 import { ActivityLogModule } from 'src/activity-log/activity-log.module';
+import { TicketInteractedListener } from './application/listeners/ticket-interacted.listener';
 
 @Module({
   controllers: [SupportTicketController],
@@ -28,6 +29,7 @@ import { ActivityLogModule } from 'src/activity-log/activity-log.module';
     },
     ...Object.values(UseCases),
     TicketAnsweredListener,
+    TicketInteractedListener,
   ],
   exports: [SupportTicketRepository, SupportTicketAnswerRepository],
   imports: [DepartmentModule, ActivityLogModule],

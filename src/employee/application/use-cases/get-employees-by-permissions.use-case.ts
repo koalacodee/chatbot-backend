@@ -36,8 +36,8 @@ export class GetEmployeesByPermissionsUseCase {
         const supervisor = await this.supervisorRepository.findByUserId(userId);
 
         // Get employees that are directly supervised by this supervisor
-        employees = await this.employeeRepository.findBySupervisorId(
-          supervisor.id.toString(),
+        employees = await this.employeeRepository.findBySupervisorIds(
+          [supervisor.id.toString()],
         );
 
         // Filter to only include employees with the required permissions

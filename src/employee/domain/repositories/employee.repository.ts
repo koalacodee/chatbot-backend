@@ -1,4 +1,4 @@
-import { Employee } from '../entities/employee.entity';
+import { Employee, EmployeePermissionsEnum } from '../entities/employee.entity';
 
 export abstract class EmployeeRepository {
   abstract save(employee: Employee): Promise<Employee>;
@@ -11,7 +11,10 @@ export abstract class EmployeeRepository {
   abstract exists(id: string): Promise<boolean>;
   abstract count(): Promise<number>;
   abstract findByUserId(id: string): Promise<Employee | null>;
-  abstract findBySupervisorId(supervisorId: string): Promise<Employee[]>;
+  abstract findBySupervisorIds(
+    supervisorIds: string[],
+    permissions?: EmployeePermissionsEnum[],
+  ): Promise<Employee[]>;
   abstract findBySubDepartment(id: string): Promise<Employee[]>;
   abstract canDeleteEmployee(id: string): Promise<boolean>;
   abstract findByPermissions(permissions: string[]): Promise<Employee[]>;

@@ -8,6 +8,9 @@ import { Email } from 'src/shared/value-objects/email.vo';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StaffRequestedEvent } from '../listeners/staff-requested.listener';
+import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
+import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
+import { Notification } from 'src/notification/domain/entities/notification.entity';
 
 export interface SubmitEmployeeRequestDto {
   newEmployeeId?: string;
@@ -24,7 +27,9 @@ export class SubmitEmployeeRequestUseCase {
   constructor(
     private readonly employeeRequestRepository: EmployeeRequestRepository,
     private readonly supervisorRepository: SupervisorRepository,
+    private readonly adminRepository: AdminRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly notificationRepository: NotificationRepository,
   ) {}
 
   async execute(
@@ -57,6 +62,15 @@ export class SubmitEmployeeRequestUseCase {
         toReturn.newEmployeeFullName,
       ),
     );
+
+    const admins = await this.adminRepository.findAll();
+    const notification = Notification.create({
+      message: 'staff_requested',
+    });
+
+    admins.forEach(({ id }) => notification.addRecipient(id.toString()));
+
+    await this.notificationRepository.save(notification);
 
     return toReturn;
   }

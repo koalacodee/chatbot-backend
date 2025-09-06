@@ -8,5 +8,6 @@ export class TicketAnsweredEvent {
     public readonly answeredAt: Date,
     public readonly code: string,
     public readonly rating?: InteractionType,
+    public readonly repliedInSeconds?: number,
   ) {}
 }

@@ -14,6 +14,8 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { Notification } from 'src/notification/domain/entities/notification.entity';
+import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
 
 interface CreateTaskInputDto {
   title: string;
@@ -40,6 +42,7 @@ export class CreateTaskUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly adminRepository: AdminRepository,
+    private readonly notificationRepository: NotificationRepository,
   ) {}
 
   async execute(dto: CreateTaskInputDto, userId?: string): Promise<Task> {
@@ -133,7 +136,12 @@ export class CreateTaskUseCase {
       feedback: dto.feedback ?? undefined,
     });
 
-    return this.taskRepo.save(task);
+    const [saved] = await Promise.all([
+      this.taskRepo.save(task),
+      this.notify(dto),
+    ]);
+
+    return saved;
   }
 
   private async checkDepartmentAccess(
@@ -204,5 +212,33 @@ export class CreateTaskUseCase {
         );
       }
     }
+  }
+
+  private async notify(dto: CreateTaskInputDto) {
+    const notification = Notification.create({ message: 'task_created' });
+
+    if (dto.assignmentType === 'DEPARTMENT') {
+      const supervisors =
+        await this.supervisorRepository.findManyByDepartmentId(
+          dto.targetDepartmentId,
+        );
+
+      supervisors.forEach(({ userId }) =>
+        notification.addRecipient(userId.toString()),
+      );
+    } else if (dto.assignmentType === 'SUB_DEPARTMENT') {
+      const employees = await this.employeeRepository.findBySubDepartment(
+        dto.targetSubDepartmentId,
+      );
+      employees.forEach(({ userId }) =>
+        notification.addRecipient(userId.toString()),
+      );
+    } else {
+      const employee = await this.employeeRepository.findById(dto.assigneeId);
+
+      notification.addRecipient(employee.userId.toString());
+    }
+
+    await this.notificationRepository.save(notification);
   }
 }

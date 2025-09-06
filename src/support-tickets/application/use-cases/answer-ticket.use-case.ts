@@ -16,12 +16,14 @@ import { UserRepository } from 'src/shared/repositories/user.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TicketAnsweredEvent } from 'src/support-tickets/domain/events/ticket-answered.event';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface AnswerTicketInput {
   ticketId: string;
   userId: string;
   userRole: Roles;
   content: string;
+  attach?: boolean;
 }
 
 @Injectable()
@@ -34,9 +36,16 @@ export class AnswerTicketUseCase {
     private readonly ticketAnswerRepository: SupportTicketAnswerRepository,
     private readonly departmentRepository: DepartmentRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly fileService: FilesService,
   ) {}
 
-  async execute({ ticketId, userId, content, userRole }: AnswerTicketInput) {
+  async execute({
+    ticketId,
+    userId,
+    content,
+    userRole,
+    attach,
+  }: AnswerTicketInput) {
     const [answerer, ticket, existingAnswer] = await Promise.all([
       this.getAnswererByRole(userRole, userId),
       this.ticketRepository.findById(ticketId),
@@ -69,13 +78,23 @@ export class AnswerTicketUseCase {
 
     ticket.status = SupportTicketStatus.ANSWERED;
 
-    let savedAnswer;
+    let savedAnswer: SupportTicketAnswer;
+    let uploadKey: string;
 
     if (existingAnswer) {
       if (content) existingAnswer.content = content;
       existingAnswer.answerer = answerer;
 
-      savedAnswer = this.ticketAnswerRepository.save(existingAnswer);
+      await Promise.all([
+        attach
+          ? this.fileService
+              .genUploadKey(existingAnswer.id.toString())
+              .then((key) => (uploadKey = key))
+          : undefined,
+        this.ticketAnswerRepository.save(existingAnswer),
+        this.ticketRepository.save(ticket),
+      ]);
+      savedAnswer = existingAnswer;
     } else {
       await Promise.all([
         this.ticketAnswerRepository
@@ -86,7 +105,14 @@ export class AnswerTicketUseCase {
               answerer,
             }),
           )
-          .then((saved) => (savedAnswer = saved)),
+          .then((saved) => {
+            savedAnswer = saved;
+            attach
+              ? this.fileService
+                  .genUploadKey(saved.id.toString())
+                  .then((key) => (uploadKey = key))
+              : undefined;
+          }),
         this.ticketRepository.save(ticket),
       ]);
     }
@@ -99,10 +125,13 @@ export class AnswerTicketUseCase {
         new Date(),
         ticket?.code,
         ticket?.interaction?.type,
+        Math.round(
+          (savedAnswer.createdAt.getTime() - ticket.createdAt.getTime()) / 1000,
+        ),
       ),
     );
 
-    return savedAnswer;
+    return { answer: savedAnswer, uploadKey };
   }
 
   async getAnswererByRole(role: Roles, id: string) {

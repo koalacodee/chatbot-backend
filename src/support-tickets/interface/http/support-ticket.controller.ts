@@ -126,7 +126,7 @@ export class SupportTicketController {
   async create(
     @Body() dto: CreateSupportTicketDto,
     @Req() req: any,
-  ): Promise<SupportTicket> {
+  ): Promise<{ ticket: SupportTicket; uploadKey?: string }> {
     return this.createUseCase.execute({
       guestId: req.user?.id,
       subject: dto.subject,
@@ -181,10 +181,11 @@ export class SupportTicketController {
     @Body() dto: AnswerTicketDto,
     @Param('id') id: string,
     @Req() req: any,
-  ): Promise<SupportTicketAnswer> {
+  ): Promise<{ answer: SupportTicketAnswer; uploadKey?: string }> {
     return this.answerTicketUseCase.execute({
       ticketId: id,
       content: dto.content,
+      attach: dto.attach,
       userId: req.user.id,
       userRole: req.user.role,
     });

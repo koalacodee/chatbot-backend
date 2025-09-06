@@ -29,8 +29,8 @@ export class GetAllEmployeesUseCase {
         const supervisor = await this.supervisorRepository.findByUserId(userId);
 
         // Get employees that are directly supervised by this supervisor
-        employees = await this.employeeRepository.findBySupervisorId(
-          supervisor.id.toString(),
+        employees = await this.employeeRepository.findBySupervisorIds(
+          [supervisor.id.toString()],
         );
       } else if (userRole === Roles.ADMIN) {
         // Admins see all employees

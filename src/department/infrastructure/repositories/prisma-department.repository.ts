@@ -337,8 +337,6 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
       if (!(await this.findMainDepartmentById(departmentId))) return false;
     }
 
-    console.log('Validating Deletion');
-
     const hasRelation = async (promise: Promise<number>): Promise<boolean> =>
       (await promise) > 0;
 

@@ -130,7 +130,7 @@ export class QuestionController {
   async create(
     @Body() input: CreateQuestionInputDto,
     @Req() req: any,
-  ): Promise<Question> {
+  ): Promise<{ question: Question; uploadKey: string }> {
     return this.createUseCase.execute({ ...input, creatorId: req.user.id });
   }
 

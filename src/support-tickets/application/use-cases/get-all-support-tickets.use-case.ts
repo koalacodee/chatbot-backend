@@ -41,8 +41,6 @@ export class GetAllSupportTicketsUseCase {
       toReturn.map((t) => t.id.toString()),
     );
 
-    console.log(toReturn);
-
     return toReturn.map((ticket) => {
       const answer = answers.find(
         (a) => a.supportTicket.id.toString() === ticket.id.toString(),

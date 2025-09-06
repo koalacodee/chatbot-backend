@@ -19,6 +19,7 @@ export class TicketAnsweredListener {
       meta: {
         rating: event.rating,
         code: event.code,
+        repliedInSeconds: event.repliedInSeconds,
       },
       occurredAt: event.answeredAt,
     });

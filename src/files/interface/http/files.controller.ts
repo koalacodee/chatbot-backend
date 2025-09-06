@@ -1,9 +1,6 @@
 import {
   Controller,
   Post,
-  Delete,
-  Body,
-  Param,
   Req,
   UploadedFile,
   UploadedFiles,
@@ -11,24 +8,29 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
 import { UploadFileUseCase } from 'src/files/application/use-cases/upload-file.use-case';
-import { DeleteFileUseCase } from 'src/files/application/use-cases/delete-file.use-case';
-import { GenTokenUseCase } from 'src/files/application/use-cases/gen-token.use-case';
 import { FileUploadGuard } from 'src/files/infrastructure/guards/file-upload.guard';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { Roles } from 'src/shared/value-objects/role.vo';
+import { UUID } from 'src/shared/value-objects/uuid.vo';
 
 @Controller('files')
 export class FilesController {
-  constructor(
-    private readonly uploadFileUseCase: UploadFileUseCase,
-    private readonly deleteFileUseCase: DeleteFileUseCase,
-    private readonly genTokenUseCase: GenTokenUseCase,
-  ) {}
+  constructor(private readonly uploadFileUseCase: UploadFileUseCase) {}
 
   @Post('single')
   @UseGuards(FileUploadGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: join(process.cwd(), 'uploads'),
+        filename: (_, file, cb) => {
+          const ext = extname(file.originalname);
+          cb(null, `${UUID.create().toString()}${ext}`);
+        },
+      }),
+    }),
+  )
   async uploadSingle(
     @UploadedFile() file: Express.Multer.File,
     @Req() req: any,
@@ -39,20 +41,29 @@ export class FilesController {
     });
   }
 
-  @Post('multiple')
-  @UseGuards(FileUploadGuard)
-  @UseInterceptors(FilesInterceptor('files'))
-  async uploadMultiple(
-    @UploadedFiles() files: Express.Multer.File[],
-    @Req() req: any,
-  ) {
-    await Promise.all(
-      files.map((file) =>
-        this.uploadFileUseCase.execute({
-          targetId: req.targetId,
-          filename: file.filename,
-        }),
-      ),
-    );
-  }
+  // @Post('multiple')
+  // @UseGuards(FileUploadGuard)
+  // @UseInterceptors(
+  //   FilesInterceptor('files', {
+  //     storage: diskStorage({
+  //       destination: join(process.cwd(), 'uploads'),
+  //       filename: (_, __, cb) => {
+  //         cb(null, UUID.create().toString());
+  //       },
+  //     }),
+  //   }),
+  // )
+  // async uploadMultiple(
+  //   @UploadedFiles() files: Express.Multer.File[],
+  //   @Req() req: any,
+  // ) {
+  //   await Promise.all(
+  //     files.map((file) =>
+  //       this.uploadFileUseCase.execute({
+  //         targetId: req.targetId,
+  //         filename: file.filename,
+  //       }),
+  //     ),
+  //   );
+  // }
 }

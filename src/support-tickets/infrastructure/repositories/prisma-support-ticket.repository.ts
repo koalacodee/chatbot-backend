@@ -13,6 +13,7 @@ import { User } from 'src/shared/entities/user.entity';
 import { Guest } from 'src/guest/domain/entities/guest.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
 import { SupportTicketInteraction } from 'src/support-tickets/domain/entities/support-ticket-interaction.entity';
+import { SupportTicketStatus as PrismaSupportTicketStatus } from '@prisma/client';
 @Injectable()
 export class PrismaSupportTicketRepository extends SupportTicketRepository {
   constructor(private readonly prisma: PrismaService) {
@@ -68,7 +69,7 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
         description: data.description,
         departmentId: data.departmentId,
         assigneeId: data.assigneeId?.toString(),
-        status: data.status,
+        status: PrismaSupportTicketStatus[data.status],
         updatedAt: new Date(),
       },
       create: data,

@@ -164,7 +164,7 @@ export class TaskController {
     @Param('id') id: string,
     @Body() input: SubmitTaskForReviewInputDto,
     @Req() req: any,
-  ): Promise<Task> {
+  ): Promise<{ task: Task; uploadKey?: string }> {
     return this.submitForReviewUseCase.execute(
       {
         taskId: id,

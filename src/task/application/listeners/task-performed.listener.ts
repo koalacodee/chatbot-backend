@@ -3,6 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { ActivityLog } from 'src/activity-log/domain/entities/activity-log.entity';
 import { ActivityLogType } from 'src/activity-log/domain/entities/activity-log.entity';
 import { ActivityLogRepository } from 'src/activity-log/domain/repositories/activity-log.repository';
+import { TaskPerformedEvent } from 'src/task/domain/events/task-performed.event';
 
 export enum TaskStatus {
   PENDING = 'PENDING',
@@ -10,17 +11,6 @@ export enum TaskStatus {
   COMPLETED = 'COMPLETED',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
-}
-
-export class TaskPerformedEvent {
-  constructor(
-    public readonly title: string,
-    public readonly itemId: string,
-    public readonly userId: string,
-    public readonly occurredAt: Date,
-    public readonly departmentId: string,
-    public readonly status: TaskStatus,
-  ) {}
 }
 
 @Injectable()
@@ -37,6 +27,7 @@ export class TaskPerformedListener {
       meta: {
         departmentId: event.departmentId,
         status: event.status,
+        performedInSeconds: event.performedInSeconds,
       },
       occurredAt: event.occurredAt,
     });

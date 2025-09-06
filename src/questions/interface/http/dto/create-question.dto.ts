@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateQuestionInputDto {
   @IsString()
@@ -14,4 +14,8 @@ export class CreateQuestionInputDto {
   @IsOptional()
   @IsString()
   answer?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  attach?: boolean;
 }

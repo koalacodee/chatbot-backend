@@ -8,5 +8,6 @@ export class TaskPerformedEvent {
     public readonly occurredAt: Date,
     public readonly departmentId: string,
     public readonly status: TaskStatus,
+    public readonly performedInSeconds?: number,
   ) {}
 }

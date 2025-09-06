@@ -9,6 +9,7 @@ import { DepartmentRepository } from 'src/department/domain/repositories/departm
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FaqCreatedEvent } from 'src/questions/domain/events/faq-created.event';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface CreateQuestionDto {
   text: string;
@@ -16,6 +17,7 @@ interface CreateQuestionDto {
   knowledgeChunkId?: string;
   answer?: string;
   creatorId: string;
+  attach?: boolean;
 }
 
 @Injectable()
@@ -28,9 +30,12 @@ export class CreateQuestionUseCase {
     private readonly userRepository: UserRepository,
     private readonly departmentRepository: DepartmentRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly filesService: FilesService,
   ) {}
 
-  async execute(dto: CreateQuestionDto): Promise<Question> {
+  async execute(
+    dto: CreateQuestionDto,
+  ): Promise<{ question: Question; uploadKey: string }> {
     const user = await this.userRepository.findById(dto.creatorId);
     const userRole = user.role.getRole();
     // Check department access based on user role
@@ -61,19 +66,21 @@ export class CreateQuestionUseCase {
           : undefined,
     });
 
-    const savedQuestion = await this.questionRepo.save(question);
-
-    this.eventEmitter.emit(
-      FaqCreatedEvent.name,
-      new FaqCreatedEvent(
-        savedQuestion.text,
-        savedQuestion.id.toString(),
-        dto.creatorId,
-        new Date(),
+    const [savedQuestion, uploadKey] = await Promise.all([
+      this.questionRepo.save(question),
+      this.filesService.genUploadKey(question.id.toString()),
+      this.eventEmitter.emitAsync(
+        FaqCreatedEvent.name,
+        new FaqCreatedEvent(
+          question.text,
+          question.id.toString(),
+          dto.creatorId,
+          new Date(),
+        ),
       ),
-    );
+    ]);
 
-    return savedQuestion;
+    return { question: savedQuestion, uploadKey };
   }
 
   private async checkDepartmentAccess(

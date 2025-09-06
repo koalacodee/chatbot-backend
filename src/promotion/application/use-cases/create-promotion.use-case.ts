@@ -51,24 +51,23 @@ export class CreatePromotionUseCase {
           : undefined,
     });
 
-    const saved = await this.promotionRepo.save(promotion);
-
-    this.eventEmitter.emit(
-      PromotionCreatedEvent.name,
-      new PromotionCreatedEvent(
-        saved.title,
-        saved.id.toString(),
-        dto.createdByUserId,
-        saved.createdAt,
-        saved.audience,
+    const [saved, uploadKey] = await Promise.all([
+      this.promotionRepo.save(promotion),
+      dto.attach
+        ? this.fileService.genUploadKey(promotion.id.toString())
+        : undefined,
+      this.eventEmitter.emitAsync(
+        PromotionCreatedEvent.name,
+        new PromotionCreatedEvent(
+          promotion.title,
+          promotion.id.toString(),
+          dto.createdByUserId,
+          promotion.createdAt,
+          promotion.audience,
+        ),
       ),
-    );
+    ]);
 
-    // attach media to saved promotion via generic Attachment table
-    let uploadKey: string;
-    if (dto.attach) {
-      uploadKey = await this.fileService.genUploadKey(promotion.id.toString());
-    }
-    return { saved, uploadKey: uploadKey ?? undefined };
+    return { saved, uploadKey };
   }
 }

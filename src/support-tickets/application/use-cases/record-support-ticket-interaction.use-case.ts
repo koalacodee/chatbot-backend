@@ -10,6 +10,8 @@ import {
   InteractionType,
 } from '../../domain/entities/support-ticket-interaction.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TicketInteractedEvent } from 'src/support-tickets/domain/events/ticket-interacted.event';
 
 export interface RecordSupportTicketInteractionInput {
   guestId: string;
@@ -33,6 +35,7 @@ export class RecordSupportTicketInteractionUseCase {
   constructor(
     private readonly interactionRepository: SupportTicketInteractionRepository,
     private readonly supportTicketRepository: SupportTicketRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(
@@ -68,7 +71,12 @@ export class RecordSupportTicketInteractionUseCase {
       type: input.type,
     });
 
-    await this.interactionRepository.save(interaction);
+    await this.interactionRepository.save(interaction).then(() => {
+      this.eventEmitter.emit(
+        TicketInteractedEvent.name,
+        new TicketInteractedEvent(supportTicket.id.toString(), input.type),
+      );
+    });
 
     return {
       interaction: {
