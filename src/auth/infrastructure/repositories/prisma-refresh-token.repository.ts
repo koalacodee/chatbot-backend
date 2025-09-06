@@ -15,14 +15,14 @@ export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
 
   async findByToken(token: string) {
     return this.mapToDomain(
-      await this.prisma.refreshToken.findUnique({
+      await this.prisma.refreshToken.findFirst({
         where: { token },
       }),
     );
   }
 
   async deleteByToken(token: string): Promise<void> {
-    await this.prisma.refreshToken.delete({
+    await this.prisma.refreshToken.deleteMany({
       where: { token },
     });
   }
@@ -34,7 +34,7 @@ export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
   }
 
   async revokeToken(token: string): Promise<void> {
-    await this.prisma.refreshToken.update({
+    await this.prisma.refreshToken.updateMany({
       where: { token },
       data: { revokedAt: new Date() },
     });
