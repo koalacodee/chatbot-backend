@@ -8,19 +8,20 @@ datasource db {
 }
 
 model User {
-  id         String        @id @default(uuid()) @map("id") @db.Uuid
-  name       String        @map("name") @db.VarChar(255)
-  email      String        @unique @map("email") @db.VarChar(255)
-  username   String        @unique @map("username") @db.VarChar(255)
-  password   String        @map("password") @db.Char(97)
-  role       UserRole      @map("role")
-  employeeId String?       @unique @map("employee_id") @db.VarChar(255)
-  jobTitle   String?       @map("job_title") @db.VarChar(255)
-  activities ActivityLog[]
-  supervisor Supervisor?
-  employee   Employee?
-  admin      Admin?
-  driver     Driver?
+  id            String                  @id @default(uuid()) @map("id") @db.Uuid
+  name          String                  @map("name") @db.VarChar(255)
+  email         String                  @unique @map("email") @db.VarChar(255)
+  username      String                  @unique @map("username") @db.VarChar(255)
+  password      String                  @map("password") @db.Char(97)
+  role          UserRole                @map("role")
+  employeeId    String?                 @unique @map("employee_id") @db.VarChar(255)
+  jobTitle      String?                 @map("job_title") @db.VarChar(255)
+  activities    ActivityLog[]
+  supervisor    Supervisor?
+  employee      Employee?
+  admin         Admin?
+  driver        Driver?
+  notifications RecipientNotification[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -159,13 +160,14 @@ model Guest {
 
 model RefreshToken {
   id        String    @id @default(uuid()) @map("id") @db.Uuid
-  token     String    @unique @map("token")
+  token     String    @map("token")
   expiresAt DateTime  @map("expires_at")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   revokedAt DateTime? @map("revoked_at")
   targetId  String    @map("target_id") @db.Uuid
 
+  @@index([token])
   @@map("refresh_tokens")
 }
 
@@ -721,11 +723,11 @@ model ActivityLog {
   itemId String          @map("item_id") @db.VarChar(255)
   meta   Json
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
   occurredAt DateTime @map("occurred_at") // ISO instant coming from the source
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String   @map("user_id") @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id") @db.Uuid
 
   @@index([userId])
   @@index([type])
@@ -734,13 +736,13 @@ model ActivityLog {
 }
 
 enum ActivityLogType {
-  TICKET_ANSWERED   @map("ticket_answered")
-  TASK_PERFORMED    @map("task_performed")
-  TASK_APPROVED     @map("task_approved")
-  FAQ_CREATED       @map("faq_created")
-  FAQ_UPDATED       @map("faq_updated")
-  PROMOTION_CREATED @map("promotion_created")
-  STAFF_REQUEST_CREATED     @map("staff_request_created")
+  TICKET_ANSWERED       @map("ticket_answered")
+  TASK_PERFORMED        @map("task_performed")
+  TASK_APPROVED         @map("task_approved")
+  FAQ_CREATED           @map("faq_created")
+  FAQ_UPDATED           @map("faq_updated")
+  PROMOTION_CREATED     @map("promotion_created")
+  STAFF_REQUEST_CREATED @map("staff_request_created")
 }
 
 model Promotion {
@@ -773,4 +775,31 @@ enum AudienceType {
   ALL        @map("all")
 
   @@map("audience_type")
+}
+
+model RecipientNotification {
+  id             String       @id @default(uuid()) @map("id") @db.Uuid
+  seen           Boolean      @default(false) @map("seen")
+  userId         String       @map("user_id") @db.Uuid
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationId String       @map("notification_id") @db.Uuid
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([seen])
+  @@index([userId])
+  @@index([notificationId])
+  @@map("recipient_notifications")
+}
+
+model Notification {
+  id String @id @default(uuid()) @map("id") @db.Uuid
+
+  message String @map("message") @db.Text
+
+  recipients RecipientNotification[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("notifications")
 }
