@@ -3,19 +3,28 @@ import { NotificationRecipient } from './notification-recipient.entity';
 
 interface NotificationOptions {
   id?: string;
-  message: string;
+  title: string;
+  type: string;
   recipients?: NotificationRecipient[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export class Notification {
   private readonly _id: string;
-  private _message: string;
+  private _type: string;
   private _recipients: NotificationRecipient[];
+  private _title: string;
+  private _createdAt: Date;
+  private _updatedAt: Date;
 
   private constructor(options: NotificationOptions) {
     this._id = options.id || UUID.create().toString();
-    this._message = options.message;
+    this._type = options.type;
+    this._title = options.title;
     this._recipients = options.recipients ?? [];
+    this._createdAt = options.createdAt || new Date();
+    this._updatedAt = options.updatedAt || new Date();
   }
 
   public static create(options: NotificationOptions): Notification {
@@ -26,12 +35,12 @@ export class Notification {
     return this._id;
   }
 
-  public get message(): string {
-    return this._message;
+  public get type(): string {
+    return this._type;
   }
 
-  public set message(message: string) {
-    this._message = message;
+  public set type(type: string) {
+    this._type = type;
   }
 
   public get recipients(): NotificationRecipient[] {
@@ -40,6 +49,30 @@ export class Notification {
 
   public set recipients(recipients: NotificationRecipient[]) {
     this._recipients = recipients;
+  }
+
+  public get title(): string {
+    return this._title;
+  }
+
+  public set title(title: string) {
+    this._title = title;
+  }
+
+  public get createdAt(): Date {
+    return new Date(this._createdAt);
+  }
+
+  public set createdAt(createdAt: Date) {
+    this._createdAt = new Date(createdAt);
+  }
+
+  public get updatedAt(): Date {
+    return new Date(this._updatedAt);
+  }
+
+  public set updatedAt(updatedAt: Date) {
+    this._updatedAt = new Date(updatedAt);
   }
 
   public addRecipient(userId: string) {
@@ -55,7 +88,10 @@ export class Notification {
   public toJSON(): NotificationOptions {
     return {
       id: this._id,
-      message: this._message,
+      title: this._title,
+      type: this._type,
+      createdAt: this._createdAt,
+      updatedAt: this._updatedAt,
     };
   }
 }

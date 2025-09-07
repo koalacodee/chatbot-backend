@@ -215,7 +215,10 @@ export class CreateTaskUseCase {
   }
 
   private async notify(dto: CreateTaskInputDto) {
-    const notification = Notification.create({ message: 'task_created' });
+    const notification = Notification.create({
+      type: 'task_created',
+      title: dto.title,
+    });
 
     if (dto.assignmentType === 'DEPARTMENT') {
       const supervisors =

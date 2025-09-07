@@ -75,7 +75,8 @@ export class CreateSupportTicketUseCase {
     );
 
     const notification = Notification.create({
-      message: 'ticket_opened',
+      type: 'ticket_opened',
+      title: supportTicket.subject,
     });
     [
       ...supervisors.map(({ userId }) => userId.toString()),

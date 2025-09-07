@@ -65,7 +65,8 @@ export class SubmitEmployeeRequestUseCase {
 
     const admins = await this.adminRepository.findAll();
     const notification = Notification.create({
-      message: 'staff_requested',
+      title: employeeRequest.newEmployeeFullName,
+      type: 'staff_requested',
     });
 
     admins.forEach(({ id }) => notification.addRecipient(id.toString()));

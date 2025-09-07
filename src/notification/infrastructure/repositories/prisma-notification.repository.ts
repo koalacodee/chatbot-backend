@@ -12,16 +12,18 @@ export class PrismaNotificationRepository extends NotificationRepository {
 
   toDomain(prismaNotification: {
     id: string;
-    message: string;
+    title: string;
+    type: string;
     recipients?: {
       id: string;
       userId: string;
       seen: boolean;
     }[];
+    createdAt?: Date;
+    updatedAt?: Date;
   }) {
     return Notification.create({
       id: prismaNotification.id,
-      message: prismaNotification.message,
       recipients: prismaNotification?.recipients?.map((recipient) =>
         NotificationRecipient.create({
           id: recipient.id,
@@ -30,6 +32,10 @@ export class PrismaNotificationRepository extends NotificationRepository {
           seen: recipient.seen,
         }),
       ),
+      title: prismaNotification.title,
+      type: prismaNotification.type,
+      createdAt: prismaNotification.createdAt,
+      updatedAt: prismaNotification.updatedAt,
     });
   }
 
@@ -63,7 +69,10 @@ export class PrismaNotificationRepository extends NotificationRepository {
   async save(notification: Notification) {
     const notificationData = {
       id: notification.id,
-      message: notification.message,
+      title: notification.title,
+      type: notification.type,
+      createdAt: notification.createdAt,
+      updatedAt: notification.updatedAt,
     };
 
     const createdNotification = await this.prisma.notification.upsert({

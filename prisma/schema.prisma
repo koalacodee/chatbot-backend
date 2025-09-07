@@ -792,14 +792,12 @@ model RecipientNotification {
 }
 
 model Notification {
-  id String @id @default(uuid()) @map("id") @db.Uuid
-
-  message String @map("message") @db.Text
-
+  id         String                  @id @default(uuid()) @map("id") @db.Uuid
+  type       String                  @map("type") @db.VarChar(255)
+  title      String                  @map("title") @db.VarChar(255)
   recipients RecipientNotification[]
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt  DateTime                @default(now()) @map("created_at")
+  updatedAt  DateTime                @updatedAt @map("updated_at")
 
   @@map("notifications")
 }
