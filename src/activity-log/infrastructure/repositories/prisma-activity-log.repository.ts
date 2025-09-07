@@ -220,16 +220,16 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
           ) x) AS last_occurred_at
         FROM (SELECT DISTINCT type FROM filtered) AS f1
       )
-      SELECT json_agg(payload) AS data,
+      SELECT COALESCE(json_agg(payload), '[]') AS data,
             CASE
-              WHEN min(last_occurred_at) IS NULL THEN NULL
-              ELSE min(last_occurred_at)
+              WHEN COALESCE(min(last_occurred_at), NULL) IS NULL THEN NULL
+              ELSE COALESCE(min(last_occurred_at), NULL)
             END AS nextCursor
       FROM grouped;
 
     `;
 
-    return { data: result[0].data, nextCursor: result[0].nextCursor };
+    return result[0];
   }
 
   async getAgentPerformance(
@@ -278,8 +278,8 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
             WHERE sti.type IS NOT NULL
         )
         SELECT
-            (SELECT json_agg(u.*) FROM user_rows  u) AS users,
-            (SELECT json_agg(t.*) FROM ticket_rows t) AS tickets;
+            COALESCE((SELECT json_agg(u.*) FROM user_rows  u), '[]') AS users,
+            COALESCE((SELECT json_agg(t.*) FROM ticket_rows t), '[]') AS tickets;
         `;
 
     // strip internal row_num before returning
@@ -372,37 +372,37 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
 
       /* ---------- Final projection ---------- */
       SELECT
-        (SELECT total_views FROM global_totals) AS "totalViews",
-        (SELECT open_tickets FROM ticket_counts) AS "openTicketsCount",
-        (SELECT answered_pending_closure FROM ticket_counts) AS "answeredPendingClosureCount",
-        (SELECT faq_satisfaction_rate FROM global_totals) AS "faqSatisfactionRate",
+        COALESCE((SELECT total_views FROM global_totals), 0) AS "totalViews",
+        COALESCE((SELECT open_tickets FROM ticket_counts), 0) AS "openTicketsCount",
+        COALESCE((SELECT answered_pending_closure FROM ticket_counts), 0) AS "answeredPendingClosureCount",
+        COALESCE((SELECT faq_satisfaction_rate FROM global_totals), 0) AS "faqSatisfactionRate",
         
-        (SELECT jsonb_agg(DISTINCT jsonb_build_object(
+        COALESCE((SELECT jsonb_agg(DISTINCT jsonb_build_object(
             'categoryName', category_name,
             'views',        total_views
           ))
         FROM category_views
-        ) AS "categoryViews",
+        ), '[]') AS "categoryViews",
 
-        (SELECT jsonb_agg(jsonb_build_object(
+        COALESCE((SELECT jsonb_agg(jsonb_build_object(
             'id',           id,
             'question',     question,
             'viewCount',    view_count,
             'categoryName', category_name
           ))
         FROM top_faqs
-        ) AS "topFaqs",
+        ), '[]') AS "topFaqs",
 
-        (SELECT jsonb_agg(jsonb_build_object(
+        COALESCE((SELECT jsonb_agg(jsonb_build_object(
             'originalCasing', subject,
             'categoryId',     category_id,
             'categoryName',   category_name,
             'count',          asked_times
           ))
         FROM opportunities
-        ) AS "faqOpportunities",
+        ), '[]') AS "faqOpportunities",
 
-        (SELECT row_to_json(ap.*) FROM active_promo ap LIMIT 1) AS "activePromotion";
+        COALESCE((SELECT row_to_json(ap.*) FROM active_promo ap LIMIT 1), '{}') AS "activePromotion";
 
     `;
 
