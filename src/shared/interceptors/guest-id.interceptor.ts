@@ -27,7 +27,7 @@ export class GuestIdInterceptor implements NestInterceptor {
 
     // Generate new guest ID if none exists
     if (!guestId) {
-      guestId = UUID.create();
+      guestId = UUID.create().toString();
 
       // Set cookie with guest ID
       response.cookie(this.GUEST_COOKIE_NAME, guestId, {

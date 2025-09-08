@@ -26,7 +26,6 @@ export class PrismaSupportTicketAnswerRepository extends SupportTicketAnswerRepo
   private async toDomain(row: any): Promise<SupportTicketAnswer> {
     const ticket = SupportTicket.fromPersistence({
       id: row.supportTicket.id,
-      guestId: row.supportTicket.guestId,
       subject: row.supportTicket.subject,
       description: row.supportTicket.description,
       departmentId: row.supportTicket.departmentId,

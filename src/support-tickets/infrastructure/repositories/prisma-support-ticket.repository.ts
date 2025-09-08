@@ -53,8 +53,11 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       id: ticket.id.toString(),
       subject: ticket.subject,
       description: ticket.description,
-      departmentId: ticket.departmentId.toString(),
-      assigneeId: ticket.assignee ? ticket.assignee.id.toString() : undefined,
+      // departmentId: ,
+      department: { connect: { id: ticket.departmentId.toString() } },
+      assignee: ticket.assignee
+        ? { connect: { id: ticket.assignee.id.toString() } }
+        : undefined,
       status: ticket.status,
       createdAt: ticket.createdAt,
       updatedAt: ticket.updatedAt,
@@ -69,8 +72,6 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       update: {
         subject: data.subject,
         description: data.description,
-        departmentId: data.departmentId,
-        assigneeId: data.assigneeId?.toString(),
         status: PrismaSupportTicketStatus[data.status],
         updatedAt: new Date(),
         guestName: data.guestName,
@@ -232,8 +233,8 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
     return rec ? this.toDomain(rec) : null;
   }
 
-  async findGuestTicketsWithDetails(
-    guestId: string,
+  async findByPhoneNumber(
+    phone: string,
     offset: number = 0,
     limit: number = 10,
   ): Promise<
@@ -250,7 +251,7 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
     }[]
   > {
     return this.prisma.$queryRaw`
-      WITH GuestTickets AS (
+      WITH PhoneTickets AS (
         SELECT 
           st.id,
           st.subject,
@@ -258,11 +259,11 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
           st.department_id as "departmentId",
           st.created_at as "createdAt",
           st.updated_at as "updatedAt",
-          st.guest_id,
+          st.guest_phone,
           st.status,
           st.code
         FROM support_tickets st
-        WHERE st.guest_id = ${guestId}::uuid
+        WHERE st.guest_phone = ${phone}
       ),
       TicketAnswers AS (
         SELECT 
@@ -280,20 +281,20 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
         FROM support_ticket_interactions sti
       )
       SELECT 
-        gt.id,
-        gt.subject,
-        gt.description,
+        pt.id,
+        pt.subject,
+        pt.description,
         ta.answer,
         COALESCE(tr."isRated", false) as "isRated",
-        gt."departmentId",
-        gt."createdAt",
-        gt."updatedAt",
-        UPPER(gt.status::text) AS status,
-        gt.code
-      FROM GuestTickets gt
-      LEFT JOIN TicketAnswers ta ON ta.support_ticket_id = gt.id
-      LEFT JOIN TicketRatings tr ON tr.support_ticket_id = gt.id
-      ORDER BY gt."createdAt" DESC
+        pt."departmentId",
+        pt."createdAt",
+        pt."updatedAt",
+        UPPER(pt.status::text) AS status,
+        pt.code
+      FROM PhoneTickets pt
+      LEFT JOIN TicketAnswers ta ON ta.support_ticket_id = pt.id
+      LEFT JOIN TicketRatings tr ON tr.support_ticket_id = pt.id
+      ORDER BY pt."createdAt" DESC
       LIMIT ${limit} OFFSET ${offset};
     `;
   }

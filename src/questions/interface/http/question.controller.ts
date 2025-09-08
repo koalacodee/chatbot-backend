@@ -59,15 +59,12 @@ export class QuestionController {
 
   @Get('view')
   @UseInterceptors(GuestIdInterceptor)
-  @GuestAuth()
   async viewFaqs(@Query() query: ViewFaqsDto, @Req() req: any): Promise<any> {
-    const userId = req.user?.id || req.guest?.id;
-    return this.viewFaqsUseCase.execute({ ...query, guestId: userId });
+    return this.viewFaqsUseCase.execute({ ...query, guestId: req.guest?.id });
   }
 
   @Get('shared')
   @UseInterceptors(GuestIdInterceptor)
-  @GuestAuth()
   async getSharedDepartmentFaqs(
     @Query() query: GetSharedDepartmentFaqsDto,
     @Req() req: any,
@@ -80,7 +77,6 @@ export class QuestionController {
     });
   }
 
-  @GuestAuth()
   @UseInterceptors(GuestIdInterceptor)
   @Post(':type/:faqId')
   async recordInteraction(

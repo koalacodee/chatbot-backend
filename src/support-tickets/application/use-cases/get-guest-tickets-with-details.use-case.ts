@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SupportTicketRepository } from '../../domain/repositories/support-ticket.repository';
 
 export interface GetGuestTicketsWithDetailsInput {
-  guestId: string;
+  phone: string;
   offset?: number;
   limit?: number;
 }
@@ -18,7 +18,6 @@ export interface GetGuestTicketsWithDetailsOutput {
     createdAt: Date;
     updatedAt: Date;
   }[];
-  total: number;
 }
 
 @Injectable()
@@ -30,23 +29,22 @@ export class GetGuestTicketsWithDetailsUseCase {
   async execute(
     input: GetGuestTicketsWithDetailsInput,
   ): Promise<GetGuestTicketsWithDetailsOutput> {
-    const { guestId, offset = 0, limit = 10 } = input;
+    const { phone, offset = 0, limit = 10 } = input;
 
     const tickets =
-      await this.supportTicketRepository.findGuestTicketsWithDetails(
-        guestId,
+      await this.supportTicketRepository.findByPhoneNumber(
+        phone,
         offset,
         limit,
       );
 
-    // Get total count for pagination metadata
-    const totalTickets =
-      await this.supportTicketRepository.findByGuestId(guestId);
-    const total = totalTickets.length;
+    // // Get total count for pagination metadata
+    // const totalTickets =
+    //   await this.supportTicketRepository.findByGuestId(guestId);
+    // const total = totalTickets.length;
 
     return {
       tickets,
-      total,
     };
   }
 }

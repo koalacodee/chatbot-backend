@@ -49,10 +49,10 @@ export class RecordSupportTicketInteractionUseCase {
       throw new NotFoundException('Support ticket not found');
     }
 
-    // Validate guest ownership - ensure the guest owns this support ticket
-    if (supportTicket.guestId.toString() !== input.guestId) {
-      throw new ForbiddenException('Guest does not own this support ticket');
-    }
+    // // Validate guest ownership - ensure the guest owns this support ticket
+    // if (supportTicket.guestId.toString() !== input.guestId) {
+    //   throw new ForbiddenException('Guest does not own this support ticket');
+    // }
 
     // Check if an interaction already exists for this support ticket
     const existingInteraction =

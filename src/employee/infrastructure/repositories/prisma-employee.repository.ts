@@ -315,14 +315,16 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
 
   async findBySupervisorIds(
     supervisorIds: string[],
-    permissions: EmployeePermissionsEnum[],
+    permissions?: EmployeePermissionsEnum[],
   ): Promise<Employee[]> {
     const items = await this.prisma.employee.findMany({
       where: {
         supervisorId: { in: supervisorIds },
-        permissions: {
-          hasEvery: permissions,
-        },
+        permissions: permissions
+          ? {
+              hasEvery: permissions,
+            }
+          : undefined,
       },
       include: {
         subDepartments: {

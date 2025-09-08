@@ -11,7 +11,6 @@ import { NotificationRepository } from 'src/notification/domain/repositories/not
 import { Notification } from 'src/notification/domain/entities/notification.entity';
 
 interface CreateSupportTicketInputDto {
-  guestId: string;
   subject: string;
   description: string;
   departmentId: string;
@@ -26,7 +25,6 @@ export class CreateSupportTicketUseCase {
   constructor(
     private readonly supportTicketRepo: SupportTicketRepository,
     private readonly departmentRepo: DepartmentRepository,
-    private readonly guestRepo: GuestRepository,
     private readonly fileService: FilesService,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
@@ -37,12 +35,10 @@ export class CreateSupportTicketUseCase {
     dto: CreateSupportTicketInputDto,
   ): Promise<{ ticket: SupportTicket; uploadKey?: string }> {
     // Validate foreign keys
-    const [guest, department] = await Promise.all([
-      this.guestRepo.findById(dto.guestId),
+    const [department] = await Promise.all([
       this.departmentRepo.findById(dto.departmentId),
     ]);
 
-    if (!guest) throw new NotFoundException({ guestId: 'guest_not_found' });
     if (!department)
       throw new NotFoundException({ departmentId: 'department_not_found' });
 

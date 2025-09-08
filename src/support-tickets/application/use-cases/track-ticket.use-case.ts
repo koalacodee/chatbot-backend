@@ -14,8 +14,8 @@ export class TrackTicketUseCase {
   async execute(dto: TrackTicketInputDto): Promise<SupportTicket> {
     const ticket = await this.supportTicketRepo.findByCode(dto.code);
     if (!ticket) throw new NotFoundException({ code: 'ticket_not_found' });
-    if (ticket.guestId.toString() !== dto.guestId)
-      throw new NotFoundException({ guestId: 'ticket_not_owned' });
+    // if (ticket.guestId.toString() !== dto.guestId)
+    //   throw new NotFoundException({ guestId: 'ticket_not_owned' });
     return ticket;
   }
 }

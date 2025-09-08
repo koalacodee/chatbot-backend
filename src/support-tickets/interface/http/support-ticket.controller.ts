@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   CreateSupportTicketUseCase,
@@ -44,6 +45,7 @@ import {
   SupervisorPermissions,
 } from 'src/rbac/decorators';
 import { EmployeePermissionsEnum as EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
+import { GuestIdInterceptor } from 'src/shared/interceptors/guest-id.interceptor';
 
 interface UpdateSupportTicketDto {
   id: string;
@@ -108,27 +110,25 @@ export class SupportTicketController {
     });
   }
 
-  @GuestAuth()
+  @UseInterceptors(GuestIdInterceptor)
   @Get('my-tickets')
   async getGuestTicketsWithDetails(
     @Query() query: GetGuestTicketsWithDetailsDto,
-    @Req() req: any,
   ) {
     return this.getGuestTicketsWithDetailsUseCase.execute({
-      guestId: req.user.id,
+      phone: query.phone,
       offset: query.offset,
       limit: query.limit,
     });
   }
 
-  @GuestAuth()
+  @UseInterceptors(GuestIdInterceptor)
   @Post()
   async create(
     @Body() dto: CreateSupportTicketDto,
     @Req() req: any,
   ): Promise<{ ticket: SupportTicket; uploadKey?: string }> {
     return this.createUseCase.execute({
-      guestId: req.user?.id,
       subject: dto.subject,
       description: dto.description,
       departmentId: dto.departmentId,
@@ -138,7 +138,7 @@ export class SupportTicketController {
     });
   }
 
-  @GuestAuth()
+  @UseInterceptors(GuestIdInterceptor)
   @Get('track/:code')
   async track(
     @Param() params: TrackTicketDto,

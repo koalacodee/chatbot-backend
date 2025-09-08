@@ -34,7 +34,6 @@ export class PrismaGuestRepository extends GuestRepository {
       create: data,
       include: {
         conversations: true,
-        supportTickets: true,
       },
     });
 
@@ -46,7 +45,6 @@ export class PrismaGuestRepository extends GuestRepository {
       where: { id },
       include: {
         conversations: true,
-        supportTickets: true,
       },
     });
     return row ? this.toDomain(row) : null;
@@ -57,7 +55,6 @@ export class PrismaGuestRepository extends GuestRepository {
       where: { email },
       include: {
         conversations: true,
-        supportTickets: true,
       },
     });
     return row ? this.toDomain(row) : null;
@@ -68,7 +65,6 @@ export class PrismaGuestRepository extends GuestRepository {
       where: { phone },
       include: {
         conversations: true,
-        supportTickets: true,
       },
     });
     return row ? this.toDomain(row) : null;
@@ -81,7 +77,6 @@ export class PrismaGuestRepository extends GuestRepository {
       orderBy: { createdAt: 'desc' },
       include: {
         conversations: true,
-        supportTickets: true,
       },
     });
     return rows.map((r) => this.toDomain(r));

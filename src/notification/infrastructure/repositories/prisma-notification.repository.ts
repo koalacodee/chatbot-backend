@@ -82,21 +82,36 @@ export class PrismaNotificationRepository extends NotificationRepository {
     });
 
     if (notification.recipients.length > 0) {
-      await this.prisma.$transaction(
-        notification.recipients.map((recipient) => {
-          const data = {
-            id: recipient.id.toString(),
-            notificationId: notification.id,
-            userId: recipient.userId,
-            seen: recipient.seen,
-          };
-          return this.prisma.recipientNotification.upsert({
-            where: { id: recipient.id.toString() },
-            create: data,
-            update: data,
-          });
-        }),
+      // Validate that all recipient user IDs exist
+      const userIds = notification.recipients.map(r => r.userId);
+      const existingUsers = await this.prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true }
+      });
+      const existingUserIds = new Set(existingUsers.map(u => u.id));
+      
+      // Filter out non-existent users
+      const validRecipients = notification.recipients.filter(recipient => 
+        existingUserIds.has(recipient.userId)
       );
+      
+      if (validRecipients.length > 0) {
+        await this.prisma.$transaction(
+          validRecipients.map((recipient) => {
+            const data = {
+              id: recipient.id.toString(),
+              notificationId: notification.id,
+              userId: recipient.userId,
+              seen: recipient.seen,
+            };
+            return this.prisma.recipientNotification.upsert({
+              where: { id: recipient.id.toString() },
+              create: data,
+              update: data,
+            });
+          }),
+        );
+      }
     }
 
     return this.toDomain(createdNotification);

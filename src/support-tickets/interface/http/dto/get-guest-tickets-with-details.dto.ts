@@ -1,7 +1,11 @@
-import { IsOptional, IsPositive } from 'class-validator';
+import { IsOptional, IsPositive, IsString, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GetGuestTicketsWithDetailsDto {
+  @IsNotEmpty()
+  @IsString()
+  phone: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsPositive()

@@ -187,7 +187,7 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
       : Prisma.sql`TRUE`;
 
     const supervisorFilter = supervisor
-      ? Prisma.sql`u.id IN (SELECT user_id FROM employees WHERE supervisor_id = ${supervisor.id})`
+      ? Prisma.sql`u.id IN (SELECT user_id FROM employees WHERE supervisor_id = ${supervisor.id}::uuid)`
       : Prisma.sql`TRUE`;
 
     const cursorFilter = options.cursor
@@ -307,7 +307,7 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
                 LOWER(u.role::text) AS role
             FROM users u
             JOIN employees e ON e.user_id = u.id
-            WHERE e.supervisor_id = ${supervisor.id}
+            WHERE e.supervisor_id = ${supervisor.id}::uuid
         ),
         ticket_rows AS (
             SELECT
@@ -329,7 +329,7 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
             LEFT JOIN supervisors sup ON sup.id = sta.answerer_supervisor_id
             LEFT JOIN admins      adm ON adm.id  = sta.answerer_admin_id
             WHERE sti.type IS NOT NULL
-              AND ((d.parent_id IS NULL AND d.id IN (${Prisma.join(deptIds)})) OR (d.parent_id IS NOT NULL AND d.parent_id IN (${Prisma.join(deptIds)})))
+              AND ((d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds.map(id => id))})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds.map(id => id))})))
         )
         SELECT
             COALESCE((SELECT json_agg(u.*) FROM user_rows  u), '[]') AS users,
@@ -417,7 +417,7 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
             d.name          AS category_name
           FROM questions q
           JOIN departments d ON d.id = q.department_id
-          WHERE (d.parent_id IS NULL AND d.id IN (${Prisma.join(deptIds)})) OR (d.parent_id IS NOT NULL AND d.parent_id IN (${Prisma.join(deptIds)}))
+          WHERE (d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds)})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds)}))
         ),
 
         /* ---------- 2. Ticket counts by status ---------- */
@@ -427,7 +427,7 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
             (COUNT(*) FILTER (WHERE st.status = 'answered'))::int AS answered_pending_closure
           FROM support_tickets st
           JOIN departments d ON d.id = st.department_id
-          WHERE (d.parent_id IS NULL AND d.id IN (${Prisma.join(deptIds)})) OR (d.parent_id IS NOT NULL AND d.parent_id IN (${Prisma.join(deptIds)}))
+          WHERE (d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds)})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds)}))
         ),
 
         /* ---------- 3. Top 5 FAQs ---------- */
@@ -445,7 +445,7 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
             COALESCE(SUM(q.views)::int, 0) AS total_views
           FROM departments d
           LEFT JOIN questions q ON q.department_id = d.id
-          WHERE (d.parent_id IS NULL AND d.id IN (${Prisma.join(deptIds)})) OR (d.parent_id IS NOT NULL AND d.parent_id IN (${Prisma.join(deptIds)}))
+          WHERE (d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds)})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds)}))
           GROUP BY d.id, d.name
           ORDER BY total_views DESC
         ),
@@ -463,7 +463,7 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
             COUNT(*)::int         AS asked_times
           FROM support_tickets st
           JOIN departments d ON d.id = st.department_id
-          WHERE ((d.parent_id IS NULL AND d.id IN (${Prisma.join(deptIds)})) OR (d.parent_id IS NOT NULL AND d.parent_id IN (${Prisma.join(deptIds)})))
+          WHERE ((d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds.map(id => id))})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds.map(id => id))})))
             AND LOWER(TRIM(st.subject)) NOT IN (SELECT q_low FROM faq_questions)
           GROUP BY st.subject, st.department_id, d.name
           HAVING COUNT(*) > 1

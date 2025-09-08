@@ -144,7 +144,7 @@ export class SupportTicket {
     this._interaction = value;
   }
 
-  toJSON(): Record<string, unknown> {
+  toJSON(): Record<string, any> {
     return {
       id: this._id.toString(),
       subject: this._subject,

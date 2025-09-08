@@ -70,7 +70,6 @@ export abstract class QuestionRepository {
     departmentIds?: string[];
   }): Promise<any[]>;
   abstract viewFaqs(options?: {
-    guestId: string;
     limit?: number;
     page?: number;
     departmentId?: string;

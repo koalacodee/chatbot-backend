@@ -40,7 +40,6 @@ export class GetSharedDepartmentFAQsUseCase {
 
     return this.questionsRepository.viewFaqs({
       departmentId: subDepartmentId ?? departmentId,
-      guestId,
       viewPrivate: true,
     });
   }
