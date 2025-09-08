@@ -60,7 +60,7 @@ export class EmployeeRequestController {
   }
 
   @Patch(':id/approve')
-  @SupervisorPermissions(SupervisorPermissionsEnum.APPROVE_STAFF_REQUESTS)
+  @AdminAuth()
   async approve(@Param('id') id: string, @Req() req: any) {
     return await this.approveEmployeeRequestUseCase.execute({
       employeeRequestId: id,
@@ -69,7 +69,7 @@ export class EmployeeRequestController {
   }
 
   @Patch(':id/reject')
-  @SupervisorPermissions(SupervisorPermissionsEnum.APPROVE_STAFF_REQUESTS)
+  @AdminAuth()
   async reject(
     @Param('id') id: string,
     @Body() rejectEmployeeRequestDto: RejectEmployeeRequestDto,

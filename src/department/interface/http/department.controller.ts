@@ -24,7 +24,6 @@ import {
   DeleteMainDepartmentUseCase,
   DeleteSubDepartmentUseCase,
 } from '../../application/use-cases';
-import { GetSharedDepartmentDataUseCase } from '../../application/use-cases/get-shared-department-data.use-case';
 import { GetSharedDepartmentSubDepartmentsUseCase } from '../../application/use-cases/get-shared-department-sub-departments.use-case';
 import { GetSharedDepartmentFaqsUseCase } from '../../application/use-cases/get-shared-department-faqs.use-case';
 import { GetSharedSubDepartmentFaqsUseCase } from '../../application/use-cases/get-shared-sub-department-faqs.use-case';
@@ -46,6 +45,7 @@ import { CreateSubDepartmentDto } from './dto/create-sub-department.dto';
 import { GetAllSubDepartmentsDto } from './dto/get-all-sub-departments.dto';
 import { PaginateDto } from './dto/paginate.dto';
 import { GetSharedDepartmentDataDto } from './dto/get-shared-department-data.dto';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 
 @Controller('department')
 export class DepartmentController {
@@ -65,7 +65,6 @@ export class DepartmentController {
     private readonly viewMainDepartmentsUseCase: ViewMainDepartmentsUseCase,
     private readonly viewSubDepartmentsUseCase: ViewSubDepartmentsUseCase,
     private readonly generateShareKeyUseCase: GenerateShareKeyUseCase,
-    private readonly getSharedDepartmentDataUseCase: GetSharedDepartmentDataUseCase,
     private readonly getSharedDepartmentSubDepartmentsUseCase: GetSharedDepartmentSubDepartmentsUseCase,
     private readonly getSharedDepartmentFaqsUseCase: GetSharedDepartmentFaqsUseCase,
     private readonly getSharedSubDepartmentFaqsUseCase: GetSharedSubDepartmentFaqsUseCase,
@@ -104,7 +103,7 @@ export class DepartmentController {
     });
   }
 
-  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_DEPARTMENTS)
+  @AdminAuth()
   @Post()
   async create(@Body() input: CreateDepartmentInputDto): Promise<Department> {
     return this.createDepartmentUseCase.execute(input);
@@ -118,7 +117,7 @@ export class DepartmentController {
     return this.createSubDepartmentUseCase.execute(input);
   }
 
-  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_DEPARTMENTS)
+  @AdminAuth()
   @Put('main/:id')
   async updateMainDepartment(
     @Body() input: UpdateDepartmentInputDto,
@@ -170,7 +169,7 @@ export class DepartmentController {
     return this.getAllDepartmentsUseCase.execute(req.user.id);
   }
 
-  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_DEPARTMENTS)
+  @AdminAuth()
   @Delete('main/:id')
   async deleteMainDepartment(
     @Param('id') id: string,
@@ -210,7 +209,7 @@ export class DepartmentController {
     return this.countDepartmentsUseCase.execute();
   }
 
-  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_DEPARTMENTS)
+  @AdminAuth()
   @Get('can-delete/main/:id')
   async canDeleteMainDepartment(@Param('id') id: string, @Req() req: any) {
     return this.canDeleteUseCase.execute({ id, userId: req.user.id });

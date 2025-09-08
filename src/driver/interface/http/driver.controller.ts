@@ -23,6 +23,7 @@ import { AddDriverBySupervisorUseCase } from '../../application/use-cases/add-dr
 import { AddDriverBySupervisorDto } from './dto/add-driver-by-supervisor.dto';
 import { SupervisorPermissions } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 
 @Controller('drivers')
 export class DriverController {
@@ -36,7 +37,7 @@ export class DriverController {
     private readonly addDriverBySupervisorUseCase: AddDriverBySupervisorUseCase,
   ) {}
 
-  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_DRIVERS)
+  @AdminAuth()
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createDriver(@Body() createDriverDto: CreateDriverDto): Promise<any> {
@@ -44,7 +45,7 @@ export class DriverController {
     return driver.toJSON();
   }
 
-  @SupervisorPermissions()
+  @AdminAuth()
   @Get()
   @HttpCode(HttpStatus.OK)
   async getAllDrivers(): Promise<any> {
@@ -74,7 +75,7 @@ export class DriverController {
     return driver.toJSON();
   }
 
-  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_DRIVERS)
+  @AdminAuth()
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   async updateDriver(
@@ -91,7 +92,7 @@ export class DriverController {
     return driver.toJSON();
   }
 
-  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_DRIVERS)
+  @AdminAuth()
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async deleteDriver(@Param('id') id: string) {
