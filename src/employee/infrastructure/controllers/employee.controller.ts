@@ -15,11 +15,13 @@ import { UpdateEmployeeUseCase } from '../../application/use-cases/update-employ
 import { DeleteEmployeeUseCase } from '../../application/use-cases/delete-employee.use-case';
 import { GetEmployeeByUserIdUseCase } from '../../application/use-cases/get-employee-by-user-id.use-case';
 import { CreateEmployeeDto } from '../dtos/create-employee.dto';
+import { CreateEmployeeDirectDto } from '../dtos/create-employee-direct.dto';
 import { UpdateEmployeeDto } from '../dtos/update-employee.dto';
+import { GetEmployeesByPermissionsDto } from '../dtos/get-employees-by-permissions.dto';
+import { CreateEmployeeDirectUseCase } from 'src/employee/application/use-cases/create-employee-direct.use-case';
 import { GetEmployeesBySubDepartmentUseCase } from 'src/employee/application/use-cases/get-employees-by-sub-department.use-case';
 import { CanDeleteEmployeeUseCase } from 'src/employee/application/use-cases/can-delete-employee.use-case';
 import { GetEmployeesByPermissionsUseCase } from 'src/employee/application/use-cases/get-employees-by-permissions.use-case';
-import { GetEmployeesByPermissionsDto } from '../dtos/get-employees-by-permissions.dto';
 import { SupervisorPermissions } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 
@@ -27,6 +29,7 @@ import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/superv
 export class EmployeeController {
   constructor(
     private readonly createEmployeeUseCase: CreateEmployeeUseCase,
+    private readonly createEmployeeDirectUseCase: CreateEmployeeDirectUseCase,
     private readonly getEmployeeUseCase: GetEmployeeUseCase,
     private readonly getAllEmployeesUseCase: GetAllEmployeesUseCase,
     private readonly getEmployeesBySubDepartmentUseCase: GetEmployeesBySubDepartmentUseCase,
@@ -50,6 +53,37 @@ export class EmployeeController {
     return {
       id: employee.id,
       userId: employee.userId,
+      permissions: employee.permissions,
+      supervisorId: employee.supervisorId,
+      subDepartmentIds: employee.subDepartments.map((dept) => dept.id),
+    };
+  }
+
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_STAFF_DIRECTLY)
+  @Post('direct')
+  async createDirect(@Body() createEmployeeDto: CreateEmployeeDirectDto, @Req() req: any) {
+    const { employee, user } = await this.createEmployeeDirectUseCase.execute({
+      email: createEmployeeDto.email,
+      fullName: createEmployeeDto.fullName,
+      username: createEmployeeDto.username,
+      jobTitle: createEmployeeDto.jobTitle,
+      employeeId: createEmployeeDto.employeeId,
+      password: createEmployeeDto.password,
+      designation: createEmployeeDto.designation,
+      permissions: createEmployeeDto.permissions,
+      supervisorId: createEmployeeDto.supervisorId,
+      subDepartmentIds: createEmployeeDto.subDepartmentIds,
+    }, req.user.id);
+
+    return {
+      id: employee.id,
+      userId: employee.userId,
+      email: user.email,
+      username: user.username,
+      fullName: user.name,
+      jobTitle: user.jobTitle,
+      employeeId: user.employeeId,
+      designation: createEmployeeDto.designation,
       permissions: employee.permissions,
       supervisorId: employee.supervisorId,
       subDepartmentIds: employee.subDepartments.map((dept) => dept.id),
