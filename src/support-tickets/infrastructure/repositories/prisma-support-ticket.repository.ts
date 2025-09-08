@@ -23,7 +23,6 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
   private async toDomain(rec: any): Promise<SupportTicket> {
     return SupportTicket.fromPersistence({
       id: rec.id,
-      guestId: rec.guestId,
       subject: rec.subject,
       description: rec.description,
       departmentId: rec.departmentId,
@@ -37,20 +36,21 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
           })
         : undefined,
       status: SupportTicketStatus[rec.status],
-      guest: rec.guest ? await Guest.create(rec.guest) : undefined,
       createdAt: rec.createdAt,
       updatedAt: rec.updatedAt,
       code: rec.code,
       interaction: rec.interaction
         ? SupportTicketInteraction.create(rec.interaction)
         : undefined,
+      guestName: rec.guestName,
+      guestPhone: rec.guestPhone,
+      guestEmail: rec.guestEmail,
     });
   }
 
   async save(ticket: SupportTicket): Promise<SupportTicket> {
     const data = {
       id: ticket.id.toString(),
-      guestId: ticket.guestId.toString(),
       subject: ticket.subject,
       description: ticket.description,
       departmentId: ticket.departmentId.toString(),
@@ -59,23 +59,27 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       createdAt: ticket.createdAt,
       updatedAt: ticket.updatedAt,
       code: ticket.code.toString(),
+      guestName: ticket.toJSON().guestName,
+      guestPhone: ticket.toJSON().guestPhone,
+      guestEmail: ticket.toJSON().guestEmail,
     };
 
     const upsert = await this.prisma.supportTicket.upsert({
       where: { id: data.id },
       update: {
-        guestId: data.guestId,
         subject: data.subject,
         description: data.description,
         departmentId: data.departmentId,
         assigneeId: data.assigneeId?.toString(),
         status: PrismaSupportTicketStatus[data.status],
         updatedAt: new Date(),
+        guestName: data.guestName,
+        guestPhone: data.guestPhone,
+        guestEmail: data.guestEmail,
       },
       create: data,
       include: {
         assignee: { include: { user: true } },
-        guest: true,
         department: true,
         interaction: true,
       },
@@ -89,7 +93,6 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       where: { id },
       include: {
         assignee: { include: { user: true } },
-        guest: true,
         department: true,
         interaction: true,
       },
@@ -109,7 +112,6 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       orderBy: { createdAt: 'desc' },
       include: {
         assignee: { include: { user: true } },
-        guest: true,
         department: true,
         interaction: true,
       },
@@ -141,20 +143,6 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
     return this.prisma.supportTicket.count({ where: { status: 'ANSWERED' } });
   }
 
-  async findByGuestId(guestId: string): Promise<SupportTicket[]> {
-    const rows = await this.prisma.supportTicket.findMany({
-      where: { guestId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        assignee: { include: { user: true } },
-        guest: true,
-        department: true,
-        interaction: true,
-      },
-    });
-    return Promise.all(rows.map((r) => this.toDomain(r)));
-  }
-
   async findByDepartment(
     departmentId: string,
     status?: 'NEW' | 'SEEN' | 'ANSWERED' | 'CLOSED',
@@ -164,7 +152,7 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       orderBy: { createdAt: 'desc' },
       include: {
         assignee: { include: { user: true } },
-        guest: true,
+
         department: true,
         interaction: true,
       },
@@ -179,10 +167,9 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
           { id: query },
           { subject: { contains: query, mode: 'insensitive' } },
           { description: { contains: query, mode: 'insensitive' } },
-          { guestId: query },
           { assigneeId: query },
-          { guest: { name: { contains: query, mode: 'insensitive' } } },
-          { guest: { phone: { contains: query, mode: 'insensitive' } } },
+          { guestName: { contains: query, mode: 'insensitive' } },
+          { guestPhone: { contains: query, mode: 'insensitive' } },
           {
             assignee: {
               user: { name: { contains: query, mode: 'insensitive' } },
@@ -194,7 +181,6 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       orderBy: { createdAt: 'desc' },
       include: {
         assignee: { include: { user: true } },
-        guest: true,
         department: true,
         interaction: true,
       },
@@ -239,7 +225,6 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       where: { code },
       include: {
         assignee: { include: { user: true } },
-        guest: true,
         department: true,
         interaction: true,
       },

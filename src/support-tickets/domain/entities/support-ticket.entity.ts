@@ -15,8 +15,6 @@ export enum SupportTicketStatus {
 
 export class SupportTicket {
   private _id: UUID;
-  private _guestId: UUID;
-  private _guest?: Guest;
   private _subject: string;
   private _description: string;
   private _departmentId: UUID;
@@ -28,11 +26,12 @@ export class SupportTicket {
   private _updatedAt: Date;
   private _code: TicketCode;
   private _interaction?: SupportTicketInteraction;
+  private _guestName?: string;
+  private _guestPhone?: string;
+  private _guestEmail?: string;
 
   private constructor(options: SupportTicketOptions) {
     this._id = UUID.create(options.id);
-    this._guestId = UUID.create(options.guestId);
-    this._guest = options.guest;
     this._subject = options.subject;
     this._description = options.description;
     this._departmentId = UUID.create(options.departmentId);
@@ -44,6 +43,9 @@ export class SupportTicket {
     this._updatedAt = options.updatedAt;
     this._code = options.code ?? TicketCode.create();
     this._interaction = options.interaction;
+    this._guestName = options.guestName;
+    this._guestPhone = options.guestPhone;
+    this._guestEmail = options.guestEmail;
   }
 
   get id(): UUID {
@@ -52,14 +54,6 @@ export class SupportTicket {
 
   set id(value: UUID) {
     this._id = value;
-  }
-
-  get guestId(): UUID {
-    return this._guestId;
-  }
-
-  set guestId(value: UUID) {
-    this._guestId = value;
   }
 
   get subject(): string {
@@ -153,8 +147,6 @@ export class SupportTicket {
   toJSON(): Record<string, unknown> {
     return {
       id: this._id.toString(),
-      guestId: this._guestId.toString(),
-      guest: this._guest?.withoutPassword(),
       subject: this._subject,
       description: this._description,
       departmentId: this._departmentId.toString(),
@@ -166,6 +158,9 @@ export class SupportTicket {
       updatedAt: this._updatedAt.toISOString(),
       code: this._code.toString(),
       interaction: this._interaction?.toJSON(),
+      guestName: this._guestName,
+      guestPhone: this._guestPhone,
+      guestEmail: this._guestEmail,
     };
   }
 
@@ -176,9 +171,7 @@ export class SupportTicket {
   static fromPersistence(data: SupportTicketPersistence): SupportTicket {
     return new SupportTicket({
       id: data.id,
-      guestId: data.guestId,
       subject: data.subject,
-      guest: data.guest,
       description: data.description,
       departmentId: data.departmentId,
       department: data.department,
@@ -189,15 +182,16 @@ export class SupportTicket {
       updatedAt: data.updatedAt,
       code: TicketCode.create(data.code),
       interaction: data.interaction,
+      guestName: data.guestName,
+      guestPhone: data.guestPhone,
+      guestEmail: data.guestEmail,
     });
   }
 
   static toPersistence(supportTicket: SupportTicket): SupportTicketPersistence {
     return {
       id: supportTicket.id.toString(),
-      guestId: supportTicket.guestId.toString(),
       subject: supportTicket.subject,
-      guest: supportTicket._guest,
       description: supportTicket.description,
       departmentId: supportTicket.departmentId.toString(),
       department: supportTicket._department,
@@ -208,14 +202,15 @@ export class SupportTicket {
       updatedAt: supportTicket.updatedAt,
       code: supportTicket._code.toString(),
       interaction: supportTicket.interaction,
+      guestName: supportTicket._guestName,
+      guestPhone: supportTicket._guestPhone,
+      guestEmail: supportTicket._guestEmail,
     };
   }
 }
 
 export interface SupportTicketOptions {
   id?: string;
-  guestId: string;
-  guest?: Guest;
   subject: string;
   description: string;
   departmentId: string;
@@ -227,12 +222,13 @@ export interface SupportTicketOptions {
   updatedAt: Date;
   code?: TicketCode;
   interaction?: SupportTicketInteraction;
+  guestName?: string;
+  guestPhone?: string;
+  guestEmail?: string;
 }
 
 export interface SupportTicketPersistence {
   id: string;
-  guestId: string;
-  guest?: Guest;
   subject: string;
   description: string;
   departmentId: string;
@@ -244,4 +240,7 @@ export interface SupportTicketPersistence {
   updatedAt: Date;
   code: string;
   interaction?: SupportTicketInteraction;
+  guestName?: string;
+  guestPhone?: string;
+  guestEmail?: string;
 }

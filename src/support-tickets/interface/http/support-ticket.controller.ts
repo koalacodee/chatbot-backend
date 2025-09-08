@@ -132,6 +132,9 @@ export class SupportTicketController {
       subject: dto.subject,
       description: dto.description,
       departmentId: dto.departmentId,
+      guestName: dto.guestName,
+      guestPhone: dto.guestPhone,
+      guestEmail: dto.guestEmail,
     });
   }
 

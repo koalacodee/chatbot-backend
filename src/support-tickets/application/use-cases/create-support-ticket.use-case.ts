@@ -16,6 +16,9 @@ interface CreateSupportTicketInputDto {
   description: string;
   departmentId: string;
   attach?: boolean;
+  guestName?: string;
+  guestPhone?: string;
+  guestEmail?: string;
 }
 
 @Injectable()
@@ -45,13 +48,15 @@ export class CreateSupportTicketUseCase {
 
     const now = new Date();
     const ticket = SupportTicket.create({
-      guestId: dto.guestId,
       subject: dto.subject,
       description: dto.description,
       departmentId: dto.departmentId,
       status: 'NEW' as any,
       createdAt: now,
       updatedAt: now,
+      guestName: dto.guestName,
+      guestPhone: dto.guestPhone,
+      guestEmail: dto.guestEmail,
     });
 
     const [uploadKey] = await Promise.all([
