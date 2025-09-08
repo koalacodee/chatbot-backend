@@ -26,19 +26,24 @@ export class ActivityLogController {
   @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_USER_ACTIVITY)
   @Get('feed')
   async getActivityFeed(
+    @Req() req: any,
     @Query('userId') userId?: string,
     @Query('limit') limit?: string,
   ) {
     return this.aggregateActivityFeedUseCase.execute({
       userId,
       limit: limit ? parseInt(limit, 10) : undefined,
+      supervisorId: req.user.role !== 'ADMIN' ? req.user.id : undefined,
     });
   }
 
   @SupervisorPermissions()
   @Get('performance')
-  async getAgentPerformance(@Query('userId') userId: string) {
-    return this.calculateAgentPerformanceUseCase.execute({ userId });
+  async getAgentPerformance(@Req() req: any, @Query('userId') userId: string) {
+    return this.calculateAgentPerformanceUseCase.execute({
+      userId,
+      supervisorId: req.user.role !== 'ADMIN' ? req.user.id : undefined,
+    });
   }
 
   @EmployeePermissions()
@@ -53,9 +58,11 @@ export class ActivityLogController {
     return this.searchUsersUseCase.execute({ searchQuery });
   }
 
-  @AdminAuth()
+  @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_ANALYTICS)
   @Get('analytics-overview')
-  async getAnalyticsOverview() {
-    return this.getAnalyticsOverviewUseCase.execute();
+  async getAnalyticsOverview(@Req() req: any) {
+    return this.getAnalyticsOverviewUseCase.execute({
+      supervisorId: req.user.role !== 'ADMIN' ? req.user.id : undefined,
+    });
   }
 }

@@ -33,6 +33,7 @@ export interface UserPerformanceArgs {
   cursor?: string; // base64-encoded rowNumber
   direction?: 'forward' | 'backward';
   userId?: string; // optional filter
+  supervisorId?: string; // optional filter
 }
 
 export interface UserPerformanceRow {
@@ -136,9 +137,12 @@ export abstract class ActivityLogRepository {
     userId?: string;
     limit?: number;
     cursor?: string;
+    supervisorId?: string;
   }): Promise<AllGroupedActivities>;
   abstract getAgentPerformance(
     options: UserPerformanceArgs,
   ): Promise<QueryOutput>;
-  abstract getAnalyticsOverview(): Promise<DashboardAggregatedResult>;
+  abstract getAnalyticsOverview(
+    supervisorId?: string,
+  ): Promise<DashboardAggregatedResult>;
 }

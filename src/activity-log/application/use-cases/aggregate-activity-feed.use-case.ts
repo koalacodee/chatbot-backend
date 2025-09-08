@@ -5,6 +5,7 @@ export interface AggregateActivityFeedInputDto {
   userId?: string;
   limit?: number; // total items after merge
   page?: number;
+  supervisorId?: string;
 }
 
 @Injectable()
