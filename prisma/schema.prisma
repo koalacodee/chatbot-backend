@@ -117,17 +117,12 @@ model EmployeeSubDepartment {
 }
 
 enum AdminPermissions {
-  VIEW_ALL_DASHBOARD     @map("view_all_dashboard")
+  VIEW_ANALYTICS @map("view_analytics")
   MANAGE_SUB_DEPARTMENTS @map("manage_sub_departments")
-  MANAGE_DEPARTMENTS     @map("manage_departments")
-  MANAGE_PROMOTIONS      @map("manage_promotions")
-  APPROVE_STAFF_REQUESTS @map("approve_staff_requests")
-  MANAGE_SITE_CONFIG     @map("manage_site_config")
-  MANAGE_SUPERVISORS     @map("manage_supervisors")
-  VIEW_USER_ACTIVITY     @map("view_user_activity")
-  MANAGE_STAFF_DIRECTLY  @map("manage_staff_directly")
-  MANAGE_TASKS           @map("manage_tasks")
-  MANAGE_DRIVERS         @map("manage_drivers")
+  MANAGE_PROMOTIONS @map("manage_promotions")
+  VIEW_USER_ACTIVITY @map("view_user_activity")
+  MANAGE_STAFF_DIRECTLY @map("manage_staff_directly")
+  MANAGE_TASKS @map("manage_tasks")
 }
 
 enum EmployeePermissions {
