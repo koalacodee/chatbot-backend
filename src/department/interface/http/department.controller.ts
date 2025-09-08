@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   CreateDepartmentUseCase,
@@ -46,6 +47,7 @@ import { GetAllSubDepartmentsDto } from './dto/get-all-sub-departments.dto';
 import { PaginateDto } from './dto/paginate.dto';
 import { GetSharedDepartmentDataDto } from './dto/get-shared-department-data.dto';
 import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
+import { GuestIdInterceptor } from 'src/shared/interceptors/guest-id.interceptor';
 
 @Controller('department')
 export class DepartmentController {
@@ -71,28 +73,44 @@ export class DepartmentController {
   ) {}
 
   @Get('view/main')
-  async viewMainDepartments(@Query() queryDto: PaginateDto) {
-    return this.viewMainDepartmentsUseCase.execute(queryDto);
+  @UseInterceptors(GuestIdInterceptor)
+  async viewMainDepartments(@Query() queryDto: PaginateDto, @Req() req: any) {
+    const userId = req.user?.id || req.guest?.id;
+    return this.viewMainDepartmentsUseCase.execute({
+      ...queryDto,
+      guestId: userId,
+    });
   }
 
   @Get('view/sub')
-  async viewSubDepartments(@Query() queryDto: GetAllSubDepartmentsDto) {
-    return this.viewSubDepartmentsUseCase.execute(queryDto);
+  @UseInterceptors(GuestIdInterceptor)
+  async viewSubDepartments(
+    @Query() queryDto: GetAllSubDepartmentsDto,
+    @Req() req: any,
+  ) {
+    const userId = req.user?.id || req.guest?.id;
+    return this.viewSubDepartmentsUseCase.execute({
+      ...queryDto,
+      guestId: userId,
+    });
   }
 
   @Get('shared/sub-departments')
+  @UseInterceptors(GuestIdInterceptor)
   async getSharedDepartmentSubDepartments(
     @Query() query: GetSharedDepartmentDataDto,
   ) {
-    return this.getSharedDepartmentSubDepartmentsUseCase.execute(query);
+    return this.getSharedDepartmentSubDepartmentsUseCase.execute({ ...query });
   }
 
   @Get('shared/faqs')
+  @UseInterceptors(GuestIdInterceptor)
   async getSharedDepartmentFaqs(@Query() query: GetSharedDepartmentDataDto) {
-    return this.getSharedDepartmentFaqsUseCase.execute(query);
+    return this.getSharedDepartmentFaqsUseCase.execute({ ...query });
   }
 
   @Get('shared/sub-department/:subId/faqs')
+  @UseInterceptors(GuestIdInterceptor)
   async getSharedSubDepartmentFaqs(
     @Query() query: GetSharedDepartmentDataDto,
     @Param('subId') subDepartmentId: string,

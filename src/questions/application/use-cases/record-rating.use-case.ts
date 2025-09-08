@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { QuestionRepository } from 'src/questions/domain/repositories/question.repository';
-import { GuestRepository } from 'src/guest/domain/repositories/guest.repository';
 
 interface RecordRatingInput {
   guestId: string;
@@ -12,16 +11,12 @@ interface RecordRatingInput {
 export class RecordRatingUseCase {
   constructor(
     private readonly questionRepo: QuestionRepository,
-    private readonly guestRepo: GuestRepository,
   ) {}
 
   async execute({ guestId, faqId, satisfactionType }: RecordRatingInput) {
-    const guest = await this.guestRepo.exists(guestId);
-
-    if (!guest) {
-      throw new Error('Guest not found');
-    }
-
+    // Accept both authenticated user IDs and guest IDs without validation
+    // The guestId can be either a real user ID or a generated guest ID from cookies
+    
     const faq = await this.questionRepo.exists(faqId);
 
     if (!faq) {

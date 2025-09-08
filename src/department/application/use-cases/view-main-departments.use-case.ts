@@ -9,7 +9,12 @@ export class ViewMainDepartmentsUseCase {
   async execute(options?: {
     limit?: number;
     page?: number;
+    guestId?: string;
   }): Promise<Department[]> {
-    return this.departmentRepository.viewMainDepartments(options);
+    // guestId is accepted for consistency but not used in this public viewing use case
+    return this.departmentRepository.viewMainDepartments({
+      limit: options?.limit,
+      page: options?.page,
+    });
   }
 }

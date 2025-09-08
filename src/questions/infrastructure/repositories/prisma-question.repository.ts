@@ -280,7 +280,7 @@ export class PrismaQuestionRepository extends QuestionRepository {
     // Handle undefined departmentIds by providing an empty array with proper type casting
     const deptIds = departmentIds || [];
     const isUnrestricted = !departmentIds || departmentIds.length === 0;
-    
+
     return this.prisma.$queryRaw<any[]>`
     WITH question_with_parent AS (
       SELECT

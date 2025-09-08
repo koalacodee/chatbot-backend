@@ -10,7 +10,13 @@ export class ViewSubDepartmentsUseCase {
     limit?: number;
     page?: number;
     departmentId?: string;
+    guestId?: string;
   }): Promise<Department[]> {
-    return this.departmentRepository.viewSubDepartments(options);
+    // guestId is accepted for consistency but not used in this public viewing use case
+    return this.departmentRepository.viewSubDepartments({
+      limit: options?.limit,
+      page: options?.page,
+      departmentId: options?.departmentId,
+    });
   }
 }

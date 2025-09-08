@@ -34,7 +34,6 @@ export class PrismaGuestRepository extends GuestRepository {
       create: data,
       include: {
         conversations: true,
-        interactions: true,
         supportTickets: true,
       },
     });
@@ -47,7 +46,6 @@ export class PrismaGuestRepository extends GuestRepository {
       where: { id },
       include: {
         conversations: true,
-        interactions: true,
         supportTickets: true,
       },
     });
@@ -59,7 +57,6 @@ export class PrismaGuestRepository extends GuestRepository {
       where: { email },
       include: {
         conversations: true,
-        interactions: true,
         supportTickets: true,
       },
     });
@@ -71,7 +68,6 @@ export class PrismaGuestRepository extends GuestRepository {
       where: { phone },
       include: {
         conversations: true,
-        interactions: true,
         supportTickets: true,
       },
     });
@@ -85,7 +81,6 @@ export class PrismaGuestRepository extends GuestRepository {
       orderBy: { createdAt: 'desc' },
       include: {
         conversations: true,
-        interactions: true,
         supportTickets: true,
       },
     });

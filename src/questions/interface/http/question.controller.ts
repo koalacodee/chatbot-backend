@@ -6,10 +6,10 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
   Req,
   Query,
   BadRequestException,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   CreateQuestionUseCase,
@@ -31,18 +31,13 @@ import {
   DeleteManyQuestionsInputDto,
 } from './dto';
 import { Question } from '../../domain/entities/question.entity';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { Roles } from 'src/shared/value-objects/role.vo';
 import { ViewFaqsDto } from './dto/view-faqs.dto';
 import { GetSharedDepartmentFaqsDto } from './dto/get-shared-department-faqs.dto';
 import { ViewFaqsUseCase } from 'src/questions/application/use-cases/view-faqs.use-case';
 import { GuestAuth } from 'src/auth/guest/infrastructure/decorators/guest-auth.decorator';
+import { GuestIdInterceptor } from 'src/shared/interceptors/guest-id.interceptor';
 import { RecordInteractionDto } from './dto/record-interaction.dto';
-import {
-  EmployeePermissions,
-  SupervisorPermissions,
-} from 'src/rbac/decorators';
-import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
+import { EmployeePermissions } from 'src/rbac/decorators';
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 
 @Controller('questions')
@@ -63,47 +58,53 @@ export class QuestionController {
   ) {}
 
   @Get('view')
+  @UseInterceptors(GuestIdInterceptor)
   @GuestAuth()
   async viewFaqs(@Query() query: ViewFaqsDto, @Req() req: any): Promise<any> {
-    return this.viewFaqsUseCase.execute({ ...query, guestId: req.user.id });
+    const userId = req.user?.id || req.guest?.id;
+    return this.viewFaqsUseCase.execute({ ...query, guestId: userId });
   }
 
   @Get('shared')
+  @UseInterceptors(GuestIdInterceptor)
   @GuestAuth()
   async getSharedDepartmentFaqs(
     @Query() query: GetSharedDepartmentFaqsDto,
     @Req() req: any,
   ): Promise<any> {
+    const userId = req.user?.id || req.guest?.id;
     return this.getSharedDepartmentFAQsUseCase.execute({
       key: query.key,
-      guestId: req.user.id,
+      guestId: userId,
       subDepartmentId: query.subDepartmentId,
     });
   }
 
   @GuestAuth()
+  @UseInterceptors(GuestIdInterceptor)
   @Post(':type/:faqId')
   async recordInteraction(
     @Param() params: RecordInteractionDto,
     @Req() req: any,
   ) {
     const { faqId } = params;
+    const userId = req.user?.id || req.guest?.id;
     const handlers: Record<string, () => Promise<any>> = {
       satisfaction: () =>
         this.recordRatingUseCase.execute({
-          guestId: req.user.id,
+          guestId: userId,
           faqId,
           satisfactionType: 'satisfied',
         }),
       dissatisfaction: () =>
         this.recordRatingUseCase.execute({
-          guestId: req.user.id,
+          guestId: userId,
           faqId,
           satisfactionType: 'dissatisfied',
         }),
       view: () =>
         this.recordViewUseCase.execute({
-          guestId: req.user.id,
+          guestId: userId,
           faqId,
         }),
     };

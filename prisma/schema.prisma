@@ -142,13 +142,11 @@ model Guest {
   email                     String                     @unique @map("email") @db.VarChar(255)
   phone                     String?                    @unique @map("phone") @db.VarChar(255)
   conversations             Conversation[]
-  interactions              QuestionInteraction[]
   supportTickets            SupportTicket[]
   tickets                   Ticket[]
   supportTicketInteractions SupportTicketInteraction[]
   createdAt                 DateTime                   @default(now()) @map("created_at")
   updatedAt                 DateTime                   @updatedAt @map("updated_at")
-  questionViews             QuestionView[]
 
   @@map("guests")
 }
@@ -236,7 +234,6 @@ model QuestionInteraction {
   questionId String   @map("question_id") @db.Uuid
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   guestId    String   @map("guest_id") @db.Uuid
-  guest      Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
 
   @@unique([questionId, guestId])
   @@index([questionId])
@@ -249,7 +246,6 @@ model QuestionView {
   questionId String   @map("question_id") @db.Uuid
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   guestId    String   @map("guest_id") @db.Uuid
-  guest      Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
