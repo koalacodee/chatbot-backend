@@ -1,13 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
-import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
-import { EmbeddingService } from 'src/shared/embedding/embedding-service.interface';
-import { Vector } from 'src/shared/value-objects/vector.vo';
-import { PointRepository } from 'src/shared/repositories/point.repository';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
-import { Point } from 'src/shared/entities/point.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { KnowledgeChunk } from 'src/knowledge-chunks/domain/entities/knowledge-chunk.entity';
 
 interface CreateKnowledgeChunkDto {
   content: string;
@@ -18,12 +14,10 @@ interface CreateKnowledgeChunkDto {
 @Injectable()
 export class CreateKnowledgeChunkUseCase {
   constructor(
-    private readonly chunkRepo: KnowledgeChunkRepository,
-    private readonly embeddingService: EmbeddingService,
-    private readonly pointRepo: PointRepository,
     private readonly departmentRepo: DepartmentRepository,
     private readonly accessControl: AccessControlService,
-    private readonly eventEmitter: EventEmitter2,
+    @InjectQueue('knowledge-chunks')
+    private readonly knowledgeChunksQueue: Queue,
   ) {}
 
   async execute(dto: CreateKnowledgeChunkDto): Promise<KnowledgeChunk> {
@@ -34,31 +28,13 @@ export class CreateKnowledgeChunkUseCase {
       throw new NotFoundException('Department not found');
     }
 
-    const vector = await this.embeddingService.embed(dto.content);
-    const vectorObj = Vector.create({
-      vector,
-      dim: vector.length as 2048,
-    });
-
-    // First create the point
-    const point = Point.create({
-      vector: vectorObj,
-    });
-    const savedPoint = await this.pointRepo.save(point);
-
-    // Then create the knowledge chunk with the point ID
-    const chunk = KnowledgeChunk.create({
+    // Add the processing job to the queue
+    await this.knowledgeChunksQueue.add('create', {
       content: dto.content,
-      pointId: savedPoint.id.value,
-      department,
+      departmentId: dto.departmentId,
+      userId: dto.userId,
     });
-    const savedChunk = await this.chunkRepo.save(chunk);
 
-    return this.chunkRepo.save(savedChunk).then((updatedChunk) => {
-      this.eventEmitter.emit('knowledgeChunk.created', {
-        knowledgeChunkId: updatedChunk.id.toString(),
-      });
-      return updatedChunk;
-    });
+    return KnowledgeChunk.create({ content: dto.content, department });
   }
 }
