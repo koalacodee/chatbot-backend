@@ -5,7 +5,8 @@ import { Guest } from 'src/guest/domain/entities/guest.entity';
 
 interface ConversationOptions {
   id?: UUID;
-  guest: Guest;
+  guest?: Guest;
+  anonymousId?: string;
   startedAt?: Date;
   endedAt?: Date;
   updatedAt?: Date;
@@ -15,7 +16,8 @@ interface ConversationOptions {
 
 export class Conversation {
   private readonly _id: UUID;
-  private _guest: Guest;
+  private _guest?: Guest;
+  private _anonymousId?: UUID;
   private _startedAt: Date;
   private _updatedAt: Date;
   private _endedAt?: Date;
@@ -29,6 +31,7 @@ export class Conversation {
     this._updatedAt = options.updatedAt || new Date();
     this._messages = options.messages ?? [];
     this._retrievedChunks = options.retrievedChunks ?? [];
+    this._anonymousId = UUID.create(options.anonymousId);
   }
 
   // Getters
@@ -60,9 +63,17 @@ export class Conversation {
     return this._updatedAt;
   }
 
+  get anonymousId(): UUID {
+    return this._anonymousId;
+  }
+
   // Setters
   set guest(value: Guest) {
     this._guest = value;
+  }
+
+  set anonymousId(anonymousId: string) {
+    this._anonymousId = UUID.create(anonymousId);
   }
 
   set endedAt(value: Date | undefined) {
@@ -100,6 +111,7 @@ export class Conversation {
     return {
       id: this._id.value,
       guestId: this._guest.id.value,
+      anonymousId: this.anonymousId,
       startedAt: this._startedAt.toISOString(),
       endedAt: this._endedAt?.toISOString(),
       messages: this._messages.map((msg) => msg.toJSON()),

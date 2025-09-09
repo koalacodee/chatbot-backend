@@ -17,7 +17,6 @@ import { Conversation } from 'src/chat/domain/entities/conversation.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomInt } from 'crypto';
 import { QuestionRepository } from 'src/questions/domain/repositories/question.repository';
-import { GuestRepository } from 'src/guest/domain/repositories/guest.repository';
 
 interface AskUseCaseInput {
   question: string;
@@ -38,7 +37,6 @@ export class AskUseCase {
     private readonly conversationRepo: ConversationRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly questionRepo: QuestionRepository,
-    private readonly guestRepo: GuestRepository,
     @InjectQueue('chat') private readonly queue: Queue,
   ) {}
 
@@ -235,7 +233,7 @@ export class AskUseCase {
         this.logger.warn(`Conversation not found: ${id}`);
         throw new NotFoundException('conversation_not_found');
       }
-      if (c.guest.id.value !== guestId) {
+      if (c.guest.id.value !== guestId && c.anonymousId.value !== guestId) {
         this.logger.warn(
           `Unauthorized user access attempt for conversation: ${id}`,
         );
@@ -248,7 +246,7 @@ export class AskUseCase {
     this.logger.log('Creating new conversation');
     return this.conversationRepo.save(
       Conversation.create({
-        guest: await this.guestRepo.findById(guestId),
+        anonymousId: guestId,
       }),
     );
   }

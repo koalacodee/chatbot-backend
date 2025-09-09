@@ -1,9 +1,17 @@
-import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseInterceptors,
+} from '@nestjs/common';
 import { AskUseCase } from 'src/chat/application/use-cases/ask.use-case';
 import { AskDto } from './dto/ask.dto';
 import { GetAllConversationsUseCase } from 'src/chat/application/use-cases/get-all-conversations.use-case';
 import { GetConversationUseCase } from 'src/chat/application/use-cases/get-conversation.use-case';
-import { GuestAuth } from 'src/auth/guest/infrastructure/decorators/guest-auth.decorator';
+import { GuestIdInterceptor } from 'src/shared/interceptors/guest-id.interceptor';
 
 @Controller('chat')
 export class AskController {
@@ -13,31 +21,31 @@ export class AskController {
     private readonly getConversationUseCase: GetConversationUseCase,
   ) {}
 
-  @GuestAuth()
+  @UseInterceptors(GuestIdInterceptor)
   @Post('ask')
   async ask(@Body() dto: AskDto, @Req() req: any) {
-    // req.user.id is assumed to be set by JwtAuthGuard
+    // req.guest.id is assumed to be set by JwtAuthGuard
     const answer = await this.askUseCase.execute({
       question: dto.question,
       conversationId: dto.conversationId,
-      guestId: req.user.id,
+      guestId: req.guest.id,
       faqId: dto.faqId,
     });
     return answer;
   }
 
   @Get('conversations')
-  @GuestAuth()
+  @UseInterceptors(GuestIdInterceptor)
   async getConversations(@Req() req: any) {
     const conversation = await this.getAllConversationsUseCase.execute({
-      guestId: req.user.id,
+      guestId: req.guest.id,
     });
     return conversation;
   }
 
   @Get(':id')
-  @GuestAuth()
+  @UseInterceptors(GuestIdInterceptor)
   async getConversation(@Param('id') id: string, @Req() req: any) {
-    return this.getConversationUseCase.execute({ id, guestId: req.user.id });
+    return this.getConversationUseCase.execute({ id, guestId: req.guest.id });
   }
 }
