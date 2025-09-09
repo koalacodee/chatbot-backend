@@ -67,7 +67,7 @@ export class RecordSupportTicketInteractionUseCase {
     const interaction = SupportTicketInteraction.create({
       id: UUID.create().toString(),
       supportTicketId: input.supportTicketId,
-      guestId: input.guestId,
+      anonymousId: input.guestId,
       type: input.type,
     });
 
@@ -82,7 +82,7 @@ export class RecordSupportTicketInteractionUseCase {
       interaction: {
         id: interaction.id.toString(),
         supportTicketId: interaction.supportTicketId!.toString(),
-        guestId: interaction.guestId!.toString(),
+        guestId: interaction.anonymousId!.toString(),
         type: interaction.type,
         createdAt: new Date(),
         updatedAt: new Date(),

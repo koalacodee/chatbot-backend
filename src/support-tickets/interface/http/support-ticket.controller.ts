@@ -30,6 +30,8 @@ import {
   RecordSupportTicketInteractionUseCase,
   GetGuestTicketsWithDetailsUseCase,
 } from '../../application/use-cases';
+import { CreateSupportTicketWithVerificationUseCase } from '../../application/use-cases/create-support-ticket-with-verification.use-case';
+import { VerifySupportTicketUseCase } from '../../application/use-cases/verify-support-ticket.use-case';
 import { GetEmployeesWithTicketHandlingPermissionsUseCase } from '../../application/use-cases/get-employees-with-ticket-handling-permissions.use-case';
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
 import { AnswerTicketDto } from './dto/answer-ticket.use-case';
@@ -46,6 +48,7 @@ import {
 } from 'src/rbac/decorators';
 import { EmployeePermissionsEnum as EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { GuestIdInterceptor } from 'src/shared/interceptors/guest-id.interceptor';
+import { VerifyCodeDto } from 'src/auth/guest/interface/dto';
 
 interface UpdateSupportTicketDto {
   id: string;
@@ -76,6 +79,8 @@ interface SearchTicketsDto {
 export class SupportTicketController {
   constructor(
     private readonly createUseCase: CreateSupportTicketUseCase,
+    private readonly createWithVerificationUseCase: CreateSupportTicketWithVerificationUseCase,
+    private readonly verifyTicketUseCase: VerifySupportTicketUseCase,
     private readonly getUseCase: GetSupportTicketUseCase,
     private readonly getAllUseCase: GetAllSupportTicketsUseCase,
     private readonly updateUseCase: UpdateSupportTicketUseCase,
@@ -97,14 +102,14 @@ export class SupportTicketController {
     private readonly getEmployeesWithTicketHandlingPermissionsUseCase: GetEmployeesWithTicketHandlingPermissionsUseCase,
   ) {}
 
-  @GuestAuth()
+  @UseInterceptors(GuestIdInterceptor)
   @Post(':type/:ticketId')
   async recordInteraction(
     @Param() params: RecordTicketInteractionDto,
     @Req() req: any,
   ) {
     return this.recordInteractionUseCase.execute({
-      guestId: req.user.id,
+      guestId: req.guest.id,
       supportTicketId: params.ticketId,
       type: params.type,
     });
@@ -122,20 +127,48 @@ export class SupportTicketController {
     });
   }
 
+  // @UseInterceptors(GuestIdInterceptor)
+  // @Post()
+  // async create(
+  //   @Body() dto: CreateSupportTicketDto,
+  //   @Req() req: any,
+  // ): Promise<{ ticket: SupportTicket; uploadKey?: string }> {
+  //   return this.createUseCase.execute({
+  //     subject: dto.subject,
+  //     description: dto.description,
+  //     departmentId: dto.departmentId,
+  //     guestName: dto.guestName,
+  //     guestPhone: dto.guestPhone,
+  //     guestEmail: dto.guestEmail,
+  //   });
+  // }
+
   @UseInterceptors(GuestIdInterceptor)
   @Post()
-  async create(
+  async createWithVerification(
     @Body() dto: CreateSupportTicketDto,
     @Req() req: any,
-  ): Promise<{ ticket: SupportTicket; uploadKey?: string }> {
-    return this.createUseCase.execute({
+  ): Promise<{
+    message: string;
+    ticketId: string;
+    verificationEmailSent: boolean;
+  }> {
+    return this.createWithVerificationUseCase.execute({
       subject: dto.subject,
       description: dto.description,
       departmentId: dto.departmentId,
       guestName: dto.guestName,
       guestPhone: dto.guestPhone,
       guestEmail: dto.guestEmail,
+      attach: dto.attach,
     });
+  }
+
+  @Post('verify')
+  async verifyTicket(
+    @Body() body: VerifyCodeDto,
+  ): Promise<{ ticket: SupportTicket; message: string }> {
+    return this.verifyTicketUseCase.execute({ verificationCode: body.code });
   }
 
   @UseInterceptors(GuestIdInterceptor)

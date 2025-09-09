@@ -11,6 +11,7 @@ export interface SupportTicketInteractionOptions {
   id: string;
   supportTicketId?: string;
   guestId?: string;
+  anonymousId?: string;
   type: InteractionType;
   supportTicket?: SupportTicket;
   guest?: Guest;
@@ -22,6 +23,7 @@ export class SupportTicketInteraction {
   private _supportTicket?: SupportTicket;
   private _guestId?: UUID;
   private _guest?: Guest;
+  private _anonymousId?: UUID;
   private _type: InteractionType;
 
   private constructor(options: SupportTicketInteractionOptions) {
@@ -30,6 +32,9 @@ export class SupportTicketInteraction {
       ? UUID.create(options.supportTicketId)
       : undefined;
     this._guestId = options.guestId ? UUID.create(options.guestId) : undefined;
+    this._anonymousId = options.anonymousId
+      ? UUID.create(options.anonymousId)
+      : undefined;
     this._type = options.type;
     this._supportTicket = options.supportTicket;
     this._guest = options.guest;
@@ -57,6 +62,14 @@ export class SupportTicketInteraction {
 
   set guestId(guestId: UUID | undefined) {
     this._guestId = guestId;
+  }
+
+  get anonymousId(): UUID | undefined {
+    return this._anonymousId;
+  }
+
+  set anonymousId(anonymousId: UUID | undefined) {
+    this._anonymousId = anonymousId;
   }
 
   get supportTicket(): SupportTicket | undefined {
@@ -88,6 +101,7 @@ export class SupportTicketInteraction {
       id: this._id.value,
       supportTicketId: this._supportTicketId?.value,
       guestId: this._guestId?.value,
+      anonymousId: this._anonymousId?.value,
       type: this._type,
       supportTicket: this._supportTicket,
       guest: this._guest,

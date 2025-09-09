@@ -11,6 +11,7 @@ import { SupportTicketInteractionRepository } from './domain/repositories/suppor
 import { TicketAnsweredListener } from './application/listeners/ticket-answered.listener';
 import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 import { TicketInteractedListener } from './application/listeners/ticket-interacted.listener';
+import { RedisTicketStorageService } from './infrastructure/services/redis-ticket-storage.service';
 
 @Module({
   controllers: [SupportTicketController],
@@ -27,6 +28,7 @@ import { TicketInteractedListener } from './application/listeners/ticket-interac
       provide: SupportTicketInteractionRepository,
       useClass: PrismaSupportTicketInteractionRepository,
     },
+    RedisTicketStorageService,
     ...Object.values(UseCases),
     TicketAnsweredListener,
     TicketInteractedListener,

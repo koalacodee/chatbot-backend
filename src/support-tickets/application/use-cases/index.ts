@@ -18,3 +18,5 @@ export * from './track-ticket.use-case';
 export * from './record-support-ticket-interaction.use-case';
 export * from './get-guest-tickets-with-details.use-case';
 export * from './get-employees-with-ticket-handling-permissions.use-case';
+export * from './create-support-ticket-with-verification.use-case';
+export * from './verify-support-ticket.use-case';
