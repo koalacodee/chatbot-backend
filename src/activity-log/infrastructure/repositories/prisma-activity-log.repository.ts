@@ -402,250 +402,147 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
     const deptIds = supervisor?.departments.map((d) => d.id) ?? [];
 
     let query;
-    if (supervisor && deptIds.length > 0) {
-      query = Prisma.sql`
-        WITH
-        /* ---------- 1. FAQ-level aggregates ---------- */
-        faq_stats AS (
-          SELECT
-            q.id,
-            q.text AS question,
-            q.views::int AS view_count,
-            q.satisfaction::int,
-            q.dissatisfaction::int,
-            q.department_id AS category_id,
-            d.name          AS category_name
-          FROM questions q
-          JOIN departments d ON d.id = q.department_id
-          WHERE (d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds)})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds)}))
-        ),
+    // Build dynamic department filter once
+    const deptFilter =
+      deptIds.length > 0
+        ? Prisma.sql`WHERE (d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds)})) 
+                OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds)}))`
+        : Prisma.empty;
 
-        /* ---------- 2. Ticket counts by status ---------- */
-        ticket_counts AS (
-          SELECT
-            (COUNT(*) FILTER (WHERE st.status IN ('new', 'seen')))::int AS open_tickets,
-            (COUNT(*) FILTER (WHERE st.status = 'answered'))::int AS answered_pending_closure
-          FROM support_tickets st
-          JOIN departments d ON d.id = st.department_id
-          WHERE (d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds)})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds)}))
-        ),
+    // Build optional promotions CTE
+    const promoCTE = supervisor?.permissions.includes('MANAGE_PROMOTIONS')
+      ? Prisma.sql`
+    , active_promo AS (
+        SELECT p.*
+        FROM promotions p
+        WHERE p.is_active = TRUE
+          AND (p.start_date IS NULL OR p.start_date <= NOW())
+          AND (p.end_date   IS NULL OR p.end_date   >= NOW())
+        ORDER BY p.created_at DESC
+        LIMIT 1
+      )
+  `
+      : Prisma.empty;
 
-        /* ---------- 3. Top 5 FAQs ---------- */
-        top_faqs AS (
-          SELECT *
-          FROM faq_stats
-          ORDER BY view_count DESC
-          LIMIT 5
-        ),
+    // Final query
+    query = Prisma.sql`
+  WITH
+  /* ---------- 1. FAQ-level aggregates ---------- */
+  faq_stats AS (
+    SELECT
+      q.id,
+      q.text AS question,
+      q.views::int AS view_count,
+      q.satisfaction::int,
+      q.dissatisfaction::int,
+      q.department_id AS category_id,
+      d.name          AS category_name
+    FROM questions q
+    JOIN departments d ON d.id = q.department_id
+    ${deptFilter}
+  ),
 
-        /* ---------- 4. Category performance ---------- */
-        category_views AS (
-          SELECT
-            d.name  AS category_name,
-            COALESCE(SUM(q.views)::int, 0) AS total_views
-          FROM departments d
-          LEFT JOIN questions q ON q.department_id = d.id
-          WHERE (d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds)})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds)}))
-          GROUP BY d.id, d.name
-          ORDER BY total_views DESC
-        ),
+  /* ---------- 2. Ticket counts by status ---------- */
+  ticket_counts AS (
+    SELECT
+      (COUNT(*) FILTER (WHERE st.status IN ('new', 'seen')))::int AS open_tickets,
+      (COUNT(*) FILTER (WHERE st.status = 'answered'))::int AS answered_pending_closure
+    FROM support_tickets st
+    JOIN departments d ON d.id = st.department_id
+    ${deptFilter}
+  ),
 
-        /* ---------- 5. Improvement opportunities ---------- */
-        faq_questions AS (
-          SELECT LOWER(TRIM(question)) AS q_low
-          FROM faq_stats
-        ),
-        opportunities AS (
-          SELECT
-            st.subject,
-            st.department_id AS category_id,
-            d.name           AS category_name,
-            COUNT(*)::int         AS asked_times
-          FROM support_tickets st
-          JOIN departments d ON d.id = st.department_id
-          WHERE ((d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds.map((id) => id))})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds.map((id) => id))})))
-            AND LOWER(TRIM(st.subject)) NOT IN (SELECT q_low FROM faq_questions)
-          GROUP BY st.subject, st.department_id, d.name
-          HAVING COUNT(*) > 1
-          ORDER BY asked_times DESC
-          LIMIT 5
-        ),
+  /* ---------- 3. Top 5 FAQs ---------- */
+  top_faqs AS (
+    SELECT *
+    FROM faq_stats
+    ORDER BY view_count DESC
+    LIMIT 5
+  ),
 
-        /* ---------- 6. Active promotion ---------- */
-        ${
-          supervisor.permissions.includes('MANAGE_PROMOTIONS')
-            ? Prisma.sql`
-        active_promo AS (
-          SELECT p.*
-          FROM promotions p
-          WHERE p.is_active = TRUE
-            AND (p.start_date IS NULL OR p.start_date <= NOW())
-            AND (p.end_date   IS NULL OR p.end_date   >= NOW())
-          ORDER BY p.created_at DESC
-          LIMIT 1
-        ),
-        `
-            : Prisma.empty
-        }
+  /* ---------- 4. Category performance ---------- */
+  category_views AS (
+    SELECT
+      d.name  AS category_name,
+      COALESCE(SUM(q.views)::int, 0) AS total_views
+    FROM departments d
+    LEFT JOIN questions q ON q.department_id = d.id
+    ${deptFilter}
+    GROUP BY d.id, d.name
+    ORDER BY total_views DESC
+  ),
 
-        /* ---------- 7. Global totals ---------- */
-        global_totals AS (
-          SELECT
-            SUM(view_count)::int AS total_views,
-            SUM(satisfaction)::float /
-              NULLIF(SUM(satisfaction) + SUM(dissatisfaction), 0) * 100 AS faq_satisfaction_rate
-          FROM faq_stats
-        )
+  /* ---------- 5. Improvement opportunities ---------- */
+  faq_questions AS (
+    SELECT LOWER(TRIM(question)) AS q_low
+    FROM faq_stats
+  ),
+  opportunities AS (
+    SELECT
+      st.subject,
+      st.department_id AS category_id,
+      d.name           AS category_name,
+      COUNT(*)::int    AS asked_times
+    FROM support_tickets st
+    JOIN departments d ON d.id = st.department_id
+    ${deptFilter}
+      AND LOWER(TRIM(st.subject)) NOT IN (SELECT q_low FROM faq_questions)
+    GROUP BY st.subject, st.department_id, d.name
+    HAVING COUNT(*) > 1
+    ORDER BY asked_times DESC
+    LIMIT 5
+  )
 
-        /* ---------- Final projection ---------- */
-        SELECT
-          COALESCE((SELECT total_views FROM global_totals), 0) AS "totalViews",
-          COALESCE((SELECT open_tickets FROM ticket_counts), 0) AS "openTicketsCount",
-          COALESCE((SELECT answered_pending_closure FROM ticket_counts), 0) AS "answeredPendingClosureCount",
-          COALESCE((SELECT faq_satisfaction_rate FROM global_totals), 0) AS "faqSatisfactionRate",
-          
-          COALESCE((SELECT jsonb_agg(DISTINCT jsonb_build_object(
-              'categoryName', category_name,
-              'views',        total_views
-            ))
-          FROM category_views
-          ), '[]') AS "categoryViews",
+  ${promoCTE}
 
-          COALESCE((SELECT jsonb_agg(jsonb_build_object(
-              'id',           id,
-              'question',     question,
-              'viewCount',    view_count,
-              'categoryName', category_name
-            ))
-          FROM top_faqs
-          ), '[]') AS "topFaqs",
+  /* ---------- 6. Global totals ---------- */
+  , global_totals AS (
+    SELECT
+      SUM(view_count)::int AS total_views,
+      SUM(satisfaction)::float /
+        NULLIF(SUM(satisfaction) + SUM(dissatisfaction), 0) * 100 AS faq_satisfaction_rate
+    FROM faq_stats
+  )
 
-          COALESCE((SELECT jsonb_agg(jsonb_build_object(
-              'originalCasing', subject,
-              'categoryId',     category_id,
-              'categoryName',   category_name,
-              'count',          asked_times
-            ))
-          FROM opportunities
-          ), '[]') AS "faqOpportunities",
+  /* ---------- Final projection ---------- */
+  SELECT
+    COALESCE((SELECT total_views FROM global_totals), 0) AS "totalViews",
+    COALESCE((SELECT open_tickets FROM ticket_counts), 0) AS "openTicketsCount",
+    COALESCE((SELECT answered_pending_closure FROM ticket_counts), 0) AS "answeredPendingClosureCount",
+    COALESCE((SELECT faq_satisfaction_rate FROM global_totals), 0) AS "faqSatisfactionRate",
+    
+    COALESCE((SELECT jsonb_agg(DISTINCT jsonb_build_object(
+        'categoryName', category_name,
+        'views',        total_views
+      ))
+    FROM category_views
+    ), '[]') AS "categoryViews",
 
-          ${
-            supervisor.permissions.includes('MANAGE_PROMOTIONS')
-              ? Prisma.sql`
-          COALESCE((SELECT row_to_json(ap.*) FROM active_promo ap LIMIT 1), '{}') AS "activePromotion"
-          `
-              : Prisma.empty
-          }
-      `;
-    } else {
-      query = Prisma.sql`
-        WITH
-        /* ---------- 1. FAQ-level aggregates ---------- */
-        faq_stats AS (
-          SELECT
-            q.id,
-            q.text AS question,
-            q.views::int AS view_count,
-            q.satisfaction::int,
-            q.dissatisfaction::int,
-            q.department_id AS category_id,
-            d.name          AS category_name
-          FROM questions q
-          JOIN departments d ON d.id = q.department_id
-        ),
+    COALESCE((SELECT jsonb_agg(jsonb_build_object(
+        'id',           id,
+        'question',     question,
+        'viewCount',    view_count,
+        'categoryName', category_name
+      ))
+    FROM top_faqs
+    ), '[]') AS "topFaqs",
 
-        /* ---------- 2. Ticket counts by status ---------- */
-        ticket_counts AS (
-          SELECT
-            (COUNT(*) FILTER (WHERE st.status IN ('new', 'seen')))::int AS open_tickets,
-            (COUNT(*) FILTER (WHERE st.status = 'answered'))::int AS answered_pending_closure
-          FROM support_tickets st
-          JOIN departments d ON d.id = st.department_id
-        ),
+    COALESCE((SELECT jsonb_agg(jsonb_build_object(
+        'originalCasing', subject,
+        'categoryId',     category_id,
+        'categoryName',   category_name,
+        'count',          asked_times
+      ))
+    FROM opportunities
+    ), '[]') AS "faqOpportunities",
 
-        /* ---------- 3. Top 5 FAQs ---------- */
-        top_faqs AS (
-          SELECT *
-          FROM faq_stats
-          ORDER BY view_count DESC
-          LIMIT 5
-        ),
+    ${
+      supervisor?.permissions.includes('MANAGE_PROMOTIONS')
+        ? Prisma.sql`COALESCE((SELECT row_to_json(ap.*) FROM active_promo ap LIMIT 1), '{}')`
+        : Prisma.sql`'{}'::jsonb`
+    } AS "activePromotion"
+`;
 
-        /* ---------- 4. Category performance ---------- */
-        category_views AS (
-          SELECT
-            d.name  AS category_name,
-            COALESCE(SUM(q.views)::int, 0) AS total_views
-          FROM departments d
-          LEFT JOIN questions q ON q.department_id = d.id
-          GROUP BY d.id, d.name
-          ORDER BY total_views DESC
-        ),
-
-        /* ---------- 5. Improvement opportunities ---------- */
-        faq_questions AS (
-          SELECT LOWER(TRIM(question)) AS q_low
-          FROM faq_stats
-        ),
-        opportunities AS (
-          SELECT
-            st.subject,
-            st.department_id AS category_id,
-            d.name           AS category_name,
-            COUNT(*)::int         AS asked_times
-          FROM support_tickets st
-          JOIN departments d ON d.id = st.department_id
-          WHERE LOWER(TRIM(st.subject)) NOT IN (SELECT q_low FROM faq_questions)
-          GROUP BY st.subject, st.department_id, d.name
-          HAVING COUNT(*) > 1
-          ORDER BY asked_times DESC
-          LIMIT 5
-        ),
-
-        /* ---------- 6. Global totals ---------- */
-        global_totals AS (
-          SELECT
-            SUM(view_count)::int AS total_views,
-            SUM(satisfaction)::float /
-              NULLIF(SUM(satisfaction) + SUM(dissatisfaction), 0) * 100 AS faq_satisfaction_rate
-          FROM faq_stats
-        )
-
-        /* ---------- Final projection ---------- */
-        SELECT
-          COALESCE((SELECT total_views FROM global_totals), 0) AS "totalViews",
-          COALESCE((SELECT open_tickets FROM ticket_counts), 0) AS "openTicketsCount",
-          COALESCE((SELECT answered_pending_closure FROM ticket_counts), 0) AS "answeredPendingClosureCount",
-          COALESCE((SELECT faq_satisfaction_rate FROM global_totals), 0) AS "faqSatisfactionRate",
-          
-          COALESCE((SELECT jsonb_agg(DISTINCT jsonb_build_object(
-              'categoryName', category_name,
-              'views',        total_views
-            ))
-          FROM category_views
-          ), '[]') AS "categoryViews",
-
-          COALESCE((SELECT jsonb_agg(jsonb_build_object(
-              'id',           id,
-              'question',     question,
-              'viewCount',    view_count,
-              'categoryName', category_name
-            ))
-          FROM top_faqs
-          ), '[]') AS "topFaqs",
-
-          COALESCE((SELECT jsonb_agg(jsonb_build_object(
-              'originalCasing', subject,
-              'categoryId',     category_id,
-              'categoryName',   category_name,
-              'count',          asked_times
-            ))
-          FROM opportunities
-          ), '[]') AS "faqOpportunities",
-
-          '{}'::jsonb AS "activePromotion"
-      `;
-    }
     const result =
       await this.prisma.$queryRaw<DashboardAggregatedResult[]>(query);
 
