@@ -3,6 +3,7 @@ import { SupervisorRepository } from 'src/supervisor/domain/repository/superviso
 import { AddSupervisorByAdminRequest } from './add-supervisor-by-admin.use-case';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Email } from 'src/shared/value-objects/email.vo';
+import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 
 interface UpdateSupervisorRequest
   extends Partial<AddSupervisorByAdminRequest> {}
@@ -12,6 +13,7 @@ export class UpdateSupervisorUseCase {
   constructor(
     private readonly supervisorRepository: SupervisorRepository,
     private readonly userRepository: UserRepository,
+    private readonly departmentRepository: DepartmentRepository,
   ) {}
 
   async execute(
@@ -31,6 +33,16 @@ export class UpdateSupervisorUseCase {
     const existingSupervisor = await this.supervisorRepository.findById(id);
     if (!existingSupervisor) {
       throw new NotFoundException('Supervisor not found');
+    }
+
+    if (
+      supervisor.departmentIds !==
+      existingSupervisor.departments.map(({ id }) => id.toString())
+    ) {
+      const departments = await this.departmentRepository.findByIds(
+        supervisor.departmentIds,
+      );
+      existingSupervisor.departments = departments;
     }
 
     const updatedSupervisor = Object.assign(existingSupervisor, supervisor);
