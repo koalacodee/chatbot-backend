@@ -329,7 +329,7 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
             LEFT JOIN supervisors sup ON sup.id = sta.answerer_supervisor_id
             LEFT JOIN admins      adm ON adm.id  = sta.answerer_admin_id
             WHERE sti.type IS NOT NULL
-              AND ((d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds.map(id => id))})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds.map(id => id))})))
+              AND ((d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds.map((id) => id))})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds.map((id) => id))})))
         )
         SELECT
             COALESCE((SELECT json_agg(u.*) FROM user_rows  u), '[]') AS users,
@@ -463,7 +463,7 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
             COUNT(*)::int         AS asked_times
           FROM support_tickets st
           JOIN departments d ON d.id = st.department_id
-          WHERE ((d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds.map(id => id))})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds.map(id => id))})))
+          WHERE ((d.parent_id IS NULL AND d.id::text IN (${Prisma.join(deptIds.map((id) => id))})) OR (d.parent_id IS NOT NULL AND d.parent_id::text IN (${Prisma.join(deptIds.map((id) => id))})))
             AND LOWER(TRIM(st.subject)) NOT IN (SELECT q_low FROM faq_questions)
           GROUP BY st.subject, st.department_id, d.name
           HAVING COUNT(*) > 1
@@ -483,10 +483,10 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
             AND (p.end_date   IS NULL OR p.end_date   >= NOW())
           ORDER BY p.created_at DESC
           LIMIT 1
-        )
+        ),
         `
             : Prisma.empty
-        },
+        }
 
         /* ---------- 7. Global totals ---------- */
         global_totals AS (
