@@ -30,4 +30,20 @@ export abstract class TaskRepository {
     offset?: number;
     limit?: number;
   }): Promise<Task[]>;
+
+  abstract findTasksForSupervisor(options: {
+    supervisorDepartmentIds: string[];
+    status?: string[];
+    offset?: number;
+    limit?: number;
+  }): Promise<{ tasks: Task[]; total: number }>;
+
+  abstract findTasksForEmployee(options: {
+    employeeId: string;
+    supervisorId: string;
+    subDepartmentIds: string[];
+    status?: string[];
+    offset?: number;
+    limit?: number;
+  }): Promise<{ tasks: Task[]; total: number }>;
 }

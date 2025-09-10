@@ -10,3 +10,4 @@ export * from './reject-task.use-case';
 export * from './mark-task-seen.use-case';
 export * from './get-tasks-with-filters.use-case';
 export * from './get-team-tasks.use-case';
+export * from './get-my-tasks.use-case';

@@ -451,4 +451,111 @@ export class PrismaTaskRepository extends TaskRepository {
 
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
+
+  async findTasksForSupervisor(options: {
+    supervisorDepartmentIds: string[];
+    status?: string[];
+    offset?: number;
+    limit?: number;
+  }): Promise<{ tasks: Task[]; total: number }> {
+    const { supervisorDepartmentIds, status, offset, limit } = options;
+
+    // Get all sub-department IDs under supervisor's departments
+    const subDepartments = await this.prisma.department.findMany({
+      where: { parentId: { in: supervisorDepartmentIds } },
+      select: { id: true },
+    });
+    const subDepartmentIds = subDepartments.map((d) => d.id);
+
+    // Combine all department IDs (main + sub-departments)
+    const allDepartmentIds = [...supervisorDepartmentIds, ...subDepartmentIds];
+
+    const whereClause: any = {
+      OR: [
+        { targetDepartmentId: { in: allDepartmentIds } },
+        { targetSubDepartmentId: { in: allDepartmentIds } },
+      ],
+    };
+
+    if (status && status.length > 0) {
+      whereClause.status = { in: status };
+    }
+
+    const [rows, total] = await Promise.all([
+      this.prisma.task.findMany({
+        where: whereClause,
+        skip: offset,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          assignee: true,
+          assignerAdmin: true,
+          assignerSupervisor: true,
+          approverAdmin: true,
+          approverSupervisor: true,
+          targetDepartment: true,
+          targetSubDepartment: true,
+        },
+      }),
+      this.prisma.task.count({ where: whereClause }),
+    ]);
+
+    const tasks = await Promise.all(rows.map((r) => this.toDomain(r)));
+    return { tasks, total };
+  }
+
+  async findTasksForEmployee(options: {
+    employeeId: string;
+    supervisorId: string;
+    subDepartmentIds: string[];
+    status?: string[];
+    offset?: number;
+    limit?: number;
+  }): Promise<{ tasks: Task[]; total: number }> {
+    const {
+      employeeId,
+      supervisorId,
+      subDepartmentIds,
+      status,
+      offset,
+      limit,
+    } = options;
+
+    const whereClause: any = {
+      OR: [
+        // Tasks directly assigned to the employee
+        { assigneeId: employeeId },
+        // Tasks assigned by their supervisor
+        { assignerSupervisorId: supervisorId },
+        // Tasks assigned to their sub-departments
+        { targetSubDepartmentId: { in: subDepartmentIds } },
+      ],
+    };
+
+    if (status && status.length > 0) {
+      whereClause.status = { in: status };
+    }
+
+    const [rows, total] = await Promise.all([
+      this.prisma.task.findMany({
+        where: whereClause,
+        skip: offset,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          assignee: true,
+          assignerAdmin: true,
+          assignerSupervisor: true,
+          approverAdmin: true,
+          approverSupervisor: true,
+          targetDepartment: true,
+          targetSubDepartment: true,
+        },
+      }),
+      this.prisma.task.count({ where: whereClause }),
+    ]);
+
+    const tasks = await Promise.all(rows.map((r) => this.toDomain(r)));
+    return { tasks, total };
+  }
 }

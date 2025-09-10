@@ -8,7 +8,10 @@ import {
   Param,
   Query,
   Req,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import {
   CreateTaskUseCase,
   UpdateTaskUseCase,
@@ -22,6 +25,7 @@ import {
   MarkTaskSeenUseCase,
   GetTasksWithFiltersUseCase,
   GetTeamTasksUseCase,
+  GetMyTasksUseCase,
 } from '../../application/use-cases';
 import {
   CreateTaskInputDto,
@@ -58,6 +62,7 @@ export class TaskController {
     private readonly markTaskSeenUseCase: MarkTaskSeenUseCase,
     private readonly getTasksWithFiltersUseCase: GetTasksWithFiltersUseCase,
     private readonly getTeamTasksUseCase: GetTeamTasksUseCase,
+    private readonly getMyTasksUseCase: GetMyTasksUseCase,
   ) {}
 
   @Post()
@@ -214,5 +219,45 @@ export class TaskController {
   @Post(':id/seen')
   async markSeen(@Param('id') id: string, @Req() req: any): Promise<Task> {
     return this.markTaskSeenUseCase.execute({ taskId: id }, req.user.id);
+  }
+
+  // My tasks endpoint for role-based task retrieval
+  @Get('my-tasks')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get tasks based on user role and hierarchy' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tasks retrieved successfully based on user role',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: { type: 'array', items: { type: 'object' } },
+        total: { type: 'number' },
+        canSubmitWork: { type: 'array', items: { type: 'boolean' } },
+      },
+    },
+  })
+  async getMyTasks(
+    @Req() req: any,
+    @Query('offset') offset?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+  ) {
+    const result = await this.getMyTasksUseCase.execute({
+      userId: req.user.id,
+      offset: offset ? parseInt(offset, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      status,
+    });
+
+    return {
+      success: true,
+      data: result.tasks.map((task) => ({
+        ...task.toJSON(),
+        canSubmitWork: result.canSubmitWork[result.tasks.indexOf(task)],
+      })),
+      total: result.total,
+    };
   }
 }
