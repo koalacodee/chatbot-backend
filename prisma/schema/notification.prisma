@@ -1,0 +1,24 @@
+model RecipientNotification {
+  id             String       @id @default(uuid()) @map("id") @db.Uuid
+  seen           Boolean      @default(false) @map("seen")
+  userId         String       @map("user_id") @db.Uuid
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationId String       @map("notification_id") @db.Uuid
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([seen])
+  @@index([userId])
+  @@index([notificationId])
+  @@map("recipient_notifications")
+}
+
+model Notification {
+  id         String                  @id @default(uuid()) @map("id") @db.Uuid
+  type       String                  @map("type") @db.VarChar(255)
+  title      String                  @map("title") @db.VarChar(255)
+  recipients RecipientNotification[]
+  createdAt  DateTime                @default(now()) @map("created_at")
+  updatedAt  DateTime                @updatedAt @map("updated_at")
+
+  @@map("notifications")
+}

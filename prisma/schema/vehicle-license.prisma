@@ -1,0 +1,27 @@
+model VehicleLicense {
+  id                    String                @id @default(uuid()) @map("id") @db.Uuid
+  vehicleId             String                @unique @map("vehicle_id") @db.Uuid
+  vehicle               Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  licenseNumber         String                @map("license_number") @db.VarChar(255)
+  issueDate             DateTime              @map("issue_date")
+  expiryDate            DateTime              @map("expiry_date")
+  insurancePolicyNumber String?               @map("insurance_policy_number") @db.VarChar(255)
+  insuranceExpiryDate   DateTime?             @map("insurance_expiry_date")
+  status                VehicleLicenseStatus? @map("status")
+  // attachment moved to Attachment with targetId
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("vehicle_licenses")
+}
+
+// Removed VehicleLicenseAttachment junction
+
+enum VehicleLicenseStatus {
+  ACTIVE        @map("active")
+  EXPIRING_SOON @map("expiring_soon")
+  EXPIRED       @map("expired")
+
+  @@map("vehicle_license_status")
+}

@@ -1,0 +1,16 @@
+model Driver {
+  id                   String      @id @default(uuid()) @map("id") @db.Uuid
+  userId               String      @unique @map("user_id") @db.Uuid
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supervisorId         String      @map("supervisor_id") @db.Uuid
+  supervisor           Supervisor  @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  licensingNumber      String      @unique @map("licensing_number") @db.VarChar(255)
+  drivingLicenseExpiry DateTime    @map("driving_license_expiry") @db.Date
+  vehicles             Vehicle[]
+  violations           Violation[]
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
+
+  @@index([supervisorId])
+  @@map("drivers")
+}

@@ -1,0 +1,28 @@
+model ActivityLog {
+  id     String          @id @default(uuid()) @map("id") @db.Uuid
+  type   ActivityLogType
+  title  String
+  itemId String          @map("item_id") @db.VarChar(255)
+  meta   Json
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  occurredAt DateTime @map("occurred_at") // ISO instant coming from the source
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id") @db.Uuid
+
+  @@index([userId])
+  @@index([type])
+  @@index([occurredAt])
+  @@map("activity_logs")
+}
+
+enum ActivityLogType {
+  TICKET_ANSWERED       @map("ticket_answered")
+  TASK_PERFORMED        @map("task_performed")
+  TASK_APPROVED         @map("task_approved")
+  FAQ_CREATED           @map("faq_created")
+  FAQ_UPDATED           @map("faq_updated")
+  PROMOTION_CREATED     @map("promotion_created")
+  STAFF_REQUEST_CREATED @map("staff_request_created")
+}

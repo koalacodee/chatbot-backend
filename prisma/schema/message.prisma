@@ -1,0 +1,20 @@
+model Message {
+  id             String          @id @default(uuid()) @map("id") @db.Uuid
+  content        String          @map("content") @db.Text
+  role           MessageRole     @map("role")
+  conversationId String          @map("conversation_id") @db.Uuid
+  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  retrievedChunk RetrievedChunk?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+enum MessageRole {
+  USER      @map("user")
+  ASSISTANT @map("assistant")
+
+  @@map("message_role")
+}

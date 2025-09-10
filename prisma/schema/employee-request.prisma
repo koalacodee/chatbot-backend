@@ -1,0 +1,37 @@
+model EmployeeRequest {
+  id String @id @default(uuid()) @map("id") @db.Uuid
+
+  requestedBySupervisor   Supervisor @relation("SupervisorRequests", fields: [requestedBySupervisorId], references: [id])
+  requestedBySupervisorId String     @map("requested_by_supervisor_id") @db.Uuid
+
+  newEmployeeEmail       String  @map("new_employee_email") @db.VarChar(255)
+  newEmployeeFullName    String  @map("new_employee_full_name") @db.VarChar(255)
+  newEmployeeUsername    String  @map("new_employee_username") @db.VarChar(255)
+  newEmployeeJobTitle    String  @map("new_employee_job_title") @db.VarChar(255)
+  temporaryPassword      String  @map("temporary_password") @db.VarChar(255)
+  newEmployeeDesignation String? @map("new_employee_designation") @db.VarChar(255)
+  newEmployeeId          String? @map("new_employee_id") @db.VarChar(255)
+
+  status RequestStatus @default(PENDING) @map("status")
+
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  resolvedAt        DateTime? @map("resolved_at")
+  resolvedByAdmin   Admin?    @relation("AdminResolutions", fields: [resolvedByAdminId], references: [id])
+  resolvedByAdminId String?   @map("resolved_by_admin_id") @db.Uuid
+
+  rejectionReason          String? @map("rejection_reason") @db.Text
+  acknowledgedBySupervisor Boolean @default(false) @map("acknowledged_by_supervisor")
+
+  @@index([requestedBySupervisorId])
+  @@index([resolvedByAdminId, status])
+  @@map("employee_requests")
+}
+
+enum RequestStatus {
+  PENDING  @map("pending")
+  APPROVED @map("approved")
+  REJECTED @map("rejected")
+
+  @@map("request_status")
+}

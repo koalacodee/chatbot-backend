@@ -1,0 +1,14 @@
+model RetrievedChunk {
+  id               String          @id @default(uuid()) @map("id") @db.Uuid
+  messageId        String          @unique @map("message_id") @db.Uuid
+  message          Message         @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  knowledgeChunkId String          @map("knowledge_chunk_id") @db.Uuid
+  knowledgeChunk   KnowledgeChunk? @relation(fields: [knowledgeChunkId], references: [id], onDelete: Cascade)
+  score            Float           @map("score")
+  retrievedAt      DateTime        @default(now()) @map("retrieved_at")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  @@index([knowledgeChunkId])
+  @@map("retrieved_chunks")
+}

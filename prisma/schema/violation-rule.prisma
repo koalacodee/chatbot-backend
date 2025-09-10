@@ -1,0 +1,20 @@
+model ViolationRule {
+  id          String        @id @default(uuid()) @map("id") @db.Uuid
+  type        ViolationType @map("type")
+  threshold   Int           @map("threshold")
+  fineAmount  Int           @map("fine_amount")
+  description String        @map("description") @db.Text
+  isEnabled   Boolean       @default(true) @map("is_enabled")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  violations  Violation[]
+
+  @@map("violation_rules")
+}
+
+enum ViolationType {
+  SPEEDING           @map("speeding")
+  MISSED_MAINTENANCE @map("missed_maintenance")
+
+  @@map("violation_type")
+}

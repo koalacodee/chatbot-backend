@@ -1,0 +1,13 @@
+
+model PushSubscription {
+  id             String    @id @default(uuid()) @map("id") @db.Uuid
+  userId         String    @map("user_id") @db.VarChar(255)
+  endpoint       String    @map("endpoint") @db.Text
+  expirationTime DateTime? @map("expiration_time")
+  keys           Json      @map("keys")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}

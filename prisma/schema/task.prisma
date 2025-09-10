@@ -1,0 +1,74 @@
+enum TaskAssignmentType {
+  INDIVIDUAL     @map("individual")
+  DEPARTMENT     @map("department")
+  SUB_DEPARTMENT @map("sub_department")
+
+  @@map("task_assignment_type")
+}
+
+model Task {
+  id          String @id @default(uuid()) @map("id") @db.Uuid
+  title       String @map("title") @db.VarChar(255)
+  description String @map("description") @db.Text
+
+  assigneeId String?   @map("assignee_id") @db.Uuid
+  assignee   Employee? @relation("AssigneeOfTask", fields: [assigneeId], references: [id], onDelete: Cascade)
+
+  assignerSupervisorId String?     @map("assigner_supervisor_id") @db.Uuid
+  assignerSupervisor   Supervisor? @relation("AssignerOfTask", fields: [assignerSupervisorId], references: [id], onDelete: Cascade)
+  assignerAdminId      String?     @map("assigner_admin_id") @db.Uuid
+  assignerAdmin        Admin?      @relation("AssignerOfTask", fields: [assignerAdminId], references: [id], onDelete: Cascade)
+
+  approverSupervisorId String?     @map("approver_supervisor_id") @db.Uuid
+  approverSupervisor   Supervisor? @relation("ApproverOfTask", fields: [approverSupervisorId], references: [id], onDelete: Cascade)
+  approverAdminId      String?     @map("approver_admin_id") @db.Uuid
+  approverAdmin        Admin?      @relation("ApproverOfTask", fields: [approverAdminId], references: [id], onDelete: Cascade)
+
+  status         TaskStatus         @default(TODO) @map("status")
+  assignmentType TaskAssignmentType @map("assignment_type")
+
+  targetDepartmentId    String?     @map("target_department_id") @db.Uuid
+  targetDepartment      Department? @relation("TargetDepartment", fields: [targetDepartmentId], references: [id], onDelete: Cascade)
+  targetSubDepartmentId String?     @map("target_sub_department_id") @db.Uuid
+  targetSubDepartment   Department? @relation("TargetSubDepartment", fields: [targetSubDepartmentId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  completedAt   DateTime? @map("completed_at")
+  assignerNotes String?   @map("assigner_notes") @db.Text
+  feedback      String?   @map("feedback") @db.Text
+
+  performerEmployeeId   String?     @map("performer_employee_id") @db.Uuid
+  performerEmployee     Employee?   @relation("PerformerOfTask", fields: [performerEmployeeId], references: [id], onDelete: Cascade)
+  performerSupervisorId String?     @map("performer_supervisor_id") @db.Uuid
+  performerSupervisor   Supervisor? @relation("PerformerOfTask", fields: [performerSupervisorId], references: [id], onDelete: Cascade)
+  performerAdminId      String?     @map("performer_admin_id") @db.Uuid
+  performerAdmin        Admin?      @relation("PerformerOfTask", fields: [performerAdminId], references: [id], onDelete: Cascade)
+
+  @@index([assigneeId])
+  @@index([assignerSupervisorId])
+  @@index([assignerAdminId])
+  @@index([targetDepartmentId])
+  @@index([targetSubDepartmentId])
+  @@index([approverAdminId, approverSupervisorId, status])
+  @@map("tasks")
+}
+
+// Removed TaskAttachment junction; attachments now reference their targets via Attachment.targetId
+
+enum TaskAttachmentType {
+  ASSIGNER @map("assigner")
+  ASSIGNEE @map("assignee")
+
+  @@map("task_attachment_type")
+}
+
+enum TaskStatus {
+  TODO                      @map("to_do")
+  SEEN                      @map("seen")
+  PENDING_REVIEW            @map("pending_review")
+  PENDING_SUPERVISOR_REVIEW @map("pending_supervisor_review")
+  COMPLETED                 @map("completed")
+
+  @@map("task_status")
+}

@@ -1,0 +1,32 @@
+model Department {
+  id              String               @id @default(uuid()) @map("id") @db.Uuid
+  name            String               @map("name") @db.VarChar(255)
+  visibility      DepartmentVisibility @default(PUBLIC) @map("visibility")
+  questions       Question[]
+  knowledgeChunks KnowledgeChunk[]
+  supervisors     Supervisor[]
+  tickets         Ticket[]
+
+  // Self-relation fields
+  parentId               String?                 @map("parent_id") @db.Uuid
+  parent                 Department?             @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  subDepartments         Department[]            @relation("DepartmentHierarchy")
+  supportTickets         SupportTicket[]
+  employeeSubDepartments EmployeeSubDepartment[]
+
+  // Task assignment relations
+  targetTasks         Task[] @relation("TargetDepartment")
+  targetSubDepartment Task[] @relation("TargetSubDepartment")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([parentId])
+  @@map("departments")
+}
+
+
+enum DepartmentVisibility {
+  PUBLIC  @map("public")
+  PRIVATE @map("private")
+}

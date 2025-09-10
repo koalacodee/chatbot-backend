@@ -1,0 +1,42 @@
+enum EmployeePermissions {
+  HANDLE_TICKETS          @map("handle_tickets")
+  HANDLE_TASKS            @map("handle_tasks")
+  ADD_FAQS                @map("add_faqs")
+  VIEW_ANALYTICS          @map("view_analytics")
+  CLOSE_TICKETS           @map("close_tickets")
+  MANAGE_KNOWLEDGE_CHUNKS @map("manage_knowledge_chunks")
+
+  @@map("permissions")
+}
+
+model EmployeeSubDepartment {
+  id           String     @id @default(uuid()) @map("id") @db.Uuid
+  employeeId   String     @map("employee_id") @db.Uuid
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  departmentId String     @map("department_id") @db.Uuid
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  assignedAt   DateTime   @default(now()) @map("assigned_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@unique([employeeId, departmentId])
+  @@index([employeeId])
+  @@index([departmentId])
+  @@map("employee_sub_departments")
+}
+
+model Employee {
+  id                           String                  @id @default(uuid()) @map("id") @db.Uuid
+  userId                       String                  @unique @map("user_id") @db.Uuid
+  user                         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissions                  EmployeePermissions[]
+  supervisorId                 String                  @map("supervisor_id") @db.Uuid
+  supervisor                   Supervisor              @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  supportTicketAnswersAssigned SupportTicket[]         @relation("AssigneeOfSupportTicket")
+  assigneeTasks                Task[]                  @relation("AssigneeOfTask")
+  questions                    Question[]
+  supportTicketAnswersAuthored SupportTicketAnswer[]   @relation("AnswererOfSupportTicketAnswer")
+  performerTasks               Task[]                  @relation("PerformerOfTask")
+  subDepartments               EmployeeSubDepartment[]
+
+  @@map("employees")
+}

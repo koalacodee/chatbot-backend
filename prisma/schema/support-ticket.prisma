@@ -1,0 +1,83 @@
+model SupportTicket {
+  id           String                    @id @default(uuid()) @map("id") @db.Uuid
+  subject      String                    @map("subject") @db.VarChar(255)
+  description  String                    @map("description") @db.Text
+  departmentId String                    @map("department_id") @db.Uuid
+  department   Department                @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  status       SupportTicketStatus       @default(NEW) @map("status")
+  createdAt    DateTime                  @default(now()) @map("created_at")
+  updatedAt    DateTime                  @updatedAt @map("updated_at")
+  answeredAt   DateTime?                 @map("answered_at")
+  answer       SupportTicketAnswer?
+  assigneeId   String?                   @map("assignee_id") @db.Uuid
+  assignee     Employee?                 @relation("AssigneeOfSupportTicket", fields: [assigneeId], references: [id], onDelete: Cascade)
+  code         String                    @unique @map("code") @db.VarChar(10)
+  interaction  SupportTicketInteraction?
+  guestName    String                   @map("guest_name") @db.VarChar(255)
+  guestPhone   String                   @map("guest_phone") @db.VarChar(255)
+  guestEmail   String                   @map("guest_email") @db.VarChar(255)
+
+  @@index([departmentId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+model SupportTicketAnswer {
+  id                   String        @id @default(uuid()) @map("id") @db.Uuid
+  supportTicketId      String        @unique @map("support_ticket_id") @db.Uuid
+  supportTicket        SupportTicket @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
+  content              String        @map("content") @db.Text
+  answererSupervisorId String?       @map("answerer_supervisor_id") @db.Uuid
+  answererSupervisor   Supervisor?   @relation("AnswererOfSupportTicketAnswer", fields: [answererSupervisorId], references: [id], onDelete: Cascade)
+  answererEmployeeId   String?       @map("answerer_employee_id") @db.Uuid
+  answererEmployee     Employee?     @relation("AnswererOfSupportTicketAnswer", fields: [answererEmployeeId], references: [id], onDelete: Cascade)
+  answererAdminId      String?       @map("answerer_admin_id") @db.Uuid
+  answererAdmin        Admin?        @relation("AnswererOfSupportTicketAnswer", fields: [answererAdminId], references: [id], onDelete: Cascade)
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+  rating               Rating?       @map("rating")
+
+  @@index([answererSupervisorId, answererEmployeeId, answererAdminId])
+  @@map("support_ticket_answers")
+}
+
+model SupportTicketInteraction {
+  id              String                       @id @default(uuid()) @map("id") @db.Uuid
+  supportTicketId String                       @unique @map("support_ticket_id") @db.Uuid
+  supportTicket   SupportTicket                @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
+  guestId         String?                      @map("guest_id") @db.Uuid
+  guest           Guest?                       @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  anonymousId     String?                      @map("anonymous_id") @db.Uuid
+  type            SupportTicketInteractionType @map("type")
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
+
+  @@index([supportTicketId])
+  @@index([guestId])
+  @@index([anonymousId])
+  @@map("support_ticket_interactions")
+}
+
+enum SupportTicketInteractionType {
+  SATISFACTION    @map("satisfaction")
+  DISSATISFACTION @map("dissatisfaction")
+
+  @@map("support_ticket_interaction_type")
+}
+
+enum SupportTicketStatus {
+  NEW      @map("new")
+  SEEN     @map("seen")
+  ANSWERED @map("answered")
+  CLOSED   @map("closed")
+
+  @@map("support_ticket_status")
+}
+
+
+enum Rating {
+  SATISFACTION    @map("satisfaction")
+  DISSATISFACTION @map("dissatisfaction")
+
+  @@map("rating")
+}

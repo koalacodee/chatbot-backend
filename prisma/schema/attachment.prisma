@@ -1,0 +1,14 @@
+
+model Attachment {
+  id   String @id @default(uuid()) @map("id") @db.Uuid
+  type String @map("type") @db.VarChar(255)
+  url  String @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  // Generic target reference; indexed for fast lookup
+  targetId  String   @map("target_id") @db.Uuid
+
+  @@index([targetId])
+  @@map("attachments")
+}

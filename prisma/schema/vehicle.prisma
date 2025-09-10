@@ -1,0 +1,28 @@
+enum VehicleStatus {
+  ACTIVE         @map("active")
+  IN_MAINTENANCE @map("in_maintenance")
+  OUT_OF_SERVICE @map("out_of_service")
+
+  @@map("vehicle_status")
+}
+
+model Vehicle {
+  id                  String          @id @default(uuid()) @map("id") @db.Uuid
+  make                String          @map("make") @db.VarChar(255)
+  model               String          @map("model") @db.VarChar(255)
+  year                Int             @map("year")
+  plateNumber         String          @map("plate_number") @db.VarChar(255)
+  vin                 String          @map("vin") @db.VarChar(255)
+  status              VehicleStatus   @default(ACTIVE) @map("status")
+  driverId            String          @map("driver_id") @db.Uuid
+  driver              Driver          @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+  notes               String?         @map("notes") @db.Text
+  nextMaintenanceDate DateTime?       @map("next_maintenance_date")
+  license             VehicleLicense?
+  violations          Violation[]
+
+  @@index([driverId, status])
+  @@map("vehicles")
+}

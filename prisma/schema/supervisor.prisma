@@ -1,0 +1,32 @@
+model Supervisor {
+  id                           String                @id @default(uuid()) @map("id") @db.Uuid
+  departments                  Department[]
+  permissions                  AdminPermissions[]
+  userId                       String                @unique @map("user_id") @db.Uuid
+  user                         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignerTasks                Task[]                @relation("AssignerOfTask")
+  employees                    Employee[]
+  promotions                   Promotion[]
+  approvedTasks                Task[]                @relation("ApproverOfTask")
+  employeeRequests             EmployeeRequest[]     @relation("SupervisorRequests")
+  questions                    Question[]
+  supportTicketAnswersAuthored SupportTicketAnswer[] @relation("AnswererOfSupportTicketAnswer")
+  performerTasks               Task[]                @relation("PerformerOfTask")
+  drivers                      Driver[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("supervisors")
+}
+
+
+enum AdminPermissions {
+  VIEW_ANALYTICS @map("view_analytics")
+  MANAGE_SUB_DEPARTMENTS @map("manage_sub_departments")
+  MANAGE_PROMOTIONS @map("manage_promotions")
+  VIEW_USER_ACTIVITY @map("view_user_activity")
+  MANAGE_STAFF_DIRECTLY @map("manage_staff_directly")
+  MANAGE_TASKS @map("manage_tasks")
+}

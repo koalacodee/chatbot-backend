@@ -1,0 +1,67 @@
+model Question {
+  id                  String                @id @default(uuid()) @map("id") @db.Uuid
+  text                String                @map("text") @db.Text
+  answer              String?               @map("answer") @db.Text
+  departmentId        String                @map("department_id") @db.Uuid
+  department          Department            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  knowledgeChunkId    String?               @map("knowledge_chunk_id") @db.Uuid
+  knowledgeChunk      KnowledgeChunk?       @relation(fields: [knowledgeChunkId], references: [id], onDelete: Cascade)
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  creatorSupervisorId String?               @map("creator_supervisor_id") @db.Uuid
+  creatorSupervisor   Supervisor?           @relation(fields: [creatorSupervisorId], references: [id], onDelete: Cascade)
+  creatorAdminId      String?               @map("creator_admin_id") @db.Uuid
+  creatorAdmin        Admin?                @relation(fields: [creatorAdminId], references: [id], onDelete: Cascade)
+  creatorEmployeeId   String?               @map("creator_employee_id") @db.Uuid
+  creatorEmployee     Employee?             @relation(fields: [creatorEmployeeId], references: [id], onDelete: Cascade)
+  interactions        QuestionInteraction[]
+  satisfaction        Int                   @default(0) @map("satisfaction")
+  dissatisfaction     Int                   @default(0) @map("dissatisfaction")
+  views               Int                   @default(0) @map("views")
+  questionViews       QuestionView[]
+
+  @@index([departmentId])
+  @@index([views])
+  @@index([departmentId, views])
+  @@index([creatorSupervisorId])
+  @@map("questions")
+}
+
+model QuestionInteraction {
+  id        String          @id @default(uuid()) @map("id") @db.Uuid
+  type      InteractionType @map("type")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  questionId String   @map("question_id") @db.Uuid
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  guestId    String   @map("guest_id") @db.Uuid
+
+  @@unique([questionId, guestId])
+  @@index([questionId])
+  @@index([guestId])
+  @@map("question_interactions")
+}
+
+model QuestionView {
+  id         String   @id @default(uuid()) @map("id") @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  guestId    String   @map("guest_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([questionId, guestId])
+  @@index([questionId])
+  @@index([guestId])
+  @@map("question_views")
+}
+
+enum InteractionType {
+  SATISFACTION    @map("satisfaction")
+  DISSATISFACTION @map("dissatisfaction")
+  VIEW            @map("view")
+
+  @@map("interaction_type")
+}

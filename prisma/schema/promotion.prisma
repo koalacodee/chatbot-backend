@@ -1,0 +1,32 @@
+
+model Promotion {
+  id    String @id @default(uuid()) @map("id") @db.Uuid
+  title String @map("title") @db.VarChar(255)
+
+  audience AudienceType @map("audience")
+  isActive Boolean      @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  startDate DateTime? @map("start_date")
+  endDate   DateTime? @map("end_date")
+
+  createdByAdminId      String?     @map("created_by_admin_id") @db.Uuid
+  createdByAdmin        Admin?      @relation(fields: [createdByAdminId], references: [id], onDelete: Cascade)
+  createdBySupervisorId String?     @map("created_by_supervisor_id") @db.Uuid
+  createdBySupervisor   Supervisor? @relation(fields: [createdBySupervisorId], references: [id], onDelete: Cascade)
+
+  @@index([createdByAdminId, isActive, createdBySupervisorId])
+  @@map("promotions")
+}
+
+// Removed PromotionAttachment junction
+
+enum AudienceType {
+  CUSTOMER   @map("customer")
+  SUPERVISOR @map("supervisor")
+  EMPLOYEE   @map("employee")
+  ALL        @map("all")
+
+  @@map("audience_type")
+}

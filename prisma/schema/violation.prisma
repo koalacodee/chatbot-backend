@@ -1,0 +1,20 @@
+model Violation {
+  id             String        @id @default(uuid()) @map("id") @db.Uuid
+  driverId       String        @map("driver_id") @db.Uuid
+  driver         Driver        @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicleId      String        @map("vehicle_id") @db.Uuid
+  vehicle        Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  ruleId         String        @map("rule_id") @db.Uuid
+  rule           ViolationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  description    String        @map("description") @db.Text
+  amount         Float         @map("amount")
+  isPaid         Boolean       @default(false) @map("is_paid")
+  triggerEventId String        @map("trigger_event_id") @db.VarChar(255)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@index([driverId])
+  @@index([vehicleId])
+  @@index([ruleId, isPaid])
+  @@map("violations")
+}

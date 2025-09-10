@@ -1,0 +1,13 @@
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @map("id") @db.Uuid
+  token     String    @map("token")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  revokedAt DateTime? @map("revoked_at")
+  targetId  String    @map("target_id") @db.Uuid
+
+  @@index([token])
+  @@map("refresh_tokens")
+}

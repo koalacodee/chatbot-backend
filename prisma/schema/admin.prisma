@@ -1,0 +1,14 @@
+model Admin {
+  id                           String                @id @default(uuid()) @map("id") @db.Uuid
+  userId                       String                @unique @map("user_id") @db.Uuid
+  user                         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promotions                   Promotion[]
+  approvedTasks                Task[]                @relation("ApproverOfTask")
+  adminResolutions             EmployeeRequest[]     @relation("AdminResolutions")
+  questions                    Question[]
+  supportTicketAnswersAuthored SupportTicketAnswer[] @relation("AnswererOfSupportTicketAnswer")
+  performerTasks               Task[]                @relation("PerformerOfTask")
+  assignedTasks                Task[]                @relation("AssignerOfTask")
+
+  @@map("admins")
+}
