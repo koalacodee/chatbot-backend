@@ -274,7 +274,7 @@ model KnowledgeChunk {
 
 model Conversation {
   id        String    @id @default(uuid()) @map("id") @db.Uuid
-  guestId   String    @map("guest_id") @db.Uuid
+  guestId   String?    @map("guest_id") @db.Uuid
   guest     Guest?    @relation(fields: [guestId], references: [id], onDelete: Cascade)
   anonymousId String?    @map("anonymous_id") @db.Uuid
   messages  Message[]
