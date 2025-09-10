@@ -1,13 +1,13 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { Request } from 'express';
 import { Strategy } from 'passport-jwt';
 import { GuestRepository } from 'src/guest/domain/repositories/guest.repository';
 import { RefreshTokenRepository } from 'src/auth/domain/repositories/refresh-token.repository';
+import { FastifyRequest } from 'fastify';
 
 // Custom extractor function to get JWT from cookies
-const cookieExtractor = (req: Request): string | null => {
+const cookieExtractor = (req: FastifyRequest): string | null => {
   if (req && req.cookies) {
     return req.cookies['guest_refresh_token'] || null;
   }
@@ -32,7 +32,7 @@ export class GuestRefreshTokenStrategy extends PassportStrategy(
     });
   }
 
-  async validate(req: Request, payload: any) {
+  async validate(req: FastifyRequest, payload: any) {
     const refreshToken = req.cookies['guest_refresh_token'];
 
     if (!refreshToken) {

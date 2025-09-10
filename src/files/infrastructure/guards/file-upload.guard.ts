@@ -1,8 +1,8 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { RedisService } from 'src/shared/infrastructure/redis';
-import { Request } from 'express';
+import { FastifyRequest } from 'fastify';
 
-interface UploadRequest extends Request {
+interface UploadRequest extends FastifyRequest {
   targetId?: string;
 }
 

@@ -1,6 +1,4 @@
-import { Response } from 'express';
-import { PermissionsEnum } from 'src/rbac/decorators/permissions.decorator';
-
+import { FastifyReply } from 'fastify';
 export interface Tokens {
   accessToken: string;
   refreshToken: string;
@@ -27,8 +25,8 @@ export abstract class TokensService {
   abstract revokeRefreshToken(refreshToken: string): void | Promise<void>;
   abstract revokeAllRefreshTokens(guestId: string): void | Promise<void>;
   abstract setRefreshTokenCookie(
-    res: Response,
+    res: FastifyReply,
     token: string,
   ): void | Promise<void>;
-  abstract clearRefreshTokenCookie(res: Response): void | Promise<void>;
+  abstract clearRefreshTokenCookie(res: FastifyReply): void | Promise<void>;
 }

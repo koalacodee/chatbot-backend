@@ -34,7 +34,7 @@ import { CreateSupportTicketWithVerificationUseCase } from '../../application/us
 import { VerifySupportTicketUseCase } from '../../application/use-cases/verify-support-ticket.use-case';
 import { GetEmployeesWithTicketHandlingPermissionsUseCase } from '../../application/use-cases/get-employees-with-ticket-handling-permissions.use-case';
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
-import { AnswerTicketDto } from './dto/answer-ticket.use-case';
+import { AnswerSupportTicketDto } from './dto/answer-ticket.use-case';
 import { AnswerTicketUseCase } from 'src/support-tickets/application/use-cases/answer-ticket.use-case';
 import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
 import { GuestAuth } from 'src/auth/guest/infrastructure/decorators/guest-auth.decorator';
@@ -214,7 +214,7 @@ export class SupportTicketController {
   @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)
   @Put(':id/answer')
   async answerTicket(
-    @Body() dto: AnswerTicketDto,
+    @Body() dto: AnswerSupportTicketDto,
     @Param('id') id: string,
     @Req() req: any,
   ): Promise<{ answer: SupportTicketAnswer; uploadKey?: string }> {

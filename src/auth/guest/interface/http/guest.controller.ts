@@ -8,7 +8,6 @@ import {
   Res,
   HttpCode,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { GuestRefreshTokenGuard } from '../../infrastructure/guards/guest-refresh-token.guard';
 import {
@@ -22,6 +21,8 @@ import {
 } from '../../application/use-cases';
 import { LoginGuestDto, RegisterGuestDto, VerifyCodeDto } from '../dto';
 import { GuestJwtAuthGuard } from '../../infrastructure/guards/guest-jwt-auth.guard';
+import { FastifyReply, FastifyRequest } from 'fastify';
+import '@fastify/cookie';
 
 @Controller('auth/guest')
 export class GuestController {
@@ -53,7 +54,7 @@ export class GuestController {
   @HttpCode(200)
   async verifyLogin(
     @Body() dto: VerifyCodeDto,
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) res: FastifyReply,
   ) {
     const result = await this.verifyLoginUseCase.execute(dto.code);
     this.setGuestRefreshTokenCookie(res, result.tokens.refreshToken);
@@ -67,7 +68,7 @@ export class GuestController {
   @HttpCode(200)
   async verifyRegister(
     @Body() dto: VerifyCodeDto,
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) res: FastifyReply,
   ) {
     const result = await this.verifyRegisterUseCase.execute(dto.code);
     this.setGuestRefreshTokenCookie(res, result.tokens.refreshToken);
@@ -81,8 +82,8 @@ export class GuestController {
   @Post('refresh')
   @HttpCode(200)
   async handleRefreshToken(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) res: FastifyReply,
   ) {
     const refreshToken = req.cookies['guest_refresh_token'];
     const result = await this.refreshGuestTokenUseCase.execute({
@@ -100,7 +101,7 @@ export class GuestController {
   @UseGuards(GuestRefreshTokenGuard)
   @Post('check')
   @HttpCode(200)
-  async handleCheckAuth(@Req() req: Request) {
+  async handleCheckAuth(@Req() req: FastifyRequest) {
     return {
       success: true,
     };
@@ -110,8 +111,8 @@ export class GuestController {
   @Post('logout')
   @HttpCode(200)
   async handleLogout(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) res: FastifyReply,
   ) {
     const refreshToken = req.cookies['guest_refresh_token'];
 
@@ -135,14 +136,14 @@ export class GuestController {
     return await this.getCurrentGuestUseCase.execute({ guestId });
   }
 
-  private setGuestRefreshTokenCookie(res: Response, token: string) {
+  private setGuestRefreshTokenCookie(res: FastifyReply, token: string) {
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 7);
 
     const COOKIE_SAMESITE = this.config.get('COOKIES_SAMESITE', 'strict');
     const COOKIE_SECURE = this.config.get('COOKIES_SECURE', true);
 
-    res.cookie('guest_refresh_token', token, {
+    res.setCookie('guest_refresh_token', token, {
       httpOnly: true,
       secure: COOKIE_SECURE,
       sameSite: COOKIE_SAMESITE,

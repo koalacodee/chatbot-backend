@@ -9,7 +9,6 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { LoginDto } from '../dto/login.dto';
-import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import {
   GetAuthorizedUserUseCase,
@@ -19,6 +18,7 @@ import {
 } from '../../application/use-cases';
 import { UserRefreshTokenGuard } from '../../infrastructure/guards/refresh-token.guard';
 import { UserJwtAuthGuard } from '../../infrastructure/guards/jwt-auth.guard';
+import { FastifyReply, FastifyRequest } from 'fastify';
 
 @Controller('auth')
 export class UserAuthController {
@@ -34,14 +34,14 @@ export class UserAuthController {
   @HttpCode(200)
   async handleLogin(
     @Body() dto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) res: FastifyReply,
   ) {
     const result = await this.login.execute(dto);
 
     // Set refresh token as HTTP-only cookie
     this.setRefreshTokenCookie(res, result.refreshToken);
 
-    // Return only the access token and user info in the response body
+    // Return only the access token and user info in the FastifyReply body
     return {
       user: result.user,
       accessToken: result.accessToken,
@@ -59,8 +59,8 @@ export class UserAuthController {
   @Post('logout')
   @HttpCode(200)
   async handleLogout(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) res: FastifyReply,
   ) {
     const refreshToken = req.cookies['refresh_token'];
     await this.logout.execute({ refreshToken });
@@ -83,7 +83,7 @@ export class UserAuthController {
     return await this.getAuthorizedUser.execute({ userId });
   }
 
-  private setRefreshTokenCookie(res: Response, token: string) {
+  private setRefreshTokenCookie(res: FastifyReply, token: string) {
     // Calculate expiry date (7 days from now)
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 7);
@@ -91,7 +91,7 @@ export class UserAuthController {
     const COOKIE_SAMESITE = this.config.get('COOKIES_SAMESITE', 'strict');
     const COOKIE_SECURE = this.config.get('COOKIES_SECURE', true);
 
-    res.cookie('refresh_token', token, {
+    res.setCookie('refresh_token', token, {
       httpOnly: true,
       secure: COOKIE_SECURE,
       sameSite: COOKIE_SAMESITE,

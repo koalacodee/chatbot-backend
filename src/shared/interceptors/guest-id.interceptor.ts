@@ -5,9 +5,8 @@ import {
   CallHandler,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { Response } from 'express';
-import { randomUUID } from 'crypto';
 import { UUID } from '../value-objects/uuid.vo';
+import { FastifyReply } from 'fastify';
 
 @Injectable()
 export class GuestIdInterceptor implements NestInterceptor {
@@ -16,7 +15,7 @@ export class GuestIdInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
-    const response = context.switchToHttp().getResponse<Response>();
+    const response = context.switchToHttp().getResponse<FastifyReply>();
 
     // Skip if user is already authenticated
     if (request.user) {
@@ -30,7 +29,7 @@ export class GuestIdInterceptor implements NestInterceptor {
       guestId = UUID.create().toString();
 
       // Set cookie with guest ID
-      response.cookie(this.GUEST_COOKIE_NAME, guestId, {
+      response.setCookie(this.GUEST_COOKIE_NAME, guestId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',

@@ -2,9 +2,9 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { RefreshTokenRepository } from 'src/auth/domain/repositories/refresh-token.repository';
-import { Response } from 'express';
 import { RefreshToken } from 'src/auth/domain/entities/refresh-token.entity';
 import { TokensService } from 'src/auth/domain/services/tokens.service';
+import { FastifyReply } from 'fastify';
 
 @Injectable()
 export class JwtTokenService extends TokensService {
@@ -115,14 +115,14 @@ export class JwtTokenService extends TokensService {
     await this.refreshTokenRepository.deleteAllForTarget(guestId);
   }
 
-  setRefreshTokenCookie(res: Response, token: string): void {
+  setRefreshTokenCookie(res: FastifyReply, token: string): void {
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 7);
 
     const COOKIE_SAMESITE = this.config.get('COOKIES_SAMESITE', 'strict');
     const COOKIE_SECURE = this.config.get('COOKIES_SECURE', true);
 
-    res.cookie('guest_refresh_token', token, {
+    res.setCookie('guest_refresh_token', token, {
       httpOnly: true,
       secure: COOKIE_SECURE,
       sameSite: COOKIE_SAMESITE,
@@ -131,7 +131,7 @@ export class JwtTokenService extends TokensService {
     });
   }
 
-  clearRefreshTokenCookie(res: Response): void {
+  clearRefreshTokenCookie(res: FastifyReply): void {
     res.clearCookie('guest_refresh_token', {
       httpOnly: true,
       secure: this.config.get('NODE_ENV', 'development') === 'production',
