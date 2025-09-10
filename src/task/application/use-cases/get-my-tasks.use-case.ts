@@ -23,6 +23,11 @@ interface MyTasksResult {
   tasks: Task[];
   total: number;
   canSubmitWork: boolean[];
+  metrics: {
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  };
 }
 
 @Injectable()
@@ -69,7 +74,16 @@ export class GetMyTasksUseCase {
     );
 
     if (supervisorDepartmentIds.length === 0) {
-      return { tasks: [], total: 0, canSubmitWork: [] };
+      return {
+        tasks: [],
+        total: 0,
+        canSubmitWork: [],
+        metrics: {
+          pendingCount: 0,
+          completedCount: 0,
+          completionPercentage: 0,
+        },
+      };
     }
 
     const result = await this.taskRepo.findTasksForSupervisor({
@@ -79,10 +93,13 @@ export class GetMyTasksUseCase {
       limit: dto.limit,
     });
 
+    const metrics = await this.taskRepo.getTaskMetricsForSupervisor(supervisorDepartmentIds);
+    
     return {
       tasks: result.tasks,
       total: result.total,
-      canSubmitWork: result.tasks.map(() => true), // Supervisors can submit work for their managed tasks
+      canSubmitWork: result.tasks.map(() => true),
+      metrics,
     };
   }
 
@@ -107,6 +124,12 @@ export class GetMyTasksUseCase {
       limit: dto.limit,
     });
 
+    const metrics = await this.taskRepo.getTaskMetricsForEmployee(
+      employee.id.toString(),
+      employee.supervisor.id.toString(),
+      employeeSubDepartmentIds,
+    );
+    
     return {
       tasks: result.tasks,
       total: result.total,
@@ -120,6 +143,7 @@ export class GetMyTasksUseCase {
           );
         return isAssignedToEmployee || isInSubDepartment;
       }),
+      metrics,
     };
   }
 }

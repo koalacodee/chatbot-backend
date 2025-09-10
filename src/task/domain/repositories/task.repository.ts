@@ -46,4 +46,22 @@ export abstract class TaskRepository {
     offset?: number;
     limit?: number;
   }): Promise<{ tasks: Task[]; total: number }>;
+
+  abstract getTaskMetricsForSupervisor(
+    supervisorDepartmentIds: string[],
+  ): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }>;
+
+  abstract getTaskMetricsForEmployee(
+    employeeId: string,
+    supervisorId: string,
+    subDepartmentIds: string[],
+  ): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }>;
 }

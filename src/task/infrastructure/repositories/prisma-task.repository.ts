@@ -10,6 +10,7 @@ import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
+import { TaskStatus } from '@prisma/client';
 
 @Injectable()
 export class PrismaTaskRepository extends TaskRepository {
@@ -557,5 +558,93 @@ export class PrismaTaskRepository extends TaskRepository {
 
     const tasks = await Promise.all(rows.map((r) => this.toDomain(r)));
     return { tasks, total };
+  }
+
+  async getTaskMetricsForSupervisor(
+    supervisorDepartmentIds: string[],
+  ): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }> {
+    const departmentIds = [...supervisorDepartmentIds];
+    const subDepartments = await this.prisma.department.findMany({
+      where: { parentId: { in: supervisorDepartmentIds } },
+      select: { id: true },
+    });
+    departmentIds.push(...subDepartments.map((d) => d.id));
+
+    return this.executeMetricsQuery(
+      `t.target_department_id IN (SELECT department_id FROM department_hierarchy) OR t.target_sub_department_id IN (SELECT department_id FROM department_hierarchy)`,
+      departmentIds,
+      'department_hierarchy',
+      'department_id',
+    );
+  }
+
+  async getTaskMetricsForEmployee(
+    employeeId: string,
+    supervisorId: string,
+    subDepartmentIds: string[],
+  ): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }> {
+    return this.executeMetricsQuery(
+      `t.assignee_id = ${employeeId}::uuid OR t.assigner_supervisor_id = ${supervisorId}::uuid OR t.target_sub_department_id IN (SELECT sub_department_id FROM employee_access)`,
+      subDepartmentIds,
+      'employee_access',
+      'sub_department_id',
+    );
+  }
+
+  private async executeMetricsQuery(
+    whereClause: string,
+    parameterArray: string[],
+    parameterListName: string,
+    parameterName: string,
+  ): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }> {
+    const parameterList = parameterArray.join(',');
+
+    const result = await this.prisma.$queryRaw<
+      [
+        {
+          pending_count: bigint;
+          completed_count: bigint;
+          completion_percentage: number;
+        },
+      ]
+    >`
+      WITH ${parameterListName} AS (
+        SELECT unnest(ARRAY[${parameterList}])::uuid AS ${parameterName}
+      ),
+      task_counts AS (
+        SELECT 
+          COUNT(CASE WHEN t.status IN ('to_do', 'seen', 'pending_review', 'pending_supervisor_review') THEN 1 END) as pending_count,
+          COUNT(CASE WHEN t.status = 'completed' THEN 1 END) as completed_count
+        FROM tasks t
+        WHERE ${whereClause}
+      )
+      SELECT 
+        pending_count,
+        completed_count,
+        CASE 
+          WHEN (pending_count + completed_count) > 0 
+          THEN ROUND((completed_count::numeric / (pending_count + completed_count)) * 100)
+          ELSE 0
+        END as completion_percentage
+      FROM task_counts
+    `;
+
+    return {
+      pendingCount: Number(result[0]?.pending_count || 0),
+      completedCount: Number(result[0]?.completed_count || 0),
+      completionPercentage: Number(result[0]?.completion_percentage || 0),
+    };
   }
 }

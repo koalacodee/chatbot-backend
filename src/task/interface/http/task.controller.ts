@@ -258,6 +258,7 @@ export class TaskController {
         canSubmitWork: result.canSubmitWork[result.tasks.indexOf(task)],
       })),
       total: result.total,
+      metrics: result.metrics,
     };
   }
 }
