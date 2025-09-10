@@ -4,6 +4,7 @@ import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
+import { TaskApprovalLevel } from '../value-objects/task-approval-level.vo';
 
 export enum TaskStatus {
   TODO = 'TODO',
@@ -225,6 +226,24 @@ export class Task {
     this._targetSubDepartment = value;
   }
 
+  get approvalLevel(): TaskApprovalLevel {
+    if (this.targetDepartment) {
+      return TaskApprovalLevel.DEPARTMENT_LEVEL;
+    }
+
+    if (this.targetSubDepartment) {
+      return TaskApprovalLevel.SUB_DEPARTMENT_LEVEL;
+    }
+
+    if (this.assignee) {
+      return TaskApprovalLevel.EMPLOYEE_LEVEL;
+    }
+
+    throw new Error(
+      'Task must have either targetDepartment, targetSubDepartment, or assignee',
+    );
+  }
+
   toJSON(): any {
     return {
       id: this.id.toString(),
@@ -238,6 +257,7 @@ export class Task {
       assignmentType: this.assignmentType,
       targetDepartment: this.targetDepartment?.toJSON(),
       targetSubDepartment: this.targetSubDepartment?.toJSON(),
+      approvalLevel: this.approvalLevel,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
       completedAt: this.completedAt?.toISOString(),
