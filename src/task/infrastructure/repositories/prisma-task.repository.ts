@@ -1,16 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { TaskRepository } from '../../domain/repositories/task.repository';
-import { Task, TaskAssignmentType } from '../../domain/entities/task.entity';
+import {
+  Task,
+  TaskAssignmentType,
+  TaskPriority,
+} from '../../domain/entities/task.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
-import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
-import { TaskStatus } from '@prisma/client';
 
 @Injectable()
 export class PrismaTaskRepository extends TaskRepository {
@@ -65,6 +67,7 @@ export class PrismaTaskRepository extends TaskRepository {
       approver: approver,
       status: row.status,
       assignmentType: row.assignmentType as TaskAssignmentType,
+      priority: row.priority as TaskPriority,
       targetDepartment: targetDepartment,
       targetSubDepartment: targetSubDepartment,
       createdAt: row.createdAt,
@@ -107,6 +110,7 @@ export class PrismaTaskRepository extends TaskRepository {
           : null,
       status: task.status,
       assignmentType: task.assignmentType,
+      priority: task.priority,
       targetDepartmentId: task.targetDepartment?.id.toString() ?? null,
       targetSubDepartmentId: task.targetSubDepartment?.id.toString() ?? null,
       createdAt: task.createdAt,
@@ -140,6 +144,7 @@ export class PrismaTaskRepository extends TaskRepository {
         approverSupervisorId: data.approverSupervisorId,
         status: data.status,
         assignmentType: data.assignmentType,
+        priority: data.priority,
         targetDepartmentId: data.targetDepartmentId,
         targetSubDepartmentId: data.targetSubDepartmentId,
         updatedAt: data.updatedAt,
@@ -609,19 +614,19 @@ export class PrismaTaskRepository extends TaskRepository {
     completedCount: number;
     completionPercentage: number;
   }> {
-    const parameterList = parameterArray.join(',');
+    if (parameterArray.length === 0) {
+      return {
+        pendingCount: 0,
+        completedCount: 0,
+        completionPercentage: 0,
+      };
+    }
 
-    const result = await this.prisma.$queryRaw<
-      [
-        {
-          pending_count: bigint;
-          completed_count: bigint;
-          completion_percentage: number;
-        },
-      ]
-    >`
+    const departmentIds = parameterArray.map((id) => `'${id}'`).join(',');
+
+    const query = `
       WITH ${parameterListName} AS (
-        SELECT unnest(ARRAY[${parameterList}])::uuid AS ${parameterName}
+        SELECT unnest(ARRAY[${departmentIds}]::uuid[]) AS ${parameterName}
       ),
       task_counts AS (
         SELECT 
@@ -640,6 +645,16 @@ export class PrismaTaskRepository extends TaskRepository {
         END as completion_percentage
       FROM task_counts
     `;
+
+    const result = await this.prisma.$queryRawUnsafe<
+      [
+        {
+          pending_count: bigint;
+          completed_count: bigint;
+          completion_percentage: number;
+        },
+      ]
+    >(query);
 
     return {
       pendingCount: Number(result[0]?.pending_count || 0),

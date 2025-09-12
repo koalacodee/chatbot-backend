@@ -89,13 +89,14 @@ export class UserAuthController {
     expiryDate.setDate(expiryDate.getDate() + 7);
 
     const COOKIE_SAMESITE = this.config.get('COOKIES_SAMESITE', 'strict');
-    const COOKIE_SECURE = this.config.get('COOKIES_SECURE', true);
+    const COOKIE_SECURE = this.config.get('COOKIE_SECURE', 'true') === 'true';
 
     res.setCookie('refresh_token', token, {
       httpOnly: true,
       secure: COOKIE_SECURE,
       sameSite: COOKIE_SAMESITE,
       expires: expiryDate,
+      path: '/',
     });
   }
 }

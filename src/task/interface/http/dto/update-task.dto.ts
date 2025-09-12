@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { TaskPriority } from 'src/task/domain/entities/task.entity';
 
 export enum UpdateTaskAssignmentType {
   INDIVIDUAL = 'INDIVIDUAL',
@@ -37,6 +38,10 @@ export class UpdateTaskInputDto {
   // @IsOptional()
   // @IsEnum(UpdateTaskAssignmentType)
   // assignmentType?: UpdateTaskAssignmentType;
+
+  @IsOptional()
+  @IsEnum(TaskPriority)
+  priority?: TaskPriority;
 
   @IsOptional()
   @IsString()

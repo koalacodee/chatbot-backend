@@ -11,3 +11,6 @@ export * from './mark-task-seen.use-case';
 export * from './get-tasks-with-filters.use-case';
 export * from './get-team-tasks.use-case';
 export * from './get-my-tasks.use-case';
+export * from './get-sub-department-tasks.use-case';
+export * from './get-department-level-tasks.use-case';
+export * from './get-individual-level-tasks.use-case';

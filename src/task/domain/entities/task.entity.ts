@@ -20,6 +20,12 @@ export enum TaskAssignmentType {
   SUB_DEPARTMENT = 'SUB_DEPARTMENT',
 }
 
+export enum TaskPriority {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+}
+
 export interface TaskOptions {
   id?: string;
   title: string;
@@ -30,6 +36,7 @@ export interface TaskOptions {
   performer?: Admin | Supervisor | Employee;
   status: TaskStatus;
   assignmentType: TaskAssignmentType;
+  priority: TaskPriority;
   targetDepartment?: Department;
   targetSubDepartment?: Department;
   createdAt?: Date;
@@ -51,6 +58,7 @@ export class Task {
   private _performer?: Admin | Supervisor | Employee;
   private _status: TaskStatus;
   private _assignmentType: TaskAssignmentType;
+  private _priority: TaskPriority;
   private _targetDepartment?: Department;
   private _targetSubDepartment?: Department;
   private _createAt: Date;
@@ -71,6 +79,7 @@ export class Task {
     this._performer = options.performer;
     this._status = options.status;
     this._assignmentType = options.assignmentType;
+    this._priority = options.priority;
     this._targetDepartment = options.targetDepartment;
     this._targetSubDepartment = options.targetSubDepartment;
     this._createAt = options.createdAt ?? new Date();
@@ -210,6 +219,14 @@ export class Task {
     this._assignmentType = value;
   }
 
+  get priority(): TaskPriority {
+    return this._priority;
+  }
+
+  set priority(value: TaskPriority) {
+    this._priority = value;
+  }
+
   get targetDepartment(): Department | undefined {
     return this._targetDepartment;
   }
@@ -255,6 +272,7 @@ export class Task {
       performer: this.performer?.toJSON(),
       status: this.status,
       assignmentType: this.assignmentType,
+      priority: this.priority,
       targetDepartment: this.targetDepartment?.toJSON(),
       targetSubDepartment: this.targetSubDepartment?.toJSON(),
       approvalLevel: this.approvalLevel,

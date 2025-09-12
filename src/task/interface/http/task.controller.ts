@@ -37,8 +37,6 @@ import {
 } from './dto';
 import { GetTeamTasksDto } from './dto/get-team-tasks.dto';
 import { Task, TaskAssignmentType } from '../../domain/entities/task.entity';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { Roles } from 'src/shared/value-objects/role.vo';
 import { TaskStatus } from '@prisma/client';
 import {
   EmployeePermissions,
@@ -46,7 +44,6 @@ import {
 } from 'src/rbac/decorators';
 import { EmployeePermissionsEnum as EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
-import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 @Controller('tasks')
 export class TaskController {
   constructor(
@@ -238,6 +235,7 @@ export class TaskController {
       },
     },
   })
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TASKS)
   async getMyTasks(
     @Req() req: any,
     @Query('offset') offset?: string,

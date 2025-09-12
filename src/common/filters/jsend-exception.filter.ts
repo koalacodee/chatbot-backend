@@ -6,12 +6,13 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { FastifyReply } from 'fastify';
 
 @Catch()
 export class JSendExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse();
+    const response = ctx.getResponse<FastifyReply>();
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Something went wrong';
 
@@ -19,7 +20,7 @@ export class JSendExceptionFilter implements ExceptionFilter {
       status = exception.getStatus();
       const responseBody = exception.getResponse();
 
-      return response.status(status).json({
+      return response.status(status).send({
         status: 'fail', // "fail" for user errors
         data:
           typeof responseBody === 'string'
@@ -34,7 +35,7 @@ export class JSendExceptionFilter implements ExceptionFilter {
       `Exception thrown: ${JSON.stringify(message)}`,
       (exception as Error).stack,
     );
-    return response.status(status).json({
+    return response.status(status).send({
       status: 'error',
       message: message,
       code: status,

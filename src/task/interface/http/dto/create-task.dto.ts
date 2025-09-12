@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsString, IsOptional, IsEnum, IsDate } from 'class-validator';
-import { TaskStatus } from 'src/task/domain/entities/task.entity';
+import { TaskStatus, TaskPriority } from 'src/task/domain/entities/task.entity';
 
 export enum CreateTaskAssignmentType {
   INDIVIDUAL = 'INDIVIDUAL',
@@ -29,6 +29,10 @@ export class CreateTaskInputDto {
 
   @IsEnum(CreateTaskAssignmentType)
   assignmentType: CreateTaskAssignmentType;
+
+  @IsEnum(TaskPriority)
+  @IsOptional()
+  priority?: TaskPriority;
 
   @IsOptional()
   @IsString()

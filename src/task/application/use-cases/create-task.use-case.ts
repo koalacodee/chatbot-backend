@@ -4,7 +4,11 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { Task, TaskAssignmentType } from '../../domain/entities/task.entity';
+import {
+  Task,
+  TaskAssignmentType,
+  TaskPriority,
+} from '../../domain/entities/task.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { CreateTaskInputDto as CreateTaskDto } from '../../interface/http/dto/create-task.dto';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
@@ -30,6 +34,7 @@ interface CreateTaskInputDto {
   targetSubDepartmentId?: string;
   completedAt?: Date | null;
   notes?: string;
+  priority?: TaskPriority;
   feedback?: string;
 }
 
@@ -128,9 +133,11 @@ export class CreateTaskUseCase {
       assigner: assigner,
       approver: approverAdmin ?? approverSupervisor,
       assignmentType: dto.assignmentType,
-      targetDepartment: targetDepartment ?? undefined,
-      targetSubDepartment: targetSubDepartment ?? undefined,
+      targetDepartment:
+        !assignee && !targetSubDepartment ? targetDepartment : undefined,
+      targetSubDepartment: !assignee ? targetSubDepartment : undefined,
       status: dto.status,
+      priority: dto.priority ?? TaskPriority.MEDIUM,
       completedAt: dto.completedAt ?? undefined,
       notes: dto.notes ?? undefined,
       feedback: dto.feedback ?? undefined,

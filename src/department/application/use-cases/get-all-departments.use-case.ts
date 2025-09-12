@@ -13,23 +13,22 @@ export class GetAllDepartmentsUseCase {
   ) {}
 
   async execute(userId?: string): Promise<any[]> {
-    let departments = await this.departmentRepo.findAllDepartments({
-      includeQuestions: true,
-      includeSubDepartments: true,
-    });
+    let departments = await this.departmentRepo.findAllDepartments({});
 
     // Apply department filtering for supervisors
     if (userId) {
       const user = await this.userRepository.findById(userId);
       const userRole = user.role.getRole();
-      
+
       if (userRole === Roles.SUPERVISOR) {
         const supervisor = await this.supervisorRepository.findByUserId(userId);
-        const supervisorDepartmentIds = supervisor.departments.map((d) => d.id.toString());
-        
+        const supervisorDepartmentIds = supervisor.departments.map((d) =>
+          d.id.toString(),
+        );
+
         // Filter departments to only those assigned to the supervisor
-        departments = departments.filter((dept) => 
-          supervisorDepartmentIds.includes(dept.id.toString())
+        departments = departments.filter((dept) =>
+          supervisorDepartmentIds.includes(dept.id.toString()),
         );
       }
       // Admins see all departments (no filtering)

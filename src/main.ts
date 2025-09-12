@@ -17,7 +17,23 @@ import fastifyMultipart from '@fastify/multipart';
 
 async function bootstrap() {
   const adapter = new FastifyAdapter({
-    logger: false,
+    logger:
+      process.env.NODE_ENV !== 'production'
+        ? {
+            transport: {
+              target: 'pino-pretty',
+              options: {
+                colorize: true,
+                translateTime: 'yyyy-mm-dd HH:MM:ss',
+                singleLine: true, // كل log في سطر واحد
+                ignore: 'pid,hostname,reqId', // يشيل الحقول الزيادة
+                messageFormat: true,
+              },
+            },
+          }
+        : {
+            level: 'info',
+          },
   });
 
   // ✨ Explicit generic على AppModule و NestFastifyApplication
