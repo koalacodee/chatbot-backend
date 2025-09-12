@@ -9,15 +9,16 @@ import { TaskRepository } from '../../domain/repositories/task.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
-import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { TaskApprovedEvent } from 'src/task/domain/events/task-approved.event';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DepartmentHierarchyService } from '../services/department-hierarchy.service';
+import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
+import { Admin } from 'src/admin/domain/entities/admin.entity';
+import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 
 interface ApproveTaskInputDto {
   taskId: string;
-  approverId: string;
 }
 
 @Injectable()
@@ -27,18 +28,15 @@ export class ApproveTaskUseCase {
     private readonly userRepo: UserRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
-    private readonly departmentRepository: DepartmentRepository,
     private readonly departmentHierarchyService: DepartmentHierarchyService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly adminRepository: AdminRepository,
   ) {}
 
   async execute(dto: ApproveTaskInputDto, userId?: string): Promise<Task> {
-    if (!dto.approverId)
-      throw new BadRequestException({ approverId: 'required' });
-
     const [task, approver] = await Promise.all([
       this.taskRepo.findById(dto.taskId),
-      this.userRepo.findById(dto.approverId),
+      this.userRepo.findById(userId),
     ]);
 
     if (!task) throw new NotFoundException({ id: 'task_not_found' });
@@ -48,10 +46,9 @@ export class ApproveTaskUseCase {
     if (userId) {
       const user = await this.userRepo.findById(userId);
       const userRole = user.role.getRole();
-      await this.validateApprovalRights(userId, task, userRole);
+      task.approver = await this.validateApprovalRights(userId, task, userRole);
     }
 
-    task.approver = approver as any;
     task.status = 'COMPLETED' as any;
     task.completedAt = new Date();
 
@@ -76,19 +73,16 @@ export class ApproveTaskUseCase {
     userId: string,
     task: Task,
     role: Roles,
-  ): Promise<void> {
+  ): Promise<Supervisor | Admin> {
     const approvalLevel = task.approvalLevel;
 
     switch (approvalLevel) {
       case 'DEPARTMENT_LEVEL':
-        await this.validateDepartmentLevelApproval(userId, task, role);
-        break;
+        return this.validateDepartmentLevelApproval(userId, task, role);
       case 'SUB_DEPARTMENT_LEVEL':
-        await this.validateSubDepartmentLevelApproval(userId, task, role);
-        break;
+        return this.validateSubDepartmentLevelApproval(userId, task, role);
       case 'EMPLOYEE_LEVEL':
-        await this.validateEmployeeLevelApproval(userId, task, role);
-        break;
+        return this.validateEmployeeLevelApproval(userId, task, role);
       default:
         throw new ForbiddenException('Invalid task approval level');
     }
@@ -98,7 +92,7 @@ export class ApproveTaskUseCase {
     userId: string,
     task: Task,
     role: Roles,
-  ): Promise<void> {
+  ): Promise<Admin> {
     // Department level tasks can only be approved by admins
     if (role !== Roles.ADMIN) {
       throw new ForbiddenException(
@@ -108,18 +102,22 @@ export class ApproveTaskUseCase {
 
     // Ensure task has target department
     if (!task.targetDepartment) {
-      throw new BadRequestException('Department-level task must have target department');
+      throw new BadRequestException(
+        'Department-level task must have target department',
+      );
     }
+
+    return this.adminRepository.findByUserId(userId);
   }
 
   private async validateSubDepartmentLevelApproval(
     userId: string,
     task: Task,
     role: Roles,
-  ): Promise<void> {
+  ): Promise<Supervisor | Admin> {
     // Admins can approve any sub-department task
     if (role === Roles.ADMIN) {
-      return;
+      return this.adminRepository.findByUserId(userId);
     }
 
     // Supervisors can approve sub-department tasks under their supervision
@@ -134,13 +132,16 @@ export class ApproveTaskUseCase {
       );
 
       if (!task.targetSubDepartment) {
-        throw new BadRequestException('Sub-department level task must have target sub-department');
+        throw new BadRequestException(
+          'Sub-department level task must have target sub-department',
+        );
       }
 
-      const hasAccess = await this.departmentHierarchyService.hasHierarchicalAccess(
-        task.targetSubDepartment.id.toString(),
-        supervisorDepartmentIds,
-      );
+      const hasAccess =
+        await this.departmentHierarchyService.hasHierarchicalAccess(
+          task.targetSubDepartment.id.toString(),
+          supervisorDepartmentIds,
+        );
 
       if (!hasAccess) {
         throw new ForbiddenException(
@@ -148,7 +149,7 @@ export class ApproveTaskUseCase {
         );
       }
 
-      return;
+      return supervisor;
     }
 
     throw new ForbiddenException(
@@ -160,10 +161,10 @@ export class ApproveTaskUseCase {
     userId: string,
     task: Task,
     role: Roles,
-  ): Promise<void> {
+  ): Promise<Supervisor | Admin> {
     // Admins can approve any employee-level task
     if (role === Roles.ADMIN) {
-      return;
+      return this.adminRepository.findByUserId(userId);
     }
 
     // Supervisors can approve employee-level tasks for employees under their supervision
@@ -182,27 +183,37 @@ export class ApproveTaskUseCase {
       }
 
       // Get employee's department/sub-department
-      const employee = await this.employeeRepository.findById(task.assignee.id.toString());
+      const employee = await this.employeeRepository.findById(
+        task.assignee.id.toString(),
+      );
       if (!employee) {
         throw new NotFoundException('Employee not found');
       }
 
       let employeeDepartmentIds: string[] = [];
-      
+
       // Get employee's sub-department IDs
       if (employee.subDepartments && employee.subDepartments.length > 0) {
-        employeeDepartmentIds = employee.subDepartments.map(d => d.id.toString());
+        employeeDepartmentIds = employee.subDepartments.map((d) =>
+          d.id.toString(),
+        );
       }
-      
+
       // If employee has no sub-departments, check supervisor's departments
       if (employeeDepartmentIds.length === 0 && employee.supervisor) {
-        employeeDepartmentIds = employee.supervisor.departments.map(d => d.id.toString());
+        employeeDepartmentIds = employee.supervisor.departments.map((d) =>
+          d.id.toString(),
+        );
       }
 
       // Check if employee belongs to any department under supervisor's supervision
-      const hasAccess = employeeDepartmentIds.some(deptId =>
-        supervisorDepartmentIds.includes(deptId) ||
-        this.departmentHierarchyService.hasHierarchicalAccess(deptId, supervisorDepartmentIds)
+      const hasAccess = employeeDepartmentIds.some(
+        (deptId) =>
+          supervisorDepartmentIds.includes(deptId) ||
+          this.departmentHierarchyService.hasHierarchicalAccess(
+            deptId,
+            supervisorDepartmentIds,
+          ),
       );
 
       if (!hasAccess) {
@@ -211,7 +222,7 @@ export class ApproveTaskUseCase {
         );
       }
 
-      return;
+      return supervisor;
     }
 
     throw new ForbiddenException(

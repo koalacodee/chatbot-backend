@@ -15,6 +15,11 @@ export class CreateTaskInputDto {
   @IsString()
   description: string;
 
+  @IsDate()
+  @IsOptional()
+  @Type(() => Date)
+  dueDate?: Date;
+
   @IsOptional()
   @IsString()
   assigneeId?: string;

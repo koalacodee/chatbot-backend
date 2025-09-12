@@ -83,6 +83,7 @@ export class PrismaTaskRepository extends TaskRepository {
           : row.performerEmployee
             ? await Employee.create(row.performerEmployee)
             : undefined,
+      dueDate: row.dueDate,
     });
   }
 
@@ -130,6 +131,7 @@ export class PrismaTaskRepository extends TaskRepository {
         task?.performer?.user?.role?.getRole() == Roles.EMPLOYEE
           ? task.performer?.user.id.toString()
           : null,
+      dueDate: task.dueDate,
     } as const;
 
     const upsert = await this.prisma.task.upsert({
@@ -148,6 +150,7 @@ export class PrismaTaskRepository extends TaskRepository {
         targetDepartmentId: data.targetDepartmentId,
         targetSubDepartmentId: data.targetSubDepartmentId,
         updatedAt: data.updatedAt,
+        dueDate: task.dueDate,
         completedAt: data.completedAt,
         assignerNotes: data.assignerNotes,
         feedback: data.feedback,

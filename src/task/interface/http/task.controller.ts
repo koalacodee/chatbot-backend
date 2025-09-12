@@ -180,18 +180,8 @@ export class TaskController {
   // Approve
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Post(':id/approve')
-  async approve(
-    @Param('id') id: string,
-    @Body() input: ApproveTaskInputDto,
-    @Req() req: any,
-  ): Promise<Task> {
-    return this.approveTaskUseCase.execute(
-      {
-        taskId: id,
-        approverId: input.approverId,
-      },
-      req.user.id,
-    );
+  async approve(@Param('id') id: string, @Req() req: any): Promise<Task> {
+    return this.approveTaskUseCase.execute({ taskId: id }, req.user.id);
   }
 
   // Reject

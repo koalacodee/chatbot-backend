@@ -16,6 +16,7 @@ import { Roles } from 'src/shared/value-objects/role.vo';
 interface UpdateTaskInputDto {
   title?: string;
   description?: string;
+  dueDate?: Date;
   departmentId?: string;
   assigneeId?: string;
   assignerId?: string;
@@ -53,6 +54,7 @@ export class UpdateTaskUseCase {
 
     if (dto.title !== undefined) existing.title = dto.title;
     if (dto.description !== undefined) existing.description = dto.description;
+    if (dto.dueDate !== undefined) existing.dueDate = dto.dueDate;
 
     if (dto.assigneeId !== undefined) {
       if (dto.assigneeId === null) {

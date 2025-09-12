@@ -30,6 +30,7 @@ export interface TaskOptions {
   id?: string;
   title: string;
   description: string;
+  dueDate?: Date;
   assignee?: Employee;
   assigner: Admin | Supervisor;
   approver?: Admin | Supervisor;
@@ -52,6 +53,7 @@ export class Task {
   private readonly _id: UUID;
   private _title: string;
   private _description: string;
+  private _dueDate?: Date;
   private _assignee?: Employee;
   private _assigner: Admin | Supervisor;
   private _approver?: Admin | Supervisor;
@@ -73,6 +75,7 @@ export class Task {
     this._id = UUID.create(options.id);
     this._title = options.title;
     this._description = options.description;
+    this._dueDate = options.dueDate;
     this._assignee = options.assignee;
     this._assigner = options.assigner;
     this._approver = options.approver;
@@ -115,11 +118,19 @@ export class Task {
     this._description = value;
   }
 
-  get assignee(): Employee {
+  get dueDate(): Date | undefined {
+    return this._dueDate;
+  }
+
+  set dueDate(value: Date | undefined) {
+    this._dueDate = value;
+  }
+
+  get assignee(): Employee | undefined {
     return this._assignee;
   }
 
-  set assignee(value: Employee) {
+  set assignee(value: Employee | undefined) {
     this._assignee = value;
   }
 
@@ -131,11 +142,11 @@ export class Task {
     this._assigner = value;
   }
 
-  get approver(): Admin | Supervisor {
+  get approver(): Admin | Supervisor | undefined {
     return this._approver;
   }
 
-  set approver(value: Admin | Supervisor) {
+  set approver(value: Admin | Supervisor | undefined) {
     this._approver = value;
   }
 
@@ -171,19 +182,19 @@ export class Task {
     this._completedAt = value;
   }
 
-  get notes(): string {
+  get notes(): string | undefined {
     return this._notes;
   }
 
-  set notes(value: string) {
+  set notes(value: string | undefined) {
     this._notes = value;
   }
 
-  get feedback(): string {
+  get feedback(): string | undefined {
     return this._feedback;
   }
 
-  set feedback(value: string) {
+  set feedback(value: string | undefined) {
     this._feedback = value;
   }
 
@@ -266,6 +277,7 @@ export class Task {
       id: this.id.toString(),
       title: this.title,
       description: this.description,
+      dueDate: this.dueDate?.toISOString(),
       assignee: this.assignee?.toJSON(),
       assigner: this.assigner?.toJSON(),
       approver: this.approver?.toJSON(),

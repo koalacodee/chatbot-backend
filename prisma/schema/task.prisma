@@ -10,6 +10,7 @@ model Task {
   id          String @id @default(uuid()) @map("id") @db.Uuid
   title       String @map("title") @db.VarChar(255)
   description String @map("description") @db.Text
+  dueDate     DateTime? @map("due_date")
 
   assigneeId String?   @map("assignee_id") @db.Uuid
   assignee   Employee? @relation("AssigneeOfTask", fields: [assigneeId], references: [id], onDelete: Cascade)

@@ -10,7 +10,6 @@ import {
   TaskPriority,
 } from '../../domain/entities/task.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
-import { CreateTaskInputDto as CreateTaskDto } from '../../interface/http/dto/create-task.dto';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
@@ -24,6 +23,7 @@ import { NotificationRepository } from 'src/notification/domain/repositories/not
 interface CreateTaskInputDto {
   title: string;
   description: string;
+  dueDate?: Date;
   assigneeId?: string;
   assignerId: string;
   assignerRole: Roles;
@@ -129,6 +129,7 @@ export class CreateTaskUseCase {
       id: UUID.create().toString(),
       title: dto.title,
       description: dto.description,
+      dueDate: dto.dueDate,
       assignee: assignee ?? undefined,
       assigner: assigner,
       approver: approverAdmin ?? approverSupervisor,

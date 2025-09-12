@@ -21,6 +21,10 @@ export class UpdateTaskInputDto {
 
   @IsOptional()
   @IsString()
+  dueDate?: string;
+
+  @IsOptional()
+  @IsString()
   assigneeId?: string | null;
 
   @IsOptional()
