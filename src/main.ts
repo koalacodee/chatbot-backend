@@ -45,10 +45,10 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   // Register plugins (replacing Express middlewares)
-  await app.register(fastifyCookie, {
+  await app.register(fastifyCookie as any, {
     secret: configService.get<string>('COOKIE_SECRET') || 'default-secret',
   });
-  app.register(fastifyHelmet, {
+  app.register(fastifyHelmet as any, {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: [`'self'`],
@@ -58,13 +58,13 @@ async function bootstrap() {
       },
     },
   });
-  await app.register(fastifyCompress);
-  await app.register(fastifyCors, {
+  await app.register(fastifyCompress as any);
+  await app.register(fastifyCors as any, {
     origin: configService.get<string>('CORS_ORIGINS')?.split(',') ?? '*',
     credentials: true,
     methods: configService.get<string>('CORS_METHODS').split(','),
   });
-  await app.register(fastifyMultipart);
+  await app.register(fastifyMultipart as any, { global: true });
 
   // Swagger setup
   const config = new DocumentBuilder()
