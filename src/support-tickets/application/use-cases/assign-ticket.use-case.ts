@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { SupportTicketRepository } from 'src/support-tickets/domain/repositories/support-ticket.repository';
@@ -10,6 +11,8 @@ import { SupervisorRepository } from 'src/supervisor/domain/repository/superviso
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
+import { TicketAssignedEvent } from '../../domain/events/ticket-assigned.event';
+import { TicketAssignedTeamEvent } from '../../domain/events/ticket-assigned-team.event';
 
 interface AssignTicketInput {
   ticketId: string;
@@ -25,6 +28,7 @@ export class AssignTicketUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly userRepository: UserRepository,
     private readonly departmentRepository: DepartmentRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute({ ticketId, userId, currentUserId }: AssignTicketInput) {
@@ -64,6 +68,29 @@ export class AssignTicketUseCase {
     ticket.assignee = employee;
 
     await this.ticketRepository.save(ticket);
+
+    // Emit ticket assigned events
+    this.eventEmitter.emit(
+      TicketAssignedEvent.name,
+      new TicketAssignedEvent(
+        ticket.id.toString(),
+        ticket.subject,
+        employee.id.toString(),
+        new Date(),
+      ),
+    );
+
+    // Emit ticket assigned team event
+    this.eventEmitter.emit(
+      TicketAssignedTeamEvent.name,
+      new TicketAssignedTeamEvent(
+        ticket.id.toString(),
+        ticket.subject,
+        employee.id.toString(),
+        employee.supervisorId?.toString() || '',
+        new Date(),
+      ),
+    );
 
     return null;
   }

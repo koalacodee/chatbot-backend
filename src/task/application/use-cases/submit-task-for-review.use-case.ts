@@ -16,6 +16,8 @@ import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { User } from 'src/shared/entities/user.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TaskPerformedEvent } from 'src/task/domain/events/task-performed.event';
+import { TaskSubmittedSupervisorEvent } from '../../domain/events/task-submitted-supervisor.event';
+import { TaskSubmittedAdminEvent } from '../../domain/events/task-submitted-admin.event';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { FilesService } from 'src/files/domain/services/files.service';
 
@@ -104,6 +106,34 @@ export class SubmitTaskForReviewUseCase {
         ),
       ),
     ]);
+
+    // Emit appropriate task submitted events based on status
+    if (
+      existing.status === TaskStatus.PENDING_SUPERVISOR_REVIEW &&
+      existing.assignee
+    ) {
+      // Task submitted by employee, needs supervisor review
+      this.eventEmitter.emit(
+        TaskSubmittedSupervisorEvent.name,
+        new TaskSubmittedSupervisorEvent(
+          existing.id.toString(),
+          existing.title,
+          existing.assignee.id.toString(),
+          existing.assignee.supervisorId?.toString() || '',
+          new Date(),
+        ),
+      );
+    } else if (existing.status === TaskStatus.PENDING_REVIEW) {
+      // Task submitted by supervisor, needs admin review
+      this.eventEmitter.emit(
+        TaskSubmittedAdminEvent.name,
+        new TaskSubmittedAdminEvent(
+          existing.id.toString(),
+          existing.title,
+          new Date(),
+        ),
+      );
+    }
 
     return { task: savedTask, uploadKey };
   }

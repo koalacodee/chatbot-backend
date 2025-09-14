@@ -3,12 +3,14 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EmployeeRequestRepository } from '../../domain/repositories/employee-request.repository';
 import {
   EmployeeRequest,
   RequestStatus,
 } from '../../domain/entities/employee-request.entity';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
+import { StaffRequestResolvedEvent } from '../../domain/events/staff-request-resolved.event';
 
 export interface RejectEmployeeRequestDto {
   employeeRequestId: string;
@@ -21,6 +23,7 @@ export class RejectEmployeeRequestUseCase {
   constructor(
     private readonly employeeRequestRepository: EmployeeRequestRepository,
     private readonly adminRepository: AdminRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(dto: RejectEmployeeRequestDto): Promise<EmployeeRequest> {
@@ -47,6 +50,21 @@ export class RejectEmployeeRequestUseCase {
     employeeRequest.resolvedByAdmin = admin;
     employeeRequest.resolvedAt = new Date();
 
-    return await this.employeeRequestRepository.save(employeeRequest);
+    const updatedRequest =
+      await this.employeeRequestRepository.save(employeeRequest);
+
+    // Emit staff request resolved event
+    this.eventEmitter.emit(
+      StaffRequestResolvedEvent.name,
+      new StaffRequestResolvedEvent(
+        updatedRequest.id.toString(),
+        updatedRequest.newEmployeeUsername,
+        updatedRequest.requestedBySupervisor.id.toString(),
+        'rejected',
+        new Date(),
+      ),
+    );
+
+    return updatedRequest;
   }
 }

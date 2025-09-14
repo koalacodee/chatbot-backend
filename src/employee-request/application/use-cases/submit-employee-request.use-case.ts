@@ -8,6 +8,7 @@ import { Email } from 'src/shared/value-objects/email.vo';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StaffRequestedEvent } from '../listeners/staff-requested.listener';
+import { StaffRequestCreatedEvent } from '../../domain/events/staff-request-created.event';
 import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { Notification } from 'src/notification/domain/entities/notification.entity';
@@ -53,6 +54,7 @@ export class SubmitEmployeeRequestUseCase {
 
     const toReturn = await this.employeeRequestRepository.save(employeeRequest);
 
+    // Emit both old and new events for backward compatibility
     this.eventEmitter.emit(
       StaffRequestedEvent.name,
       new StaffRequestedEvent(
@@ -63,15 +65,16 @@ export class SubmitEmployeeRequestUseCase {
       ),
     );
 
-    const admins = await this.adminRepository.findAll();
-    const notification = Notification.create({
-      title: employeeRequest.newEmployeeFullName,
-      type: 'staff_requested',
-    });
-
-    admins.forEach(({ id }) => notification.addRecipient(id.toString()));
-
-    await this.notificationRepository.save(notification);
+    // Emit new staff request created event
+    this.eventEmitter.emit(
+      StaffRequestCreatedEvent.name,
+      new StaffRequestCreatedEvent(
+        toReturn.id.toString(),
+        toReturn.newEmployeeUsername,
+        supervisor.id.toString(),
+        toReturn.createdAt,
+      ),
+    );
 
     return toReturn;
   }

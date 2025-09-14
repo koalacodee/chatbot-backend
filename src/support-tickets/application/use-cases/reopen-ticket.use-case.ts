@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupportTicketStatus } from 'src/support-tickets/domain/entities/support-ticket.entity';
 import { SupportTicketRepository } from 'src/support-tickets/domain/repositories/support-ticket.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
@@ -6,6 +12,7 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { TicketReopenedEvent } from '../../domain/events/ticket-reopened.event';
 
 interface ReopenTicketInput {
   ticketId: string;
@@ -19,6 +26,7 @@ export class ReopenTicketUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
     private readonly departmentRepository: DepartmentRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute({ ticketId, userId }: ReopenTicketInput) {
@@ -32,16 +40,38 @@ export class ReopenTicketUseCase {
     if (userId) {
       const user = await this.userRepository.findById(userId);
       const userRole = user.role.getRole();
-      await this.checkDepartmentAccess(userId, ticket.departmentId.toString(), userRole);
+      await this.checkDepartmentAccess(
+        userId,
+        ticket.departmentId.toString(),
+        userRole,
+      );
     }
 
     if (ticket.status === SupportTicketStatus.CLOSED) {
-      throw new BadRequestException({ticket: 'ticket_closed'})
+      throw new BadRequestException({ ticket: 'ticket_closed' });
     }
 
     ticket.status = SupportTicketStatus.SEEN;
 
     await this.ticketRepository.save(ticket);
+
+    // Emit ticket reopened event
+    // Note: We need to get the answeredByUserId from the ticket's answer
+    const answeredByUserId =
+      ticket.answer?.answererAdminId ||
+      ticket.answer?.answererSupervisorId ||
+      ticket.answer?.answererEmployeeId ||
+      '';
+
+    this.eventEmitter.emit(
+      TicketReopenedEvent.name,
+      new TicketReopenedEvent(
+        ticket.id.toString(),
+        ticket.subject,
+        answeredByUserId,
+        new Date(),
+      ),
+    );
 
     return null;
   }

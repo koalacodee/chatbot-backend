@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
 import { SupportTicketRepository } from '../../domain/repositories/support-ticket.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
@@ -9,6 +10,7 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
 import { Notification } from 'src/notification/domain/entities/notification.entity';
+import { TicketCreatedEvent } from '../../domain/events/ticket-created.event';
 
 interface CreateSupportTicketInputDto {
   subject: string;
@@ -29,6 +31,7 @@ export class CreateSupportTicketUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly notificationRepository: NotificationRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(
@@ -62,6 +65,19 @@ export class CreateSupportTicketUseCase {
       this.supportTicketRepo.save(ticket),
       this.notify(ticket),
     ]);
+
+    // Emit ticket created event
+    this.eventEmitter.emit(
+      TicketCreatedEvent.name,
+      new TicketCreatedEvent(
+        ticket.id.toString(),
+        ticket.subject,
+        ticket.departmentId.toString(),
+        department.id.toString(), // categoryId - using department as category
+        department.parentId?.toString(), // subDepartmentId
+        ticket.createdAt,
+      ),
+    );
 
     return { ticket, uploadKey };
   }

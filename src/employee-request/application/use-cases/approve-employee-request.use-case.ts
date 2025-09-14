@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EmployeeRequestRepository } from '../../domain/repositories/employee-request.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
@@ -14,6 +15,7 @@ import { User } from 'src/shared/entities/user.entity';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
+import { StaffRequestResolvedEvent } from '../../domain/events/staff-request-resolved.event';
 
 export interface ApproveEmployeeRequestDto {
   employeeRequestId: string;
@@ -27,6 +29,7 @@ export class ApproveEmployeeRequestUseCase {
     private readonly userRepository: UserRepository,
     private readonly adminRepository: AdminRepository,
     private readonly employeeRepository: EmployeeRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(dto: ApproveEmployeeRequestDto): Promise<{
@@ -104,6 +107,18 @@ export class ApproveEmployeeRequestUseCase {
     employeeRequest.resolvedAt = new Date();
     const updatedRequest =
       await this.employeeRequestRepository.save(employeeRequest);
+
+    // Emit staff request resolved event
+    this.eventEmitter.emit(
+      StaffRequestResolvedEvent.name,
+      new StaffRequestResolvedEvent(
+        updatedRequest.id.toString(),
+        updatedRequest.newEmployeeUsername,
+        updatedRequest.requestedBySupervisor.id.toString(),
+        'approved',
+        new Date(),
+      ),
+    );
 
     return {
       employeeRequest: updatedRequest,

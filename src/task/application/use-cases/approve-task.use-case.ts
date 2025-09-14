@@ -11,6 +11,7 @@ import { SupervisorRepository } from 'src/supervisor/domain/repository/superviso
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { TaskApprovedEvent } from 'src/task/domain/events/task-approved.event';
+import { TaskRejectedEvent } from '../../domain/events/task-rejected.event';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DepartmentHierarchyService } from '../services/department-hierarchy.service';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
@@ -61,10 +62,20 @@ export class ApproveTaskUseCase {
           task.id.toString(),
           approver.id.toString(),
           new Date(),
-          task?.performer?.id.toString(),
         ),
       ),
     ]);
+
+    // Emit task approved event for notification
+    this.eventEmitter.emit(
+      TaskApprovedEvent.name,
+      new TaskApprovedEvent(
+        task.title,
+        task.id.toString(),
+        task.assignee?.id.toString() || '',
+        new Date(),
+      ),
+    );
 
     return savedTask;
   }

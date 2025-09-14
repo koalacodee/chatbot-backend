@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   Task,
   TaskAssignmentType,
@@ -19,6 +20,9 @@ import { AdminRepository } from 'src/admin/domain/repositories/admin.repository'
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { Notification } from 'src/notification/domain/entities/notification.entity';
 import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
+import { TaskCreatedEvent } from '../../domain/events/task-created.event';
+import { TaskCreatedSupervisorEvent } from '../../domain/events/task-created-supervisor.event';
+import { TaskCreatedEmployeeEvent } from '../../domain/events/task-created-employee.event';
 
 interface CreateTaskInputDto {
   title: string;
@@ -48,6 +52,7 @@ export class CreateTaskUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly adminRepository: AdminRepository,
     private readonly notificationRepository: NotificationRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(dto: CreateTaskInputDto, userId?: string): Promise<Task> {
@@ -148,6 +153,41 @@ export class CreateTaskUseCase {
       this.taskRepo.save(task),
       this.notify(dto),
     ]);
+
+    // Emit appropriate task created events based on assignment type
+    if (dto.assignmentType === 'INDIVIDUAL' && dto.assigneeId) {
+      // Task assigned to specific employee
+      this.eventEmitter.emit(
+        TaskCreatedEmployeeEvent.name,
+        new TaskCreatedEmployeeEvent(
+          task.id.toString(),
+          task.title,
+          dto.assigneeId,
+          undefined,
+          task.createdAt,
+        ),
+      );
+    } else if (dto.assignmentType === 'DEPARTMENT' && dto.targetDepartmentId) {
+      // Task for department - notify admins
+      this.eventEmitter.emit(
+        TaskCreatedEvent.name,
+        new TaskCreatedEvent(task.id.toString(), task.title, task.createdAt),
+      );
+    } else if (
+      dto.assignmentType === 'SUB_DEPARTMENT' &&
+      dto.targetSubDepartmentId
+    ) {
+      // Task for sub-department - notify supervisors
+      this.eventEmitter.emit(
+        TaskCreatedSupervisorEvent.name,
+        new TaskCreatedSupervisorEvent(
+          task.id.toString(),
+          task.title,
+          dto.targetSubDepartmentId, // Using sub-department as category
+          task.createdAt,
+        ),
+      );
+    }
 
     return saved;
   }

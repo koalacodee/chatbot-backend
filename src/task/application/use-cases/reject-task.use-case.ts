@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Task } from '../../domain/entities/task.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
@@ -12,6 +13,7 @@ import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { DepartmentHierarchyService } from '../services/department-hierarchy.service';
+import { TaskRejectedEvent } from '../../domain/events/task-rejected.event';
 
 interface RejectTaskInputDto {
   taskId: string;
@@ -26,6 +28,7 @@ export class RejectTaskUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
     private readonly departmentHierarchyService: DepartmentHierarchyService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(dto: RejectTaskInputDto, userId?: string): Promise<Task> {
@@ -43,7 +46,20 @@ export class RejectTaskUseCase {
     existing.completedAt = null;
     if (dto.feedback !== undefined) existing.feedback = dto.feedback as any;
 
-    return this.taskRepo.save(existing);
+    const savedTask = await this.taskRepo.save(existing);
+
+    // Emit task rejected event for notification
+    this.eventEmitter.emit(
+      TaskRejectedEvent.name,
+      new TaskRejectedEvent(
+        existing.title,
+        existing.id.toString(),
+        existing.assignee?.id.toString() || '',
+        new Date(),
+      ),
+    );
+
+    return savedTask;
   }
 
   private async validateRejectionRights(
