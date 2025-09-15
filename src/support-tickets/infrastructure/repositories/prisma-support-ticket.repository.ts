@@ -3,6 +3,7 @@ import { PrismaService } from 'src/common/prisma/prisma.service';
 import {
   FrequentTicketSubject,
   SupportTicketRepository,
+  SupportTicketMetrics,
 } from '../../domain/repositories/support-ticket.repository';
 import {
   SupportTicket,
@@ -297,5 +298,42 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       ORDER BY pt."createdAt" DESC
       LIMIT ${limit} OFFSET ${offset};
     `;
+  }
+
+  async getMetrics(departmentIds?: string[]): Promise<SupportTicketMetrics> {
+    let whereClause = '';
+    if (departmentIds?.length) {
+      // Cast each id to uuid in the SQL query
+      const uuidArray = departmentIds.map((id) => `'${id}'::uuid`).join(',');
+      whereClause = `WHERE st.department_id = ANY(ARRAY[${uuidArray}])`;
+    }
+
+    const query = `
+      SELECT 
+        COUNT(*) as total_tickets,
+        COUNT(CASE WHEN st.status IN ('new', 'seen') THEN 1 END) as pending_tickets,
+        COUNT(CASE WHEN st.status = 'answered' THEN 1 END) as answered_tickets,
+        COUNT(CASE WHEN st.status = 'closed' THEN 1 END) as closed_tickets
+      FROM support_tickets st
+      ${whereClause}
+    `;
+
+    const result = await this.prisma.$queryRawUnsafe<
+      Array<{
+        total_tickets: bigint;
+        pending_tickets: bigint;
+        answered_tickets: bigint;
+        closed_tickets: bigint;
+      }>
+    >(query);
+
+    const metrics = result[0];
+
+    return {
+      totalTickets: Number(metrics.total_tickets),
+      pendingTickets: Number(metrics.pending_tickets),
+      answeredTickets: Number(metrics.answered_tickets),
+      closedTickets: Number(metrics.closed_tickets),
+    };
   }
 }

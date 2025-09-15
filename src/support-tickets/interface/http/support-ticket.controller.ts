@@ -37,7 +37,6 @@ import { SupportTicket } from '../../domain/entities/support-ticket.entity';
 import { AnswerSupportTicketDto } from './dto/answer-ticket.use-case';
 import { AnswerTicketUseCase } from 'src/support-tickets/application/use-cases/answer-ticket.use-case';
 import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
-import { GuestAuth } from 'src/auth/guest/infrastructure/decorators/guest-auth.decorator';
 import { TrackTicketDto } from './dto/track-ticket.dto';
 import { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
 import { RecordTicketInteractionDto } from './dto/record-ticket-interaction.dto';
@@ -49,6 +48,7 @@ import {
 import { EmployeePermissionsEnum as EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { GuestIdInterceptor } from 'src/shared/interceptors/guest-id.interceptor';
 import { VerifyCodeDto } from 'src/auth/guest/interface/dto';
+import { SupportTicketMetrics } from 'src/support-tickets/domain/repositories/support-ticket.repository';
 
 interface UpdateSupportTicketDto {
   id: string;
@@ -195,7 +195,7 @@ export class SupportTicketController {
     @Req() req: any,
     @Query('offset') offset?: string,
     @Query('limit') limit?: string,
-  ): Promise<SupportTicket[]> {
+  ): Promise<{ tickets: SupportTicket[]; metrics: SupportTicketMetrics }> {
     return this.getAllUseCase.execute(
       offset ? parseInt(offset, 10) : undefined,
       limit ? parseInt(limit, 10) : undefined,

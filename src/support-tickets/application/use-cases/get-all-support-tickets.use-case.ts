@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { SupportTicketRepository } from '../../domain/repositories/support-ticket.repository';
+import {
+  SupportTicketRepository,
+  SupportTicketMetrics,
+} from '../../domain/repositories/support-ticket.repository';
 import { SupportTicketAnswerRepository } from '../../domain/repositories/support-ticket-answer.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
@@ -22,7 +25,10 @@ export class GetAllSupportTicketsUseCase {
     offset?: number,
     limit?: number,
     userId?: string,
-  ): Promise<any[]> {
+  ): Promise<{
+    tickets: any[];
+    metrics: SupportTicketMetrics;
+  }> {
     let departmentIds: string[] | undefined = undefined;
 
     // Get department access for the user if provided
@@ -32,16 +38,17 @@ export class GetAllSupportTicketsUseCase {
       departmentIds = await this.getUserDepartmentIds(userId, userRole);
     }
 
-    const toReturn = await this.supportTicketRepo.findAll(
-      offset,
-      limit,
-      departmentIds,
-    );
+    // Get tickets and metrics in parallel
+    const [toReturn, metrics] = await Promise.all([
+      this.supportTicketRepo.findAll(offset, limit, departmentIds),
+      this.supportTicketRepo.getMetrics(departmentIds),
+    ]);
+
     const answers = await this.supportTicketAnswerRepo.findBySupportTicketIds(
       toReturn.map((t) => t.id.toString()),
     );
 
-    return toReturn.map((ticket) => {
+    const tickets = toReturn.map((ticket) => {
       const answer = answers.find(
         (a) => a.supportTicket.id.toString() === ticket.id.toString(),
       );
@@ -50,6 +57,11 @@ export class GetAllSupportTicketsUseCase {
         answer: answer?.content,
       };
     });
+
+    return {
+      tickets,
+      metrics,
+    };
   }
 
   private async getUserDepartmentIds(

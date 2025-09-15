@@ -7,6 +7,13 @@ export interface FrequentTicketSubject {
   category_name: string; // The human-readable name of the category (or "Unknown")
 }
 
+export interface SupportTicketMetrics {
+  totalTickets: number;
+  pendingTickets: number; // NEW + SEEN statuses
+  answeredTickets: number; // ANSWERED status
+  closedTickets: number; // CLOSED status
+}
+
 export abstract class SupportTicketRepository {
   abstract save(ticket: SupportTicket): Promise<SupportTicket>;
   abstract findById(id: string): Promise<SupportTicket | null>;
@@ -47,4 +54,6 @@ export abstract class SupportTicketRepository {
       updatedAt: Date;
     }[]
   >;
+
+  abstract getMetrics(departmentIds?: string[]): Promise<SupportTicketMetrics>;
 }
