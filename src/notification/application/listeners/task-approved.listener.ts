@@ -17,6 +17,7 @@ export class TaskApprovedListener {
     const recipients =
       await this.recipientResolver.resolveTaskApprovedRecipients(
         event.assignedEmployeeId,
+        event.performerEmployeeId,
       );
 
     const notification = Notification.create({

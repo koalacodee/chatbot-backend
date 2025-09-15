@@ -67,11 +67,10 @@ enum TaskAttachmentType {
 }
 
 enum TaskStatus {
-  TODO                      @map("to_do")
-  SEEN                      @map("seen")
-  PENDING_REVIEW            @map("pending_review")
-  PENDING_SUPERVISOR_REVIEW @map("pending_supervisor_review")
-  COMPLETED                 @map("completed")
+  TODO           @map("to_do")
+  SEEN           @map("seen")
+  PENDING_REVIEW @map("pending_review")
+  COMPLETED      @map("completed")
 
   @@map("task_status")
 }

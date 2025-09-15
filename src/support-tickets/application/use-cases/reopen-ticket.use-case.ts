@@ -69,6 +69,8 @@ export class ReopenTicketUseCase {
         ticket.id.toString(),
         ticket.subject,
         answeredByUserId,
+        ticket.departmentId.toString(),
+        undefined, // subDepartmentId - could be added if needed
         new Date(),
       ),
     );

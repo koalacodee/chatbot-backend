@@ -12,7 +12,6 @@ import { DepartmentRepository } from 'src/department/domain/repositories/departm
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { TicketAssignedEvent } from '../../domain/events/ticket-assigned.event';
-import { TicketAssignedTeamEvent } from '../../domain/events/ticket-assigned-team.event';
 
 interface AssignTicketInput {
   ticketId: string;
@@ -69,25 +68,13 @@ export class AssignTicketUseCase {
 
     await this.ticketRepository.save(ticket);
 
-    // Emit ticket assigned events
+    // Emit ticket assigned event
     this.eventEmitter.emit(
       TicketAssignedEvent.name,
       new TicketAssignedEvent(
         ticket.id.toString(),
         ticket.subject,
         employee.userId.toString(),
-        new Date(),
-      ),
-    );
-
-    // Emit ticket assigned team event
-    this.eventEmitter.emit(
-      TicketAssignedTeamEvent.name,
-      new TicketAssignedTeamEvent(
-        ticket.id.toString(),
-        ticket.subject,
-        employee.userId.toString(),
-        employee.supervisorId?.toString() || '',
         new Date(),
       ),
     );

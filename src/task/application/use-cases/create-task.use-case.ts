@@ -18,11 +18,8 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
-import { Notification } from 'src/notification/domain/entities/notification.entity';
 import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
 import { TaskCreatedEvent } from '../../domain/events/task-created.event';
-import { TaskCreatedSupervisorEvent } from '../../domain/events/task-created-supervisor.event';
-import { TaskCreatedEmployeeEvent } from '../../domain/events/task-created-employee.event';
 
 interface CreateTaskInputDto {
   title: string;
@@ -151,43 +148,19 @@ export class CreateTaskUseCase {
 
     const [saved] = await Promise.all([
       this.taskRepo.save(task),
-      this.notify(dto),
-    ]);
-
-    // Emit appropriate task created events based on assignment type
-    if (dto.assignmentType === 'INDIVIDUAL' && dto.assigneeId) {
-      // Task assigned to specific employee
-      this.eventEmitter.emit(
-        TaskCreatedEmployeeEvent.name,
-        new TaskCreatedEmployeeEvent(
-          task.id.toString(),
-          task.title,
-          dto.assigneeId,
-          undefined,
-          task.createdAt,
-        ),
-      );
-    } else if (dto.assignmentType === 'DEPARTMENT' && dto.targetDepartmentId) {
-      // Task for department - notify admins
-      this.eventEmitter.emit(
+      this.eventEmitter.emitAsync(
         TaskCreatedEvent.name,
-        new TaskCreatedEvent(task.id.toString(), task.title, task.createdAt),
-      );
-    } else if (
-      dto.assignmentType === 'SUB_DEPARTMENT' &&
-      dto.targetSubDepartmentId
-    ) {
-      // Task for sub-department - notify supervisors
-      this.eventEmitter.emit(
-        TaskCreatedSupervisorEvent.name,
-        new TaskCreatedSupervisorEvent(
+        new TaskCreatedEvent(
           task.id.toString(),
           task.title,
-          dto.targetSubDepartmentId, // Using sub-department as category
+          dto.assignmentType,
+          dto.assigneeId,
+          dto.targetDepartmentId,
+          dto.targetSubDepartmentId,
           task.createdAt,
         ),
-      );
-    }
+      ),
+    ]);
 
     return saved;
   }
@@ -260,36 +233,5 @@ export class CreateTaskUseCase {
         );
       }
     }
-  }
-
-  private async notify(dto: CreateTaskInputDto) {
-    const notification = Notification.create({
-      type: 'task_created',
-      title: dto.title,
-    });
-
-    if (dto.assignmentType === 'DEPARTMENT') {
-      const supervisors =
-        await this.supervisorRepository.findManyByDepartmentId(
-          dto.targetDepartmentId,
-        );
-
-      supervisors.forEach(({ userId }) =>
-        notification.addRecipient(userId.toString()),
-      );
-    } else if (dto.assignmentType === 'SUB_DEPARTMENT') {
-      const employees = await this.employeeRepository.findBySubDepartment(
-        dto.targetSubDepartmentId,
-      );
-      employees.forEach(({ userId }) =>
-        notification.addRecipient(userId.toString()),
-      );
-    } else {
-      const employee = await this.employeeRepository.findById(dto.assigneeId);
-
-      notification.addRecipient(employee.userId.toString());
-    }
-
-    await this.notificationRepository.save(notification);
   }
 }

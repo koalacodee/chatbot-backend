@@ -14,16 +14,18 @@ export class TaskRejectedListener {
 
   @OnEvent(TaskRejectedEvent.name)
   async handleTaskRejectedEvent(event: TaskRejectedEvent): Promise<void> {
-    const recipients = await this.recipientResolver.resolveTaskRejectedRecipients(
-      event.assignedEmployeeId,
-    );
+    const recipients =
+      await this.recipientResolver.resolveTaskRejectedRecipients(
+        event.assignedEmployeeId,
+        event.performerEmployeeId,
+      );
 
     const notification = Notification.create({
       title: event.title,
       type: 'task_rejected',
     });
 
-    recipients.forEach(userId => notification.addRecipient(userId));
+    recipients.forEach((userId) => notification.addRecipient(userId));
 
     await this.notificationRepository.save(notification);
   }

@@ -15,7 +15,14 @@ export class TaskCreatedListener {
   @OnEvent(TaskCreatedEvent.name)
   async handleTaskCreatedEvent(event: TaskCreatedEvent): Promise<void> {
     const recipients =
-      await this.recipientResolver.resolveTaskCreatedRecipients();
+      await this.recipientResolver.resolveTaskCreatedRecipients(
+        event.assignmentType,
+        event.assignedEmployeeId,
+        event.targetDepartmentId,
+        event.targetSubDepartmentId,
+      );
+
+    console.log('recipients', recipients);
 
     const notification = Notification.create({
       title: event.title,

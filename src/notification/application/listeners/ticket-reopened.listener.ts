@@ -17,6 +17,8 @@ export class TicketReopenedListener {
     const recipients =
       await this.recipientResolver.resolveTicketReopenedRecipients(
         event.answeredByUserId,
+        event.departmentId,
+        event.subDepartmentId,
       );
 
     const notification = Notification.create({

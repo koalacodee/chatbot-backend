@@ -4,7 +4,11 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { Task, TaskStatus } from '../../domain/entities/task.entity';
+import {
+  Task,
+  TaskAssignmentType,
+  TaskStatus,
+} from '../../domain/entities/task.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
@@ -16,8 +20,7 @@ import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { User } from 'src/shared/entities/user.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TaskPerformedEvent } from 'src/task/domain/events/task-performed.event';
-import { TaskSubmittedSupervisorEvent } from '../../domain/events/task-submitted-supervisor.event';
-import { TaskSubmittedAdminEvent } from '../../domain/events/task-submitted-admin.event';
+import { TaskSubmittedEvent } from '../../domain/events/task-submitted.event';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { FilesService } from 'src/files/domain/services/files.service';
 
@@ -79,14 +82,8 @@ export class SubmitTaskForReviewUseCase {
 
     existing.performer = submitter;
 
-    // Update status according to role
-    if (submitter instanceof Employee) {
-      existing.status = TaskStatus.PENDING_REVIEW;
-    } else if (submitter instanceof Supervisor) {
-      existing.status = TaskStatus.PENDING_SUPERVISOR_REVIEW;
-    } else {
-      existing.status = TaskStatus.COMPLETED;
-    }
+    // Update status to PENDING_REVIEW for all submissions
+    existing.status = TaskStatus.PENDING_REVIEW;
 
     const [savedTask, uploadKey] = await Promise.all([
       this.taskRepo.save(existing),
@@ -107,29 +104,33 @@ export class SubmitTaskForReviewUseCase {
       ),
     ]);
 
-    // Emit appropriate task submitted events based on status
-    if (
-      existing.status === TaskStatus.PENDING_SUPERVISOR_REVIEW &&
-      existing.assignee
-    ) {
-      // Task submitted by employee, needs supervisor review
+    // Emit unified task submitted event based on assignment type
+    if (existing.assignmentType === TaskAssignmentType.DEPARTMENT) {
+      // Department tasks: only admins can resolve
       this.eventEmitter.emit(
-        TaskSubmittedSupervisorEvent.name,
-        new TaskSubmittedSupervisorEvent(
+        TaskSubmittedEvent.name,
+        new TaskSubmittedEvent(
           existing.id.toString(),
           existing.title,
-          existing.assignee.userId.toString(),
-          existing.assignee.supervisorId?.toString() || '',
+          'ADMIN_REVIEW',
+          undefined,
+          undefined,
           new Date(),
         ),
       );
-    } else if (existing.status === TaskStatus.PENDING_REVIEW) {
-      // Task submitted by supervisor, needs admin review
+    } else if (
+      existing.assignmentType === TaskAssignmentType.INDIVIDUAL ||
+      existing.assignmentType === TaskAssignmentType.SUB_DEPARTMENT
+    ) {
+      // Individual and Sub-department tasks: both supervisors and admins can resolve
       this.eventEmitter.emit(
-        TaskSubmittedAdminEvent.name,
-        new TaskSubmittedAdminEvent(
+        TaskSubmittedEvent.name,
+        new TaskSubmittedEvent(
           existing.id.toString(),
           existing.title,
+          'SUPERVISOR_AND_ADMIN_REVIEW',
+          existing.assignee?.userId.toString(),
+          existing.assignee?.supervisorId?.toString(),
           new Date(),
         ),
       );

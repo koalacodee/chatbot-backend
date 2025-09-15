@@ -52,9 +52,10 @@ export class RejectTaskUseCase {
     this.eventEmitter.emit(
       TaskRejectedEvent.name,
       new TaskRejectedEvent(
-        existing.title,
         existing.id.toString(),
-        existing.assignee?.userId.toString() || '',
+        existing.title,
+        existing.assignee?.userId.toString(),
+        existing.performer?.userId.toString(),
         new Date(),
       ),
     );
@@ -67,21 +68,20 @@ export class RejectTaskUseCase {
     task: Task,
     role: Roles,
   ): Promise<Supervisor | void> {
-    const approvalLevel = task.approvalLevel;
-
-    switch (approvalLevel) {
-      case 'DEPARTMENT_LEVEL':
-        return this.validateDepartmentLevelRejection(userId, task, role);
-      case 'SUB_DEPARTMENT_LEVEL':
-        return this.validateSubDepartmentLevelRejection(userId, task, role);
-      case 'EMPLOYEE_LEVEL':
-        return this.validateEmployeeLevelRejection(userId, task, role);
+    // Use assignment type instead of approval level
+    switch (task.assignmentType) {
+      case 'DEPARTMENT':
+        return this.validateDepartmentRejection(userId, task, role);
+      case 'SUB_DEPARTMENT':
+        return this.validateSubDepartmentRejection(userId, task, role);
+      case 'INDIVIDUAL':
+        return this.validateIndividualRejection(userId, task, role);
       default:
-        throw new ForbiddenException('Invalid task rejection level');
+        throw new ForbiddenException('Invalid task assignment type');
     }
   }
 
-  private async validateDepartmentLevelRejection(
+  private async validateDepartmentRejection(
     userId: string,
     task: Task,
     role: Roles,
@@ -103,7 +103,7 @@ export class RejectTaskUseCase {
     return;
   }
 
-  private async validateSubDepartmentLevelRejection(
+  private async validateSubDepartmentRejection(
     userId: string,
     task: Task,
     role: Roles,
@@ -150,7 +150,7 @@ export class RejectTaskUseCase {
     );
   }
 
-  private async validateEmployeeLevelRejection(
+  private async validateIndividualRejection(
     userId: string,
     task: Task,
     role: Roles,

@@ -57,24 +57,14 @@ export class ApproveTaskUseCase {
       this.eventEmitter.emitAsync(
         TaskApprovedEvent.name,
         new TaskApprovedEvent(
-          task.title,
           task.id.toString(),
-          approver.id.toString(),
+          task.title,
+          task.assignee?.userId.toString(),
+          task.performer?.userId.toString(),
           new Date(),
         ),
       ),
     ]);
-
-    // Emit task approved event for notification
-    this.eventEmitter.emit(
-      TaskApprovedEvent.name,
-      new TaskApprovedEvent(
-        task.title,
-        task.id.toString(),
-        task.assignee?.userId.toString() || '',
-        new Date(),
-      ),
-    );
 
     return savedTask;
   }
@@ -84,43 +74,42 @@ export class ApproveTaskUseCase {
     task: Task,
     role: Roles,
   ): Promise<Supervisor | Admin> {
-    const approvalLevel = task.approvalLevel;
-
-    switch (approvalLevel) {
-      case 'DEPARTMENT_LEVEL':
-        return this.validateDepartmentLevelApproval(userId, task, role);
-      case 'SUB_DEPARTMENT_LEVEL':
-        return this.validateSubDepartmentLevelApproval(userId, task, role);
-      case 'EMPLOYEE_LEVEL':
-        return this.validateEmployeeLevelApproval(userId, task, role);
+    // Use assignment type instead of approval level
+    switch (task.assignmentType) {
+      case 'DEPARTMENT':
+        return this.validateDepartmentApproval(userId, task, role);
+      case 'SUB_DEPARTMENT':
+        return this.validateSubDepartmentApproval(userId, task, role);
+      case 'INDIVIDUAL':
+        return this.validateIndividualApproval(userId, task, role);
       default:
-        throw new ForbiddenException('Invalid task approval level');
+        throw new ForbiddenException('Invalid task assignment type');
     }
   }
 
-  private async validateDepartmentLevelApproval(
+  private async validateDepartmentApproval(
     userId: string,
     task: Task,
     role: Roles,
   ): Promise<Admin> {
-    // Department level tasks can only be approved by admins
+    // Department tasks can only be approved by admins
     if (role !== Roles.ADMIN) {
       throw new ForbiddenException(
-        'Department-level tasks can only be approved by administrators',
+        'Department tasks can only be approved by administrators',
       );
     }
 
     // Ensure task has target department
     if (!task.targetDepartment) {
       throw new BadRequestException(
-        'Department-level task must have target department',
+        'Department task must have target department',
       );
     }
 
     return this.adminRepository.findByUserId(userId);
   }
 
-  private async validateSubDepartmentLevelApproval(
+  private async validateSubDepartmentApproval(
     userId: string,
     task: Task,
     role: Roles,
@@ -167,17 +156,16 @@ export class ApproveTaskUseCase {
     );
   }
 
-  private async validateEmployeeLevelApproval(
+  private async validateIndividualApproval(
     userId: string,
     task: Task,
     role: Roles,
   ): Promise<Supervisor | Admin> {
-    // Admins can approve any employee-level task
+    // Both admins and supervisors can approve individual tasks
     if (role === Roles.ADMIN) {
       return this.adminRepository.findByUserId(userId);
     }
 
-    // Supervisors can approve employee-level tasks for employees under their supervision
     if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
       if (!supervisor) {
