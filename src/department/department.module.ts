@@ -7,6 +7,7 @@ import { PrismaQuestionRepository } from '../questions/infrastructure/repositori
 import { DepartmentRepository } from './domain/repositories/department.repository';
 import { PrismaDepartmentRepository } from './infrastructure/repositories/prisma-department.repository';
 import * as UseCases from './application/use-cases';
+import { DepartmentHierarchyService } from './application/services/department-hierarchy.service';
 @Module({
   controllers: [DepartmentController],
   providers: [
@@ -14,7 +15,8 @@ import * as UseCases from './application/use-cases';
     { provide: DepartmentRepository, useClass: PrismaDepartmentRepository },
     { provide: EmbeddingService, useClass: JinaAiEmbeddingService },
     ...Object.values(UseCases),
+    DepartmentHierarchyService,
   ],
-  exports: [DepartmentRepository],
+  exports: [DepartmentRepository, DepartmentHierarchyService],
 })
 export class DepartmentModule {}

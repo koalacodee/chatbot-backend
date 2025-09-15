@@ -11,7 +11,6 @@ import * as UseCases from './application/use-cases';
 import { TaskApprovedListener } from './application/listeners/task-approved.listener';
 import { TaskPerformedListener } from './application/listeners/task-performed.listener';
 import { ActivityLogModule } from 'src/activity-log/activity-log.module';
-import { DepartmentHierarchyService } from './application/services/department-hierarchy.service';
 
 @Module({
   imports: [PrismaModule, DepartmentModule, SharedModule, ActivityLogModule],
@@ -24,7 +23,6 @@ import { DepartmentHierarchyService } from './application/services/department-hi
     ...Object.values(UseCases),
     TaskApprovedListener,
     TaskPerformedListener,
-    DepartmentHierarchyService,
   ],
   exports: [TaskRepository],
 })

@@ -9,7 +9,7 @@ import { UserRepository } from 'src/shared/repositories/user.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
-import { DepartmentHierarchyService } from '../services/department-hierarchy.service';
+import { DepartmentHierarchyService } from 'src/department/application/services/department-hierarchy.service';
 import { Roles } from 'src/shared/value-objects/role.vo';
 
 interface GetMyTasksInputDto {
@@ -93,8 +93,10 @@ export class GetMyTasksUseCase {
       limit: dto.limit,
     });
 
-    const metrics = await this.taskRepo.getTaskMetricsForSupervisor(supervisorDepartmentIds);
-    
+    const metrics = await this.taskRepo.getTaskMetricsForSupervisor(
+      supervisorDepartmentIds,
+    );
+
     return {
       tasks: result.tasks,
       total: result.total,
@@ -129,7 +131,7 @@ export class GetMyTasksUseCase {
       employee.supervisor.id.toString(),
       employeeSubDepartmentIds,
     );
-    
+
     return {
       tasks: result.tasks,
       total: result.total,

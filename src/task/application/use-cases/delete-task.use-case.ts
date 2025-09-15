@@ -11,7 +11,7 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
-import { DepartmentHierarchyService } from '../services/department-hierarchy.service';
+import { DepartmentHierarchyService } from 'src/department/application/services/department-hierarchy.service';
 
 @Injectable()
 export class DeleteTaskUseCase {

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/prisma/prisma.service';
-import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
+import {
+  NotificationRepository,
+  UnseenNotificationsResult,
+} from 'src/notification/domain/repositories/notification.repository';
 import { Notification } from 'src/notification/domain/entities/notification.entity';
 import { NotificationRecipient } from 'src/notification/domain/entities/notification-recipient.entity';
 
@@ -60,7 +63,11 @@ export class PrismaNotificationRepository extends NotificationRepository {
 
   async getUserNotifications(userId: string): Promise<Notification[]> {
     const notifications = await this.prisma.notification.findMany({
-      where: { recipients: { some: { userId } } },
+      where: {
+        recipients: {
+          some: { userId },
+        },
+      },
       include: { recipients: true },
     });
     return notifications.map((notification) => this.toDomain(notification));
@@ -83,45 +90,74 @@ export class PrismaNotificationRepository extends NotificationRepository {
 
     if (notification.recipients.length > 0) {
       // Validate that all recipient user IDs exist
-      const userIds = notification.recipients.map(r => r.userId);
+      const userIds = notification.recipients.map((r) => r.userId);
       const existingUsers = await this.prisma.user.findMany({
         where: { id: { in: userIds } },
-        select: { id: true }
+        select: { id: true },
       });
-      const existingUserIds = new Set(existingUsers.map(u => u.id));
-      
+      const existingUserIds = new Set(existingUsers.map((u) => u.id));
+
       // Filter out non-existent users
-      const validRecipients = notification.recipients.filter(recipient => 
-        existingUserIds.has(recipient.userId)
+      const validRecipients = notification.recipients.filter((recipient) =>
+        existingUserIds.has(recipient.userId),
       );
-      
+
       if (validRecipients.length > 0) {
         await this.prisma.$transaction(
           validRecipients.map((recipient) => {
-            const data = {
-              id: recipient.id.toString(),
-              notificationId: notification.id,
-              userId: recipient.userId,
-              seen: recipient.seen,
-            };
-            return this.prisma.recipientNotification.upsert({
-              where: { id: recipient.id.toString() },
-              create: data,
-              update: data,
+            return this.prisma.recipientNotification.create({
+              data: {
+                id: recipient.id.toString(),
+                seen: recipient.seen,
+                notification: { connect: { id: notification.id } },
+                user: { connect: { id: recipient.userId } },
+              },
             });
           }),
         );
       }
     }
 
-    return this.toDomain(createdNotification);
+    // Fetch the notification with recipients to return the complete domain entity
+    const notificationWithRecipients =
+      await this.prisma.notification.findUnique({
+        where: { id: createdNotification.id },
+        include: { recipients: true },
+      });
+
+    return this.toDomain(notificationWithRecipients!);
   }
 
-  async findUnseenNotifications(userId: string): Promise<Notification[]> {
+  async findUnseenNotifications(
+    userId: string,
+  ): Promise<UnseenNotificationsResult> {
     const notifications = await this.prisma.notification.findMany({
-      where: { recipients: { some: { userId, seen: false } } },
+      where: {
+        recipients: {
+          some: {
+            userId,
+            seen: false,
+          },
+        },
+      },
+      include: { recipients: true },
     });
-    return notifications.map((notification) => this.toDomain(notification));
+
+    const domainNotifications = notifications.map((notification) =>
+      this.toDomain(notification),
+    );
+
+    // Count notifications by type
+    const counts: Record<string, number> = {};
+    domainNotifications.forEach((notification) => {
+      const type = notification.type;
+      counts[type] = (counts[type] || 0) + 1;
+    });
+
+    return {
+      notifications: domainNotifications,
+      counts,
+    };
   }
 
   async markAllAsSeen(userId: string): Promise<void> {

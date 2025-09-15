@@ -75,7 +75,7 @@ export class AssignTicketUseCase {
       new TicketAssignedEvent(
         ticket.id.toString(),
         ticket.subject,
-        employee.id.toString(),
+        employee.userId.toString(),
         new Date(),
       ),
     );
@@ -86,7 +86,7 @@ export class AssignTicketUseCase {
       new TicketAssignedTeamEvent(
         ticket.id.toString(),
         ticket.subject,
-        employee.id.toString(),
+        employee.userId.toString(),
         employee.supervisorId?.toString() || '',
         new Date(),
       ),

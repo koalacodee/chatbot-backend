@@ -4,7 +4,7 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { NotificationRecipient } from '../entities/notification-recipient.entity';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
-import { DepartmentHierarchyService } from 'src/task/application/services/department-hierarchy.service';
+import { DepartmentHierarchyService } from 'src/department/application/services/department-hierarchy.service';
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 
 @Injectable()
@@ -25,7 +25,7 @@ export class NotificationRecipientResolverService {
 
     // Get all admins
     const admins = await this.adminRepository.findAll();
-    recipients.push(...admins.map((admin) => admin.id.toString()));
+    recipients.push(...admins.map((admin) => admin.userId.toString()));
 
     // Get supervisors whose departments have access to the ticket category
     const supervisorIds =
@@ -44,7 +44,7 @@ export class NotificationRecipientResolverService {
           ) && subDepartmentEmployees.includes(employee.id.toString()),
       );
       recipients.push(
-        ...relevantEmployees.map((employee) => employee.id.toString()),
+        ...relevantEmployees.map((employee) => employee.userId.toString()),
       );
     }
 
@@ -54,6 +54,7 @@ export class NotificationRecipientResolverService {
   async resolveTicketAssignedRecipients(
     assignedEmployeeId: string,
   ): Promise<string[]> {
+    // assignedEmployeeId is already a userId, so we can return it directly
     return [assignedEmployeeId];
   }
 
@@ -74,7 +75,7 @@ export class NotificationRecipientResolverService {
 
     // Add all admins
     const admins = await this.adminRepository.findAll();
-    recipients.push(...admins.map((admin) => admin.id.toString()));
+    recipients.push(...admins.map((admin) => admin.userId.toString()));
 
     return [...new Set(recipients)]; // Remove duplicates
   }
@@ -82,7 +83,7 @@ export class NotificationRecipientResolverService {
   async resolveTaskCreatedRecipients(): Promise<string[]> {
     // Get all admins
     const admins = await this.adminRepository.findAll();
-    return admins.map((admin) => admin.id.toString());
+    return admins.map((admin) => admin.userId.toString());
   }
 
   async resolveTaskCreatedSupervisorRecipients(
@@ -99,6 +100,7 @@ export class NotificationRecipientResolverService {
     const recipients: string[] = [];
 
     if (assignedEmployeeId) {
+      // assignedEmployeeId is already a userId
       recipients.push(assignedEmployeeId);
     }
 
@@ -122,30 +124,33 @@ export class NotificationRecipientResolverService {
   async resolveTaskSubmittedAdminRecipients(): Promise<string[]> {
     // Get all admins
     const admins = await this.adminRepository.findAll();
-    return admins.map((admin) => admin.id.toString());
+    return admins.map((admin) => admin.userId.toString());
   }
 
   async resolveTaskApprovedRecipients(
     assignedEmployeeId: string,
   ): Promise<string[]> {
+    // assignedEmployeeId is already a userId
     return [assignedEmployeeId];
   }
 
   async resolveTaskRejectedRecipients(
     assignedEmployeeId: string,
   ): Promise<string[]> {
+    // assignedEmployeeId is already a userId
     return [assignedEmployeeId];
   }
 
   async resolveStaffRequestCreatedRecipients(): Promise<string[]> {
     // Get all admins
     const admins = await this.adminRepository.findAll();
-    return admins.map((admin) => admin.id.toString());
+    return admins.map((admin) => admin.userId.toString());
   }
 
   async resolveStaffRequestResolvedRecipients(
     requestedBySupervisorId: string,
   ): Promise<string[]> {
+    // requestedBySupervisorId is already a userId
     return [requestedBySupervisorId];
   }
 
@@ -163,7 +168,7 @@ export class NotificationRecipientResolverService {
     const supervisor = await this.supervisorRepository.findById(
       employee.supervisorId.toString(),
     );
-    return supervisor ? supervisor.id.toString() : null;
+    return supervisor ? supervisor.userId.toString() : null;
   }
 
   /**
@@ -178,7 +183,7 @@ export class NotificationRecipientResolverService {
         (dept) => dept.id.toString() === subDepartmentId,
       ),
     );
-    return relevantEmployees.map((employee) => employee.id.toString());
+    return relevantEmployees.map((employee) => employee.userId.toString());
   }
 
   /**
@@ -206,6 +211,8 @@ export class NotificationRecipientResolverService {
       }
     }
 
-    return relevantSupervisors.map((supervisor) => supervisor.id.toString());
+    return relevantSupervisors.map((supervisor) =>
+      supervisor.userId.toString(),
+    );
   }
 }

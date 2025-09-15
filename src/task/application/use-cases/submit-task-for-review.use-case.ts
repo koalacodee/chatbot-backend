@@ -118,7 +118,7 @@ export class SubmitTaskForReviewUseCase {
         new TaskSubmittedSupervisorEvent(
           existing.id.toString(),
           existing.title,
-          existing.assignee.id.toString(),
+          existing.assignee.userId.toString(),
           existing.assignee.supervisorId?.toString() || '',
           new Date(),
         ),
