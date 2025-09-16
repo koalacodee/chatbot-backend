@@ -1,5 +1,6 @@
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { NotificationRecipient } from './notification-recipient.entity';
+import { NotificationCreatedEvent } from '../events/notification-created.event';
 
 interface NotificationOptions {
   id?: string;
@@ -17,6 +18,7 @@ export class Notification {
   private _title: string;
   private _createdAt: Date;
   private _updatedAt: Date;
+  private _events: Object[] = [];
 
   private constructor(options: NotificationOptions) {
     this._id = options.id || UUID.create().toString();
@@ -28,7 +30,9 @@ export class Notification {
   }
 
   public static create(options: NotificationOptions): Notification {
-    return new Notification(options);
+    const notification = new Notification(options);
+    notification._events.push(new NotificationCreatedEvent(notification));
+    return notification;
   }
 
   public get id(): string {
@@ -37,6 +41,10 @@ export class Notification {
 
   public get type(): string {
     return this._type;
+  }
+
+  public get events(): Object[] {
+    return this._events;
   }
 
   public set type(type: string) {

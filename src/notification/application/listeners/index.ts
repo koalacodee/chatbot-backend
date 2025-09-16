@@ -12,3 +12,6 @@ export { TaskRejectedListener } from './task-rejected.listener';
 // Staff request listeners
 export { StaffRequestCreatedListener } from './staff-request-created.listener';
 export { StaffRequestResolvedListener } from './staff-request-resolved.listener';
+
+// Notification logging listener
+export { NotificationLoggingListener } from './notification-logging.listener';
