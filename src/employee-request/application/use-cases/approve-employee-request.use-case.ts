@@ -16,6 +16,7 @@ import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { StaffRequestResolvedEvent } from '../../domain/events/staff-request-resolved.event';
+import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 
 export interface ApproveEmployeeRequestDto {
   employeeRequestId: string;
@@ -30,6 +31,7 @@ export class ApproveEmployeeRequestUseCase {
     private readonly adminRepository: AdminRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly supervisorRepository: SupervisorRepository,
   ) {}
 
   async execute(dto: ApproveEmployeeRequestDto): Promise<{
@@ -107,6 +109,9 @@ export class ApproveEmployeeRequestUseCase {
     employeeRequest.resolvedAt = new Date();
     const updatedRequest =
       await this.employeeRequestRepository.save(employeeRequest);
+    const supervisor = await this.supervisorRepository.findById(
+      updatedRequest.requestedBySupervisorId,
+    );
 
     // Emit staff request resolved event
     this.eventEmitter.emit(
@@ -114,7 +119,7 @@ export class ApproveEmployeeRequestUseCase {
       new StaffRequestResolvedEvent(
         updatedRequest.id.toString(),
         updatedRequest.newEmployeeUsername,
-        updatedRequest.requestedBySupervisor.id.toString(),
+        supervisor.userId.toString(),
         'approved',
         new Date(),
       ),

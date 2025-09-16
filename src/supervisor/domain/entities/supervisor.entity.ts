@@ -225,18 +225,33 @@ export class Supervisor {
       userId: this.userId.toString(),
       user: this?.user?.withoutPassword(),
       permissions: this.permissions,
-      departments: this?.departments?.map((dept) => dept?.toJSON()),
-      assignedTasks: this?.assignedTasks?.map((task) => task?.toJSON()),
+      departments: this?.departments?.map((dept) =>
+        typeof dept?.toJSON === 'function' ? dept.toJSON() : dept,
+      ),
+      assignedTasks: this?.assignedTasks?.map((task) =>
+        typeof task?.toJSON === 'function' ? task.toJSON() : task,
+      ),
       employeeRequests: this?.employeeRequests?.map((request) =>
-        request?.toJSON(),
+        typeof request?.toJSON === 'function' ? request.toJSON() : request,
       ),
-      promotions: this?.promotions?.map((promotion) => promotion?.toJSON()),
-      approvedTasks: this?.approvedTasks?.map((task) => task?.toJSON()),
-      questions: this?.questions?.map((question) => question?.toJSON()),
+      promotions: this?.promotions?.map((promotion) =>
+        typeof promotion?.toJSON === 'function'
+          ? promotion.toJSON()
+          : promotion,
+      ),
+      approvedTasks: this?.approvedTasks?.map((task) =>
+        typeof task?.toJSON === 'function' ? task.toJSON() : task,
+      ),
+      questions: this?.questions?.map((question) =>
+        typeof question?.toJSON === 'function' ? question.toJSON() : question,
+      ),
       supportTicketAnswersAuthored: this?.supportTicketAnswersAuthored?.map(
-        (answer) => answer?.toJSON(),
+        (answer) =>
+          typeof answer?.toJSON === 'function' ? answer.toJSON() : answer,
       ),
-      performedTasks: this?.performedTasks?.map((task) => task?.toJSON()),
+      performedTasks: this?.performedTasks?.map((task) =>
+        typeof task?.toJSON === 'function' ? task.toJSON() : task,
+      ),
       createdAt: this?.createdAt?.toISOString(),
       updatedAt: this?.updatedAt?.toISOString(),
     };

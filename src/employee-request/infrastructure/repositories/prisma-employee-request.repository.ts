@@ -48,6 +48,7 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
     return EmployeeRequest.create({
       id: row.id,
       requestedBySupervisor,
+      requestedBySupervisorId: row.requestedBySupervisorId,
       newEmployeeEmail: Email.create(row.newEmployeeEmail),
       newEmployeeFullName: row.newEmployeeFullName,
       newEmployeeUsername: row.newEmployeeUsername,

@@ -140,7 +140,14 @@ export class PrismaNotificationRepository extends NotificationRepository {
           },
         },
       },
-      include: { recipients: true },
+      include: {
+        recipients: {
+          where: {
+            userId,
+            seen: false,
+          },
+        },
+      },
     });
 
     const domainNotifications = notifications.map((notification) =>
@@ -163,6 +170,27 @@ export class PrismaNotificationRepository extends NotificationRepository {
   async markAllAsSeen(userId: string): Promise<void> {
     await this.prisma.recipientNotification.updateMany({
       where: { userId },
+      data: {
+        seen: true,
+      },
+    });
+  }
+
+  async markNotificationsAsSeen(
+    userId: string,
+    notificationIds: string[],
+  ): Promise<void> {
+    if (notificationIds.length === 0) {
+      return;
+    }
+
+    await this.prisma.recipientNotification.updateMany({
+      where: {
+        userId,
+        notificationId: {
+          in: notificationIds,
+        },
+      },
       data: {
         seen: true,
       },

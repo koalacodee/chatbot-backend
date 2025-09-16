@@ -15,4 +15,8 @@ export abstract class NotificationRepository {
     userId: string,
   ): Promise<UnseenNotificationsResult>;
   abstract markAllAsSeen(userId: string): Promise<void>;
+  abstract markNotificationsAsSeen(
+    userId: string,
+    notificationIds: string[],
+  ): Promise<void>;
 }

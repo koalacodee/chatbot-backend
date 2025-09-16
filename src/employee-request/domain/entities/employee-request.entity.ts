@@ -13,6 +13,7 @@ export enum RequestStatus {
 interface EmployeeRequestOptions {
   id?: string;
   requestedBySupervisor: Supervisor;
+  requestedBySupervisorId?: string;
   newEmployeeEmail: Email;
   newEmployeeFullName: string;
   newEmployeeUsername: string;
@@ -32,6 +33,7 @@ interface EmployeeRequestOptions {
 export class EmployeeRequest {
   private _id: UUID;
   private _requestedBySupervisor: Supervisor;
+  private _requestedBySupervisorId?: string;
   private readonly _newEmployeeEmail: Email;
   private readonly _newEmployeeFullName: string;
   private readonly _newEmployeeUsername: string;
@@ -50,6 +52,7 @@ export class EmployeeRequest {
   private constructor(options: EmployeeRequestOptions) {
     this._id = UUID.create(options.id);
     this._requestedBySupervisor = options.requestedBySupervisor;
+    this._requestedBySupervisorId = options.requestedBySupervisorId;
     this._newEmployeeEmail = options.newEmployeeEmail;
     this._newEmployeeFullName = options.newEmployeeFullName;
     this._newEmployeeUsername = options.newEmployeeUsername;
@@ -80,6 +83,14 @@ export class EmployeeRequest {
 
   public set requestedBySupervisor(value: Supervisor) {
     this._requestedBySupervisor = value;
+  }
+
+  public get requestedBySupervisorId(): string | undefined {
+    return this._requestedBySupervisorId;
+  }
+
+  public set requestedBySupervisorId(value: string | undefined) {
+    this._requestedBySupervisorId = value;
   }
 
   public get newEmployeeEmail(): Email {
@@ -170,6 +181,7 @@ export class EmployeeRequest {
     return {
       id: this._id.value,
       requestedBySupervisor: this._requestedBySupervisor,
+      requestedBySupervisorId: this._requestedBySupervisorId,
       newEmployeeEmail: this._newEmployeeEmail,
       newEmployeeFullName: this._newEmployeeFullName,
       newEmployeeUsername: this._newEmployeeUsername,

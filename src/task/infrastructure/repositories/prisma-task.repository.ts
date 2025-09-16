@@ -600,7 +600,7 @@ export class PrismaTaskRepository extends TaskRepository {
     completionPercentage: number;
   }> {
     return this.executeMetricsQuery(
-      `t.assignee_id = ${employeeId}::uuid OR t.assigner_supervisor_id = ${supervisorId}::uuid OR t.target_sub_department_id IN (SELECT sub_department_id FROM employee_access)`,
+      `t.assignee_id = '${employeeId}'::uuid OR t.assigner_supervisor_id = '${supervisorId}'::uuid OR t.target_sub_department_id IN (SELECT sub_department_id FROM employee_access)`,
       subDepartmentIds,
       'employee_access',
       'sub_department_id',
@@ -633,7 +633,7 @@ export class PrismaTaskRepository extends TaskRepository {
       ),
       task_counts AS (
         SELECT 
-          COUNT(CASE WHEN t.status IN ('to_do', 'seen', 'pending_review', 'pending_supervisor_review') THEN 1 END) as pending_count,
+          COUNT(CASE WHEN t.status IN ('to_do', 'seen', 'pending_review') THEN 1 END) as pending_count,
           COUNT(CASE WHEN t.status = 'completed' THEN 1 END) as completed_count
         FROM tasks t
         WHERE ${whereClause}

@@ -42,6 +42,7 @@ export class SubmitEmployeeRequestUseCase {
 
     const employeeRequest = EmployeeRequest.create({
       requestedBySupervisor: supervisor,
+      requestedBySupervisorId: supervisor.id.toString(),
       newEmployeeEmail: Email.create(dto.newEmployeeEmail),
       newEmployeeFullName: dto.newEmployeeFullName,
       newEmployeeUsername: dto.newEmployeeUsername,

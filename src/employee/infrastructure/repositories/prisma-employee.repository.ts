@@ -22,6 +22,7 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
           id: subDept.department.id,
           name: subDept.department.name,
           visibility: subDept.department.visibility,
+          parentId: subDept.department.parentId,
         }),
       ) || [];
 

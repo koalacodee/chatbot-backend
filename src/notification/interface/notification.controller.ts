@@ -15,7 +15,7 @@ export class NotificationController {
   @EmployeePermissions()
   geAll(@Req() req: any): any {
     return this.getUnseenNotificationsUseCase
-      .execute(req.user.id)
+      .execute({ userId: req.user.id })
       .then((val) => ({
         ...val,
         notifications: val.notifications.map((val) => val.toJSON()),

@@ -113,9 +113,9 @@ export class GetMyTasksUseCase {
       throw new NotFoundException('Employee not found');
     }
 
-    const employeeSubDepartmentIds = employee.subDepartments.map((sd) =>
-      sd.parentId.toString(),
-    );
+    const employeeSubDepartmentIds = employee.subDepartments
+      .map((sd) => sd.parentId?.toString())
+      .filter((id) => id !== undefined && id !== '');
 
     const result = await this.taskRepo.findTasksForEmployee({
       employeeId: employee.id.toString(),

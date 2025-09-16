@@ -1,5 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { SupportTicket, SupportTicketStatus } from '../../domain/entities/support-ticket.entity';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  SupportTicket,
+  SupportTicketStatus,
+} from '../../domain/entities/support-ticket.entity';
 import { SupportTicketRepository } from '../../domain/repositories/support-ticket.repository';
 import { RedisTicketStorageService } from '../../infrastructure/services/redis-ticket-storage.service';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
@@ -7,6 +14,8 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
 import { Notification } from 'src/notification/domain/entities/notification.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TicketCreatedEvent } from 'src/support-tickets/domain/events/ticket-created.event';
 
 interface VerifySupportTicketInput {
   verificationCode: string;
@@ -25,19 +34,24 @@ export class VerifySupportTicketUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly notificationRepository: NotificationRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(
     dto: VerifySupportTicketInput,
   ): Promise<VerifySupportTicketOutput> {
     // Validate code
-    const isValid = await this.redisTicketStorage.isTokenValid(dto.verificationCode);
+    const isValid = await this.redisTicketStorage.isTokenValid(
+      dto.verificationCode,
+    );
     if (!isValid) {
       throw new BadRequestException('Invalid or expired verification code');
     }
 
     // Retrieve ticket from Redis
-    const ticketData = await this.redisTicketStorage.retrieveTemporaryTicket(dto.verificationCode);
+    const ticketData = await this.redisTicketStorage.retrieveTemporaryTicket(
+      dto.verificationCode,
+    );
     if (!ticketData) {
       throw new NotFoundException('Ticket not found or already verified');
     }
@@ -62,7 +76,19 @@ export class VerifySupportTicketUseCase {
     await this.redisTicketStorage.deleteTemporaryTicket(dto.verificationCode);
 
     // Send notifications
-    await this.notify(savedTicket);
+    // await this.notify(savedTicket);
+
+    this.eventEmitter.emit(
+      TicketCreatedEvent.name,
+      new TicketCreatedEvent(
+        savedTicket.id.toString(),
+        savedTicket.subject,
+        savedTicket.departmentId.toString(),
+        savedTicket.departmentId.toString(),
+        savedTicket.departmentId.toString(),
+        savedTicket.createdAt,
+      ),
+    );
 
     return {
       ticket: savedTicket,
