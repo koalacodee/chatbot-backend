@@ -7,11 +7,13 @@ import { DepartmentRepository } from 'src/department/domain/repositories/departm
 import { PointRepository } from 'src/shared/repositories/point.repository';
 import { Point } from 'src/shared/entities/point.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface UpdateKnowledgeChunkDto {
   content?: string;
   departmentId?: string;
   userId: string;
+  attach?: boolean;
 }
 
 @Injectable()
@@ -22,12 +24,13 @@ export class UpdateKnowledgeChunkUseCase {
     private readonly departmentRepo: DepartmentRepository,
     private readonly pointRepo: PointRepository,
     private readonly accessControl: AccessControlService,
+    private readonly filesService: FilesService,
   ) {}
 
   async execute(
     id: string,
     dto: UpdateKnowledgeChunkDto,
-  ): Promise<KnowledgeChunk | null> {
+  ): Promise<{ knowledgeChunk: KnowledgeChunk | null; uploadKey?: string }> {
     const chunk = await this.chunkRepo.findById(id);
     await this.accessControl.canAccessDepartment(
       dto.userId,
@@ -67,6 +70,11 @@ export class UpdateKnowledgeChunkUseCase {
       chunk.updateDepartment(department);
     }
 
-    return this.chunkRepo.save(chunk);
+    const [savedChunk, uploadKey] = await Promise.all([
+      this.chunkRepo.save(chunk),
+      dto.attach ? this.filesService.replaceFilesByTargetId(id) : undefined,
+    ]);
+
+    return { knowledgeChunk: savedChunk, uploadKey };
   }
 }

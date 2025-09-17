@@ -7,6 +7,7 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 @Injectable()
 export class DeleteQuestionUseCase {
@@ -17,6 +18,7 @@ export class DeleteQuestionUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
     private readonly departmentRepository: DepartmentRepository,
+    private readonly filesService: FilesService,
   ) {}
 
   async execute(id: string, userId: string): Promise<Question | null> {
@@ -31,6 +33,9 @@ export class DeleteQuestionUseCase {
       question.departmentId.value,
       userRole,
     );
+
+    // Delete associated files first
+    await this.filesService.deleteFilesByTargetId(id);
 
     return this.questionRepo.removeById(id);
   }

@@ -8,11 +8,13 @@ import { AnswerRepository } from 'src/tickets/domain/repositories/answer.reposit
 import { Answer } from 'src/tickets/domain/entities/answer.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { TicketStatusEnum } from 'src/tickets/domain/value-objects/ticket-status.vo';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface AnswerTicketUseCaseInput {
   ticketId: string;
   content: string;
   answeredBy?: string; // User ID who is answering
+  attach?: boolean;
 }
 
 interface AnswerTicketUseCaseOutput {
@@ -20,6 +22,7 @@ interface AnswerTicketUseCaseOutput {
   answerId: string;
   content: string;
   answeredAt: Date;
+  uploadKey?: string;
 }
 
 @Injectable()
@@ -27,12 +30,14 @@ export class AnswerTicketUseCase {
   constructor(
     private readonly ticketRepository: TicketRepository,
     private readonly answerRepository: AnswerRepository,
+    private readonly filesService: FilesService,
   ) {}
 
   async execute({
     ticketId,
     content,
     answeredBy,
+    attach,
   }: AnswerTicketUseCaseInput): Promise<AnswerTicketUseCaseOutput> {
     // Find the ticket
     const ticket = await this.ticketRepository.findById(ticketId);
@@ -71,11 +76,16 @@ export class AnswerTicketUseCase {
     // Add answer to ticket entity
     ticket.answer = savedAnswer;
 
+    const uploadKey = attach
+      ? await this.filesService.genUploadKey(savedAnswer.id.toString())
+      : undefined;
+
     return {
       ticketId: ticketId,
       answerId: savedAnswer.id.toString(),
       content: savedAnswer.content,
       answeredAt: savedAnswer.createdAt,
+      uploadKey,
     };
   }
 }

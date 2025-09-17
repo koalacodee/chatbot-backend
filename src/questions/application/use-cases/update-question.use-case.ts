@@ -9,6 +9,7 @@ import { DepartmentRepository } from 'src/department/domain/repositories/departm
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FaqUpdatedEvent } from '../listeners/faq-updated.listener';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface UpdateQuestionDto {
   text?: string;
@@ -16,6 +17,7 @@ interface UpdateQuestionDto {
   knowledgeChunkId?: string;
   userId: string;
   answer?: string;
+  attach?: boolean;
 }
 
 @Injectable()
@@ -27,9 +29,10 @@ export class UpdateQuestionUseCase {
     private readonly userRepository: UserRepository,
     private readonly departmentRepository: DepartmentRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly filesService: FilesService,
   ) {}
 
-  async execute(id: string, dto: UpdateQuestionDto): Promise<Question> {
+  async execute(id: string, dto: UpdateQuestionDto): Promise<{ question: Question; uploadKey?: string }> {
     // Fetch the question to get departmentId
     const question = await this.questionRepo.findById(id);
     const departmentId = dto.departmentId || question.departmentId.value;
@@ -45,7 +48,12 @@ export class UpdateQuestionUseCase {
       update.knowledgeChunkId = { value: dto.knowledgeChunkId };
     if (dto.answer) update.answer = dto.answer;
 
-    const updatedQuestion = await this.questionRepo.update(id, update);
+    const [updatedQuestion, uploadKey] = await Promise.all([
+      this.questionRepo.update(id, update),
+      dto.attach
+        ? this.filesService.replaceFilesByTargetId(id)
+        : undefined,
+    ]);
 
     this.eventEmitter.emit(
       FaqUpdatedEvent.name,
@@ -57,7 +65,7 @@ export class UpdateQuestionUseCase {
       ),
     );
 
-    return updatedQuestion;
+    return { question: updatedQuestion, uploadKey };
   }
 
   private async checkDepartmentAccess(

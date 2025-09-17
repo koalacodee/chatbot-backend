@@ -3,11 +3,13 @@ import { DepartmentRepository } from 'src/department/domain/repositories/departm
 import { GuestRepository } from 'src/guest/domain/repositories/guest.repository';
 import { Ticket } from 'src/tickets/domain/entities/ticket.entity';
 import { TicketRepository } from 'src/tickets/domain/repositories/ticket.repository';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface CreateTicketInput {
   departmentId: string;
   question: string;
   guestId?: string;
+  attach?: boolean;
 }
 
 @Injectable()
@@ -16,9 +18,10 @@ export class CreateTicketUseCase {
     private readonly departmentRepo: DepartmentRepository,
     private readonly ticketRepo: TicketRepository,
     private readonly guestRepo: GuestRepository,
+    private readonly filesService: FilesService,
   ) {}
 
-  async execute({ departmentId, question, guestId }: CreateTicketInput) {
+  async execute({ departmentId, question, guestId, attach }: CreateTicketInput) {
     const ticket = await this.ticketRepo.save(
       await Ticket.create({
         question,
@@ -37,6 +40,10 @@ export class CreateTicketUseCase {
       }),
     );
 
-    return { ticket: ticket.ticketCode.toString() };
+    const uploadKey = attach
+      ? await this.filesService.genUploadKey(ticket.id.toString())
+      : undefined;
+
+    return { ticket: ticket.ticketCode.toString(), uploadKey };
   }
 }

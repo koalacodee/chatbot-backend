@@ -4,11 +4,13 @@ import { Queue } from 'bullmq';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
 import { KnowledgeChunk } from 'src/knowledge-chunks/domain/entities/knowledge-chunk.entity';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface CreateKnowledgeChunkDto {
   content: string;
   departmentId: string;
   userId: string;
+  attach?: boolean;
 }
 
 @Injectable()
@@ -16,17 +18,20 @@ export class CreateKnowledgeChunkUseCase {
   constructor(
     private readonly departmentRepo: DepartmentRepository,
     private readonly accessControl: AccessControlService,
+    private readonly filesService: FilesService,
     @InjectQueue('knowledge-chunks')
     private readonly knowledgeChunksQueue: Queue,
   ) {}
 
-  async execute(dto: CreateKnowledgeChunkDto): Promise<KnowledgeChunk> {
+  async execute(dto: CreateKnowledgeChunkDto): Promise<{ knowledgeChunk: KnowledgeChunk; uploadKey?: string }> {
     await this.accessControl.canAccessDepartment(dto.userId, dto.departmentId);
     const department = await this.departmentRepo.findById(dto.departmentId);
 
     if (!department) {
       throw new NotFoundException('Department not found');
     }
+
+    const knowledgeChunk = KnowledgeChunk.create({ content: dto.content, department });
 
     // Add the processing job to the queue
     await this.knowledgeChunksQueue.add('create', {
@@ -35,6 +40,10 @@ export class CreateKnowledgeChunkUseCase {
       userId: dto.userId,
     });
 
-    return KnowledgeChunk.create({ content: dto.content, department });
+    const uploadKey = dto.attach
+      ? await this.filesService.genUploadKey(knowledgeChunk.id.toString())
+      : undefined;
+
+    return { knowledgeChunk, uploadKey };
   }
 }

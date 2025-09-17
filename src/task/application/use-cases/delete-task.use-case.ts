@@ -12,6 +12,7 @@ import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { DepartmentHierarchyService } from 'src/department/application/services/department-hierarchy.service';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 @Injectable()
 export class DeleteTaskUseCase {
@@ -21,6 +22,7 @@ export class DeleteTaskUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
     private readonly departmentHierarchyService: DepartmentHierarchyService,
+    private readonly filesService: FilesService,
   ) {}
 
   async execute(id: string, userId?: string): Promise<Task | null> {
@@ -33,6 +35,9 @@ export class DeleteTaskUseCase {
       const userRole = user.role.getRole();
       await this.validateRejectionRights(userId, existing, userRole);
     }
+
+    // Delete associated files first
+    await this.filesService.deleteFilesByTargetId(id);
 
     await this.taskRepo.removeById(id);
     return existing;

@@ -87,7 +87,9 @@ export class SubmitTaskForReviewUseCase {
 
     const [savedTask, uploadKey] = await Promise.all([
       this.taskRepo.save(existing),
-      this.filesService.genUploadKey(existing.id.toString()),
+      dto.attach
+        ? this.filesService.genUploadKey(existing.id.toString())
+        : undefined,
       this.eventEmitter.emitAsync(
         TaskPerformedEvent.name,
         new TaskPerformedEvent(

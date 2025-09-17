@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Promotion } from '../../domain/entities/promotion.entity';
 import { PromotionRepository } from '../../domain/repositories/promotion.repository';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface UpdatePromotionInputDto {
   title?: string;
@@ -8,13 +9,20 @@ interface UpdatePromotionInputDto {
   isActive?: boolean;
   startDate?: Date;
   endDate?: Date | null;
+  attach?: boolean;
 }
 
 @Injectable()
 export class UpdatePromotionUseCase {
-  constructor(private readonly promotionRepo: PromotionRepository) {}
+  constructor(
+    private readonly promotionRepo: PromotionRepository,
+    private readonly filesService: FilesService,
+  ) {}
 
-  async execute(id: string, dto: UpdatePromotionInputDto): Promise<Promotion> {
+  async execute(
+    id: string,
+    dto: UpdatePromotionInputDto,
+  ): Promise<{ promotion: Promotion; uploadKey?: string }> {
     const existing = await this.promotionRepo.findById(id);
     if (!existing) throw new NotFoundException({ id: 'promotion_not_found' });
 
@@ -24,6 +32,11 @@ export class UpdatePromotionUseCase {
     if (dto.startDate !== undefined) existing.startDate = dto.startDate;
     if (dto.endDate !== undefined) existing.endDate = dto.endDate ?? undefined;
 
-    return this.promotionRepo.save(existing);
+    const [savedPromotion, uploadKey] = await Promise.all([
+      this.promotionRepo.save(existing),
+      dto.attach ? this.filesService.replaceFilesByTargetId(id) : undefined,
+    ]);
+
+    return { promotion: savedPromotion, uploadKey };
   }
 }

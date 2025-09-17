@@ -15,6 +15,7 @@ import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support
 import { SupportTicketStatus } from 'src/support-tickets/domain/entities/support-ticket.entity';
 import { SupportTicketAnswerRepository } from 'src/support-tickets/domain/repositories/support-ticket-answer.repository';
 import { SupportTicketRepository } from 'src/support-tickets/domain/repositories/support-ticket.repository';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface ReplyToTicketInput {
   ticketId: string;
@@ -22,6 +23,7 @@ interface ReplyToTicketInput {
   promoteToFaq?: true;
   newFawDepartmentId?: string;
   userId: string;
+  attach?: boolean;
 }
 
 @Injectable()
@@ -35,6 +37,7 @@ export class ReplyToTicketUseCase {
     private readonly ticketAnswerRepo: SupportTicketAnswerRepository,
     private readonly departmentRepo: DepartmentRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly filesService: FilesService,
   ) {}
 
   async execute({
@@ -43,7 +46,8 @@ export class ReplyToTicketUseCase {
     promoteToFaq,
     newFawDepartmentId,
     userId,
-  }: ReplyToTicketInput) {
+    attach,
+  }: ReplyToTicketInput): Promise<{ uploadKey?: string }> {
     if (promoteToFaq && !newFawDepartmentId) {
       throw new BadRequestException({ newFawDepartmentId: 'required' });
     }
@@ -62,7 +66,11 @@ export class ReplyToTicketUseCase {
       throw new NotFoundException({ newFawDepartmentId: 'not_found' });
 
     // Check department access
-    await this.checkDepartmentAccess(userId, ticket.departmentId.toString(), user.role.getRole());
+    await this.checkDepartmentAccess(
+      userId,
+      ticket.departmentId.toString(),
+      user.role.getRole(),
+    );
 
     const answer = SupportTicketAnswer.create({
       content: reply,
@@ -77,7 +85,8 @@ export class ReplyToTicketUseCase {
 
     ticket.status = SupportTicketStatus.ANSWERED;
 
-    await Promise.all([
+    const [uploadKey] = await Promise.all([
+      attach ? this.filesService.genUploadKey(answer.id.toString()) : undefined,
       this.ticketRepository.save(ticket),
       this.ticketAnswerRepo.save(answer),
       newFawDepartment
@@ -89,6 +98,8 @@ export class ReplyToTicketUseCase {
           })
         : undefined,
     ]);
+
+    return { uploadKey };
   }
 
   private async checkDepartmentAccess(
@@ -111,10 +122,12 @@ export class ReplyToTicketUseCase {
 
       // If not direct access, check if it's a sub-department and supervisor has access to parent
       if (!hasAccess) {
-        const department =
-          await this.departmentRepo.findSubDepartmentById(departmentId, {
+        const department = await this.departmentRepo.findSubDepartmentById(
+          departmentId,
+          {
             includeParent: true,
-          });
+          },
+        );
         if (department?.parent) {
           hasAccess = supervisorDepartmentIds.includes(
             department.parent.id.toString(),

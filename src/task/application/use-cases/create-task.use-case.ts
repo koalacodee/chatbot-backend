@@ -20,6 +20,7 @@ import { AdminRepository } from 'src/admin/domain/repositories/admin.repository'
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
 import { TaskCreatedEvent } from '../../domain/events/task-created.event';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface CreateTaskInputDto {
   title: string;
@@ -37,6 +38,7 @@ interface CreateTaskInputDto {
   notes?: string;
   priority?: TaskPriority;
   feedback?: string;
+  attach?: boolean;
 }
 
 @Injectable()
@@ -50,9 +52,13 @@ export class CreateTaskUseCase {
     private readonly adminRepository: AdminRepository,
     private readonly notificationRepository: NotificationRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly filesService: FilesService,
   ) {}
 
-  async execute(dto: CreateTaskInputDto, userId?: string): Promise<Task> {
+  async execute(
+    dto: CreateTaskInputDto,
+    userId?: string,
+  ): Promise<{ task: Task; uploadKey?: string }> {
     // Validate required fields based on assignment type
     const validationErrors: any = {};
 
@@ -146,8 +152,11 @@ export class CreateTaskUseCase {
       feedback: dto.feedback ?? undefined,
     });
 
-    const [saved] = await Promise.all([
+    const [saved, uploadKey] = await Promise.all([
       this.taskRepo.save(task),
+      dto.attach
+        ? this.filesService.genUploadKey(task.id.toString())
+        : undefined,
       this.eventEmitter.emitAsync(
         TaskCreatedEvent.name,
         new TaskCreatedEvent(
@@ -162,7 +171,7 @@ export class CreateTaskUseCase {
       ),
     ]);
 
-    return saved;
+    return { task: saved, uploadKey };
   }
 
   private async checkDepartmentAccess(

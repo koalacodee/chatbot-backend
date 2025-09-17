@@ -19,17 +19,21 @@ export class DeleteManyQuestionsUseCase {
 
   async execute(ids: string[], userId: string): Promise<Question[]> {
     const found = await this.questionRepo.findByIds(ids);
-    
+
     // Check department access for each question
     const user = await this.userRepository.findById(userId);
     const userRole = user.role.getRole();
-    
+
     await Promise.all(
       found.map((question) =>
-        this.checkDepartmentAccess(userId, question.departmentId.value, userRole),
+        this.checkDepartmentAccess(
+          userId,
+          question.departmentId.value,
+          userRole,
+        ),
       ),
     );
-    
+
     await Promise.all(ids.map((id) => this.questionRepo.removeById(id)));
     return found;
   }
@@ -59,9 +63,7 @@ export class DeleteManyQuestionsUseCase {
     }
 
     if (!hasAccess) {
-      throw new ForbiddenException(
-        'You do not have access to this department',
-      );
+      throw new ForbiddenException('You do not have access to this department');
     }
   }
 }

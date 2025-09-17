@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import {
   Task,
   TaskStatus,
@@ -12,6 +16,7 @@ import { SupervisorRepository } from 'src/supervisor/domain/repository/superviso
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { User } from 'src/shared/entities/user.entity';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface UpdateTaskInputDto {
   title?: string;
@@ -28,6 +33,7 @@ interface UpdateTaskInputDto {
   completedAt?: Date | null;
   notes?: string | null;
   feedback?: string | null;
+  attach?: boolean;
 }
 
 @Injectable()
@@ -39,9 +45,14 @@ export class UpdateTaskUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly adminRepository: AdminRepository,
+    private readonly filesService: FilesService,
   ) {}
 
-  async execute(id: string, dto: UpdateTaskInputDto, userId?: string): Promise<Task> {
+  async execute(
+    id: string,
+    dto: UpdateTaskInputDto,
+    userId?: string,
+  ): Promise<{ task: Task; uploadKey?: string }> {
     const existing = await this.taskRepo.findById(id);
     if (!existing) throw new NotFoundException({ id: 'task_not_found' });
 
@@ -115,7 +126,12 @@ export class UpdateTaskUseCase {
     if (dto.feedback !== undefined)
       existing.feedback = dto.feedback ?? undefined;
 
-    return this.taskRepo.save(existing);
+    const [savedTask, uploadKey] = await Promise.all([
+      this.taskRepo.save(existing),
+      dto.attach ? this.filesService.replaceFilesByTargetId(id) : undefined,
+    ]);
+
+    return { task: savedTask, uploadKey };
   }
 
   async getApproverByUser(user: User) {
@@ -140,29 +156,38 @@ export class UpdateTaskUseCase {
       hasAccess = true; // Admins have access to all tasks
     } else if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
-      const supervisorDepartmentIds = supervisor.departments.map((d) => d.id.toString());
-      
+      const supervisorDepartmentIds = supervisor.departments.map((d) =>
+        d.id.toString(),
+      );
+
       // Check if task targets supervisor's departments
       const targetDepartmentId = task.targetDepartment?.id.toString();
       const targetSubDepartmentId = task.targetSubDepartment?.id.toString();
-      
-      hasAccess = (targetDepartmentId && supervisorDepartmentIds.includes(targetDepartmentId)) ||
-                  (targetSubDepartmentId && supervisorDepartmentIds.includes(targetSubDepartmentId));
+
+      hasAccess =
+        (targetDepartmentId &&
+          supervisorDepartmentIds.includes(targetDepartmentId)) ||
+        (targetSubDepartmentId &&
+          supervisorDepartmentIds.includes(targetSubDepartmentId));
     } else if (role === Roles.EMPLOYEE) {
       const employee = await this.employeeRepository.findByUserId(userId);
       const employeeDepartmentIds =
         employee?.subDepartments.map((dep) => dep.id.toString()) ??
         employee?.supervisor?.departments.map((d) => d.id.toString()) ??
         [];
-      
+
       // Check if task targets employee's departments or is assigned to them
       const targetDepartmentId = task.targetDepartment?.id.toString();
       const targetSubDepartmentId = task.targetSubDepartment?.id.toString();
-      const isAssignedToEmployee = task.assignee?.id.toString() === employee?.id.toString();
-      
-      hasAccess = isAssignedToEmployee ||
-                  (targetDepartmentId && employeeDepartmentIds.includes(targetDepartmentId)) ||
-                  (targetSubDepartmentId && employeeDepartmentIds.includes(targetSubDepartmentId));
+      const isAssignedToEmployee =
+        task.assignee?.id.toString() === employee?.id.toString();
+
+      hasAccess =
+        isAssignedToEmployee ||
+        (targetDepartmentId &&
+          employeeDepartmentIds.includes(targetDepartmentId)) ||
+        (targetSubDepartmentId &&
+          employeeDepartmentIds.includes(targetSubDepartmentId));
     }
 
     if (!hasAccess) {

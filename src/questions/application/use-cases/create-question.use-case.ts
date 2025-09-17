@@ -68,7 +68,9 @@ export class CreateQuestionUseCase {
 
     const [savedQuestion, uploadKey] = await Promise.all([
       this.questionRepo.save(question),
-      this.filesService.genUploadKey(question.id.toString()),
+      dto.attach
+        ? this.filesService.genUploadKey(question.id.toString())
+        : undefined,
       this.eventEmitter.emitAsync(
         FaqCreatedEvent.name,
         new FaqCreatedEvent(
