@@ -64,7 +64,21 @@ async function bootstrap() {
     credentials: true,
     methods: configService.get<string>('CORS_METHODS').split(','),
   });
-  await app.register(fastifyMultipart as any, { global: true });
+  await app.register(fastifyMultipart as any, {
+    global: true,
+    // Optimize for streaming - don't buffer files in memory
+    limits: {
+      fileSize: 100 * 1024 * 1024, // 100MB per file
+      files: 10, // Maximum 10 files per request
+      fieldSize: 1024 * 1024, // 1MB for text fields
+      fieldNameSize: 100, // 100 characters for field names
+      fieldValueSize: 1024 * 1024, // 1MB for field values
+    },
+    // Don't preserve file paths for security
+    preservePath: false,
+    // Use streaming mode
+    attachFieldsToBody: false,
+  });
 
   // Swagger setup
   const config = new DocumentBuilder()
