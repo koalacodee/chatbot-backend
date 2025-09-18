@@ -11,6 +11,7 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { DepartmentHierarchyService } from 'src/department/application/services/department-hierarchy.service';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
 
 interface GetMyTasksInputDto {
   userId: string;
@@ -23,6 +24,7 @@ interface MyTasksResult {
   tasks: Task[];
   total: number;
   canSubmitWork: boolean[];
+  attachments: { [taskId: string]: string[] };
   metrics: {
     pendingCount: number;
     completedCount: number;
@@ -39,6 +41,7 @@ export class GetMyTasksUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly departmentRepository: DepartmentRepository,
     private readonly departmentHierarchyService: DepartmentHierarchyService,
+    private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
   ) {}
 
   async execute(dto: GetMyTasksInputDto): Promise<MyTasksResult> {
@@ -78,6 +81,7 @@ export class GetMyTasksUseCase {
         tasks: [],
         total: 0,
         canSubmitWork: [],
+        attachments: {},
         metrics: {
           pendingCount: 0,
           completedCount: 0,
@@ -97,10 +101,15 @@ export class GetMyTasksUseCase {
       supervisorDepartmentIds,
     );
 
+    const attachments = await this.getAttachmentsUseCase.execute({
+      targetIds: result.tasks.map((task) => task.id.toString()),
+    });
+
     return {
       tasks: result.tasks,
       total: result.total,
       canSubmitWork: result.tasks.map(() => true),
+      attachments,
       metrics,
     };
   }
@@ -132,6 +141,10 @@ export class GetMyTasksUseCase {
       employeeSubDepartmentIds,
     );
 
+    const attachments = await this.getAttachmentsUseCase.execute({
+      targetIds: result.tasks.map((task) => task.id.toString()),
+    });
+
     return {
       tasks: result.tasks,
       total: result.total,
@@ -145,6 +158,7 @@ export class GetMyTasksUseCase {
           );
         return isAssignedToEmployee || isInSubDepartment;
       }),
+      attachments,
       metrics,
     };
   }

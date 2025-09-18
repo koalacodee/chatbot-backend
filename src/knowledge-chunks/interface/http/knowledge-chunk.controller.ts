@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   Req,
 } from '@nestjs/common';
 import {
@@ -23,12 +22,9 @@ import {
 import { CreateKnowledgeChunkInputDto } from './dto/create-knowledge-chunk.dto';
 import { UpdateKnowledgeChunkInputDto } from './dto/update-knowledge-chunk.dto';
 import { GetKnowledgeChunkOutputDto } from './dto/get-knowledge-chunk.dto';
-import { GetAllKnowledgeChunksOutputDto } from './dto/get-all-knowledge-chunks.dto';
 import { DeleteManyKnowledgeChunksInputDto } from './dto/delete-many-knowledge-chunks.dto';
 import { FindKnowledgeChunksByDepartmentInputDto } from './dto/find-by-department.dto';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { Roles } from 'src/shared/value-objects/role.vo';
 import {
   EmployeePermissions,
   SupervisorPermissions,
@@ -53,7 +49,7 @@ export class KnowledgeChunkController {
   async create(
     @Body() input: CreateKnowledgeChunkInputDto,
     @Req() req: any,
-  ): Promise<KnowledgeChunk> {
+  ): Promise<{ knowledgeChunk: KnowledgeChunk; uploadKey?: string }> {
     return this.createUseCase.execute({ ...input, userId: req.user.id });
   }
 
@@ -62,7 +58,7 @@ export class KnowledgeChunkController {
   async update(
     @Body() input: UpdateKnowledgeChunkInputDto,
     @Req() req: any,
-  ): Promise<KnowledgeChunk> {
+  ): Promise<{ knowledgeChunk: KnowledgeChunk; uploadKey?: string }> {
     const { id, ...dto } = input;
     return this.updateUseCase.execute(id, { ...dto, userId: req.user.id });
   }
@@ -78,7 +74,10 @@ export class KnowledgeChunkController {
 
   @EmployeePermissions(EmployeePermissionsEnum.MANAGE_KNOWLEDGE_CHUNKS)
   @Get()
-  async getAll(@Req() req: any): Promise<GetAllKnowledgeChunksOutputDto> {
+  async getAll(@Req() req: any): Promise<{
+    knowledgeChunks: KnowledgeChunk[];
+    attachments: { [chunkId: string]: string[] };
+  }> {
     return this.getAllUseCase.execute(req.user.id);
   }
 

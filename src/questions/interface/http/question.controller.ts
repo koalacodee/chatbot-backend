@@ -137,7 +137,7 @@ export class QuestionController {
     @Body() dto: UpdateQuestionInputDto,
     @Req() req: any,
     @Param('id') id: string,
-  ): Promise<Question> {
+  ): Promise<{ question: Question; uploadKey?: string }> {
     return this.updateUseCase.execute(id, { ...dto, userId: req.user.id });
   }
 
@@ -146,7 +146,10 @@ export class QuestionController {
   async get(
     @Param('id') id: string,
     @Req() req: any,
-  ): Promise<GetQuestionOutputDto | null> {
+  ): Promise<{
+    question: Question;
+    attachments: { [questionId: string]: string[] };
+  }> {
     return this.getUseCase.execute(id, req.user.id);
   }
 
@@ -155,10 +158,13 @@ export class QuestionController {
   async getAll(
     @Query('departmentId') departmentId: string,
     @Req() req: any,
-  ): Promise<any> {
+  ): Promise<{
+    questions: Question[];
+    attachments: { [questionId: string]: string[] };
+  }> {
     return this.getAllUseCase
       .execute(departmentId, req.user.id)
-      .then((qs) => qs.map((qs) => qs.toJSON()));
+      .then((qs) => qs);
   }
 
   @EmployeePermissions(EmployeePermissionsEnum.ADD_FAQS)

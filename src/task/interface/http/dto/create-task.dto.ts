@@ -1,5 +1,11 @@
 import { Type } from 'class-transformer';
-import { IsString, IsOptional, IsEnum, IsDate } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsDate,
+  IsBoolean,
+} from 'class-validator';
 import { TaskStatus, TaskPriority } from 'src/task/domain/entities/task.entity';
 
 export enum CreateTaskAssignmentType {
@@ -59,4 +65,8 @@ export class CreateTaskInputDto {
   @IsOptional()
   @IsString()
   feedback?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  attach?: boolean;
 }

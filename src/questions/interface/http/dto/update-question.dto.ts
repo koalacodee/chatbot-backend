@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsBoolean } from 'class-validator';
 
 export class UpdateQuestionInputDto {
   @IsOptional()
@@ -16,4 +16,8 @@ export class UpdateQuestionInputDto {
   @IsOptional()
   @IsString()
   knowledgeChunkId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  attach?: boolean;
 }

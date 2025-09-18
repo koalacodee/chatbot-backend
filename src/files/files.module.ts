@@ -7,6 +7,7 @@ import { FilesController } from './interface/http/files.controller';
 import { UploadFileUseCase } from './application/use-cases/upload-file.use-case';
 import { DeleteFileUseCase } from './application/use-cases/delete-file.use-case';
 import { GenTokenUseCase } from './application/use-cases/gen-token.use-case';
+import { GetAttachmentsByTargetIdsUseCase } from './application/use-cases/get-attachments-by-target-ids.use-case';
 
 @Global()
 @Module({
@@ -23,7 +24,12 @@ import { GenTokenUseCase } from './application/use-cases/gen-token.use-case';
     UploadFileUseCase,
     DeleteFileUseCase,
     GenTokenUseCase,
+    GetAttachmentsByTargetIdsUseCase,
   ],
-  exports: [AttachmentRepository, FilesService],
+  exports: [
+    AttachmentRepository,
+    FilesService,
+    GetAttachmentsByTargetIdsUseCase,
+  ],
 })
 export class FileModule {}

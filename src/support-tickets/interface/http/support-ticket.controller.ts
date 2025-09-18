@@ -274,7 +274,7 @@ export class SupportTicketController {
     @Param('id') ticketId: string,
     @Body() dto: ReplyToTicketDto,
     @Req() req: any,
-  ): Promise<void> {
+  ): Promise<{ uploadKey?: string }> {
     return this.replyToTicketUseCase.execute({
       ticketId,
       reply: dto.reply,

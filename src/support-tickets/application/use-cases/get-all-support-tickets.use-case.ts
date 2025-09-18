@@ -9,6 +9,7 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
 
 @Injectable()
 export class GetAllSupportTicketsUseCase {
@@ -19,6 +20,7 @@ export class GetAllSupportTicketsUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
     private readonly departmentRepository: DepartmentRepository,
+    private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
   ) {}
 
   async execute(
@@ -28,6 +30,7 @@ export class GetAllSupportTicketsUseCase {
   ): Promise<{
     tickets: any[];
     metrics: SupportTicketMetrics;
+    attachments: { [ticketId: string]: string[] };
   }> {
     let departmentIds: string[] | undefined = undefined;
 
@@ -58,9 +61,17 @@ export class GetAllSupportTicketsUseCase {
       };
     });
 
+    // Get attachments for tickets and their answers
+    const ticketIds = toReturn.map((t) => t.id.toString());
+    const answerIds = answers.map((a) => a.id.toString());
+    const attachments = await this.getAttachmentsUseCase.execute({
+      targetIds: [...ticketIds, ...answerIds],
+    });
+
     return {
       tickets,
       metrics,
+      attachments,
     };
   }
 

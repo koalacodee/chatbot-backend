@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { AnswerRepository } from 'src/tickets/domain/repositories/answer.repository';
 import { TicketRepository } from 'src/tickets/domain/repositories/ticket.repository';
+import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
 
 interface TrackTicketInput {
   ticketCode: string;
@@ -16,6 +17,7 @@ export class TrackTicketUseCase {
   constructor(
     private readonly ticketRepo: TicketRepository,
     private readonly answerRepo: AnswerRepository,
+    private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
   ) {}
 
   async execute({ ticketCode, guestId }: TrackTicketInput) {
@@ -29,6 +31,15 @@ export class TrackTicketUseCase {
       throw new ForbiddenException({ ticket: 'not_owned' });
     }
 
+    const answer = await this.answerRepo.findByTicketId(ticket.id);
+
+    const attachments = await this.getAttachmentsUseCase.execute({
+      targetIds: [
+        ticket.id.toString(),
+        ...(answer ? [answer.id.toString()] : []),
+      ],
+    });
+
     return {
       id: ticket.id.toString(),
       code: ticket.ticketCode.toString(),
@@ -36,9 +47,8 @@ export class TrackTicketUseCase {
       createdAt: ticket.createdAt,
       updatedAt: ticket.updatedAt,
       question: ticket.question,
-      answer: await this.answerRepo.findByTicketId(ticket.id).then((ans) => {
-        return ans ? ans.content : undefined;
-      }),
+      answer: answer ? answer.content : undefined,
+      attachments,
     };
   }
 }

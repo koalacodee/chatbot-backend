@@ -4,6 +4,7 @@ import { QuestionRepository } from 'src/questions/domain/repositories/question.r
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
+import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
 
 interface GroupByDepartmentInput {
   userId: string;
@@ -16,9 +17,13 @@ export class GroupByDepartmentUseCase {
     private readonly questionRepo: QuestionRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
+    private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
   ) {}
 
-  async execute({ userId, role }: GroupByDepartmentInput): Promise<any[]> {
+  async execute({ userId, role }: GroupByDepartmentInput): Promise<{
+    questions: any[];
+    attachments: { [questionId: string]: string[] };
+  }> {
     let departmentIds: string[] | undefined = undefined;
     if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
@@ -29,6 +34,27 @@ export class GroupByDepartmentUseCase {
         employee?.subDepartments.map((dep) => dep.id.toString()) ??
         employee?.supervisor?.departments.map((d) => d.id.toString());
     }
-    return this.questionRepo.groupByDepartment({ departmentIds });
+
+    const groupedQuestions = await this.questionRepo.groupByDepartment({
+      departmentIds,
+    });
+
+    // Extract all question IDs from the grouped data
+    const allQuestionIds: string[] = [];
+    groupedQuestions.forEach((group: any) => {
+      if (group.questions && Array.isArray(group.questions)) {
+        group.questions.forEach((question: any) => {
+          if (question.id) {
+            allQuestionIds.push(question.id.toString());
+          }
+        });
+      }
+    });
+
+    const attachments = await this.getAttachmentsUseCase.execute({
+      targetIds: allQuestionIds,
+    });
+
+    return { questions: groupedQuestions, attachments };
   }
 }

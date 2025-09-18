@@ -67,7 +67,7 @@ export class TaskController {
   async create(
     @Body() input: CreateTaskInputDto,
     @Req() req: any,
-  ): Promise<Task> {
+  ): Promise<{ task: Task; uploadKey?: string }> {
     return this.createUseCase.execute(
       {
         ...input,
@@ -85,7 +85,7 @@ export class TaskController {
   async update(
     @Body() input: UpdateTaskInputDto,
     @Req() req: any,
-  ): Promise<Task> {
+  ): Promise<{ task: Task; uploadKey?: string }> {
     const { id, completedAt, ...rest } = input;
     return this.updateUseCase.execute(
       id,
@@ -101,7 +101,10 @@ export class TaskController {
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Get(':id')
-  async getTask(@Param('id') id: string, @Req() req: any): Promise<Task> {
+  async getTask(
+    @Param('id') id: string,
+    @Req() req: any,
+  ): Promise<{ task: Task; attachments: { [taskId: string]: string[] } }> {
     return this.getUseCase.execute(id, req.user.id);
   }
 
@@ -111,13 +114,13 @@ export class TaskController {
     @Req() req: any,
     @Query('offset') offset?: string,
     @Query('limit') limit?: string,
-  ): Promise<any[]> {
+  ): Promise<{ tasks: Task[]; attachments: { [taskId: string]: string[] } }> {
     const list = await this.getAllUseCase.execute(
       offset ? parseInt(offset, 10) : undefined,
       limit ? parseInt(limit, 10) : undefined,
       req.user.id,
     );
-    return list.map((t) => t.toJSON());
+    return list;
   }
 
   // Filtered retrieval
