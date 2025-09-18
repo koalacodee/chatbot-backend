@@ -4,6 +4,8 @@ export interface AttachmentOptions {
   id?: string;
   type: string;
   url: string;
+  originalName: string;
+  expirationDate: Date;
   createdAt?: Date;
   updatedAt?: Date;
   targetId: string;
@@ -13,6 +15,8 @@ export class Attachment {
   private readonly _id: UUID;
   private _type: string;
   private _url: string;
+  private _originalName: string;
+  private _expirationDate: Date;
   private _createdAt: Date;
   private _updatedAt: Date;
   private readonly _targetId: UUID;
@@ -21,6 +25,8 @@ export class Attachment {
     this._id = UUID.create(options.id);
     this._type = options.type;
     this._url = options.url;
+    this._originalName = options.originalName;
+    this._expirationDate = options.expirationDate;
     this._createdAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
     this._targetId = UUID.create(options.targetId);
@@ -50,6 +56,22 @@ export class Attachment {
     this._url = value;
   }
 
+  get originalName(): string {
+    return this._originalName;
+  }
+
+  set originalName(value: string) {
+    this._originalName = value;
+  }
+
+  get expirationDate(): Date {
+    return this._expirationDate;
+  }
+
+  set expirationDate(value: Date) {
+    this._expirationDate = value;
+  }
+
   get createdAt(): Date {
     return this._createdAt;
   }
@@ -75,6 +97,8 @@ export class Attachment {
       id: this._id.value,
       type: this._type,
       url: this._url,
+      originalName: this._originalName,
+      expirationDate: this._expirationDate,
       createdAt: this._createdAt,
       updatedAt: this._updatedAt,
       targetId: this._targetId.value,

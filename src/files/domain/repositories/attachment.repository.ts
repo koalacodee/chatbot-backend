@@ -13,6 +13,11 @@ export abstract class AttachmentRepository {
   abstract removeById(id: string): Promise<Attachment | null>;
   abstract update(
     id: string,
-    update: Partial<Pick<Attachment, 'type' | 'url' | 'targetId'>>,
+    update: Partial<
+      Pick<
+        Attachment,
+        'type' | 'url' | 'originalName' | 'expirationDate' | 'targetId'
+      >
+    >,
   ): Promise<Attachment>;
 }

@@ -3,6 +3,8 @@ model Attachment {
   id   String @id @default(uuid()) @map("id") @db.Uuid
   type String @map("type") @db.VarChar(255)
   url  String @db.Text
+  originalName String @map("original_name") @db.VarChar(500)
+  expirationDate DateTime @map("expiration_date")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -6,6 +6,8 @@ import { AttachmentRepository } from 'src/files/domain/repositories/attachment.r
 interface UploadFileInput {
   targetId: string;
   filename: string;
+  originalName: string;
+  expirationDate: Date;
 }
 
 @Injectable()
@@ -15,7 +17,12 @@ export class UploadFileUseCase {
     private readonly config: ConfigService,
   ) {}
 
-  async execute({ targetId, filename }: UploadFileInput) {
+  async execute({
+    targetId,
+    filename,
+    originalName,
+    expirationDate,
+  }: UploadFileInput) {
     const url = `${this.config.getOrThrow('BASE_URL')}/public/${filename}`;
 
     const attachment = await this.attachmentRepository.save(
@@ -23,6 +30,8 @@ export class UploadFileUseCase {
         targetId,
         url,
         type: filename.split('.').pop(),
+        originalName,
+        expirationDate,
       }),
     );
 
