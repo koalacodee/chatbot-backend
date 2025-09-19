@@ -10,6 +10,7 @@ import { Roles } from 'src/shared/value-objects/role.vo';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FaqUpdatedEvent } from '../listeners/faq-updated.listener';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/delete-attachments-by-ids.use-case';
 
 interface UpdateQuestionDto {
   text?: string;
@@ -18,6 +19,7 @@ interface UpdateQuestionDto {
   userId: string;
   answer?: string;
   attach?: boolean;
+  deleteAttachments?: string[];
 }
 
 @Injectable()
@@ -30,9 +32,13 @@ export class UpdateQuestionUseCase {
     private readonly departmentRepository: DepartmentRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
+    private readonly deleteAttachmentsUseCase: DeleteAttachmentsByIdsUseCase,
   ) {}
 
-  async execute(id: string, dto: UpdateQuestionDto): Promise<{ question: Question; uploadKey?: string }> {
+  async execute(
+    id: string,
+    dto: UpdateQuestionDto,
+  ): Promise<{ question: Question; uploadKey?: string }> {
     // Fetch the question to get departmentId
     const question = await this.questionRepo.findById(id);
     const departmentId = dto.departmentId || question.departmentId.value;
@@ -48,11 +54,16 @@ export class UpdateQuestionUseCase {
       update.knowledgeChunkId = { value: dto.knowledgeChunkId };
     if (dto.answer) update.answer = dto.answer;
 
+    // Handle attachment deletion if specified
+    if (dto.deleteAttachments && dto.deleteAttachments.length > 0) {
+      await this.deleteAttachmentsUseCase.execute({
+        attachmentIds: dto.deleteAttachments,
+      });
+    }
+
     const [updatedQuestion, uploadKey] = await Promise.all([
       this.questionRepo.update(id, update),
-      dto.attach
-        ? this.filesService.replaceFilesByTargetId(id)
-        : undefined,
+      dto.attach ? this.filesService.genUploadKey(id) : undefined,
     ]);
 
     this.eventEmitter.emit(

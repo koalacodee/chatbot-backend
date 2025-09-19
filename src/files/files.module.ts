@@ -6,11 +6,11 @@ import { LocalFilesService } from './infrastructure/services/local.files.service
 import { FilesController } from './interface/http/files.controller';
 import { AttachmentController } from './interface/http/attachment.controller';
 import { UploadFileUseCase } from './application/use-cases/upload-file.use-case';
-import { DeleteFileUseCase } from './application/use-cases/delete-file.use-case';
 import { GenTokenUseCase } from './application/use-cases/gen-token.use-case';
 import { GetAttachmentsByTargetIdsUseCase } from './application/use-cases/get-attachments-by-target-ids.use-case';
 import { GetAttachmentByTokenUseCase } from './application/use-cases/get-attachment-by-token.use-case';
 import { GetAttachmentMetadataByTokenUseCase } from './application/use-cases/get-attachment-metadata-by-token.use-case';
+import { DeleteAttachmentsByIdsUseCase } from './application/use-cases/delete-attachments-by-ids.use-case';
 
 @Global()
 @Module({
@@ -25,11 +25,11 @@ import { GetAttachmentMetadataByTokenUseCase } from './application/use-cases/get
       useClass: LocalFilesService,
     },
     UploadFileUseCase,
-    DeleteFileUseCase,
     GenTokenUseCase,
     GetAttachmentsByTargetIdsUseCase,
     GetAttachmentByTokenUseCase,
     GetAttachmentMetadataByTokenUseCase,
+    DeleteAttachmentsByIdsUseCase,
   ],
   exports: [
     AttachmentRepository,
@@ -37,6 +37,7 @@ import { GetAttachmentMetadataByTokenUseCase } from './application/use-cases/get
     GetAttachmentsByTargetIdsUseCase,
     GetAttachmentByTokenUseCase,
     GetAttachmentMetadataByTokenUseCase,
+    DeleteAttachmentsByIdsUseCase,
   ],
 })
 export class FileModule {}

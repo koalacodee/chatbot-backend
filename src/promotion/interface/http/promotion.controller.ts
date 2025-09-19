@@ -19,7 +19,6 @@ import {
   UpdatePromotionUseCase,
 } from '../../application/use-cases';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { Roles } from 'src/shared/value-objects/role.vo';
 import { CreatePromotionDto } from './dtos/create-promotion.dto';
 import { SupervisorPermissions } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
@@ -31,6 +30,7 @@ interface UpdatePromotionDto {
   audience?: any;
   startDate?: string;
   endDate?: string;
+  deleteAttachments?: string[];
 }
 
 @Controller('promotions')

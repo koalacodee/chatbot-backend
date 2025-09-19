@@ -1,4 +1,10 @@
-import { IsString, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsArray,
+  IsUUID,
+} from 'class-validator';
 
 export class UpdateKnowledgeChunkInputDto {
   @IsString()
@@ -11,4 +17,13 @@ export class UpdateKnowledgeChunkInputDto {
   @IsOptional()
   @IsString()
   departmentId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  attach?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  deleteAttachments?: string[];
 }

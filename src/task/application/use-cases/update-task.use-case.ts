@@ -17,6 +17,7 @@ import { AdminRepository } from 'src/admin/domain/repositories/admin.repository'
 import { User } from 'src/shared/entities/user.entity';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/delete-attachments-by-ids.use-case';
 
 interface UpdateTaskInputDto {
   title?: string;
@@ -34,6 +35,7 @@ interface UpdateTaskInputDto {
   notes?: string | null;
   feedback?: string | null;
   attach?: boolean;
+  deleteAttachments?: string[];
 }
 
 @Injectable()
@@ -46,6 +48,7 @@ export class UpdateTaskUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly adminRepository: AdminRepository,
     private readonly filesService: FilesService,
+    private readonly deleteAttachmentsUseCase: DeleteAttachmentsByIdsUseCase,
   ) {}
 
   async execute(
@@ -126,9 +129,16 @@ export class UpdateTaskUseCase {
     if (dto.feedback !== undefined)
       existing.feedback = dto.feedback ?? undefined;
 
+    // Handle attachment deletion if specified
+    if (dto.deleteAttachments && dto.deleteAttachments.length > 0) {
+      await this.deleteAttachmentsUseCase.execute({
+        attachmentIds: dto.deleteAttachments,
+      });
+    }
+
     const [savedTask, uploadKey] = await Promise.all([
       this.taskRepo.save(existing),
-      dto.attach ? this.filesService.replaceFilesByTargetId(id) : undefined,
+      dto.attach ? this.filesService.genUploadKey(id) : undefined,
     ]);
 
     return { task: savedTask, uploadKey };

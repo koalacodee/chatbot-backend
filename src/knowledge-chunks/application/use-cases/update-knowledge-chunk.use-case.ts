@@ -8,12 +8,14 @@ import { PointRepository } from 'src/shared/repositories/point.repository';
 import { Point } from 'src/shared/entities/point.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/delete-attachments-by-ids.use-case';
 
 interface UpdateKnowledgeChunkDto {
   content?: string;
   departmentId?: string;
   userId: string;
   attach?: boolean;
+  deleteAttachments?: string[];
 }
 
 @Injectable()
@@ -25,6 +27,7 @@ export class UpdateKnowledgeChunkUseCase {
     private readonly pointRepo: PointRepository,
     private readonly accessControl: AccessControlService,
     private readonly filesService: FilesService,
+    private readonly deleteAttachmentsUseCase: DeleteAttachmentsByIdsUseCase,
   ) {}
 
   async execute(
@@ -70,9 +73,16 @@ export class UpdateKnowledgeChunkUseCase {
       chunk.updateDepartment(department);
     }
 
+    // Handle attachment deletion if specified
+    if (dto.deleteAttachments && dto.deleteAttachments.length > 0) {
+      await this.deleteAttachmentsUseCase.execute({
+        attachmentIds: dto.deleteAttachments,
+      });
+    }
+
     const [savedChunk, uploadKey] = await Promise.all([
       this.chunkRepo.save(chunk),
-      dto.attach ? this.filesService.replaceFilesByTargetId(id) : undefined,
+      dto.attach ? this.filesService.genUploadKey(id) : undefined,
     ]);
 
     return { knowledgeChunk: savedChunk, uploadKey };

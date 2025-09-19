@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Promotion } from '../../domain/entities/promotion.entity';
 import { PromotionRepository } from '../../domain/repositories/promotion.repository';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/delete-attachments-by-ids.use-case';
 
 interface UpdatePromotionInputDto {
   title?: string;
@@ -10,6 +11,7 @@ interface UpdatePromotionInputDto {
   startDate?: Date;
   endDate?: Date | null;
   attach?: boolean;
+  deleteAttachments?: string[];
 }
 
 @Injectable()
@@ -17,6 +19,7 @@ export class UpdatePromotionUseCase {
   constructor(
     private readonly promotionRepo: PromotionRepository,
     private readonly filesService: FilesService,
+    private readonly deleteAttachmentsUseCase: DeleteAttachmentsByIdsUseCase,
   ) {}
 
   async execute(
@@ -32,9 +35,16 @@ export class UpdatePromotionUseCase {
     if (dto.startDate !== undefined) existing.startDate = dto.startDate;
     if (dto.endDate !== undefined) existing.endDate = dto.endDate ?? undefined;
 
+    // Handle attachment deletion if specified
+    if (dto.deleteAttachments && dto.deleteAttachments.length > 0) {
+      await this.deleteAttachmentsUseCase.execute({
+        attachmentIds: dto.deleteAttachments,
+      });
+    }
+
     const [savedPromotion, uploadKey] = await Promise.all([
       this.promotionRepo.save(existing),
-      dto.attach ? this.filesService.replaceFilesByTargetId(id) : undefined,
+      dto.attach ? this.filesService.genUploadKey(id) : undefined,
     ]);
 
     return { promotion: savedPromotion, uploadKey };

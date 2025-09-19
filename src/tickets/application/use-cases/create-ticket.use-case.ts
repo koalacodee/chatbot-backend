@@ -21,7 +21,12 @@ export class CreateTicketUseCase {
     private readonly filesService: FilesService,
   ) {}
 
-  async execute({ departmentId, question, guestId, attach }: CreateTicketInput) {
+  async execute({
+    departmentId,
+    question,
+    guestId,
+    attach,
+  }: CreateTicketInput) {
     const ticket = await this.ticketRepo.save(
       await Ticket.create({
         question,

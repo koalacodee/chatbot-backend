@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  IsArray,
+  IsUUID,
+} from 'class-validator';
 import { TaskPriority } from 'src/task/domain/entities/task.entity';
 
 export enum UpdateTaskAssignmentType {
@@ -66,4 +73,13 @@ export class UpdateTaskInputDto {
   @IsOptional()
   @IsString()
   feedback?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  attach?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  deleteAttachments?: string[];
 }
