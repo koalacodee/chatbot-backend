@@ -8,6 +8,7 @@ import { EmployeeRepository } from '../../domain/repositories/employee.repositor
 import { Department } from 'src/department/domain/entities/department.entity';
 import { User } from 'src/shared/entities/user.entity';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
+import { UUID } from 'src/shared/value-objects/uuid.vo';
 
 @Injectable()
 export class PrismaEmployeeRepository extends EmployeeRepository {
@@ -74,6 +75,7 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
       const subDeptData = subDepartments.map((dept) => ({
         employeeId: data.id,
         departmentId: dept.id.toString(),
+        id: UUID.create().toString(),
       }));
 
       await this.prisma.employeeSubDepartment.createMany({
@@ -158,6 +160,7 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
         const subDeptData = subDepartments.map((dept) => ({
           employeeId: id,
           departmentId: dept.id.toString(),
+          id: UUID.create().toString(),
         }));
 
         await this.prisma.employeeSubDepartment.createMany({

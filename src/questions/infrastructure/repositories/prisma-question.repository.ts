@@ -7,6 +7,7 @@ import {
   ViewdFaqDto,
 } from '../../domain/repositories/question.repository';
 import { Question } from '../../domain/entities/question.entity';
+import { UUID } from 'src/shared/value-objects/uuid.vo';
 @Injectable()
 export class PrismaQuestionRepository extends QuestionRepository {
   constructor(private readonly prisma: PrismaService) {
@@ -54,6 +55,7 @@ export class PrismaQuestionRepository extends QuestionRepository {
         dissatisfaction: data.dissatisfaction,
         views: data.views,
         answer: data.answer,
+        id: data.id,
       },
     });
     return this.toDomain(upsert);
@@ -421,8 +423,9 @@ export class PrismaQuestionRepository extends QuestionRepository {
         },
         create: {
           guestId,
-          questionId: faqId,
+          question: { connect: { id: faqId } },
           type: satisfactionType,
+          id: UUID.create().toString(),
         },
         update: {
           type: satisfactionType,
@@ -480,6 +483,7 @@ export class PrismaQuestionRepository extends QuestionRepository {
           data: {
             questionId: faqId,
             guestId,
+            id: UUID.create().toString(),
           },
         });
 
