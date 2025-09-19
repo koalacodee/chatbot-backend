@@ -1,5 +1,5 @@
 model VehicleLicense {
-  id                    String                @id @default(uuid()) @map("id") @db.Uuid
+  id                    String                @id @map("id") @db.Uuid
   vehicleId             String                @unique @map("vehicle_id") @db.Uuid
   vehicle               Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   licenseNumber         String                @map("license_number") @db.VarChar(255)

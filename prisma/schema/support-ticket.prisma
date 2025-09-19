@@ -1,5 +1,5 @@
 model SupportTicket {
-  id           String                    @id @default(uuid()) @map("id") @db.Uuid
+  id           String                    @id @map("id") @db.Uuid
   subject      String                    @map("subject") @db.VarChar(255)
   description  String                    @map("description") @db.Text
   departmentId String                    @map("department_id") @db.Uuid
@@ -13,9 +13,9 @@ model SupportTicket {
   assignee     Employee?                 @relation("AssigneeOfSupportTicket", fields: [assigneeId], references: [id], onDelete: Cascade)
   code         String                    @unique @map("code") @db.VarChar(10)
   interaction  SupportTicketInteraction?
-  guestName    String                   @map("guest_name") @db.VarChar(255)
-  guestPhone   String                   @map("guest_phone") @db.VarChar(255)
-  guestEmail   String                   @map("guest_email") @db.VarChar(255)
+  guestName    String                    @map("guest_name") @db.VarChar(255)
+  guestPhone   String                    @map("guest_phone") @db.VarChar(255)
+  guestEmail   String                    @map("guest_email") @db.VarChar(255)
 
   @@index([departmentId])
   @@index([status])
@@ -23,7 +23,7 @@ model SupportTicket {
 }
 
 model SupportTicketAnswer {
-  id                   String        @id @default(uuid()) @map("id") @db.Uuid
+  id                   String        @id @map("id") @db.Uuid
   supportTicketId      String        @unique @map("support_ticket_id") @db.Uuid
   supportTicket        SupportTicket @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
   content              String        @map("content") @db.Text
@@ -42,7 +42,7 @@ model SupportTicketAnswer {
 }
 
 model SupportTicketInteraction {
-  id              String                       @id @default(uuid()) @map("id") @db.Uuid
+  id              String                       @id @map("id") @db.Uuid
   supportTicketId String                       @unique @map("support_ticket_id") @db.Uuid
   supportTicket   SupportTicket                @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
   guestId         String?                      @map("guest_id") @db.Uuid
@@ -73,7 +73,6 @@ enum SupportTicketStatus {
 
   @@map("support_ticket_status")
 }
-
 
 enum Rating {
   SATISFACTION    @map("satisfaction")

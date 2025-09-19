@@ -1,5 +1,5 @@
 model KnowledgeChunk {
-  id              String           @id @default(uuid()) @map("id") @db.Uuid
+  id              String           @id @map("id") @db.Uuid
   content         String           @map("content") @db.Text
   departmentId    String           @map("department_id") @db.Uuid
   department      Department       @relation(fields: [departmentId], references: [id], onDelete: Cascade)

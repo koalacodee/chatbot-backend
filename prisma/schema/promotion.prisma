@@ -1,6 +1,5 @@
-
 model Promotion {
-  id    String @id @default(uuid()) @map("id") @db.Uuid
+  id    String @id @map("id") @db.Uuid
   title String @map("title") @db.VarChar(255)
 
   audience AudienceType @map("audience")

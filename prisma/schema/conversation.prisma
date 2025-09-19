@@ -1,15 +1,14 @@
-
 model Conversation {
-  id        String    @id @default(uuid()) @map("id") @db.Uuid
-  guestId   String?    @map("guest_id") @db.Uuid
-  guest     Guest?    @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  anonymousId String?    @map("anonymous_id") @db.Uuid
-  messages  Message[]
-  createdAt DateTime  @default(now()) @map("created_at")
-  startedAt DateTime  @default(now()) @map("started_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  endedAt   DateTime? @map("ended_at")
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  id          String    @id @map("id") @db.Uuid
+  guestId     String?   @map("guest_id") @db.Uuid
+  guest       Guest?    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  anonymousId String?   @map("anonymous_id") @db.Uuid
+  messages    Message[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  startedAt   DateTime  @default(now()) @map("started_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  endedAt     DateTime? @map("ended_at")
+  isDeleted   Boolean   @default(false) @map("is_deleted")
 
   @@index([guestId, isDeleted])
   @@map("conversations")

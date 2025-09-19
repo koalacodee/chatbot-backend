@@ -1,5 +1,5 @@
 model RetrievedChunk {
-  id               String          @id @default(uuid()) @map("id") @db.Uuid
+  id               String          @id @map("id") @db.Uuid
   messageId        String          @unique @map("message_id") @db.Uuid
   message          Message         @relation(fields: [messageId], references: [id], onDelete: Cascade)
   knowledgeChunkId String          @map("knowledge_chunk_id") @db.Uuid

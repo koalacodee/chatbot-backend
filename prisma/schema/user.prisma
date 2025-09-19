@@ -1,5 +1,5 @@
 model User {
-  id            String                  @id @default(uuid()) @map("id") @db.Uuid
+  id            String                  @id @map("id") @db.Uuid
   name          String                  @map("name") @db.VarChar(255)
   email         String                  @unique @map("email") @db.VarChar(255)
   username      String                  @unique @map("username") @db.VarChar(255)

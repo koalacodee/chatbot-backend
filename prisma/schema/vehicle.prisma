@@ -7,7 +7,7 @@ enum VehicleStatus {
 }
 
 model Vehicle {
-  id                  String          @id @default(uuid()) @map("id") @db.Uuid
+  id                  String          @id @map("id") @db.Uuid
   make                String          @map("make") @db.VarChar(255)
   model               String          @map("model") @db.VarChar(255)
   year                Int             @map("year")

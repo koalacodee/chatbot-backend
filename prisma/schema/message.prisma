@@ -1,5 +1,5 @@
 model Message {
-  id             String          @id @default(uuid()) @map("id") @db.Uuid
+  id             String          @id @map("id") @db.Uuid
   content        String          @map("content") @db.Text
   role           MessageRole     @map("role")
   conversationId String          @map("conversation_id") @db.Uuid

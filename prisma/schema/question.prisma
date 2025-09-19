@@ -1,5 +1,5 @@
 model Question {
-  id                  String                @id @default(uuid()) @map("id") @db.Uuid
+  id                  String                @id @map("id") @db.Uuid
   text                String                @map("text") @db.Text
   answer              String?               @map("answer") @db.Text
   departmentId        String                @map("department_id") @db.Uuid
@@ -28,7 +28,7 @@ model Question {
 }
 
 model QuestionInteraction {
-  id        String          @id @default(uuid()) @map("id") @db.Uuid
+  id        String          @id @map("id") @db.Uuid
   type      InteractionType @map("type")
   createdAt DateTime        @default(now()) @map("created_at")
   updatedAt DateTime        @updatedAt @map("updated_at")
@@ -44,7 +44,7 @@ model QuestionInteraction {
 }
 
 model QuestionView {
-  id         String   @id @default(uuid()) @map("id") @db.Uuid
+  id         String   @id @map("id") @db.Uuid
   questionId String   @map("question_id") @db.Uuid
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   guestId    String   @map("guest_id") @db.Uuid

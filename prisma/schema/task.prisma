@@ -7,9 +7,9 @@ enum TaskAssignmentType {
 }
 
 model Task {
-  id          String @id @default(uuid()) @map("id") @db.Uuid
-  title       String @map("title") @db.VarChar(255)
-  description String @map("description") @db.Text
+  id          String    @id @map("id") @db.Uuid
+  title       String    @map("title") @db.VarChar(255)
+  description String    @map("description") @db.Text
   dueDate     DateTime? @map("due_date")
 
   assigneeId String?   @map("assignee_id") @db.Uuid
@@ -74,6 +74,7 @@ enum TaskStatus {
 
   @@map("task_status")
 }
+
 enum TaskPriority {
   LOW    @map("low")
   MEDIUM @map("medium")

@@ -1,5 +1,5 @@
 model Department {
-  id              String               @id @default(uuid()) @map("id") @db.Uuid
+  id              String               @id @map("id") @db.Uuid
   name            String               @map("name") @db.VarChar(255)
   visibility      DepartmentVisibility @default(PUBLIC) @map("visibility")
   questions       Question[]
@@ -24,7 +24,6 @@ model Department {
   @@index([parentId])
   @@map("departments")
 }
-
 
 enum DepartmentVisibility {
   PUBLIC  @map("public")

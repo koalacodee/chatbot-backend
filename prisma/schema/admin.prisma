@@ -1,5 +1,5 @@
 model Admin {
-  id                           String                @id @default(uuid()) @map("id") @db.Uuid
+  id                           String                @id @map("id") @db.Uuid
   userId                       String                @unique @map("user_id") @db.Uuid
   user                         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   promotions                   Promotion[]

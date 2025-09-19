@@ -1,5 +1,5 @@
 model Violation {
-  id             String        @id @default(uuid()) @map("id") @db.Uuid
+  id             String        @id @map("id") @db.Uuid
   driverId       String        @map("driver_id") @db.Uuid
   driver         Driver        @relation(fields: [driverId], references: [id], onDelete: Cascade)
   vehicleId      String        @map("vehicle_id") @db.Uuid

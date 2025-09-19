@@ -1,5 +1,5 @@
 model ActivityLog {
-  id     String          @id @default(uuid()) @map("id") @db.Uuid
+  id     String          @id @map("id") @db.Uuid
   type   ActivityLogType
   title  String
   itemId String          @map("item_id") @db.VarChar(255)

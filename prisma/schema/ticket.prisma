@@ -1,5 +1,5 @@
 model Ticket {
-  id              String        @id @default(uuid()) @map("id") @db.Uuid
+  id              String        @id @map("id") @db.Uuid
   guestId         String?       @map("guest_id") @db.Uuid
   guest           Guest?        @relation(fields: [guestId], references: [id], onDelete: Cascade)
   question        String        @map("question") @db.Text
@@ -19,9 +19,8 @@ model Ticket {
   @@map("tickets")
 }
 
-
 model TicketAnswer {
-  id        String   @id @default(uuid()) @map("id") @db.Uuid
+  id        String   @id @map("id") @db.Uuid
   ticketId  String   @unique @map("ticket_id") @db.Uuid
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   content   String   @map("content") @db.Text

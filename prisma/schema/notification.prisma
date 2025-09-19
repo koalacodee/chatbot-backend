@@ -1,5 +1,5 @@
 model RecipientNotification {
-  id             String       @id @default(uuid()) @map("id") @db.Uuid
+  id             String       @id @map("id") @db.Uuid
   seen           Boolean      @default(false) @map("seen")
   userId         String       @map("user_id") @db.Uuid
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -13,7 +13,7 @@ model RecipientNotification {
 }
 
 model Notification {
-  id         String                  @id @default(uuid()) @map("id") @db.Uuid
+  id         String                  @id @map("id") @db.Uuid
   type       String                  @map("type") @db.VarChar(255)
   title      String                  @map("title") @db.VarChar(255)
   recipients RecipientNotification[]

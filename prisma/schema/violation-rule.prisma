@@ -1,5 +1,5 @@
 model ViolationRule {
-  id          String        @id @default(uuid()) @map("id") @db.Uuid
+  id          String        @id @map("id") @db.Uuid
   type        ViolationType @map("type")
   threshold   Int           @map("threshold")
   fineAmount  Int           @map("fine_amount")

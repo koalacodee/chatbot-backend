@@ -10,7 +10,7 @@ enum EmployeePermissions {
 }
 
 model EmployeeSubDepartment {
-  id           String     @id @default(uuid()) @map("id") @db.Uuid
+  id           String     @id @map("id") @db.Uuid
   employeeId   String     @map("employee_id") @db.Uuid
   employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   departmentId String     @map("department_id") @db.Uuid
@@ -25,7 +25,7 @@ model EmployeeSubDepartment {
 }
 
 model Employee {
-  id                           String                  @id @default(uuid()) @map("id") @db.Uuid
+  id                           String                  @id @map("id") @db.Uuid
   userId                       String                  @unique @map("user_id") @db.Uuid
   user                         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   permissions                  EmployeePermissions[]

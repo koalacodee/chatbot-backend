@@ -1,5 +1,5 @@
 model EmployeeRequest {
-  id String @id @default(uuid()) @map("id") @db.Uuid
+  id String @id @map("id") @db.Uuid
 
   requestedBySupervisor   Supervisor @relation("SupervisorRequests", fields: [requestedBySupervisorId], references: [id])
   requestedBySupervisorId String     @map("requested_by_supervisor_id") @db.Uuid
