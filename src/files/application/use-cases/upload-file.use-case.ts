@@ -23,12 +23,10 @@ export class UploadFileUseCase {
     originalName,
     expirationDate,
   }: UploadFileInput) {
-    const url = `${this.config.getOrThrow('BASE_URL')}/public/${filename}`;
-
     const attachment = await this.attachmentRepository.save(
       Attachment.create({
         targetId,
-        url,
+        filename,
         type: filename.split('.').pop(),
         originalName,
         expirationDate,

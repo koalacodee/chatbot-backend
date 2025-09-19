@@ -3,7 +3,7 @@ import { UUID } from 'src/shared/value-objects/uuid.vo';
 export interface AttachmentOptions {
   id?: string;
   type: string;
-  url: string;
+  filename: string;
   originalName: string;
   expirationDate: Date;
   createdAt?: Date;
@@ -14,7 +14,7 @@ export interface AttachmentOptions {
 export class Attachment {
   private readonly _id: UUID;
   private _type: string;
-  private _url: string;
+  private _filename: string;
   private _originalName: string;
   private _expirationDate: Date;
   private _createdAt: Date;
@@ -24,11 +24,14 @@ export class Attachment {
   private constructor(options: AttachmentOptions) {
     this._id = UUID.create(options.id);
     this._type = options.type;
-    this._url = options.url;
+    this._filename = options.filename;
     this._originalName = options.originalName;
     this._expirationDate = options.expirationDate;
     this._createdAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
+    if (!options.targetId) {
+      throw new Error('Target ID is required');
+    }
     this._targetId = UUID.create(options.targetId);
   }
 
@@ -48,12 +51,12 @@ export class Attachment {
     this._type = value;
   }
 
-  get url(): string {
-    return this._url;
+  get filename(): string {
+    return this._filename;
   }
 
-  set url(value: string) {
-    this._url = value;
+  set filename(value: string) {
+    this._filename = value;
   }
 
   get originalName(): string {
@@ -96,7 +99,7 @@ export class Attachment {
     return {
       id: this._id.value,
       type: this._type,
-      url: this._url,
+      filename: this._filename,
       originalName: this._originalName,
       expirationDate: this._expirationDate,
       createdAt: this._createdAt,

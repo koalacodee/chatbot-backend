@@ -16,7 +16,7 @@ export abstract class AttachmentRepository {
     update: Partial<
       Pick<
         Attachment,
-        'type' | 'url' | 'originalName' | 'expirationDate' | 'targetId'
+        'type' | 'filename' | 'originalName' | 'expirationDate' | 'targetId'
       >
     >,
   ): Promise<Attachment>;

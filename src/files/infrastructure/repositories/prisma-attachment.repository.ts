@@ -13,7 +13,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
     return Attachment.create({
       id: rec.id,
       type: rec.type,
-      url: rec.url,
+      filename: rec.filename,
       originalName: rec.originalName,
       expirationDate: rec.expirationDate,
       createdAt: rec.createdAt,
@@ -26,7 +26,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
     const data = {
       id: attachment.id,
       type: attachment.type,
-      url: attachment.url,
+      filename: attachment.filename,
       originalName: attachment.originalName,
       expirationDate: attachment.expirationDate,
       targetId: attachment.targetId,
@@ -38,7 +38,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
       where: { id: data.id },
       update: {
         type: data.type,
-        url: data.url,
+        filename: data.filename,
         originalName: data.originalName,
         expirationDate: data.expirationDate,
         targetId: data.targetId,
@@ -92,13 +92,13 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
     update: Partial<
       Pick<
         Attachment,
-        'type' | 'url' | 'originalName' | 'expirationDate' | 'targetId'
+        'type' | 'filename' | 'originalName' | 'expirationDate' | 'targetId'
       >
     >,
   ): Promise<Attachment> {
     const data: Record<string, any> = {};
     if (typeof update.type !== 'undefined') data.type = update.type;
-    if (typeof update.url !== 'undefined') data.url = update.url;
+    if (typeof update.filename !== 'undefined') data.filename = update.filename;
     if (typeof update.originalName !== 'undefined')
       data.originalName = update.originalName;
     if (typeof update.expirationDate !== 'undefined')
