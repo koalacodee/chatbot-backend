@@ -82,7 +82,7 @@ export class FilesController {
       await pipeline(fileData.file, writeStream);
 
       const result = await this.uploadFileUseCase.execute({
-        targetId: (req as any).targetId,
+        targetId: req.headers['x-target-id'] as any,
         filename: filename,
         originalName: fileData.filename,
         expirationDate: new Date(expirationDate),
@@ -190,7 +190,7 @@ export class FilesController {
       const results = await Promise.all(
         files.map((file, index) =>
           this.uploadFileUseCase.execute({
-            targetId: (req as any).targetId,
+            targetId: req.headers['x-target-id'] as any,
             filename: file.filename,
             originalName: file.originalName,
             expirationDate: new Date(validExpirationDates[index]),

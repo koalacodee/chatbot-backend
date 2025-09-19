@@ -23,7 +23,7 @@ export class FileUploadGuard implements CanActivate {
 
     await this.redis.del(redisKey);
 
-    request.targetId = targetId;
+    request.headers['x-target-id'] = targetId;
     return true;
   }
 }
