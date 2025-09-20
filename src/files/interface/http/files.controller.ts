@@ -25,8 +25,16 @@ export class FilesController {
     try {
       console.log('Starting single file upload...');
       const parts = req.parts();
-      let fileData: MultipartPart | null = null;
-      let expirationDate: string | null = null;
+      let file: { filename: string; originalName: string };
+      const uploadsDir = join(process.cwd(), 'uploads');
+      let expirationDate: string = '';
+
+      // Ensure uploads directory exists
+      try {
+        mkdirSync(uploadsDir, { recursive: true });
+      } catch (error) {
+        // Directory might already exist, ignore error
+      }
 
       // Process each part of the multipart form
       for await (const part of parts) {
@@ -38,59 +46,59 @@ export class FilesController {
 
         const multipartPart = part as MultipartPart;
 
-        if (multipartPart.file) {
+        if (multipartPart.file && !file) {
           // This part is a file
           console.log('Found file:', multipartPart.filename);
-          fileData = multipartPart;
+          const ext = extname(multipartPart.filename || '');
+          const filename = `${UUID.create().toString()}${ext}`;
+          const filepath = join(uploadsDir, filename);
+
+          // Create write stream with optimized settings for streaming
+          const writeStream = createWriteStream(filepath, {
+            highWaterMark: 64 * 1024, // 64KB buffer for streaming
+            flags: 'w',
+          });
+
+          // Stream the file directly to disk without buffering in memory
+          await pipeline(multipartPart.file, writeStream);
+
+          file = {
+            filename,
+            originalName: multipartPart.filename || '',
+          };
         } else if (multipartPart.fieldname === 'expirationDate') {
-          // This part is a field
-          console.log('Found expirationDate:', multipartPart.value);
-          expirationDate = multipartPart.value || null;
+          // This part is an expiration date field
+          console.log(
+            'Found expiration date field:',
+            multipartPart.fieldname,
+            multipartPart.value,
+          );
+
+          expirationDate = multipartPart.value;
         }
       }
 
-      if (!fileData) {
+      if (!file) {
         return res.status(400).send({ error: 'No file uploaded' });
       }
 
-      if (!expirationDate) {
+      const isExpirationDateValid = expirationDate !== '';
+      if (!isExpirationDateValid) {
         return res
           .status(400)
           .send({ error: 'expirationDate field is required' });
       }
 
-      const ext = extname(fileData.filename);
-      const filename = `${UUID.create().toString()}${ext}`;
-      const uploadsDir = join(process.cwd(), 'uploads');
-
-      // Ensure uploads directory exists
-      try {
-        mkdirSync(uploadsDir, { recursive: true });
-      } catch (error) {
-        // Directory might already exist, ignore error
-      }
-
-      const filepath = join(uploadsDir, filename);
-
-      // Create write stream with highWaterMark for better streaming performance
-      const writeStream = createWriteStream(filepath, {
-        highWaterMark: 64 * 1024, // 64KB buffer for streaming
-        flags: 'w',
-      });
-
-      // Stream the file directly to disk without buffering in memory
-      await pipeline(fileData.file, writeStream);
-
-      const result = await this.uploadFileUseCase.execute({
+      const results = await this.uploadFileUseCase.execute({
         targetId: req.headers['x-target-id'] as any,
-        filename: filename,
-        originalName: fileData.filename,
+        filename: file.filename,
+        originalName: file.originalName,
         expirationDate: new Date(expirationDate),
       });
 
-      return res.send(result);
+      return res.send(results);
     } catch (error) {
-      console.error('File upload error:', error);
+      console.error('Multiple file upload error:', error);
       return res.status(500).send({ error: 'File upload failed' });
     }
   }
