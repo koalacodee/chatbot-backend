@@ -81,7 +81,7 @@ export class PromotionController {
 
   @UseGuards(UserJwtAuthGuard)
   @Get('user/:userId')
-  async getForUser(@Param('userId') userId: string) {
+  async getForUser(@Param('userId') userId: string): Promise<any> {
     return this.getPromotionForUserUseCase.execute({ userId });
   }
 

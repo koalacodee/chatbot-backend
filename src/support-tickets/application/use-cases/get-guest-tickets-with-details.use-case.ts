@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupportTicketRepository } from '../../domain/repositories/support-ticket.repository';
+import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
 
 export interface GetGuestTicketsWithDetailsInput {
   phone: string;
@@ -18,12 +19,14 @@ export interface GetGuestTicketsWithDetailsOutput {
     createdAt: Date;
     updatedAt: Date;
   }[];
+  attachments: { [ticketId: string]: string[] };
 }
 
 @Injectable()
 export class GetGuestTicketsWithDetailsUseCase {
   constructor(
     private readonly supportTicketRepository: SupportTicketRepository,
+    private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
   ) {}
 
   async execute(
@@ -31,12 +34,16 @@ export class GetGuestTicketsWithDetailsUseCase {
   ): Promise<GetGuestTicketsWithDetailsOutput> {
     const { phone, offset = 0, limit = 10 } = input;
 
-    const tickets =
-      await this.supportTicketRepository.findByPhoneNumber(
-        phone,
-        offset,
-        limit,
-      );
+    const tickets = await this.supportTicketRepository.findByPhoneNumber(
+      phone,
+      offset,
+      limit,
+    );
+
+    // Get attachments for tickets
+    const attachments = await this.getAttachmentsUseCase.execute({
+      targetIds: tickets.map((ticket) => ticket.id),
+    });
 
     // // Get total count for pagination metadata
     // const totalTickets =
@@ -45,6 +52,7 @@ export class GetGuestTicketsWithDetailsUseCase {
 
     return {
       tickets,
+      attachments,
     };
   }
 }

@@ -15,9 +15,6 @@ export enum UpdateTaskAssignmentType {
 }
 
 export class UpdateTaskInputDto {
-  @IsString()
-  id: string;
-
   @IsOptional()
   @IsString()
   title?: string;

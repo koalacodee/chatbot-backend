@@ -11,6 +11,7 @@ import { GetAttachmentsByTargetIdsUseCase } from './application/use-cases/get-at
 import { GetAttachmentByTokenUseCase } from './application/use-cases/get-attachment-by-token.use-case';
 import { GetAttachmentMetadataByTokenUseCase } from './application/use-cases/get-attachment-metadata-by-token.use-case';
 import { DeleteAttachmentsByIdsUseCase } from './application/use-cases/delete-attachments-by-ids.use-case';
+import { GetAttachmentIdsByTargetIdsUseCase } from './application/use-cases/get-attachment-ids-by-target-ids.use-case';
 
 @Global()
 @Module({
@@ -30,6 +31,7 @@ import { DeleteAttachmentsByIdsUseCase } from './application/use-cases/delete-at
     GetAttachmentByTokenUseCase,
     GetAttachmentMetadataByTokenUseCase,
     DeleteAttachmentsByIdsUseCase,
+    GetAttachmentIdsByTargetIdsUseCase,
   ],
   exports: [
     AttachmentRepository,
@@ -38,6 +40,7 @@ import { DeleteAttachmentsByIdsUseCase } from './application/use-cases/delete-at
     GetAttachmentByTokenUseCase,
     GetAttachmentMetadataByTokenUseCase,
     DeleteAttachmentsByIdsUseCase,
+    GetAttachmentIdsByTargetIdsUseCase,
   ],
 })
 export class FileModule {}

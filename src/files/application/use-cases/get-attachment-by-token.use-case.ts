@@ -3,9 +3,10 @@ import { AttachmentRepository } from '../../domain/repositories/attachment.repos
 import { RedisService } from 'src/shared/infrastructure/redis';
 import { createReadStream, existsSync } from 'fs';
 import { join } from 'path';
+import { isUUID } from 'class-validator';
 
 interface GetAttachmentByTokenInput {
-  token: string;
+  tokenOrId: string;
 }
 
 export interface AttachmentStreamResult {
@@ -22,31 +23,54 @@ export class GetAttachmentByTokenUseCase {
   ) {}
 
   async execute({
-    token,
+    tokenOrId,
   }: GetAttachmentByTokenInput): Promise<AttachmentStreamResult> {
-    console.log('GetAttachmentByTokenUseCase - Processing token:', token);
-
-    // Get attachment ID from Redis
-    const redisKey = `attachment:token:${token}`;
-    const attachmentId = await this.redis.get(redisKey);
-
-    if (!attachmentId) {
-      console.log('GetAttachmentByTokenUseCase - Token not found in Redis');
-      throw new NotFoundException('Token not found or expired');
-    }
-
     console.log(
-      'GetAttachmentByTokenUseCase - Found attachment ID:',
-      attachmentId,
+      'GetAttachmentByTokenUseCase - Processing tokenOrId:',
+      tokenOrId,
     );
 
-    // Get attachment from database
-    const attachment = await this.attachmentRepository.findById(attachmentId);
-    if (!attachment) {
+    let attachment: any;
+
+    // Check if the input is a UUID (ID) or a token
+    if (isUUID(tokenOrId)) {
       console.log(
-        'GetAttachmentByTokenUseCase - Attachment not found in database',
+        'GetAttachmentByTokenUseCase - Input is UUID, querying database directly',
       );
-      throw new NotFoundException('Attachment not found');
+      // Direct ID lookup - get attachment from database
+      attachment = await this.attachmentRepository.findById(tokenOrId);
+      if (!attachment) {
+        console.log(
+          'GetAttachmentByTokenUseCase - Attachment not found in database',
+        );
+        throw new NotFoundException('Attachment not found');
+      }
+    } else {
+      console.log(
+        'GetAttachmentByTokenUseCase - Input is token, checking Redis',
+      );
+      // Token-based lookup - get attachment ID from Redis
+      const redisKey = `attachment:token:${tokenOrId}`;
+      const attachmentId = await this.redis.get(redisKey);
+
+      if (!attachmentId) {
+        console.log('GetAttachmentByTokenUseCase - Token not found in Redis');
+        throw new NotFoundException('Token not found or expired');
+      }
+
+      console.log(
+        'GetAttachmentByTokenUseCase - Found attachment ID:',
+        attachmentId,
+      );
+
+      // Get attachment from database
+      attachment = await this.attachmentRepository.findById(attachmentId);
+      if (!attachment) {
+        console.log(
+          'GetAttachmentByTokenUseCase - Attachment not found in database',
+        );
+        throw new NotFoundException('Attachment not found');
+      }
     }
 
     console.log('GetAttachmentByTokenUseCase - Attachment details:', {

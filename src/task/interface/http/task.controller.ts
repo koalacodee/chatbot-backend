@@ -81,12 +81,13 @@ export class TaskController {
   }
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
-  @Put()
+  @Put(':id')
   async update(
     @Body() input: UpdateTaskInputDto,
     @Req() req: any,
+    @Param('id') id: string,
   ): Promise<{ task: Task; uploadKey?: string }> {
-    const { id, completedAt, ...rest } = input;
+    const { completedAt, ...rest } = input;
     return this.updateUseCase.execute(
       id,
       {
@@ -129,15 +130,18 @@ export class TaskController {
   async getWithFilters(
     @Query() query: GetTasksWithFiltersDto,
     @Req() req: any,
-  ): Promise<any[]> {
-    const tasks = await this.getTasksWithFiltersUseCase.execute(
+  ): Promise<{ tasks: any[]; attachments: { [taskId: string]: string[] } }> {
+    const result = await this.getTasksWithFiltersUseCase.execute(
       {
         ...query,
         // class-transformer handles numeric conversion for offset/limit
       },
       req.user.id,
     );
-    return tasks.map((t) => t.toJSON());
+    return {
+      tasks: result.tasks.map((t) => t.toJSON()),
+      attachments: result.attachments,
+    };
   }
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
@@ -145,9 +149,12 @@ export class TaskController {
   async getTeamTasks(
     @Query() query: GetTeamTasksDto,
     @Req() req: any,
-  ): Promise<any[]> {
-    const tasks = await this.getTeamTasksUseCase.execute(query, req.user.id);
-    return tasks.map((t) => t.toJSON());
+  ): Promise<{ tasks: any[]; attachments: { [taskId: string]: string[] } }> {
+    const result = await this.getTeamTasksUseCase.execute(query, req.user.id);
+    return {
+      tasks: result.tasks.map((t) => t.toJSON()),
+      attachments: result.attachments,
+    };
   }
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
@@ -250,6 +257,7 @@ export class TaskController {
       })),
       total: result.total,
       metrics: result.metrics,
+      attachments: result.attachments,
     };
   }
 }

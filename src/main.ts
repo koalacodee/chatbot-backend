@@ -57,6 +57,7 @@ async function bootstrap() {
         scriptSrc: [`'self'`, `https: 'unsafe-inline'`],
       },
     },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   });
   await app.register(fastifyCompress as any);
   await app.register(fastifyCors as any, {

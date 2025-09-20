@@ -5,7 +5,7 @@ import { SupervisorRepository } from 'src/supervisor/domain/repository/superviso
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
-import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
+import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 
 @Injectable()
 export class GetQuestionUseCase {
@@ -14,7 +14,7 @@ export class GetQuestionUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
-    private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
+    private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
   ) {}
 
   async execute(

@@ -3,6 +3,7 @@ import { AttachmentRepository } from '../../domain/repositories/attachment.repos
 import { RedisService } from 'src/shared/infrastructure/redis';
 import { existsSync, statSync } from 'fs';
 import { join } from 'path';
+import { isUUID } from 'class-validator';
 
 interface GetAttachmentMetadataByTokenInput {
   token: string;
@@ -32,29 +33,56 @@ export class GetAttachmentMetadataByTokenUseCase {
       token,
     );
 
-    // Get attachment ID from Redis
-    const redisKey = `attachment:token:${token}`;
-    const attachmentId = await this.redis.get(redisKey);
+    let attachment: any;
+    let tokenExpiryDate: Date | undefined;
 
-    if (!attachmentId) {
+    // Check if the input is a UUID (ID) or a token
+    if (isUUID(token)) {
       console.log(
-        'GetAttachmentMetadataByTokenUseCase - Token not found in Redis',
+        'GetAttachmentMetadataByTokenUseCase - Input is UUID, querying database directly',
       );
-      throw new NotFoundException('Token not found or expired');
-    }
-
-    console.log(
-      'GetAttachmentMetadataByTokenUseCase - Found attachment ID:',
-      attachmentId,
-    );
-
-    // Get attachment from database
-    const attachment = await this.attachmentRepository.findById(attachmentId);
-    if (!attachment) {
+      // Direct ID lookup - get attachment from database
+      attachment = await this.attachmentRepository.findById(token);
+      if (!attachment) {
+        console.log(
+          'GetAttachmentMetadataByTokenUseCase - Attachment not found in database',
+        );
+        throw new NotFoundException('Attachment not found');
+      }
+    } else {
       console.log(
-        'GetAttachmentMetadataByTokenUseCase - Attachment not found in database',
+        'GetAttachmentMetadataByTokenUseCase - Input is token, checking Redis',
       );
-      throw new NotFoundException('Attachment not found');
+      // Token-based lookup - get attachment ID from Redis
+      const redisKey = `attachment:token:${token}`;
+      const attachmentId = await this.redis.get(redisKey);
+
+      if (!attachmentId) {
+        console.log(
+          'GetAttachmentMetadataByTokenUseCase - Token not found in Redis',
+        );
+        throw new NotFoundException('Token not found or expired');
+      }
+
+      console.log(
+        'GetAttachmentMetadataByTokenUseCase - Found attachment ID:',
+        attachmentId,
+      );
+
+      // Get attachment from database
+      attachment = await this.attachmentRepository.findById(attachmentId);
+      if (!attachment) {
+        console.log(
+          'GetAttachmentMetadataByTokenUseCase - Attachment not found in database',
+        );
+        throw new NotFoundException('Attachment not found');
+      }
+
+      // Get token expiry date for token-based requests
+      const ttl = await this.redis.execCommand('ttl', redisKey);
+      if (ttl > 0) {
+        tokenExpiryDate = new Date(Date.now() + ttl * 1000);
+      }
     }
 
     console.log('GetAttachmentMetadataByTokenUseCase - Attachment details:', {
@@ -102,25 +130,6 @@ export class GetAttachmentMetadataByTokenUseCase {
       'GetAttachmentMetadataByTokenUseCase - Content type:',
       contentType,
     );
-
-    // Get token expiry date from Redis TTL
-    let tokenExpiryDate: Date | undefined;
-    try {
-      const ttl = await this.redis.getClient().ttl(redisKey);
-      if (ttl > 0) {
-        tokenExpiryDate = new Date(Date.now() + ttl * 1000);
-        console.log(
-          'GetAttachmentMetadataByTokenUseCase - Token TTL:',
-          ttl,
-          'seconds',
-        );
-      }
-    } catch (error) {
-      console.log(
-        'GetAttachmentMetadataByTokenUseCase - Could not get token TTL:',
-        error,
-      );
-    }
 
     return {
       fileType,

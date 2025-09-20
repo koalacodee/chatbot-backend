@@ -5,6 +5,7 @@ import { SupervisorRepository } from 'src/supervisor/domain/repository/superviso
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 
 interface GetTasksWithFiltersInputDto {
   assigneeId?: string;
@@ -21,9 +22,13 @@ export class GetTasksWithFiltersUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
+    private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
   ) {}
 
-  async execute(dto: GetTasksWithFiltersInputDto, userId?: string): Promise<Task[]> {
+  async execute(
+    dto: GetTasksWithFiltersInputDto,
+    userId?: string,
+  ): Promise<{ tasks: Task[]; attachments: { [taskId: string]: string[] } }> {
     const { assigneeId, departmentId, status, offset, limit } = dto;
 
     // Apply department filtering if userId is provided
@@ -62,10 +67,20 @@ export class GetTasksWithFiltersUseCase {
     // Apply pagination after filtering
     const start = offset ?? 0;
     const end = limit ? start + limit : undefined;
-    return filtered.slice(start, end);
+    const tasks = filtered.slice(start, end);
+
+    // Get attachments for all tasks
+    const attachments = await this.getAttachmentsUseCase.execute({
+      targetIds: tasks.map((task) => task.id.toString()),
+    });
+
+    return { tasks, attachments };
   }
 
-  private async getUserDepartmentIds(userId: string, role: Roles): Promise<string[]> {
+  private async getUserDepartmentIds(
+    userId: string,
+    role: Roles,
+  ): Promise<string[]> {
     if (role === Roles.ADMIN) {
       return []; // Admins see all tasks (no filtering)
     } else if (role === Roles.SUPERVISOR) {
@@ -73,9 +88,11 @@ export class GetTasksWithFiltersUseCase {
       return supervisor.departments.map((d) => d.id.toString());
     } else if (role === Roles.EMPLOYEE) {
       const employee = await this.employeeRepository.findByUserId(userId);
-      return employee?.subDepartments.map((dep) => dep.id.toString()) ??
-             employee?.supervisor?.departments.map((d) => d.id.toString()) ??
-             [];
+      return (
+        employee?.subDepartments.map((dep) => dep.id.toString()) ??
+        employee?.supervisor?.departments.map((d) => d.id.toString()) ??
+        []
+      );
     }
     return [];
   }

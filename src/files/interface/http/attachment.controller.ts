@@ -11,12 +11,14 @@ export class AttachmentController {
     private readonly getAttachmentMetadataByTokenUseCase: GetAttachmentMetadataByTokenUseCase,
   ) {}
 
-  @Get(':token')
+  @Get(':tokenOrId')
   async getAttachmentByToken(
-    @Param('token') token: string,
+    @Param('tokenOrId') tokenOrId: string,
     @Res() res: FastifyReply,
   ) {
-    const result = await this.getAttachmentByTokenUseCase.execute({ token });
+    const result = await this.getAttachmentByTokenUseCase.execute({
+      tokenOrId,
+    });
     res.header('Content-Type', result.contentType);
     const encodedFilename = encodeURIComponent(result.originalName);
     res.header(
@@ -26,13 +28,13 @@ export class AttachmentController {
     res.header('Cache-Control', 'private, max-age=3600');
     res.header('Accept-Ranges', 'bytes');
     const stream = createReadStream(result.filePath);
-    return stream;
+    return res.send(stream);
   }
 
-  @Get(':token/metadata')
-  async getAttachmentMetadataByToken(@Param('token') token: string) {
+  @Get(':tokenOrId/metadata')
+  async getAttachmentMetadataByToken(@Param('tokenOrId') tokenOrId: string) {
     return this.getAttachmentMetadataByTokenUseCase.execute({
-      token,
+      token: tokenOrId,
     });
   }
 }

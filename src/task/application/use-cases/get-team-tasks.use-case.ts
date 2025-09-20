@@ -5,6 +5,7 @@ import { SupervisorRepository } from 'src/supervisor/domain/repository/superviso
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
+import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 
 export interface GetTeamTasksInput {
   employeeId?: string;
@@ -24,38 +25,39 @@ export class GetTeamTasksUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
+    private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
   ) {}
 
-  async execute(input: GetTeamTasksInput, userId?: string): Promise<Task[]> {
-    const {
-      employeeId,
-      subDepartmentId,
-      departmentId,
-      status,
-      offset,
-      limit,
-    } = input;
+  async execute(
+    input: GetTeamTasksInput,
+    userId?: string,
+  ): Promise<{ tasks: Task[]; attachments: { [taskId: string]: string[] } }> {
+    const { employeeId, subDepartmentId, departmentId, status, offset, limit } =
+      input;
 
     // Apply department filtering if userId is provided
     let filteredInput = { ...input };
     if (userId) {
       const user = await this.userRepository.findById(userId);
       const userRole = user.role.getRole();
-      const userDepartmentIds = await this.getUserDepartmentIds(userId, userRole);
-      
+      const userDepartmentIds = await this.getUserDepartmentIds(
+        userId,
+        userRole,
+      );
+
       // Filter department and subDepartment IDs based on user access
       if (userDepartmentIds.length > 0) {
         if (departmentId && !userDepartmentIds.includes(departmentId)) {
-          return []; // User doesn't have access to this department
+          return { tasks: [], attachments: {} }; // User doesn't have access to this department
         }
         if (subDepartmentId && !userDepartmentIds.includes(subDepartmentId)) {
-          return []; // User doesn't have access to this sub-department
+          return { tasks: [], attachments: {} }; // User doesn't have access to this sub-department
         }
       }
     }
 
     // Use the new repository method for efficient database-level filtering
-    return this.taskRepository.findTeamTasks({
+    const tasks = await this.taskRepository.findTeamTasks({
       employeeId,
       subDepartmentId,
       departmentId,
@@ -63,9 +65,19 @@ export class GetTeamTasksUseCase {
       offset,
       limit,
     });
+
+    // Get attachments for all tasks
+    const attachments = await this.getAttachmentsUseCase.execute({
+      targetIds: tasks.map((task) => task.id.toString()),
+    });
+
+    return { tasks, attachments };
   }
 
-  private async getUserDepartmentIds(userId: string, role: Roles): Promise<string[]> {
+  private async getUserDepartmentIds(
+    userId: string,
+    role: Roles,
+  ): Promise<string[]> {
     if (role === Roles.ADMIN) {
       return []; // Admins see all tasks (no filtering)
     } else if (role === Roles.SUPERVISOR) {
@@ -73,9 +85,11 @@ export class GetTeamTasksUseCase {
       return supervisor.departments.map((d) => d.id.toString());
     } else if (role === Roles.EMPLOYEE) {
       const employee = await this.employeeRepository.findByUserId(userId);
-      return employee?.subDepartments.map((dep) => dep.id.toString()) ??
-             employee?.supervisor?.departments.map((d) => d.id.toString()) ??
-             [];
+      return (
+        employee?.subDepartments.map((dep) => dep.id.toString()) ??
+        employee?.supervisor?.departments.map((d) => d.id.toString()) ??
+        []
+      );
     }
     return [];
   }

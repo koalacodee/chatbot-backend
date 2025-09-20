@@ -7,6 +7,7 @@ import {
   Task,
   TaskStatus,
   TaskAssignmentType,
+  TaskPriority,
 } from '../../domain/entities/task.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
@@ -28,6 +29,7 @@ interface UpdateTaskInputDto {
   assignerId?: string;
   approverId?: string | null;
   status?: TaskStatus; // TaskStatus
+  priority?: TaskPriority;
   assignmentType?: TaskAssignmentType;
   targetDepartmentId?: string;
   targetSubDepartmentId?: string;
@@ -69,6 +71,7 @@ export class UpdateTaskUseCase {
     if (dto.title !== undefined) existing.title = dto.title;
     if (dto.description !== undefined) existing.description = dto.description;
     if (dto.dueDate !== undefined) existing.dueDate = dto.dueDate;
+    if (dto.priority !== undefined) existing.priority = dto.priority;
 
     if (dto.assigneeId !== undefined) {
       if (dto.assigneeId === null) {

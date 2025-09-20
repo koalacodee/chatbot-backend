@@ -2,19 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
-import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
+import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 
 @Injectable()
 export class GetAllKnowledgeChunksUseCase {
   constructor(
     private readonly chunkRepo: KnowledgeChunkRepository,
     private readonly accessControl: AccessControlService,
-    private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
+    private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
   ) {}
 
-  async execute(
-    userId: string,
-  ): Promise<{
+  async execute(userId: string): Promise<{
     knowledgeChunks: KnowledgeChunk[];
     attachments: { [chunkId: string]: string[] };
   }> {

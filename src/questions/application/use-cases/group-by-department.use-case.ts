@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { QuestionRepository } from 'src/questions/domain/repositories/question.repository';
-import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
-import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
+import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 
 interface GroupByDepartmentInput {
   userId: string;
@@ -17,7 +16,7 @@ export class GroupByDepartmentUseCase {
     private readonly questionRepo: QuestionRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
-    private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
+    private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
   ) {}
 
   async execute({ userId, role }: GroupByDepartmentInput): Promise<{

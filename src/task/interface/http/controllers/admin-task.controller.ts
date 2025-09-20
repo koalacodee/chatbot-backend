@@ -37,14 +37,15 @@ export class AdminTaskController {
   })
   @AdminAuth()
   async getDepartmentLevelTasks(@Query() query: GetTasksByRoleDto) {
-    const tasks = await this.getDepartmentLevelTasksUseCase.execute({
+    const result = await this.getDepartmentLevelTasksUseCase.execute({
       departmentId: query.departmentId,
     });
 
     return {
       success: true,
-      data: tasks,
-      count: tasks.length,
+      data: result.tasks,
+      count: result.tasks.length,
+      attachments: result.attachments,
     };
   }
 }

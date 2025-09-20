@@ -9,7 +9,7 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
-import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
+import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 
 @Injectable()
 export class GetAllSupportTicketsUseCase {
@@ -20,7 +20,7 @@ export class GetAllSupportTicketsUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
     private readonly departmentRepository: DepartmentRepository,
-    private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
+    private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
   ) {}
 
   async execute(

@@ -40,14 +40,15 @@ export class SupervisorTaskController {
   })
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   async getSubDepartmentTasks(@Query() query: GetTasksByRoleDto) {
-    const tasks = await this.getSubDepartmentTasksUseCase.execute({
+    const result = await this.getSubDepartmentTasksUseCase.execute({
       subDepartmentId: query.subDepartmentId,
     });
 
     return {
       success: true,
-      data: tasks,
-      count: tasks.length,
+      data: result.tasks,
+      count: result.tasks.length,
+      attachments: result.attachments,
     };
   }
 
@@ -66,14 +67,15 @@ export class SupervisorTaskController {
   })
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   async getEmployeeLevelTasks(@Query() query: GetTasksByRoleDto) {
-    const tasks = await this.getIndividualLevelTasksUseCase.execute({
+    const result = await this.getIndividualLevelTasksUseCase.execute({
       assigneeId: query.assigneeId,
     });
 
     return {
       success: true,
-      data: tasks,
-      count: tasks.length,
+      data: result.tasks,
+      count: result.tasks.length,
+      attachments: result.attachments,
     };
   }
 }
