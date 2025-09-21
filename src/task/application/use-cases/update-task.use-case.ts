@@ -172,16 +172,35 @@ export class UpdateTaskUseCase {
       const supervisorDepartmentIds = supervisor.departments.map((d) =>
         d.id.toString(),
       );
+      const allDepartments = await this.departmentRepo
+        .findAllSubDepartmentsByParentIds(supervisorDepartmentIds)
+        .then((subDepts) => [
+          ...subDepts.map(({ id }) => id.toString()),
+          ...supervisorDepartmentIds,
+        ]);
 
       // Check if task targets supervisor's departments
       const targetDepartmentId = task.targetDepartment?.id.toString();
       const targetSubDepartmentId = task.targetSubDepartment?.id.toString();
 
+      // For individual-level tasks, check if the supervisor is supervising the assignee
+      let isSupervisingAssignee = false;
+      if (task.assignmentType === 'INDIVIDUAL' && task.assignee) {
+        const assigneeEmployee = await this.employeeRepository.findById(
+          task.assignee.id.toString(),
+        );
+        if (assigneeEmployee) {
+          isSupervisingAssignee =
+            assigneeEmployee.supervisor.id.toString() ===
+            supervisor.id.toString();
+        }
+      }
+
       hasAccess =
-        (targetDepartmentId &&
-          supervisorDepartmentIds.includes(targetDepartmentId)) ||
+        isSupervisingAssignee ||
+        (targetDepartmentId && allDepartments.includes(targetDepartmentId)) ||
         (targetSubDepartmentId &&
-          supervisorDepartmentIds.includes(targetSubDepartmentId));
+          allDepartments.includes(targetSubDepartmentId));
     } else if (role === Roles.EMPLOYEE) {
       const employee = await this.employeeRepository.findByUserId(userId);
       const employeeDepartmentIds =
