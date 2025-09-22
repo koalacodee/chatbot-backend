@@ -5,6 +5,8 @@ import {
   IsEnum,
   IsDate,
   IsBoolean,
+  IsPositive,
+  Min,
 } from 'class-validator';
 import { TaskStatus, TaskPriority } from 'src/task/domain/entities/task.entity';
 
@@ -69,4 +71,9 @@ export class CreateTaskInputDto {
   @IsOptional()
   @IsBoolean()
   attach?: boolean;
+
+  @IsOptional()
+  @IsPositive()
+  @Min(60000) // Minimum 1 minute (60000ms)
+  reminderInterval?: number; // in milliseconds
 }

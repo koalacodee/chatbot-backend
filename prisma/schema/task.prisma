@@ -47,6 +47,10 @@ model Task {
   performerAdminId      String?     @map("performer_admin_id") @db.Uuid
   performerAdmin        Admin?      @relation("PerformerOfTask", fields: [performerAdminId], references: [id], onDelete: Cascade)
 
+  // Reminder interval in milliseconds (e.g., 3600000 = 1 hour, 86400000 = 1 day)
+  // When set, creates a repeatable BullMQ job to fire TaskReminderEvent
+  reminderInterval      Int?        @map("reminder_interval")
+
   @@index([assigneeId])
   @@index([assignerSupervisorId])
   @@index([assignerAdminId])

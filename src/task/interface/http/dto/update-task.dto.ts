@@ -5,6 +5,8 @@ import {
   IsBoolean,
   IsArray,
   IsUUID,
+  IsPositive,
+  Min,
 } from 'class-validator';
 import { TaskPriority } from 'src/task/domain/entities/task.entity';
 
@@ -79,4 +81,9 @@ export class UpdateTaskInputDto {
   @IsArray()
   @IsUUID(undefined, { each: true })
   deleteAttachments?: string[];
+
+  @IsOptional()
+  @IsPositive()
+  @Min(60000) // Minimum 1 minute (60000ms)
+  reminderInterval?: number | null; // in milliseconds, null to remove
 }

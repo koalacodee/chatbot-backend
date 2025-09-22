@@ -46,6 +46,10 @@ export interface TaskOptions {
   feedback?: string;
   performerAttachment?: Attachment;
   assignerAttachment?: Attachment;
+  reminderInterval?: number; // in milliseconds
+  assigneeId?: string;
+  targetDepartmentId?: string;
+  targetSubDepartmentId?: string;
 }
 
 export class Task {
@@ -69,6 +73,10 @@ export class Task {
   private _feedback?: string;
   private _performerAttachment?: Attachment;
   private _assignerAttachment?: Attachment;
+  private _reminderInterval?: number; // in milliseconds
+  private _assigneeId?: string;
+  private _targetDepartmentId?: string;
+  private _targetSubDepartmentId?: string;
 
   private constructor(options: TaskOptions) {
     this._id = UUID.create(options.id);
@@ -91,6 +99,10 @@ export class Task {
     this._feedback = options.feedback ?? undefined;
     this._performerAttachment = options.performerAttachment;
     this._assignerAttachment = options.assignerAttachment;
+    this._reminderInterval = options.reminderInterval ?? undefined;
+    this._assigneeId = options.assigneeId ?? undefined;
+    this._targetDepartmentId = options.targetDepartmentId ?? undefined;
+    this._targetSubDepartmentId = options.targetSubDepartmentId ?? undefined;
   }
 
   static create(options: TaskOptions): Task {
@@ -213,6 +225,38 @@ export class Task {
     this._assignerAttachment = value;
   }
 
+  get reminderInterval(): number | undefined {
+    return this._reminderInterval;
+  }
+
+  set reminderInterval(value: number | undefined) {
+    this._reminderInterval = value;
+  }
+
+  get assigneeId(): string | undefined {
+    return this._assigneeId;
+  }
+
+  set assigneeId(value: string | undefined) {
+    this._assigneeId = value;
+  }
+
+  get targetDepartmentId(): string | undefined {
+    return this._targetDepartmentId;
+  }
+
+  set targetDepartmentId(value: string | undefined) {
+    this._targetDepartmentId = value;
+  }
+
+  get targetSubDepartmentId(): string | undefined {
+    return this._targetSubDepartmentId;
+  }
+
+  set targetSubDepartmentId(value: string | undefined) {
+    this._targetSubDepartmentId = value;
+  }
+
   get performer(): Admin | Supervisor | Employee | undefined {
     return this._performer;
   }
@@ -294,6 +338,10 @@ export class Task {
       feedback: this.feedback,
       performerAttachment: this.performerAttachment?.toJSON(),
       assignerAttachment: this.assignerAttachment?.toJSON(),
+      reminderInterval: this.reminderInterval,
+      assigneeId: this.assigneeId,
+      targetDepartmentId: this.targetDepartmentId,
+      targetSubDepartmentId: this.targetSubDepartmentId,
     };
   }
 }

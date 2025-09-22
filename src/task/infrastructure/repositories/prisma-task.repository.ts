@@ -84,6 +84,10 @@ export class PrismaTaskRepository extends TaskRepository {
             ? await Employee.create(row.performerEmployee)
             : undefined,
       dueDate: row.dueDate,
+      reminderInterval: row.reminderInterval ?? undefined,
+      assigneeId: row.assigneeId ?? undefined,
+      targetDepartmentId: row.targetDepartmentId ?? undefined,
+      targetSubDepartmentId: row.targetSubDepartmentId ?? undefined,
     });
   }
 
@@ -132,6 +136,7 @@ export class PrismaTaskRepository extends TaskRepository {
           ? task.performer?.user.id.toString()
           : null,
       dueDate: task.dueDate,
+      reminderInterval: task.reminderInterval ?? null,
     } as const;
 
     const upsert = await this.prisma.task.upsert({
@@ -157,6 +162,7 @@ export class PrismaTaskRepository extends TaskRepository {
         performerAdminId: data.performerAdminId,
         performerSupervisorId: data.performerSupervisorId,
         performerEmployeeId: data.performerEmployeeId,
+        reminderInterval: data.reminderInterval,
       },
       create: data,
       include: {
@@ -664,5 +670,30 @@ export class PrismaTaskRepository extends TaskRepository {
       completedCount: Number(result[0]?.completed_count || 0),
       completionPercentage: Number(result[0]?.completion_percentage || 0),
     };
+  }
+
+  async findTaskForReminder(taskId: string): Promise<Task | null> {
+    const row = await this.prisma.task.findFirst({
+      where: {
+        id: taskId,
+        status: {
+          in: ['TODO', 'SEEN'], // Only tasks that can receive reminders
+        },
+      },
+      select: {
+        id: true,
+        title: true,
+        assignmentType: true,
+        assigneeId: true,
+        targetDepartmentId: true,
+        targetSubDepartmentId: true,
+        createdAt: true,
+        reminderInterval: true,
+      },
+    });
+
+    if (!row) return null;
+
+    return this.toDomain(row);
   }
 }

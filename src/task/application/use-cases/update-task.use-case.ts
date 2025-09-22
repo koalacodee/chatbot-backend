@@ -19,6 +19,7 @@ import { User } from 'src/shared/entities/user.entity';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { FilesService } from 'src/files/domain/services/files.service';
 import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/delete-attachments-by-ids.use-case';
+import { ReminderQueueService } from '../../infrastructure/queues/reminder.queue';
 
 interface UpdateTaskInputDto {
   title?: string;
@@ -38,6 +39,7 @@ interface UpdateTaskInputDto {
   feedback?: string | null;
   attach?: boolean;
   deleteAttachments?: string[];
+  reminderInterval?: number | null; // in milliseconds, null to remove
 }
 
 @Injectable()
@@ -51,6 +53,7 @@ export class UpdateTaskUseCase {
     private readonly adminRepository: AdminRepository,
     private readonly filesService: FilesService,
     private readonly deleteAttachmentsUseCase: DeleteAttachmentsByIdsUseCase,
+    private readonly reminderQueueService: ReminderQueueService,
   ) {}
 
   async execute(
@@ -131,6 +134,22 @@ export class UpdateTaskUseCase {
     if (dto.notes !== undefined) existing.notes = dto.notes ?? undefined;
     if (dto.feedback !== undefined)
       existing.feedback = dto.feedback ?? undefined;
+
+    // Handle reminder interval updates
+    if (dto.reminderInterval !== undefined) {
+      if (dto.reminderInterval === null) {
+        // Remove reminder
+        existing.reminderInterval = undefined;
+        await this.reminderQueueService.removeReminder(id);
+      } else {
+        // Update or add reminder
+        existing.reminderInterval = dto.reminderInterval;
+        await this.reminderQueueService.updateReminder(
+          id,
+          dto.reminderInterval,
+        );
+      }
+    }
 
     // Handle attachment deletion if specified
     if (dto.deleteAttachments && dto.deleteAttachments.length > 0) {

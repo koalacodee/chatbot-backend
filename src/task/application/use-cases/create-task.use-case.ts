@@ -21,6 +21,7 @@ import { Roles } from 'src/shared/value-objects/role.vo';
 import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
 import { TaskCreatedEvent } from '../../domain/events/task-created.event';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { ReminderQueueService } from '../../infrastructure/queues/reminder.queue';
 
 interface CreateTaskInputDto {
   title: string;
@@ -39,6 +40,7 @@ interface CreateTaskInputDto {
   priority?: TaskPriority;
   feedback?: string;
   attach?: boolean;
+  reminderInterval?: number; // in milliseconds
 }
 
 @Injectable()
@@ -53,6 +55,7 @@ export class CreateTaskUseCase {
     private readonly notificationRepository: NotificationRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
+    private readonly reminderQueueService: ReminderQueueService,
   ) {}
 
   async execute(
@@ -150,6 +153,7 @@ export class CreateTaskUseCase {
       completedAt: dto.completedAt ?? undefined,
       notes: dto.notes ?? undefined,
       feedback: dto.feedback ?? undefined,
+      reminderInterval: dto.reminderInterval ?? undefined,
     });
 
     const [saved, uploadKey] = await Promise.all([
@@ -170,6 +174,14 @@ export class CreateTaskUseCase {
         ),
       ),
     ]);
+
+    // Schedule reminder job if reminderInterval is provided
+    if (dto.reminderInterval) {
+      await this.reminderQueueService.scheduleReminder(
+        saved.id.toString(),
+        dto.reminderInterval,
+      );
+    }
 
     return { task: saved, uploadKey };
   }
