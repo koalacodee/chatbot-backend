@@ -8,7 +8,10 @@ import { UpdatePromotionUseCase } from './application/use-cases/update-promotion
 import { DeletePromotionUseCase } from './application/use-cases/delete-promotion.use-case';
 import { TogglePromotionActiveUseCase } from './application/use-cases/toggle-promotion-active.use-case';
 import { PromotionController } from './interface/http/promotion.controller';
-import { GetPromotionForUserUseCase } from './application/use-cases';
+import {
+  GetPromotionForCustomerUseCase,
+  GetPromotionForUserUseCase,
+} from './application/use-cases';
 import { PromotionCreatedListener } from './application/listeners/promotion-created.listener';
 import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 
@@ -19,6 +22,7 @@ import { ActivityLogModule } from 'src/activity-log/activity-log.module';
     GetAllPromotionsUseCase,
     GetPromotionUseCase,
     GetPromotionForUserUseCase,
+    GetPromotionForCustomerUseCase,
     UpdatePromotionUseCase,
     DeletePromotionUseCase,
     TogglePromotionActiveUseCase,

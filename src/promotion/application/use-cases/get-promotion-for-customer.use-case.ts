@@ -1,35 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PromotionRepository } from 'src/promotion/domain/repositories/promotion.repository';
-import { UserRepository } from 'src/shared/repositories/user.repository';
 import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
 
-interface GetPromotionForUserInput {
-  userId: string;
-}
-
-interface GetPromotionForUserOutput {
+interface GetPromotionForCustomerOutput {
   promotion: any;
   attachments: { [promotionId: string]: string[] };
 }
 
 @Injectable()
-export class GetPromotionForUserUseCase {
+export class GetPromotionForCustomerUseCase {
   constructor(
     private readonly promotionRepository: PromotionRepository,
-    private readonly userRepository: UserRepository,
     private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
   ) {}
 
-  async execute({
-    userId,
-  }: GetPromotionForUserInput): Promise<GetPromotionForUserOutput> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    const promotion = await this.promotionRepository.getPromotionForUser(
-      user.role.getRole(),
-    );
+  async execute(): Promise<GetPromotionForCustomerOutput> {
+    const promotion = await this.promotionRepository.getPromotionForCustomer();
 
     // Get attachments for the promotion
     const attachments = await this.getAttachmentsUseCase.execute({

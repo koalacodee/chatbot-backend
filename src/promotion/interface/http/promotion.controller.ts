@@ -8,12 +8,14 @@ import {
   Param,
   UseGuards,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   CreatePromotionUseCase,
   DeletePromotionUseCase,
   GetAllPromotionsUseCase,
   GetPromotionForUserUseCase,
+  GetPromotionForCustomerUseCase,
   GetPromotionUseCase,
   TogglePromotionActiveUseCase,
   UpdatePromotionUseCase,
@@ -22,6 +24,7 @@ import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.g
 import { CreatePromotionDto } from './dtos/create-promotion.dto';
 import { SupervisorPermissions } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
+import { GuestIdInterceptor } from 'src/shared/interceptors/guest-id.interceptor';
 
 interface UpdatePromotionDto {
   id: string;
@@ -40,6 +43,7 @@ export class PromotionController {
     private readonly deletePromotionUseCase: DeletePromotionUseCase,
     private readonly getAllPromotionsUseCase: GetAllPromotionsUseCase,
     private readonly getPromotionForUserUseCase: GetPromotionForUserUseCase,
+    private readonly getPromotionForCustomerUseCase: GetPromotionForCustomerUseCase,
     private readonly getPromotionUseCase: GetPromotionUseCase,
     private readonly togglePromotionActiveUseCase: TogglePromotionActiveUseCase,
     private readonly updatePromotionUseCase: UpdatePromotionUseCase,
@@ -80,9 +84,15 @@ export class PromotionController {
   }
 
   @UseGuards(UserJwtAuthGuard)
-  @Get('user/:userId')
-  async getForUser(@Param('userId') userId: string): Promise<any> {
-    return this.getPromotionForUserUseCase.execute({ userId });
+  @Get('user')
+  async getForUser(@Req() req: any): Promise<any> {
+    return this.getPromotionForUserUseCase.execute({ userId: req.user.id });
+  }
+
+  @UseInterceptors(GuestIdInterceptor)
+  @Get('customer')
+  async getForCustomer(): Promise<any> {
+    return this.getPromotionForCustomerUseCase.execute();
   }
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_PROMOTIONS)

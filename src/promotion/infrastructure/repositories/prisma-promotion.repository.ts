@@ -189,4 +189,42 @@ export class PrismaPromotionRepository extends PromotionRepository {
 
     return promotion ? this.toDomain(promotion) : null;
   }
+
+  async getPromotionForCustomer(): Promise<Promotion | null> {
+    const now = new Date();
+
+    const promotion = await this.prisma.promotion.findFirst({
+      where: {
+        isActive: true,
+        OR: [{ audience: 'CUSTOMER' }, { audience: 'ALL' }],
+        AND: [
+          {
+            OR: [{ startDate: null }, { startDate: { lte: now } }],
+          },
+          {
+            OR: [
+              { endDate: null },
+              {
+                endDate: {
+                  gte: new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate(),
+                    23,
+                    59,
+                    59,
+                    999,
+                  ),
+                },
+              },
+            ],
+          },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { createdByAdmin: true, createdBySupervisor: true },
+    });
+
+    return promotion ? this.toDomain(promotion) : null;
+  }
 }

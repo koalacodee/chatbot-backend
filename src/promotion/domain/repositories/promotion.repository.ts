@@ -13,4 +13,5 @@ export abstract class PromotionRepository {
   abstract findActive(): Promise<Promotion[]>;
   abstract findActiveByAudience(audience: string): Promise<Promotion[]>;
   abstract getPromotionForUser(role: Roles): Promise<Promotion | null>;
+  abstract getPromotionForCustomer(): Promise<Promotion | null>;
 }
