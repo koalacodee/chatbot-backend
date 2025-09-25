@@ -15,7 +15,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
       type: rec.type,
       filename: rec.filename,
       originalName: rec.originalName,
-      expirationDate: rec.expirationDate,
+      expirationDate: rec.expirationDate ?? undefined,
       createdAt: rec.createdAt,
       updatedAt: rec.updatedAt,
       targetId: rec.targetId,
@@ -28,7 +28,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
       type: attachment.type,
       filename: attachment.filename,
       originalName: attachment.originalName,
-      expirationDate: attachment.expirationDate,
+      expirationDate: attachment.expirationDate ?? null,
       targetId: attachment.targetId,
       createdAt: attachment.createdAt,
       updatedAt: attachment.updatedAt,
@@ -102,7 +102,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
     if (typeof update.originalName !== 'undefined')
       data.originalName = update.originalName;
     if (typeof update.expirationDate !== 'undefined')
-      data.expirationDate = update.expirationDate;
+      data.expirationDate = update.expirationDate ?? null;
     if (typeof update.targetId !== 'undefined') data.targetId = update.targetId;
     data.updatedAt = new Date();
 

@@ -1,9 +1,9 @@
 model Attachment {
-  id             String   @id @map("id") @db.Uuid
-  type           String   @map("type") @db.VarChar(255)
-  filename       String   @map("filename") @db.VarChar(500)
-  originalName   String   @map("original_name") @db.VarChar(500)
-  expirationDate DateTime @map("expiration_date")
+  id             String    @id @map("id") @db.Uuid
+  type           String    @map("type") @db.VarChar(255)
+  filename       String    @map("filename") @db.VarChar(500)
+  originalName   String    @map("original_name") @db.VarChar(500)
+  expirationDate DateTime? @map("expiration_date")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

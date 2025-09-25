@@ -13,7 +13,7 @@ export interface AttachmentMetadataResult {
   fileType: string;
   originalName: string;
   sizeInBytes: number;
-  expiryDate: Date;
+  expiryDate: Date | null;
   tokenExpiryDate?: Date;
   contentType: string;
 }
@@ -93,7 +93,7 @@ export class GetAttachmentMetadataByTokenUseCase {
     });
 
     // Check if attachment is still valid (not expired)
-    if (attachment.expirationDate <= new Date()) {
+    if (attachment.expirationDate && attachment.expirationDate <= new Date()) {
       console.log(
         'GetAttachmentMetadataByTokenUseCase - Attachment has expired',
       );

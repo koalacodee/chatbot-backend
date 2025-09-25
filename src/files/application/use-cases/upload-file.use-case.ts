@@ -7,7 +7,7 @@ interface UploadFileInput {
   targetId: string;
   filename: string;
   originalName: string;
-  expirationDate: Date;
+  expirationDate?: Date;
 }
 
 @Injectable()

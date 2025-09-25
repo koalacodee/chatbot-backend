@@ -82,18 +82,11 @@ export class FilesController {
         return res.status(400).send({ error: 'No file uploaded' });
       }
 
-      const isExpirationDateValid = expirationDate !== '';
-      if (!isExpirationDateValid) {
-        return res
-          .status(400)
-          .send({ error: 'expirationDate field is required' });
-      }
-
       const results = await this.uploadFileUseCase.execute({
         targetId: req.headers['x-target-id'] as any,
         filename: file.filename,
         originalName: file.originalName,
-        expirationDate: new Date(expirationDate),
+        expirationDate: expirationDate ? new Date(expirationDate) : undefined,
       });
 
       return res.send(results);
@@ -177,31 +170,16 @@ export class FilesController {
         return res.status(400).send({ error: 'No files uploaded' });
       }
 
-      // Filter out empty expiration dates and validate
-      const validExpirationDates = expirationDates.filter(
-        (date) => date && date.trim() !== '',
-      );
-
-      if (validExpirationDates.length === 0) {
-        return res
-          .status(400)
-          .send({ error: 'expirationDates fields are required' });
-      }
-
-      // Validate that we have expiration dates for all files
-      if (files.length !== validExpirationDates.length) {
-        return res.status(400).send({
-          error: `Expected ${files.length} expiration dates, but received ${validExpirationDates.length}`,
-        });
-      }
-
       const results = await Promise.all(
         files.map((file, index) =>
           this.uploadFileUseCase.execute({
             targetId: req.headers['x-target-id'] as any,
             filename: file.filename,
             originalName: file.originalName,
-            expirationDate: new Date(validExpirationDates[index]),
+            expirationDate:
+              expirationDates[index] && expirationDates[index].trim() !== ''
+                ? new Date(expirationDates[index])
+                : undefined,
           }),
         ),
       );

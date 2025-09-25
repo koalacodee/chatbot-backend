@@ -27,7 +27,9 @@ export class GetAttachmentIdsByTargetIdsUseCase {
 
         // Filter out expired attachments and return IDs for valid ones
         const validAttachments = targetAttachments.filter(
-          (attachment) => attachment.expirationDate > new Date(),
+          (attachment) =>
+            !attachment.expirationDate ||
+            attachment.expirationDate > new Date(),
         );
 
         const attachmentIds = validAttachments.map(

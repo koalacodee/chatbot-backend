@@ -5,7 +5,7 @@ export interface AttachmentOptions {
   type: string;
   filename: string;
   originalName: string;
-  expirationDate: Date;
+  expirationDate?: Date;
   createdAt?: Date;
   updatedAt?: Date;
   targetId: string;
@@ -16,7 +16,7 @@ export class Attachment {
   private _type: string;
   private _filename: string;
   private _originalName: string;
-  private _expirationDate: Date;
+  private _expirationDate: Date | null;
   private _createdAt: Date;
   private _updatedAt: Date;
   private readonly _targetId: UUID;
@@ -26,7 +26,7 @@ export class Attachment {
     this._type = options.type;
     this._filename = options.filename;
     this._originalName = options.originalName;
-    this._expirationDate = options.expirationDate;
+    this._expirationDate = options.expirationDate ?? null;
     this._createdAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
     if (!options.targetId) {
@@ -67,11 +67,11 @@ export class Attachment {
     this._originalName = value;
   }
 
-  get expirationDate(): Date {
+  get expirationDate(): Date | null {
     return this._expirationDate;
   }
 
-  set expirationDate(value: Date) {
+  set expirationDate(value: Date | null) {
     this._expirationDate = value;
   }
 

@@ -32,7 +32,9 @@ export class GetAttachmentsByTargetIdsUseCase {
 
         // Filter out expired attachments and generate tokens for valid ones
         const validAttachments = targetAttachments.filter(
-          (attachment) => attachment.expirationDate > new Date(),
+          (attachment) =>
+            !attachment.expirationDate ||
+            attachment.expirationDate > new Date(),
         );
 
         const tokens = await Promise.all(

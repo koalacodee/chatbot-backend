@@ -81,7 +81,7 @@ export class GetAttachmentByTokenUseCase {
     });
 
     // Check if attachment is still valid (not expired)
-    if (attachment.expirationDate <= new Date()) {
+    if (attachment.expirationDate && attachment.expirationDate <= new Date()) {
       console.log('GetAttachmentByTokenUseCase - Attachment has expired');
       throw new GoneException('Attachment has expired');
     }
