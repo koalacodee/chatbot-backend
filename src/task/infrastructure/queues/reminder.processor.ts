@@ -48,9 +48,9 @@ export class ReminderProcessor extends WorkerHost {
         task.id.toString(),
         task.title,
         task.assignmentType,
-        task.assigneeId.toString(),
-        task.targetDepartmentId.toString(),
-        task.targetSubDepartmentId.toString(),
+        task.assigneeId?.toString(),
+        task.targetDepartmentId?.toString(),
+        task.targetSubDepartmentId?.toString(),
         task.createdAt,
       );
 
