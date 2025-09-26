@@ -47,7 +47,7 @@ export class SupervisorTaskController {
     return {
       success: true,
       data: result.tasks,
-      count: result.tasks.length,
+      metrics: result.metrics,
       attachments: result.attachments,
     };
   }
@@ -74,7 +74,7 @@ export class SupervisorTaskController {
     return {
       success: true,
       data: result.tasks,
-      count: result.tasks.length,
+      metrics: result.metrics,
       attachments: result.attachments,
     };
   }

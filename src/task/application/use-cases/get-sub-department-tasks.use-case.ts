@@ -9,6 +9,16 @@ interface GetSubDepartmentTasksInput {
   limit?: number;
 }
 
+interface SubDepartmentTasksResult {
+  tasks: Task[];
+  attachments: { [taskId: string]: string[] };
+  metrics: {
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  };
+}
+
 @Injectable()
 export class GetSubDepartmentTasksUseCase {
   constructor(
@@ -18,7 +28,7 @@ export class GetSubDepartmentTasksUseCase {
 
   async execute(
     input: GetSubDepartmentTasksInput,
-  ): Promise<{ tasks: Task[]; attachments: { [taskId: string]: string[] } }> {
+  ): Promise<SubDepartmentTasksResult> {
     const { subDepartmentId } = input;
 
     // Use repository's optimized query for sub-department-level tasks
@@ -30,6 +40,10 @@ export class GetSubDepartmentTasksUseCase {
       targetIds: tasks.map((task) => task.id.toString()),
     });
 
-    return { tasks, attachments };
+    // Get metrics for sub-department-level tasks
+    const metrics =
+      await this.taskRepo.getTaskMetricsForSubDepartment(subDepartmentId);
+
+    return { tasks, attachments, metrics };
   }
 }

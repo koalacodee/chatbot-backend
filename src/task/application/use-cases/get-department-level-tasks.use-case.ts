@@ -9,6 +9,16 @@ interface GetDepartmentLevelTasksInput {
   limit?: number;
 }
 
+interface DepartmentLevelTasksResult {
+  tasks: Task[];
+  attachments: { [taskId: string]: string[] };
+  metrics: {
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  };
+}
+
 @Injectable()
 export class GetDepartmentLevelTasksUseCase {
   constructor(
@@ -18,7 +28,7 @@ export class GetDepartmentLevelTasksUseCase {
 
   async execute(
     input: GetDepartmentLevelTasksInput,
-  ): Promise<{ tasks: Task[]; attachments: { [taskId: string]: string[] } }> {
+  ): Promise<DepartmentLevelTasksResult> {
     const { departmentId } = input;
 
     // Use repository's optimized query for department-level tasks
@@ -29,6 +39,10 @@ export class GetDepartmentLevelTasksUseCase {
       targetIds: tasks.map((task) => task.id.toString()),
     });
 
-    return { tasks, attachments };
+    // Get metrics for department-level tasks
+    const metrics =
+      await this.taskRepo.getTaskMetricsForDepartment(departmentId);
+
+    return { tasks, attachments, metrics };
   }
 }

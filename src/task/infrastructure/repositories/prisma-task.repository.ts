@@ -613,6 +613,106 @@ export class PrismaTaskRepository extends TaskRepository {
     );
   }
 
+  async getTaskMetricsForDepartment(departmentId?: string): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }> {
+    if (!departmentId) {
+      return this.executeMetricsQueryWithoutParameters(
+        `t.assignment_type = 'department'`,
+      );
+    }
+
+    return this.executeMetricsQuery(
+      `t.assignment_type = 'department' AND t.target_department_id = '${departmentId}'::uuid`,
+      [departmentId],
+      'department_tasks',
+      'department_id',
+    );
+  }
+
+  async getTaskMetricsForSubDepartment(subDepartmentId?: string): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }> {
+    if (!subDepartmentId) {
+      return this.executeMetricsQueryWithoutParameters(
+        `t.assignment_type = 'sub_department'`,
+      );
+    }
+
+    return this.executeMetricsQuery(
+      `t.assignment_type = 'sub_department' AND t.target_sub_department_id = '${subDepartmentId}'::uuid`,
+      [subDepartmentId],
+      'sub_department_tasks',
+      'sub_department_id',
+    );
+  }
+
+  async getTaskMetricsForIndividual(assigneeId?: string): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }> {
+    if (!assigneeId) {
+      return this.executeMetricsQueryWithoutParameters(
+        `t.assignment_type = 'individual'`,
+      );
+    }
+
+    return this.executeMetricsQuery(
+      `t.assignment_type = 'individual' AND t.assignee_id = '${assigneeId}'::uuid`,
+      [assigneeId],
+      'individual_tasks',
+      'assignee_id',
+    );
+  }
+
+  private async executeMetricsQueryWithoutParameters(
+    whereClause: string,
+  ): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }> {
+    const query = `
+      WITH task_counts AS (
+        SELECT 
+          COUNT(CASE WHEN t.status IN ('to_do', 'seen', 'pending_review') THEN 1 END) as pending_count,
+          COUNT(CASE WHEN t.status = 'completed' THEN 1 END) as completed_count
+        FROM tasks t
+        WHERE ${whereClause}
+      )
+      SELECT 
+        pending_count,
+        completed_count,
+        CASE 
+          WHEN (pending_count + completed_count) > 0 
+          THEN ROUND((completed_count::numeric / (pending_count + completed_count)) * 100)
+          ELSE 0
+        END as completion_percentage
+      FROM task_counts
+    `;
+
+    const result = await this.prisma.$queryRawUnsafe<
+      [
+        {
+          pending_count: bigint;
+          completed_count: bigint;
+          completion_percentage: number;
+        },
+      ]
+    >(query);
+
+    return {
+      pendingCount: Number(result[0]?.pending_count || 0),
+      completedCount: Number(result[0]?.completed_count || 0),
+      completionPercentage: Number(result[0]?.completion_percentage || 0),
+    };
+  }
+
   private async executeMetricsQuery(
     whereClause: string,
     parameterArray: string[],

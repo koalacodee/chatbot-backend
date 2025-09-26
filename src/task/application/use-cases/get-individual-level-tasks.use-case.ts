@@ -9,6 +9,16 @@ interface GetIndividualLevelTasksInput {
   limit?: number;
 }
 
+interface IndividualLevelTasksResult {
+  tasks: Task[];
+  attachments: { [taskId: string]: string[] };
+  metrics: {
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  };
+}
+
 @Injectable()
 export class GetIndividualLevelTasksUseCase {
   constructor(
@@ -18,7 +28,7 @@ export class GetIndividualLevelTasksUseCase {
 
   async execute(
     input: GetIndividualLevelTasksInput,
-  ): Promise<{ tasks: Task[]; attachments: { [taskId: string]: string[] } }> {
+  ): Promise<IndividualLevelTasksResult> {
     const tasks = await this.taskRepo.findSubIndividualsLevelTasks(
       input.assigneeId,
     );
@@ -28,6 +38,11 @@ export class GetIndividualLevelTasksUseCase {
       targetIds: tasks.map((task) => task.id.toString()),
     });
 
-    return { tasks, attachments };
+    // Get metrics for individual-level tasks
+    const metrics = await this.taskRepo.getTaskMetricsForIndividual(
+      input.assigneeId,
+    );
+
+    return { tasks, attachments, metrics };
   }
 }

@@ -69,6 +69,24 @@ export abstract class TaskRepository {
     completionPercentage: number;
   }>;
 
+  abstract getTaskMetricsForDepartment(departmentId?: string): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }>;
+
+  abstract getTaskMetricsForSubDepartment(subDepartmentId?: string): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }>;
+
+  abstract getTaskMetricsForIndividual(assigneeId?: string): Promise<{
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  }>;
+
   // Database-level filtering for reminder processing
   abstract findTaskForReminder(taskId: string): Promise<Task | null>;
 }
