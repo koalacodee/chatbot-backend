@@ -167,7 +167,7 @@ export class SupportTicketController {
   @Post('verify')
   async verifyTicket(
     @Body() body: VerifyCodeDto,
-  ): Promise<{ ticket: SupportTicket; message: string }> {
+  ): Promise<{ ticket: SupportTicket; message: string; uploadKey?: string }> {
     return this.verifyTicketUseCase.execute({ verificationCode: body.code });
   }
 

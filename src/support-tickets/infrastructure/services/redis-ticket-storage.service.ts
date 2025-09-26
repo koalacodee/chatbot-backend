@@ -6,6 +6,7 @@ interface TemporaryTicketData {
   ticket: any;
   verificationToken: string;
   expiresAt: number;
+  attach?: boolean;
 }
 
 @Injectable()
@@ -18,11 +19,13 @@ export class RedisTicketStorageService {
   async storeTemporaryTicket(
     ticket: SupportTicket,
     verificationToken: string,
+    attach?: boolean,
   ): Promise<void> {
     const data: TemporaryTicketData = {
       ticket: ticket.toJSON(),
       verificationToken,
       expiresAt: Date.now() + this.EXPIRATION_SECONDS * 1000,
+      attach,
     };
 
     await this.redisService.set(

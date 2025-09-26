@@ -73,13 +73,8 @@ export class CreateSupportTicketWithVerificationUseCase {
     await this.redisTicketStorage.storeTemporaryTicket(
       ticket,
       verificationToken,
+      dto.attach,
     );
-
-    // Generate upload key if attachments are requested
-    let uploadKey: string | undefined;
-    if (dto.attach) {
-      uploadKey = await this.fileService.genUploadKey(ticket.id.toString());
-    }
 
     // Send verification email
 

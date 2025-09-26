@@ -16,6 +16,7 @@ import { NotificationRepository } from 'src/notification/domain/repositories/not
 import { Notification } from 'src/notification/domain/entities/notification.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TicketCreatedEvent } from 'src/support-tickets/domain/events/ticket-created.event';
+import { FilesService } from 'src/files/domain/services/files.service';
 
 interface VerifySupportTicketInput {
   verificationCode: string;
@@ -24,6 +25,7 @@ interface VerifySupportTicketInput {
 interface VerifySupportTicketOutput {
   ticket: SupportTicket;
   message: string;
+  uploadKey?: string;
 }
 
 @Injectable()
@@ -35,6 +37,7 @@ export class VerifySupportTicketUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly notificationRepository: NotificationRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly fileService: FilesService,
   ) {}
 
   async execute(
@@ -72,6 +75,14 @@ export class VerifySupportTicketUseCase {
     // Save ticket to database
     const savedTicket = await this.supportTicketRepo.save(ticket);
 
+    // Generate upload key if attachments are requested
+    let uploadKey: string | undefined;
+    if (ticketData.attach) {
+      uploadKey = await this.fileService.genUploadKey(
+        savedTicket.id.toString(),
+      );
+    }
+
     // Clean up Redis storage
     await this.redisTicketStorage.deleteTemporaryTicket(dto.verificationCode);
 
@@ -93,6 +104,7 @@ export class VerifySupportTicketUseCase {
     return {
       ticket: savedTicket,
       message: 'Support ticket verified and submitted successfully',
+      uploadKey,
     };
   }
 
