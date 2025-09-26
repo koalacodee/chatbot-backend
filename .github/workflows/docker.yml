@@ -3,6 +3,9 @@ name: Chilling CI/CD for NestJS + Bun
 # Dispatch workflow manually or on push to main
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build-and-push:
