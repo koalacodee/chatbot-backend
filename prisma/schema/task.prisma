@@ -20,11 +20,6 @@ model Task {
   assignerAdminId      String?     @map("assigner_admin_id") @db.Uuid
   assignerAdmin        Admin?      @relation("AssignerOfTask", fields: [assignerAdminId], references: [id], onDelete: Cascade)
 
-  approverSupervisorId String?     @map("approver_supervisor_id") @db.Uuid
-  approverSupervisor   Supervisor? @relation("ApproverOfTask", fields: [approverSupervisorId], references: [id], onDelete: Cascade)
-  approverAdminId      String?     @map("approver_admin_id") @db.Uuid
-  approverAdmin        Admin?      @relation("ApproverOfTask", fields: [approverAdminId], references: [id], onDelete: Cascade)
-
   status         TaskStatus         @default(TODO) @map("status")
   assignmentType TaskAssignmentType @map("assignment_type")
   priority       TaskPriority       @default(MEDIUM) @map("priority")
@@ -34,29 +29,22 @@ model Task {
   targetSubDepartmentId String?     @map("target_sub_department_id") @db.Uuid
   targetSubDepartment   Department? @relation("TargetSubDepartment", fields: [targetSubDepartmentId], references: [id], onDelete: Cascade)
 
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  completedAt   DateTime? @map("completed_at")
-  assignerNotes String?   @map("assigner_notes") @db.Text
-  feedback      String?   @map("feedback") @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  completedAt DateTime? @map("completed_at")
 
-  performerEmployeeId   String?     @map("performer_employee_id") @db.Uuid
-  performerEmployee     Employee?   @relation("PerformerOfTask", fields: [performerEmployeeId], references: [id], onDelete: Cascade)
-  performerSupervisorId String?     @map("performer_supervisor_id") @db.Uuid
-  performerSupervisor   Supervisor? @relation("PerformerOfTask", fields: [performerSupervisorId], references: [id], onDelete: Cascade)
-  performerAdminId      String?     @map("performer_admin_id") @db.Uuid
-  performerAdmin        Admin?      @relation("PerformerOfTask", fields: [performerAdminId], references: [id], onDelete: Cascade)
+  // Relations to TaskSubmission
+  submissions TaskSubmission[] @relation("TaskSubmission")
 
   // Reminder interval in milliseconds (e.g., 3600000 = 1 hour, 86400000 = 1 day)
   // When set, creates a repeatable BullMQ job to fire TaskReminderEvent
-  reminderInterval      Int?        @map("reminder_interval")
+  reminderInterval Int? @map("reminder_interval")
 
   @@index([assigneeId])
   @@index([assignerSupervisorId])
   @@index([assignerAdminId])
   @@index([targetDepartmentId])
   @@index([targetSubDepartmentId])
-  @@index([approverAdminId, approverSupervisorId, status])
   @@index([priority])
   @@map("tasks")
 }
@@ -85,4 +73,45 @@ enum TaskPriority {
   HIGH   @map("high")
 
   @@map("task_priority")
+}
+
+enum TaskSubmissionStatus {
+  SUBMITTED @map("submitted")
+  APPROVED  @map("approved")
+  REJECTED  @map("rejected")
+
+  @@map("task_submission_status")
+}
+
+model TaskSubmission {
+  id     String @id @map("id") @db.Uuid
+  taskId String @map("task_id") @db.Uuid
+  task   Task   @relation("TaskSubmission", fields: [taskId], references: [id], onDelete: Cascade)
+
+  performerAdminId      String?     @map("performer_admin_id") @db.Uuid
+  performerAdmin        Admin?      @relation("PerformerOfTaskSubmission", fields: [performerAdminId], references: [id], onDelete: Cascade)
+  performerSupervisorId String?     @map("performer_supervisor_id") @db.Uuid
+  performerSupervisor   Supervisor? @relation("PerformerOfTaskSubmission", fields: [performerSupervisorId], references: [id], onDelete: Cascade)
+  performerEmployeeId   String?     @map("performer_employee_id") @db.Uuid
+  performerEmployee     Employee?   @relation("PerformerOfTaskSubmission", fields: [performerEmployeeId], references: [id], onDelete: Cascade)
+
+  notes    String? @map("notes") @db.Text
+  feedback String? @map("feedback") @db.Text
+
+  status      TaskSubmissionStatus @default(SUBMITTED) @map("status")
+  submittedAt DateTime             @default(now()) @map("submitted_at")
+  reviewedAt  DateTime?            @map("reviewed_at")
+
+  reviewedByAdminId      String?     @map("reviewed_by_admin_id") @db.Uuid
+  reviewedByAdmin        Admin?      @relation("ReviewerOfTaskSubmission", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+  reviewedBySupervisorId String?     @map("reviewed_by_supervisor_id") @db.Uuid
+  reviewedBySupervisor   Supervisor? @relation("ReviewerOfTaskSubmission", fields: [reviewedBySupervisorId], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@index([performerAdminId])
+  @@index([performerSupervisorId])
+  @@index([performerEmployeeId])
+  @@index([status])
+  @@index([reviewedByAdminId, reviewedBySupervisorId])
+  @@map("task_submissions")
 }

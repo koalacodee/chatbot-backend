@@ -84,10 +84,10 @@ export class PrismaSupervisorRepository extends SupervisorRepository {
         assignerTasks: true,
         employeeRequests: true,
         promotions: true,
-        approvedTasks: true,
+        tasksReviewed: true,
         questions: true,
         supportTicketAnswersAuthored: true,
-        performerTasks: true,
+        tasksPerformed: true,
       },
     });
     return supervisor ? this.toDomain(supervisor) : null;
@@ -101,10 +101,10 @@ export class PrismaSupervisorRepository extends SupervisorRepository {
         assignerTasks: true,
         employeeRequests: true,
         promotions: true,
-        approvedTasks: true,
+        tasksReviewed: true,
         questions: true,
         supportTicketAnswersAuthored: true,
-        performerTasks: true,
+        tasksPerformed: true,
       },
     });
     return supervisor ? this.toDomain(supervisor) : null;
@@ -117,10 +117,10 @@ export class PrismaSupervisorRepository extends SupervisorRepository {
         assignerTasks: true,
         employeeRequests: true,
         promotions: true,
-        approvedTasks: true,
+        tasksReviewed: true,
         questions: true,
         supportTicketAnswersAuthored: true,
-        performerTasks: true,
+        tasksPerformed: true,
       },
     });
     return Promise.all(supervisors.map((s) => this.toDomain(s)));
@@ -171,10 +171,10 @@ export class PrismaSupervisorRepository extends SupervisorRepository {
         assignerTasks: true,
         employeeRequests: true,
         promotions: true,
-        approvedTasks: true,
+        tasksReviewed: true,
         questions: true,
         supportTicketAnswersAuthored: true,
-        performerTasks: true,
+        tasksPerformed: true,
       },
     });
     return Promise.all(supervisors.map((s) => this.toDomain(s)));
@@ -218,10 +218,10 @@ export class PrismaSupervisorRepository extends SupervisorRepository {
         assignerTasks: true,
         employeeRequests: true,
         promotions: true,
-        approvedTasks: true,
+        tasksReviewed: true,
         questions: true,
         supportTicketAnswersAuthored: true,
-        performerTasks: true,
+        tasksPerformed: true,
       },
     });
     return Promise.all(supervisors.map((s) => this.toDomain(s)));
@@ -268,11 +268,18 @@ export class PrismaSupervisorRepository extends SupervisorRepository {
       await hasRelation(
         this.prisma.task.count({
           where: {
-            OR: [
-              { approverSupervisorId: id },
-              { assignerSupervisorId: id },
-              { performerSupervisorId: id },
-            ],
+            OR: [{ assignerSupervisorId: id }],
+          },
+        }),
+      )
+    )
+      return false;
+
+    if (
+      await hasRelation(
+        this.prisma.taskSubmission.count({
+          where: {
+            OR: [{ performerSupervisorId: id }, { reviewedBySupervisorId: id }],
           },
         }),
       )

@@ -3,11 +3,11 @@ model Admin {
   userId                       String                @unique @map("user_id") @db.Uuid
   user                         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   promotions                   Promotion[]
-  approvedTasks                Task[]                @relation("ApproverOfTask")
+  tasksReviewed                TaskSubmission[]      @relation("ReviewerOfTaskSubmission")
   adminResolutions             EmployeeRequest[]     @relation("AdminResolutions")
   questions                    Question[]
   supportTicketAnswersAuthored SupportTicketAnswer[] @relation("AnswererOfSupportTicketAnswer")
-  performerTasks               Task[]                @relation("PerformerOfTask")
+  tasksPerformed               TaskSubmission[]      @relation("PerformerOfTaskSubmission")
   assignedTasks                Task[]                @relation("AssignerOfTask")
 
   @@map("admins")

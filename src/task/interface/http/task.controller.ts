@@ -30,10 +30,9 @@ import {
 import {
   CreateTaskInputDto,
   UpdateTaskInputDto,
-  SubmitTaskForReviewInputDto,
-  ApproveTaskInputDto,
-  RejectTaskInputDto,
   GetTasksWithFiltersDto,
+  SubmitTaskSubmissionInputDto,
+  RejectTaskSubmissionInputDto,
 } from './dto';
 import { GetTeamTasksDto } from './dto/get-team-tasks.dto';
 import { Task, TaskAssignmentType } from '../../domain/entities/task.entity';
@@ -44,6 +43,7 @@ import {
 } from 'src/rbac/decorators';
 import { EmployeePermissionsEnum as EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
+import { TaskIdDto } from './dto/task-id.dto';
 @Controller('tasks')
 export class TaskController {
   constructor(
@@ -171,40 +171,40 @@ export class TaskController {
 
   // Submit for review
   @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TASKS)
-  @Post(':id/submit-review')
+  @Post(':taskId/submit-review')
   async submitForReview(
-    @Param('id') id: string,
-    @Body() input: SubmitTaskForReviewInputDto,
+    @Param() { taskId }: TaskIdDto,
+    @Body() input: SubmitTaskSubmissionInputDto,
     @Req() req: any,
   ): Promise<{ task: Task; uploadKey?: string }> {
-    return this.submitForReviewUseCase.execute(
-      {
-        taskId: id,
-        submittedBy: req.user.id,
-        notes: input.notes,
-      },
-      req.user.id,
-    );
+    return this.submitForReviewUseCase.execute({
+      ...input,
+      taskId,
+      submittedBy: req.user.id,
+    });
   }
 
   // Approve
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
-  @Post(':id/approve')
-  async approve(@Param('id') id: string, @Req() req: any): Promise<Task> {
-    return this.approveTaskUseCase.execute({ taskId: id }, req.user.id);
+  @Post(':taskId/approve')
+  async approve(
+    @Param() { taskId }: TaskIdDto,
+    @Req() req: any,
+  ): Promise<Task> {
+    return this.approveTaskUseCase.execute({ taskId }, req.user.id);
   }
 
   // Reject
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
   @Post(':id/reject')
   async reject(
-    @Param('id') id: string,
-    @Body() input: RejectTaskInputDto,
+    @Param() { taskId }: TaskIdDto,
+    @Body() input: RejectTaskSubmissionInputDto,
     @Req() req: any,
   ): Promise<Task> {
     return this.rejectTaskUseCase.execute(
       {
-        taskId: id,
+        taskId,
         feedback: input.feedback,
       },
       req.user.id,

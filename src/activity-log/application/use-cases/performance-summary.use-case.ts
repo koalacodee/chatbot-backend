@@ -61,7 +61,7 @@ export class PerformanceSummaryUseCase {
     ).length;
 
     // Tasks performed and average task time
-    const tasks = await this.prisma.task.findMany({
+    const taskSubmissions = await this.prisma.taskSubmission.findMany({
       where: {
         OR: [
           { performerAdminId: userFilter },
@@ -69,13 +69,24 @@ export class PerformanceSummaryUseCase {
           { performerEmployeeId: userFilter },
         ],
       },
-      select: { createdAt: true, completedAt: true },
+      select: {
+        submittedAt: true,
+        reviewedAt: true,
+        status: true,
+        task: {
+          select: { createdAt: true, completedAt: true },
+        },
+      },
     });
-    const tasksPerformed = tasks.length;
-    const taskDurations = tasks
-      .map((t) =>
-        t.completedAt ? t.completedAt.getTime() - t.createdAt.getTime() : null,
-      )
+    const tasksPerformed = taskSubmissions.length;
+    const taskDurations = taskSubmissions
+      .map((ts) => {
+        // Calculate duration from task creation to submission review (approval/rejection)
+        if (ts.reviewedAt && ts.task.createdAt) {
+          return ts.reviewedAt.getTime() - ts.task.createdAt.getTime();
+        }
+        return null;
+      })
       .filter((v): v is number => typeof v === 'number' && isFinite(v));
     const avgTaskTime = taskDurations.length
       ? Math.round(
@@ -84,11 +95,12 @@ export class PerformanceSummaryUseCase {
       : null;
 
     // Tasks approved
-    const tasksApproved = await this.prisma.task.count({
+    const tasksApproved = await this.prisma.taskSubmission.count({
       where: {
+        status: 'APPROVED',
         OR: [
-          { approverAdminId: userFilter },
-          { approverSupervisorId: userFilter },
+          { reviewedByAdminId: userFilter },
+          { reviewedBySupervisorId: userFilter },
         ],
       },
     });

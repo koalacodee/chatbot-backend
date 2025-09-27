@@ -35,7 +35,7 @@ model Employee {
   assigneeTasks                Task[]                  @relation("AssigneeOfTask")
   questions                    Question[]
   supportTicketAnswersAuthored SupportTicketAnswer[]   @relation("AnswererOfSupportTicketAnswer")
-  performerTasks               Task[]                  @relation("PerformerOfTask")
+  tasksPerformed               TaskSubmission[]        @relation("PerformerOfTaskSubmission")
   subDepartments               EmployeeSubDepartment[]
 
   @@map("employees")

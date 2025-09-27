@@ -33,7 +33,6 @@ export interface TaskOptions {
   assignee?: Employee;
   assigner: Admin | Supervisor;
   approver?: Admin | Supervisor;
-  performer?: Admin | Supervisor | Employee;
   status: TaskStatus;
   assignmentType: TaskAssignmentType;
   priority: TaskPriority;
@@ -42,10 +41,6 @@ export interface TaskOptions {
   createdAt?: Date;
   updatedAt?: Date;
   completedAt?: Date;
-  notes?: string;
-  feedback?: string;
-  performerAttachment?: Attachment;
-  assignerAttachment?: Attachment;
   reminderInterval?: number; // in milliseconds
   assigneeId?: string;
   targetDepartmentId?: string;
@@ -60,7 +55,6 @@ export class Task {
   private _assignee?: Employee;
   private _assigner: Admin | Supervisor;
   private _approver?: Admin | Supervisor;
-  private _performer?: Admin | Supervisor | Employee;
   private _status: TaskStatus;
   private _assignmentType: TaskAssignmentType;
   private _priority: TaskPriority;
@@ -69,10 +63,6 @@ export class Task {
   private _createAt: Date;
   private _updatedAt: Date;
   private _completedAt?: Date;
-  private _notes?: string;
-  private _feedback?: string;
-  private _performerAttachment?: Attachment;
-  private _assignerAttachment?: Attachment;
   private _reminderInterval?: number; // in milliseconds
   private _assigneeId?: string;
   private _targetDepartmentId?: string;
@@ -86,7 +76,6 @@ export class Task {
     this._assignee = options.assignee;
     this._assigner = options.assigner;
     this._approver = options.approver;
-    this._performer = options.performer;
     this._status = options.status;
     this._assignmentType = options.assignmentType;
     this._priority = options.priority;
@@ -95,10 +84,6 @@ export class Task {
     this._createAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
     this._completedAt = options.completedAt ?? undefined;
-    this._notes = options.notes ?? undefined;
-    this._feedback = options.feedback ?? undefined;
-    this._performerAttachment = options.performerAttachment;
-    this._assignerAttachment = options.assignerAttachment;
     this._reminderInterval = options.reminderInterval ?? undefined;
     this._assigneeId = options.assigneeId ?? undefined;
     this._targetDepartmentId = options.targetDepartmentId ?? undefined;
@@ -193,38 +178,6 @@ export class Task {
     this._completedAt = value;
   }
 
-  get notes(): string | undefined {
-    return this._notes;
-  }
-
-  set notes(value: string | undefined) {
-    this._notes = value;
-  }
-
-  get feedback(): string | undefined {
-    return this._feedback;
-  }
-
-  set feedback(value: string | undefined) {
-    this._feedback = value;
-  }
-
-  get performerAttachment(): Attachment | undefined {
-    return this._performerAttachment;
-  }
-
-  set performerAttachment(value: Attachment | undefined) {
-    this._performerAttachment = value;
-  }
-
-  get assignerAttachment(): Attachment | undefined {
-    return this._assignerAttachment;
-  }
-
-  set assignerAttachment(value: Attachment | undefined) {
-    this._assignerAttachment = value;
-  }
-
   get reminderInterval(): number | undefined {
     return this._reminderInterval;
   }
@@ -255,14 +208,6 @@ export class Task {
 
   set targetSubDepartmentId(value: string | undefined) {
     this._targetSubDepartmentId = value;
-  }
-
-  get performer(): Admin | Supervisor | Employee | undefined {
-    return this._performer;
-  }
-
-  set performer(value: Admin | Supervisor | Employee | undefined) {
-    this._performer = value;
   }
 
   get assignmentType(): TaskAssignmentType {
@@ -324,7 +269,6 @@ export class Task {
       assignee: this.assignee?.toJSON(),
       assigner: this.assigner?.toJSON(),
       approver: this.approver?.toJSON(),
-      performer: this.performer?.toJSON(),
       status: this.status,
       assignmentType: this.assignmentType,
       priority: this.priority,
@@ -334,10 +278,6 @@ export class Task {
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
       completedAt: this.completedAt?.toISOString(),
-      notes: this.notes,
-      feedback: this.feedback,
-      performerAttachment: this.performerAttachment?.toJSON(),
-      assignerAttachment: this.assignerAttachment?.toJSON(),
       reminderInterval: this.reminderInterval,
       assigneeId: this.assigneeId,
       targetDepartmentId: this.targetDepartmentId,

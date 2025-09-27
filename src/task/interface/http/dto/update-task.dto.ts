@@ -39,15 +39,7 @@ export class UpdateTaskInputDto {
 
   @IsOptional()
   @IsString()
-  approverId?: string | null;
-
-  @IsOptional()
-  @IsString()
   status?: string;
-
-  // @IsOptional()
-  // @IsEnum(UpdateTaskAssignmentType)
-  // assignmentType?: UpdateTaskAssignmentType;
 
   @IsOptional()
   @IsEnum(TaskPriority)
@@ -64,14 +56,6 @@ export class UpdateTaskInputDto {
   @IsOptional()
   @IsString()
   completedAt?: string | null;
-
-  @IsOptional()
-  @IsString()
-  notes?: string | null;
-
-  @IsOptional()
-  @IsString()
-  feedback?: string | null;
 
   @IsOptional()
   @IsBoolean()

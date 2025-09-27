@@ -1,17 +1,17 @@
 model Supervisor {
-  id                           String                @id @map("id") @db.Uuid
-  departments                  Department[]
-  permissions                  AdminPermissions[]
-  userId                       String                @unique @map("user_id") @db.Uuid
-  user                         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignerTasks                Task[]                @relation("AssignerOfTask")
-  employees                    Employee[]
-  promotions                   Promotion[]
-  approvedTasks                Task[]                @relation("ApproverOfTask")
+  id            String             @id @map("id") @db.Uuid
+  departments   Department[]
+  permissions   AdminPermissions[]
+  userId        String             @unique @map("user_id") @db.Uuid
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignerTasks Task[]             @relation("AssignerOfTask")
+  employees     Employee[]
+  promotions    Promotion[]
+  tasksReviewed TaskSubmission[]   @relation("ReviewerOfTaskSubmission")
   employeeRequests             EmployeeRequest[]     @relation("SupervisorRequests")
   questions                    Question[]
   supportTicketAnswersAuthored SupportTicketAnswer[] @relation("AnswererOfSupportTicketAnswer")
-  performerTasks               Task[]                @relation("PerformerOfTask")
+  tasksPerformed               TaskSubmission[]      @relation("PerformerOfTaskSubmission")
   drivers                      Driver[]
 
   createdAt DateTime @default(now()) @map("created_at")

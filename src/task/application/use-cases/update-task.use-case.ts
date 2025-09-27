@@ -35,8 +35,6 @@ interface UpdateTaskInputDto {
   targetDepartmentId?: string;
   targetSubDepartmentId?: string;
   completedAt?: Date | null;
-  notes?: string | null;
-  feedback?: string | null;
   attach?: boolean;
   deleteAttachments?: string[];
   reminderInterval?: number | null; // in milliseconds, null to remove
@@ -131,9 +129,6 @@ export class UpdateTaskUseCase {
     if (dto.status !== undefined) existing.status = dto.status;
     if (dto.completedAt !== undefined)
       existing.completedAt = dto.completedAt ?? null;
-    if (dto.notes !== undefined) existing.notes = dto.notes ?? undefined;
-    if (dto.feedback !== undefined)
-      existing.feedback = dto.feedback ?? undefined;
 
     // Handle reminder interval updates
     if (dto.reminderInterval !== undefined) {

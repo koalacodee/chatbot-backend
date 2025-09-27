@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { TaskRepository } from './domain/repositories/task.repository';
+import { TaskSubmissionRepository } from './domain/repositories/task-submission.repository';
 import { PrismaTaskRepository } from './infrastructure/repositories/prisma-task.repository';
+import { PrismaTaskSubmissionRepository } from './infrastructure/repositories/prisma-task-submission.repository';
 import { PrismaModule } from 'src/common/prisma/prisma.module';
 import { DepartmentModule } from 'src/department/department.module';
 import { SharedModule } from 'src/shared/shared.module';
 import { TaskController } from './interface/http/task.controller';
+import { TaskSubmissionController } from './interface/http/controllers/task-submission.controller';
 import { AdminTaskController } from './interface/http/controllers/admin-task.controller';
 import { SupervisorTaskController } from './interface/http/controllers/supervisor-task.controller';
 import * as UseCases from './application/use-cases';
@@ -29,11 +32,20 @@ import { ReminderProcessor } from './infrastructure/queues/reminder.processor';
       },
     }),
   ],
-  controllers: [TaskController, AdminTaskController, SupervisorTaskController],
+  controllers: [
+    TaskController,
+    TaskSubmissionController,
+    AdminTaskController,
+    SupervisorTaskController,
+  ],
   providers: [
     {
       provide: TaskRepository,
       useClass: PrismaTaskRepository,
+    },
+    {
+      provide: TaskSubmissionRepository,
+      useClass: PrismaTaskSubmissionRepository,
     },
     ...Object.values(UseCases),
     TaskApprovedListener,
@@ -41,6 +53,6 @@ import { ReminderProcessor } from './infrastructure/queues/reminder.processor';
     ReminderQueueService,
     ReminderProcessor,
   ],
-  exports: [TaskRepository, ReminderQueueService],
+  exports: [TaskRepository, TaskSubmissionRepository, ReminderQueueService],
 })
 export class TaskModule {}

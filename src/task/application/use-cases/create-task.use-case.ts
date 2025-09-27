@@ -36,9 +36,7 @@ interface CreateTaskInputDto {
   targetDepartmentId?: string;
   targetSubDepartmentId?: string;
   completedAt?: Date | null;
-  notes?: string;
   priority?: TaskPriority;
-  feedback?: string;
   attach?: boolean;
   reminderInterval?: number; // in milliseconds
 }
@@ -151,8 +149,6 @@ export class CreateTaskUseCase {
       status: dto.status,
       priority: dto.priority ?? TaskPriority.MEDIUM,
       completedAt: dto.completedAt ?? undefined,
-      notes: dto.notes ?? undefined,
-      feedback: dto.feedback ?? undefined,
       reminderInterval: dto.reminderInterval ?? undefined,
     });
 

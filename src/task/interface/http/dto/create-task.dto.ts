@@ -32,10 +32,6 @@ export class CreateTaskInputDto {
   @IsString()
   assigneeId?: string;
 
-  @IsOptional()
-  @IsString()
-  approverId?: string;
-
   @IsEnum(TaskStatus)
   @IsOptional()
   status?: TaskStatus;
@@ -59,14 +55,6 @@ export class CreateTaskInputDto {
   @IsOptional()
   @Type(() => Date)
   completedAt?: Date;
-
-  @IsOptional()
-  @IsString()
-  notes?: string;
-
-  @IsOptional()
-  @IsString()
-  feedback?: string;
 
   @IsOptional()
   @IsBoolean()

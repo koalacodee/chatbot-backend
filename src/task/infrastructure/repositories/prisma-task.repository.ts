@@ -10,9 +10,6 @@ import { Department } from 'src/department/domain/entities/department.entity';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
-import { Roles } from 'src/shared/value-objects/role.vo';
-import { Admin } from 'src/admin/domain/entities/admin.entity';
-import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 
 @Injectable()
 export class PrismaTaskRepository extends TaskRepository {
@@ -73,16 +70,7 @@ export class PrismaTaskRepository extends TaskRepository {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       completedAt: row.completedAt ?? undefined,
-      notes: row.assignerNotes ?? undefined,
-      feedback: row.feedback ?? undefined,
       // attachments handled separately via AttachmentRepository by targetId
-      performer: row.performerAdmin
-        ? Admin.create(row.performerAdmin)
-        : row.performerSupervisor
-          ? Supervisor.create(row.performerSupervisor)
-          : row.performerEmployee
-            ? await Employee.create(row.performerEmployee)
-            : undefined,
       dueDate: row.dueDate,
       reminderInterval: row.reminderInterval ?? undefined,
       assigneeId: row.assigneeId ?? undefined,
@@ -105,14 +93,6 @@ export class PrismaTaskRepository extends TaskRepository {
         task.assigner && 'admin' in task.assigner
           ? task.assigner.id.toString()
           : null,
-      approverAdminId:
-        task.approver && 'admin' in task.approver
-          ? task.approver.id.toString()
-          : null,
-      approverSupervisorId:
-        task.approver && 'supervisor' in task.approver
-          ? task.approver.id.toString()
-          : null,
       status: task.status,
       assignmentType: task.assignmentType,
       priority: task.priority,
@@ -121,20 +101,6 @@ export class PrismaTaskRepository extends TaskRepository {
       createdAt: task.createdAt,
       updatedAt: new Date(),
       completedAt: task.completedAt ?? null,
-      assignerNotes: task.notes ?? null,
-      feedback: task.feedback ?? null,
-      performerAdminId:
-        task?.performer?.user?.role?.getRole() == Roles.ADMIN
-          ? task.performer?.user.id.toString()
-          : null,
-      performerSupervisorId:
-        task?.performer?.user?.role?.getRole() == Roles.SUPERVISOR
-          ? task.performer?.user.id.toString()
-          : null,
-      performerEmployeeId:
-        task?.performer?.user?.role?.getRole() == Roles.EMPLOYEE
-          ? task.performer?.user.id.toString()
-          : null,
       dueDate: task.dueDate,
       reminderInterval: task.reminderInterval ?? null,
     } as const;
@@ -147,8 +113,6 @@ export class PrismaTaskRepository extends TaskRepository {
         assigneeId: data.assigneeId,
         assignerSupervisorId: data.assignerSupervisorId,
         assignerAdminId: data.assignerAdminId,
-        approverAdminId: data.approverAdminId,
-        approverSupervisorId: data.approverSupervisorId,
         status: data.status,
         assignmentType: data.assignmentType,
         priority: data.priority,
@@ -157,11 +121,6 @@ export class PrismaTaskRepository extends TaskRepository {
         updatedAt: data.updatedAt,
         dueDate: task.dueDate,
         completedAt: data.completedAt,
-        assignerNotes: data.assignerNotes,
-        feedback: data.feedback,
-        performerAdminId: data.performerAdminId,
-        performerSupervisorId: data.performerSupervisorId,
-        performerEmployeeId: data.performerEmployeeId,
         reminderInterval: data.reminderInterval,
       },
       create: data,
@@ -169,13 +128,8 @@ export class PrismaTaskRepository extends TaskRepository {
         assignee: true,
         assignerSupervisor: true,
         assignerAdmin: true,
-        approverAdmin: true,
-        approverSupervisor: true,
         targetDepartment: true,
         targetSubDepartment: true,
-        performerAdmin: true,
-        performerSupervisor: true,
-        performerEmployee: true,
       },
     });
 
@@ -189,8 +143,6 @@ export class PrismaTaskRepository extends TaskRepository {
         assignee: true,
         assignerAdmin: true,
         assignerSupervisor: true,
-        approverAdmin: true,
-        approverSupervisor: true,
         targetDepartment: true,
         targetSubDepartment: true,
       },
@@ -240,8 +192,6 @@ export class PrismaTaskRepository extends TaskRepository {
         },
         assignerAdmin: true,
         assignerSupervisor: true,
-        approverAdmin: true,
-        approverSupervisor: true,
         targetDepartment: true,
         targetSubDepartment: true,
       },
@@ -275,8 +225,6 @@ export class PrismaTaskRepository extends TaskRepository {
         assignee: true,
         assignerAdmin: true,
         assignerSupervisor: true,
-        approverAdmin: true,
-        approverSupervisor: true,
         targetDepartment: true,
         targetSubDepartment: true,
       },
@@ -297,8 +245,6 @@ export class PrismaTaskRepository extends TaskRepository {
         assignee: true,
         assignerSupervisor: true,
         assignerAdmin: true,
-        approverAdmin: true,
-        approverSupervisor: true,
         targetDepartment: true,
         targetSubDepartment: true,
       },
@@ -329,8 +275,6 @@ export class PrismaTaskRepository extends TaskRepository {
         assignee: true,
         assignerAdmin: true,
         assignerSupervisor: true,
-        approverAdmin: true,
-        approverSupervisor: true,
         targetDepartment: true,
         targetSubDepartment: true,
       },
@@ -351,8 +295,6 @@ export class PrismaTaskRepository extends TaskRepository {
       include: {
         assignerAdmin: true,
         assignerSupervisor: true,
-        approverAdmin: true,
-        approverSupervisor: true,
         targetDepartment: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -372,8 +314,6 @@ export class PrismaTaskRepository extends TaskRepository {
       include: {
         assignerAdmin: true,
         assignerSupervisor: true,
-        approverAdmin: true,
-        approverSupervisor: true,
         targetSubDepartment: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -394,8 +334,6 @@ export class PrismaTaskRepository extends TaskRepository {
         assignee: { include: { user: true } },
         assignerAdmin: true,
         assignerSupervisor: true,
-        approverAdmin: true,
-        approverSupervisor: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -457,8 +395,6 @@ export class PrismaTaskRepository extends TaskRepository {
         assignee: true,
         assignerAdmin: true,
         assignerSupervisor: true,
-        approverAdmin: true,
-        approverSupervisor: true,
         targetDepartment: true,
         targetSubDepartment: true,
       },
@@ -506,8 +442,6 @@ export class PrismaTaskRepository extends TaskRepository {
           assignee: true,
           assignerAdmin: true,
           assignerSupervisor: true,
-          approverAdmin: true,
-          approverSupervisor: true,
           targetDepartment: true,
           targetSubDepartment: true,
         },
@@ -561,8 +495,6 @@ export class PrismaTaskRepository extends TaskRepository {
           assignee: true,
           assignerAdmin: true,
           assignerSupervisor: true,
-          approverAdmin: true,
-          approverSupervisor: true,
           targetDepartment: true,
           targetSubDepartment: true,
         },
