@@ -24,6 +24,7 @@ import { TaskPerformedEvent } from 'src/task/domain/events/task-performed.event'
 import { TaskSubmittedEvent } from '../../domain/events/task-submitted.event';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 import {
   Task,
   TaskAssignmentType,
@@ -49,6 +50,7 @@ export class SubmitTaskSubmissionUseCase {
     private readonly departmentRepository: DepartmentRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
+    private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
   ) {}
 
   async getSubmitterByUser(
@@ -66,9 +68,11 @@ export class SubmitTaskSubmissionUseCase {
     }
   }
 
-  async execute(
-    dto: SubmitTaskSubmissionInputDto,
-  ): Promise<{ taskSubmission: TaskSubmission; uploadKey?: string }> {
+  async execute(dto: SubmitTaskSubmissionInputDto): Promise<{
+    taskSubmission: TaskSubmission;
+    uploadKey?: string;
+    attachments: { [taskSubmissionId: string]: string[] };
+  }> {
     const [existingTask, submitter] = await Promise.all([
       this.taskRepo.findById(dto.taskId),
       this.userRepo
@@ -78,13 +82,8 @@ export class SubmitTaskSubmissionUseCase {
 
     if (!existingTask) throw new NotFoundException({ id: 'task_not_found' });
     if (!submitter) throw new NotFoundException({ submittedBy: 'not_found' });
-
-    // Check if task already has a submission
-    const existingSubmission = await this.taskSubmissionRepo.findByTaskId(
-      dto.taskId,
-    );
-    if (existingSubmission) {
-      throw new BadRequestException('Task already has a submission');
+    if (existingTask.status === TaskStatus.COMPLETED) {
+      throw new BadRequestException({ task: 'already_completed' });
     }
 
     // Check department access if userId is provided
@@ -173,7 +172,12 @@ export class SubmitTaskSubmissionUseCase {
       );
     }
 
-    return { taskSubmission: savedSubmission, uploadKey };
+    // Get attachments for the saved submission
+    const attachments = await this.getAttachmentsUseCase.execute({
+      targetIds: [savedSubmission.id.toString()],
+    });
+
+    return { taskSubmission: savedSubmission, uploadKey, attachments };
   }
 
   private async checkTaskAccess(

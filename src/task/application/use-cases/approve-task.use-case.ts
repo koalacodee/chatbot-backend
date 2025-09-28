@@ -20,20 +20,28 @@ export class ApproveTaskUseCase {
     const task = await this.taskRepo.findById(dto.taskId);
     if (!task) throw new NotFoundException({ id: 'task_not_found' });
 
-    // Find the task submission
-    const taskSubmission = await this.taskSubmissionRepo.findByTaskId(
+    // Find all pending task submissions
+    const taskSubmissions = await this.taskSubmissionRepo.findByTaskId(
       dto.taskId,
     );
-    if (!taskSubmission) {
-      throw new NotFoundException('No submission found for this task');
-    }
-
-    // Approve the task submission
-    const approvedSubmission = await this.approveTaskSubmissionUseCase.execute(
-      { taskSubmissionId: taskSubmission.id.toString() },
-      userId,
+    const pendingSubmissions = taskSubmissions.filter(
+      (submission) => submission.status === 'SUBMITTED',
     );
 
-    return approvedSubmission.task;
+    if (pendingSubmissions.length === 0) {
+      throw new NotFoundException('No pending submissions found for this task');
+    }
+
+    // Approve all pending submissions
+    const approvedSubmissions = await Promise.all(
+      pendingSubmissions.map((submission) =>
+        this.approveTaskSubmissionUseCase.execute(
+          { taskSubmissionId: submission.id.toString() },
+          userId,
+        ),
+      ),
+    );
+
+    return approvedSubmissions[0].taskSubmission.task;
   }
 }

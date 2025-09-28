@@ -21,6 +21,7 @@ import { TaskRejectedEvent } from '../../domain/events/task-rejected.event';
 import { Task, TaskStatus } from '../../domain/entities/task.entity';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { Admin } from 'src/admin/domain/entities/admin.entity';
+import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 
 interface RejectTaskSubmissionInputDto {
   taskSubmissionId: string;
@@ -38,12 +39,16 @@ export class RejectTaskSubmissionUseCase {
     private readonly userRepository: UserRepository,
     private readonly departmentHierarchyService: DepartmentHierarchyService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
   ) {}
 
   async execute(
     dto: RejectTaskSubmissionInputDto,
     userId: string,
-  ): Promise<TaskSubmission> {
+  ): Promise<{
+    taskSubmission: TaskSubmission;
+    attachments: { [taskSubmissionId: string]: string[] };
+  }> {
     if (!userId) {
       throw new BadRequestException('User ID is required');
     }
@@ -90,7 +95,12 @@ export class RejectTaskSubmissionUseCase {
       ),
     ]);
 
-    return savedSubmission;
+    // Get attachments for the rejected submission
+    const attachments = await this.getAttachmentsUseCase.execute({
+      targetIds: [savedSubmission.id.toString()],
+    });
+
+    return { taskSubmission: savedSubmission, attachments };
   }
 
   private async validateRejectionRights(

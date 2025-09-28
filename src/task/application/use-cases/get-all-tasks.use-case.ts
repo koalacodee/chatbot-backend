@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { Task } from '../../domain/entities/task.entity';
+import { TaskSubmission } from '../../domain/entities/task-submission.entity';
+import { TaskSubmissionRepository } from '../../domain/repositories/task-submission.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
@@ -11,6 +13,7 @@ import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-ca
 export class GetAllTasksUseCase {
   constructor(
     private readonly taskRepo: TaskRepository,
+    private readonly taskSubmissionRepo: TaskSubmissionRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
@@ -21,7 +24,11 @@ export class GetAllTasksUseCase {
     offset?: number,
     limit?: number,
     userId?: string,
-  ): Promise<{ tasks: Task[]; attachments: { [taskId: string]: string[] } }> {
+  ): Promise<{
+    tasks: Task[];
+    submissions: TaskSubmission[];
+    attachments: { [taskId: string]: string[] };
+  }> {
     let departmentIds: string[] | undefined = undefined;
 
     // Apply department filtering if userId is provided
@@ -33,11 +40,16 @@ export class GetAllTasksUseCase {
 
     const tasks = await this.taskRepo.findAll(offset, limit, departmentIds);
 
-    const attachments = await this.getAttachmentsUseCase.execute({
-      targetIds: tasks.map((task) => task.id.toString()),
-    });
+    const [attachments, submissions] = await Promise.all([
+      this.getAttachmentsUseCase.execute({
+        targetIds: tasks.map((task) => task.id.toString()),
+      }),
+      this.taskSubmissionRepo.findByTaskIds(
+        tasks.map((task) => task.id.toString()),
+      ),
+    ]);
 
-    return { tasks, attachments };
+    return { tasks, submissions, attachments };
   }
 
   private async getUserDepartmentIds(

@@ -15,6 +15,7 @@ export interface TaskSubmissionOptions {
   task: Task;
   performerId: string;
   performerType: 'admin' | 'supervisor' | 'employee';
+  performerName?: string;
   performer?: Admin | Supervisor | Employee;
   notes?: string;
   feedback?: string;
@@ -29,6 +30,7 @@ export class TaskSubmission {
   private _task: Task;
   private _performerId: string;
   private _performerType: 'admin' | 'supervisor' | 'employee';
+  private _performerName?: string;
   private _performer?: Admin | Supervisor | Employee;
   private _notes?: string;
   private _feedback?: string;
@@ -42,6 +44,7 @@ export class TaskSubmission {
     this._task = options.task;
     this._performerId = options.performerId;
     this._performerType = options.performerType;
+    this._performerName = options.performerName ?? undefined;
     this._performer = options.performer ?? undefined;
     this._notes = options.notes ?? undefined;
     this._feedback = options.feedback ?? undefined;
@@ -81,6 +84,14 @@ export class TaskSubmission {
 
   set performerType(value: 'admin' | 'supervisor' | 'employee') {
     this._performerType = value;
+  }
+
+  get performerName(): string | undefined {
+    return this._performerName ?? undefined;
+  }
+
+  set performerName(value: string | undefined) {
+    this._performerName = value;
   }
 
   get performer(): Admin | Supervisor | Employee | undefined {
@@ -173,9 +184,10 @@ export class TaskSubmission {
   toJSON(): any {
     return {
       id: this.id.toString(),
-      taskId: this.task.id.toString(),
+      taskId: this.task?.id?.toString() || null,
       performerId: this.performerId,
       performerType: this.performerType,
+      performerName: this.performerName,
       performer: this.performer?.toJSON(),
       notes: this.notes,
       feedback: this.feedback,

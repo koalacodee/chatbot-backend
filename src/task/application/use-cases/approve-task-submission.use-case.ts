@@ -21,6 +21,7 @@ import { AdminRepository } from 'src/admin/domain/repositories/admin.repository'
 import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { Task, TaskStatus } from '../../domain/entities/task.entity';
+import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 
 interface ApproveTaskSubmissionInputDto {
   taskSubmissionId: string;
@@ -38,12 +39,16 @@ export class ApproveTaskSubmissionUseCase {
     private readonly departmentHierarchyService: DepartmentHierarchyService,
     private readonly eventEmitter: EventEmitter2,
     private readonly adminRepository: AdminRepository,
+    private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
   ) {}
 
   async execute(
     dto: ApproveTaskSubmissionInputDto,
     userId?: string,
-  ): Promise<TaskSubmission> {
+  ): Promise<{
+    taskSubmission: TaskSubmission;
+    attachments: { [taskSubmissionId: string]: string[] };
+  }> {
     const [taskSubmission, approver] = await Promise.all([
       this.taskSubmissionRepo.findById(dto.taskSubmissionId),
       this.userRepo.findById(userId),
@@ -94,7 +99,12 @@ export class ApproveTaskSubmissionUseCase {
       ),
     ]);
 
-    return savedSubmission;
+    // Get attachments for the approved submission
+    const attachments = await this.getAttachmentsUseCase.execute({
+      targetIds: [savedSubmission.id.toString()],
+    });
+
+    return { taskSubmission: savedSubmission, attachments };
   }
 
   private async validateApprovalRights(

@@ -37,6 +37,7 @@ export class TaskSubmissionController {
     return {
       taskSubmission: result.taskSubmission.toJSON(),
       uploadKey: result.uploadKey,
+      attachments: result.attachments,
     };
   }
 
@@ -46,12 +47,13 @@ export class TaskSubmissionController {
     @Body() input: ApproveTaskSubmissionInputDto,
     @Request() req: any,
   ) {
-    const taskSubmission = await this.approveTaskSubmissionUseCase.execute(
+    const result = await this.approveTaskSubmissionUseCase.execute(
       input,
       req.user.id,
     );
     return {
-      taskSubmission: taskSubmission.toJSON(),
+      taskSubmission: result.taskSubmission.toJSON(),
+      attachments: result.attachments,
     };
   }
 
@@ -61,31 +63,35 @@ export class TaskSubmissionController {
     @Body() input: RejectTaskSubmissionInputDto,
     @Request() req: any,
   ) {
-    const taskSubmission = await this.rejectTaskSubmissionUseCase.execute(
+    const result = await this.rejectTaskSubmissionUseCase.execute(
       input,
       req.user.id,
     );
     return {
-      taskSubmission: taskSubmission.toJSON(),
+      taskSubmission: result.taskSubmission.toJSON(),
+      attachments: result.attachments,
     };
   }
 
   @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TASKS)
   @Get(':id')
   async getTaskSubmission(@Param('id') id: string) {
-    const taskSubmission = await this.getTaskSubmissionUseCase.execute(id);
+    const result = await this.getTaskSubmissionUseCase.execute(id);
     return {
-      taskSubmission: taskSubmission.toJSON(),
+      taskSubmission: result.taskSubmission.toJSON(),
+      attachments: result.attachments,
     };
   }
 
   @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TASKS)
   @Get('task/:taskId')
   async getTaskSubmissionByTaskId(@Param('taskId') taskId: string) {
-    const taskSubmission =
-      await this.getTaskSubmissionUseCase.executeByTaskId(taskId);
+    const result = await this.getTaskSubmissionUseCase.executeByTaskId(taskId);
     return {
-      taskSubmission: taskSubmission?.toJSON() || null,
+      taskSubmissions: result.taskSubmissions.map((submission) =>
+        submission.toJSON(),
+      ),
+      attachments: result.attachments,
     };
   }
 }

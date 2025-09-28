@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { Task } from '../../domain/entities/task.entity';
+import { TaskSubmission } from '../../domain/entities/task-submission.entity';
+import { TaskSubmissionRepository } from '../../domain/repositories/task-submission.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
@@ -22,6 +24,7 @@ export interface GetTeamTasksInput {
 export class GetTeamTasksUseCase {
   constructor(
     private readonly taskRepository: TaskRepository,
+    private readonly taskSubmissionRepository: TaskSubmissionRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
@@ -31,7 +34,11 @@ export class GetTeamTasksUseCase {
   async execute(
     input: GetTeamTasksInput,
     userId?: string,
-  ): Promise<{ tasks: Task[]; attachments: { [taskId: string]: string[] } }> {
+  ): Promise<{
+    tasks: Task[];
+    submissions: TaskSubmission[];
+    attachments: { [taskId: string]: string[] };
+  }> {
     const { employeeId, subDepartmentId, departmentId, status, offset, limit } =
       input;
 
@@ -48,10 +55,10 @@ export class GetTeamTasksUseCase {
       // Filter department and subDepartment IDs based on user access
       if (userDepartmentIds.length > 0) {
         if (departmentId && !userDepartmentIds.includes(departmentId)) {
-          return { tasks: [], attachments: {} }; // User doesn't have access to this department
+          return { tasks: [], submissions: [], attachments: {} }; // User doesn't have access to this department
         }
         if (subDepartmentId && !userDepartmentIds.includes(subDepartmentId)) {
-          return { tasks: [], attachments: {} }; // User doesn't have access to this sub-department
+          return { tasks: [], submissions: [], attachments: {} }; // User doesn't have access to this sub-department
         }
       }
     }
@@ -66,12 +73,17 @@ export class GetTeamTasksUseCase {
       limit,
     });
 
-    // Get attachments for all tasks
-    const attachments = await this.getAttachmentsUseCase.execute({
-      targetIds: tasks.map((task) => task.id.toString()),
-    });
+    // Get attachments and submissions for all tasks
+    const [attachments, submissions] = await Promise.all([
+      this.getAttachmentsUseCase.execute({
+        targetIds: tasks.map((task) => task.id.toString()),
+      }),
+      this.taskSubmissionRepository.findByTaskIds(
+        tasks.map((task) => task.id.toString()),
+      ),
+    ]);
 
-    return { tasks, attachments };
+    return { tasks, submissions, attachments };
   }
 
   private async getUserDepartmentIds(

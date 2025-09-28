@@ -21,23 +21,31 @@ export class RejectTaskUseCase {
     const task = await this.taskRepo.findById(dto.taskId);
     if (!task) throw new NotFoundException({ id: 'task_not_found' });
 
-    // Find the task submission
-    const taskSubmission = await this.taskSubmissionRepo.findByTaskId(
+    // Find all pending task submissions
+    const taskSubmissions = await this.taskSubmissionRepo.findByTaskId(
       dto.taskId,
     );
-    if (!taskSubmission) {
-      throw new NotFoundException('No submission found for this task');
-    }
-
-    // Reject the task submission
-    const rejectedSubmission = await this.rejectTaskSubmissionUseCase.execute(
-      {
-        taskSubmissionId: taskSubmission.id.toString(),
-        feedback: dto.feedback,
-      },
-      userId,
+    const pendingSubmissions = taskSubmissions.filter(
+      (submission) => submission.status === 'SUBMITTED',
     );
 
-    return rejectedSubmission.task;
+    if (pendingSubmissions.length === 0) {
+      throw new NotFoundException('No pending submissions found for this task');
+    }
+
+    // Reject all pending submissions
+    const rejectedSubmissions = await Promise.all(
+      pendingSubmissions.map((submission) =>
+        this.rejectTaskSubmissionUseCase.execute(
+          {
+            taskSubmissionId: submission.id.toString(),
+            feedback: dto.feedback,
+          },
+          userId,
+        ),
+      ),
+    );
+
+    return rejectedSubmissions[0].taskSubmission.task;
   }
 }

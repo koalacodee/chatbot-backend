@@ -4,7 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Task } from '../../domain/entities/task.entity';
+import { TaskSubmission } from '../../domain/entities/task-submission.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
+import { TaskSubmissionRepository } from '../../domain/repositories/task-submission.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
@@ -24,6 +26,7 @@ interface MyTasksResult {
   tasks: Task[];
   total: number;
   canSubmitWork: boolean[];
+  submissions: TaskSubmission[];
   attachments: { [taskId: string]: string[] };
   metrics: {
     pendingCount: number;
@@ -36,6 +39,7 @@ interface MyTasksResult {
 export class GetMyTasksUseCase {
   constructor(
     private readonly taskRepo: TaskRepository,
+    private readonly taskSubmissionRepo: TaskSubmissionRepository,
     private readonly userRepo: UserRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
@@ -81,6 +85,7 @@ export class GetMyTasksUseCase {
         tasks: [],
         total: 0,
         canSubmitWork: [],
+        submissions: [],
         attachments: {},
         metrics: {
           pendingCount: 0,
@@ -101,14 +106,20 @@ export class GetMyTasksUseCase {
       supervisorDepartmentIds,
     );
 
-    const attachments = await this.getAttachmentsUseCase.execute({
-      targetIds: result.tasks.map((task) => task.id.toString()),
-    });
+    const [attachments, submissions] = await Promise.all([
+      this.getAttachmentsUseCase.execute({
+        targetIds: result.tasks.map((task) => task.id.toString()),
+      }),
+      this.taskSubmissionRepo.findByTaskIds(
+        result.tasks.map((task) => task.id.toString()),
+      ),
+    ]);
 
     return {
       tasks: result.tasks,
       total: result.total,
       canSubmitWork: result.tasks.map(() => true),
+      submissions,
       attachments,
       metrics,
     };
@@ -141,9 +152,14 @@ export class GetMyTasksUseCase {
       employeeSubDepartmentIds,
     );
 
-    const attachments = await this.getAttachmentsUseCase.execute({
-      targetIds: result.tasks.map((task) => task.id.toString()),
-    });
+    const [attachments, submissions] = await Promise.all([
+      this.getAttachmentsUseCase.execute({
+        targetIds: result.tasks.map((task) => task.id.toString()),
+      }),
+      this.taskSubmissionRepo.findByTaskIds(
+        result.tasks.map((task) => task.id.toString()),
+      ),
+    ]);
 
     return {
       tasks: result.tasks,
@@ -158,6 +174,7 @@ export class GetMyTasksUseCase {
           );
         return isAssignedToEmployee || isInSubDepartment;
       }),
+      submissions,
       attachments,
       metrics,
     };

@@ -24,7 +24,7 @@ export class ReminderProcessor extends WorkerHost {
 
     try {
       // Fetch task with database-level filtering
-      const task = await this.taskRepository.findTaskForReminder(taskId);
+      const task = await this.taskRepository.findById(taskId);
 
       if (!task) {
         // Task doesn't exist or is not in a state that should receive reminders
@@ -36,7 +36,8 @@ export class ReminderProcessor extends WorkerHost {
       // Check if task is still in a state that should receive reminders
       if (
         task.status === TaskStatus.COMPLETED ||
-        task.status === TaskStatus.PENDING_REVIEW
+        task.status === TaskStatus.PENDING_REVIEW ||
+        task.status === TaskStatus.SEEN
       ) {
         // Task is completed or under review, remove the repeatable job
         await this.removeRepeatableJob(job);

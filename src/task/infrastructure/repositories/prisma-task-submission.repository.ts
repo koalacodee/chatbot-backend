@@ -20,6 +20,8 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
   }
 
   private async toDomain(row: any): Promise<TaskSubmission> {
+    console.log(row);
+
     const task = await this.taskRepository.findById(row.taskId);
     if (!task) {
       throw new Error(`Task with id ${row.taskId} not found`);
@@ -29,19 +31,23 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
     let performerId: string;
     let performerType: 'admin' | 'supervisor' | 'employee';
     let performer: Admin | Supervisor | Employee | undefined;
+    let performerName: string | undefined;
 
     if (row.performerAdminId && row.performerAdmin) {
       performerId = row.performerAdminId;
       performerType = 'admin';
       performer = Admin.create(row.performerAdmin);
+      performerName = row.performerAdmin.user.name;
     } else if (row.performerSupervisorId && row.performerSupervisor) {
       performerId = row.performerSupervisorId;
       performerType = 'supervisor';
-      performer = Supervisor.create(row.performerSupervisor);
+      // performer = Supervisor.create(row.performerSupervisor);
+      performerName = row.performerSupervisor.user.name;
     } else if (row.performerEmployeeId && row.performerEmployee) {
       performerId = row.performerEmployeeId;
       performerType = 'employee';
       performer = await Employee.create(row.performerEmployee);
+      performerName = row.performerEmployee.user.name;
     } else {
       // Fallback to ID only if relation is not loaded
       if (row.performerAdminId) {
@@ -72,6 +78,7 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
       performerId,
       performerType,
       performer,
+      performerName,
       notes: row.notes ?? undefined,
       feedback: row.feedback ?? undefined,
       status: row.status as TaskSubmissionStatus,
@@ -144,7 +151,9 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
       where: { id },
       include: {
         performerAdmin: true,
-        performerSupervisor: true,
+        performerSupervisor: {
+          select: { user: { select: { name: true } } },
+        },
         performerEmployee: true,
         reviewedByAdmin: true,
         reviewedBySupervisor: true,
@@ -155,20 +164,22 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
     return this.toDomain(row);
   }
 
-  async findByTaskId(taskId: string): Promise<TaskSubmission | null> {
-    const row = await this.prisma.taskSubmission.findFirst({
+  async findByTaskId(taskId: string): Promise<TaskSubmission[]> {
+    const rows = await this.prisma.taskSubmission.findMany({
       where: { taskId },
       include: {
         performerAdmin: true,
-        performerSupervisor: true,
+        performerSupervisor: {
+          select: { user: { select: { name: true } } },
+        },
         performerEmployee: true,
         reviewedByAdmin: true,
         reviewedBySupervisor: true,
       },
+      orderBy: { submittedAt: 'desc' },
     });
 
-    if (!row) return null;
-    return this.toDomain(row);
+    return Promise.all(rows.map((row) => this.toDomain(row)));
   }
 
   async findByPerformerId(performerId: string): Promise<TaskSubmission[]> {
@@ -182,7 +193,9 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
       },
       include: {
         performerAdmin: true,
-        performerSupervisor: true,
+        performerSupervisor: {
+          select: { user: { select: { name: true } } },
+        },
         performerEmployee: true,
         reviewedByAdmin: true,
         reviewedBySupervisor: true,
@@ -197,7 +210,9 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
       where: { status: status as TaskSubmissionStatus },
       include: {
         performerAdmin: true,
-        performerSupervisor: true,
+        performerSupervisor: {
+          select: { user: { select: { name: true } } },
+        },
         performerEmployee: true,
         reviewedByAdmin: true,
         reviewedBySupervisor: true,
@@ -211,7 +226,9 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
     const rows = await this.prisma.taskSubmission.findMany({
       include: {
         performerAdmin: true,
-        performerSupervisor: true,
+        performerSupervisor: {
+          select: { user: { select: { name: true } } },
+        },
         performerEmployee: true,
         reviewedByAdmin: true,
         reviewedBySupervisor: true,
@@ -232,7 +249,9 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
       where: { taskId: { in: taskIds } },
       include: {
         performerAdmin: true,
-        performerSupervisor: true,
+        performerSupervisor: {
+          select: { user: { select: { name: true } } },
+        },
         performerEmployee: true,
         reviewedByAdmin: true,
         reviewedBySupervisor: true,

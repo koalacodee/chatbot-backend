@@ -41,7 +41,7 @@ export class ReminderQueueService {
     const jobId = `reminder-${taskId}`;
 
     // Remove the repeatable job
-    await this.reminderQueue.removeRepeatableByKey(
+    await this.reminderQueue.removeJobScheduler(
       `repeat:${jobId}:${this.reminderQueue.name}`,
     );
 

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Task } from '../../domain/entities/task.entity';
+import { TaskSubmission } from '../../domain/entities/task-submission.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
+import { TaskSubmissionRepository } from '../../domain/repositories/task-submission.repository';
 import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 
 interface GetSubDepartmentTasksInput {
@@ -11,6 +13,7 @@ interface GetSubDepartmentTasksInput {
 
 interface SubDepartmentTasksResult {
   tasks: Task[];
+  submissions: TaskSubmission[];
   attachments: { [taskId: string]: string[] };
   metrics: {
     pendingCount: number;
@@ -23,6 +26,7 @@ interface SubDepartmentTasksResult {
 export class GetSubDepartmentTasksUseCase {
   constructor(
     private readonly taskRepo: TaskRepository,
+    private readonly taskSubmissionRepo: TaskSubmissionRepository,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
   ) {}
 
@@ -35,15 +39,20 @@ export class GetSubDepartmentTasksUseCase {
     const tasks =
       await this.taskRepo.findSubDepartmentLevelTasks(subDepartmentId);
 
-    // Get attachments for all tasks
-    const attachments = await this.getAttachmentsUseCase.execute({
-      targetIds: tasks.map((task) => task.id.toString()),
-    });
+    // Get attachments and submissions for all tasks
+    const [attachments, submissions] = await Promise.all([
+      this.getAttachmentsUseCase.execute({
+        targetIds: tasks.map((task) => task.id.toString()),
+      }),
+      this.taskSubmissionRepo.findByTaskIds(
+        tasks.map((task) => task.id.toString()),
+      ),
+    ]);
 
     // Get metrics for sub-department-level tasks
     const metrics =
       await this.taskRepo.getTaskMetricsForSubDepartment(subDepartmentId);
 
-    return { tasks, attachments, metrics };
+    return { tasks, submissions, attachments, metrics };
   }
 }

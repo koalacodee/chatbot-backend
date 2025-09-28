@@ -709,7 +709,7 @@ export class PrismaTaskRepository extends TaskRepository {
       where: {
         id: taskId,
         status: {
-          in: ['TODO', 'SEEN'], // Only tasks that can receive reminders
+          in: ['TODO'], // Only tasks that can receive reminders
         },
       },
       select: {
