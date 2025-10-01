@@ -550,4 +550,60 @@ export class PrismaActivityLogRepository extends ActivityLogRepository {
 
     return data;
   }
+
+  async getRecentActivity(limit: number = 10) {
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        id: string;
+        type: string;
+        description: string;
+        timestamp: string;
+        meta: any;
+      }>
+    >`
+      WITH base AS (
+        SELECT id, type::text AS type,
+               title,
+               item_id,
+               meta,
+               occurred_at
+        FROM activity_logs
+        ORDER BY occurred_at DESC
+        LIMIT ${limit}
+      )
+      SELECT
+        b.id,
+        CASE b.type
+          WHEN 'ticket_answered' THEN 'ticket'
+          WHEN 'task_performed' THEN 'task'
+          WHEN 'task_approved' THEN 'task'
+          WHEN 'faq_created' THEN 'faq'
+          WHEN 'faq_updated' THEN 'faq'
+          WHEN 'promotion_created' THEN 'promotion'
+          WHEN 'staff_request_created' THEN 'user'
+          ELSE 'user'
+        END AS type,
+        CASE b.type
+          WHEN 'ticket_answered' THEN CONCAT('Ticket ', b.title, ' answered')
+          WHEN 'task_performed' THEN CONCAT('Task ', b.title, ' performed')
+          WHEN 'task_approved' THEN CONCAT('Task ', b.title, ' approved')
+          WHEN 'faq_created' THEN CONCAT('FAQ ', b.title, ' created')
+          WHEN 'faq_updated' THEN CONCAT('FAQ ', b.title, ' updated')
+          WHEN 'promotion_created' THEN CONCAT('Promotion ', b.title, ' created')
+          WHEN 'staff_request_created' THEN CONCAT('User ', b.title, ' requested')
+          ELSE b.title
+        END AS description,
+        b.occurred_at::text AS timestamp,
+        COALESCE(b.meta, '{}'::jsonb) AS meta
+      FROM base b;
+    `;
+
+    return rows.map((r) => ({
+      id: r.id,
+      type: r.type as any,
+      description: r.description,
+      timestamp: r.timestamp,
+      meta: r.meta,
+    }));
+  }
 }

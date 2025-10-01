@@ -23,9 +23,11 @@ import { GetEmployeeRequestsDto } from './dto/get-employee-requests.dto';
 import { SupervisorPermissions } from 'src/rbac/decorators';
 import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
+import { GetPendingPreviewUseCase } from '../../application/use-cases/get-pending-preview.use-case';
+import { GetPendingPreviewQueryDto } from './dto/get-employee-requests.dto';
 
 @Controller('employee-requests')
-@UseGuards(UserJwtAuthGuard)
+// @UseGuards(UserJwtAuthGuard)
 export class EmployeeRequestController {
   constructor(
     private readonly submitEmployeeRequestUseCase: SubmitEmployeeRequestUseCase,
@@ -33,6 +35,7 @@ export class EmployeeRequestController {
     private readonly rejectEmployeeRequestUseCase: RejectEmployeeRequestUseCase,
     private readonly getEmployeeRequestsUseCase: GetEmployeeRequestsUseCase,
     private readonly getEmployeeRequestByIdUseCase: GetEmployeeRequestByIdUseCase,
+    private readonly getPendingPreviewUseCase: GetPendingPreviewUseCase,
   ) {}
 
   @Post()
@@ -80,5 +83,12 @@ export class EmployeeRequestController {
       ...rejectEmployeeRequestDto,
       adminId: req.user.id,
     });
+  }
+
+  @Get('pending')
+  // @SupervisorPermissions()
+  async getPendingPreview(@Query() query: GetPendingPreviewQueryDto) {
+    const limit = query.limit ? Number(query.limit) : 5;
+    return this.getPendingPreviewUseCase.execute(limit);
   }
 }

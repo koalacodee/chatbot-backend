@@ -5,6 +5,7 @@ import {
   PerformanceSummaryUseCase,
   SearchUsersUseCase,
 } from '../../application/use-cases';
+import { GetRecentActivityUseCase } from 'src/activity-log/application/use-cases/get-recent-activity.use-case';
 import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 import {
   EmployeePermissions,
@@ -21,6 +22,7 @@ export class ActivityLogController {
     private readonly performanceSummaryUseCase: PerformanceSummaryUseCase,
     private readonly searchUsersUseCase: SearchUsersUseCase,
     private readonly getAnalyticsOverviewUseCase: GetAnalyticsOverviewUseCase,
+    private readonly getRecentActivityUseCase: GetRecentActivityUseCase,
   ) {}
 
   @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_USER_ACTIVITY)
@@ -64,5 +66,12 @@ export class ActivityLogController {
     return this.getAnalyticsOverviewUseCase.execute({
       supervisorId: req.user.role !== 'ADMIN' ? req.user.id : undefined,
     });
+  }
+
+  @Get('recent')
+  async getRecent(@Query('limit') limit?: string) {
+    return this.getRecentActivityUseCase.execute(
+      limit ? parseInt(limit, 10) : 10,
+    );
   }
 }

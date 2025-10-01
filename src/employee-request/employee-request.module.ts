@@ -7,6 +7,7 @@ import { RejectEmployeeRequestUseCase } from './application/use-cases/reject-emp
 import { GetEmployeeRequestsUseCase } from './application/use-cases/get-employee-requests.use-case';
 import { GetEmployeeRequestByIdUseCase } from './application/use-cases/get-employee-request-by-id.use-case';
 import { EmployeeRequestController } from './interface/http/employee-request.controller';
+import { GetPendingPreviewUseCase } from './application/use-cases/get-pending-preview.use-case';
 import { StaffRequestedListener } from './application/listeners/staff-requested.listener';
 import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 
@@ -18,6 +19,7 @@ import { ActivityLogModule } from 'src/activity-log/activity-log.module';
     RejectEmployeeRequestUseCase,
     GetEmployeeRequestsUseCase,
     GetEmployeeRequestByIdUseCase,
+    GetPendingPreviewUseCase,
     {
       provide: EmployeeRequestRepository,
       useClass: PrismaEmployeeRequestRepository,

@@ -145,4 +145,14 @@ export abstract class ActivityLogRepository {
   abstract getAnalyticsOverview(
     supervisorId?: string,
   ): Promise<DashboardAggregatedResult>;
+
+  abstract getRecentActivity(limit?: number): Promise<
+    Array<{
+      id: string;
+      type: 'ticket' | 'task' | 'faq' | 'user' | 'promotion';
+      description: string;
+      timestamp: string;
+      meta: Record<string, any>;
+    }>
+  >;
 }

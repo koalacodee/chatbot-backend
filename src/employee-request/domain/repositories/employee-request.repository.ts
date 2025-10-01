@@ -26,6 +26,7 @@ export abstract class EmployeeRequestRepository {
     offset?: number,
     limit?: number,
   ): Promise<EmployeeRequest[]>;
+  abstract countPending(): Promise<number>;
   abstract findResolved(
     offset?: number,
     limit?: number,

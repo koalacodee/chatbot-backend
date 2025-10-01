@@ -49,3 +49,9 @@ export class GetEmployeeRequestsDto {
   @IsNumberString()
   limit?: number;
 }
+
+export class GetPendingPreviewQueryDto {
+  @IsOptional()
+  @IsNumberString()
+  limit?: number;
+}

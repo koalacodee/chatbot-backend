@@ -251,6 +251,12 @@ export class PrismaEmployeeRequestRepository extends EmployeeRequestRepository {
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
 
+  async countPending(): Promise<number> {
+    return this.prisma.employeeRequest.count({
+      where: { status: 'PENDING' as any },
+    });
+  }
+
   async findResolved(
     offset?: number,
     limit?: number,
