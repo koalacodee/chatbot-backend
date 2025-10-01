@@ -1,7 +1,7 @@
 import { Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { extname, join } from 'path';
-import { createWriteStream, mkdirSync } from 'fs';
+import { createWriteStream, mkdirSync, statSync } from 'fs';
 import { pipeline } from 'stream/promises';
 import { UploadFileUseCase } from 'src/files/application/use-cases/upload-file.use-case';
 import { FileUploadGuard } from 'src/files/infrastructure/guards/file-upload.guard';
@@ -18,6 +18,128 @@ type MultipartPart = {
 @Controller('files')
 export class FilesController {
   constructor(private readonly uploadFileUseCase: UploadFileUseCase) {}
+
+  private getContentType(filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const mimeTypes: { [key: string]: string } = {
+      // Images
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      svg: 'image/svg+xml',
+      bmp: 'image/bmp',
+      ico: 'image/x-icon',
+
+      // Documents
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ppt: 'application/vnd.ms-powerpoint',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      txt: 'text/plain',
+      rtf: 'application/rtf',
+
+      // Audio
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      ogg: 'audio/ogg',
+      m4a: 'audio/mp4',
+      aac: 'audio/aac',
+
+      // Video
+      mp4: 'video/mp4',
+      avi: 'video/x-msvideo',
+      mov: 'video/quicktime',
+      wmv: 'video/x-ms-wmv',
+      flv: 'video/x-flv',
+      webm: 'video/webm',
+
+      // Archives
+      zip: 'application/zip',
+      rar: 'application/x-rar-compressed',
+      '7z': 'application/x-7z-compressed',
+      tar: 'application/x-tar',
+      gz: 'application/gzip',
+
+      // Code
+      js: 'application/javascript',
+      ts: 'application/typescript',
+      json: 'application/json',
+      xml: 'application/xml',
+      html: 'text/html',
+      css: 'text/css',
+
+      // Default
+      default: 'application/octet-stream',
+    };
+
+    return mimeTypes[ext || ''] || mimeTypes.default;
+  }
+
+  private getFileType(filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const fileTypes: { [key: string]: string } = {
+      // Images
+      jpg: 'image',
+      jpeg: 'image',
+      png: 'image',
+      gif: 'image',
+      webp: 'image',
+      svg: 'image',
+      bmp: 'image',
+      ico: 'image',
+
+      // Documents
+      pdf: 'document',
+      doc: 'document',
+      docx: 'document',
+      xls: 'document',
+      xlsx: 'document',
+      ppt: 'document',
+      pptx: 'document',
+      txt: 'document',
+      rtf: 'document',
+
+      // Audio
+      mp3: 'audio',
+      wav: 'audio',
+      ogg: 'audio',
+      m4a: 'audio',
+      aac: 'audio',
+
+      // Video
+      mp4: 'video',
+      avi: 'video',
+      mov: 'video',
+      wmv: 'video',
+      flv: 'video',
+      webm: 'video',
+
+      // Archives
+      zip: 'archive',
+      rar: 'archive',
+      '7z': 'archive',
+      tar: 'archive',
+      gz: 'archive',
+
+      // Code
+      js: 'code',
+      ts: 'code',
+      json: 'code',
+      xml: 'code',
+      html: 'code',
+      css: 'code',
+
+      // Default
+      default: 'unknown',
+    };
+
+    return fileTypes[ext || ''] || fileTypes.default;
+  }
 
   @Post('single')
   @UseGuards(FileUploadGuard)
@@ -89,7 +211,24 @@ export class FilesController {
         expirationDate: expirationDate ? new Date(expirationDate) : undefined,
       });
 
-      return res.send(results);
+      // Get file stats for size
+      const filePath = join(uploadsDir, file.filename);
+      const stats = statSync(filePath);
+
+      // Get additional file information
+      const fileType = this.getFileType(file.originalName);
+      const contentType = this.getContentType(file.originalName);
+      const sizeInBytes = stats.size;
+
+      // Return the attachment data with additional fields
+      const response = {
+        ...results.toJSON(),
+        fileType,
+        sizeInBytes,
+        contentType,
+      };
+
+      return res.send(response);
     } catch (error) {
       console.error('Multiple file upload error:', error);
       return res.status(500).send({ error: 'File upload failed' });
@@ -184,7 +323,25 @@ export class FilesController {
         ),
       );
 
-      return res.send(results);
+      // Get additional file information for each file
+      const response = results.map((result, index) => {
+        const file = files[index];
+        const filePath = join(uploadsDir, file.filename);
+        const stats = statSync(filePath);
+
+        const fileType = this.getFileType(file.originalName);
+        const contentType = this.getContentType(file.originalName);
+        const sizeInBytes = stats.size;
+
+        return {
+          ...result.toJSON(),
+          fileType,
+          sizeInBytes,
+          contentType,
+        };
+      });
+
+      return res.send(response);
     } catch (error) {
       console.error('Multiple file upload error:', error);
       return res.status(500).send({ error: 'File upload failed' });
