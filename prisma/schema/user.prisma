@@ -1,18 +1,19 @@
 model User {
-  id            String                  @id @map("id") @db.Uuid
-  name          String                  @map("name") @db.VarChar(255)
-  email         String                  @unique @map("email") @db.VarChar(255)
-  username      String                  @unique @map("username") @db.VarChar(255)
-  password      String                  @map("password") @db.Char(97)
-  role          UserRole                @map("role")
-  employeeId    String?                 @unique @map("employee_id") @db.VarChar(255)
-  jobTitle      String?                 @map("job_title") @db.VarChar(255)
-  activities    ActivityLog[]
-  supervisor    Supervisor?
-  employee      Employee?
-  admin         Admin?
-  driver        Driver?
-  notifications RecipientNotification[]
+  id             String                  @id @map("id") @db.Uuid
+  name           String                  @map("name") @db.VarChar(255)
+  email          String                  @unique @map("email") @db.VarChar(255)
+  username       String                  @unique @map("username") @db.VarChar(255)
+  password       String                  @map("password") @db.Char(97)
+  role           UserRole                @map("role")
+  employeeId     String?                 @unique @map("employee_id") @db.VarChar(255)
+  jobTitle       String?                 @map("job_title") @db.VarChar(255)
+  activities     ActivityLog[]
+  supervisor     Supervisor?
+  employee       Employee?
+  admin          Admin?
+  driver         Driver?
+  notifications  RecipientNotification[]
+  profilePictures ProfilePicture?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
