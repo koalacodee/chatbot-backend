@@ -1,5 +1,5 @@
 export * from './can-delete-employee.use-case';
-export * from './create-employee-direct.use-case';
+export * from './create-employee.use-case';
 export * from './create-employee.use-case';
 export * from './delete-employee.use-case';
 export * from './get-all-employees.use-case';
