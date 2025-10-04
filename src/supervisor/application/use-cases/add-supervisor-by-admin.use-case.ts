@@ -1,18 +1,16 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { uuidv7 } from 'uuidv7';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
-import { User } from 'src/shared/entities/user.entity';
-import { Supervisor } from '../../domain/entities/supervisor.entity';
 import { SupervisorPermissionsEnum } from '../../domain/entities/supervisor.entity';
 import { UserRepository } from 'src/shared/repositories/user.repository';
-import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
-import { Roles } from 'src/shared/value-objects/role.vo';
+import { SupervisorInvitationService } from '../../infrastructure/services/supervisor-invitation.service';
+import { ResendEmailService } from 'src/shared/infrastructure/email/resend-email.service';
+import { InviteSupervisorEmail } from 'src/shared/infrastructure/email/InviteSupervisorEmail';
+import { ConfigService } from '@nestjs/config';
+import { SupervisorInvitationStatus } from './get-supervisor-invitations.use-case';
 
 export interface AddSupervisorByAdminRequest {
   name: string;
   email: string;
-  username: string;
-  password: string;
   employeeId?: string;
   jobTitle: string;
   departmentIds: string[];
@@ -20,29 +18,23 @@ export interface AddSupervisorByAdminRequest {
 }
 
 interface AddSupervisorByAdminResponse {
-  supervisor: Supervisor;
-  user: User;
+  invitation: SupervisorInvitationStatus;
+  message: string;
 }
 
 @Injectable()
 export class AddSupervisorByAdminUseCase {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly supervisorRepository: SupervisorRepository,
     private readonly departmentRepository: DepartmentRepository,
+    private readonly invitationService: SupervisorInvitationService,
+    private readonly emailService: ResendEmailService,
+    private readonly configService: ConfigService,
   ) {}
 
   async execute(
     request: AddSupervisorByAdminRequest,
   ): Promise<AddSupervisorByAdminResponse> {
-    // Validate unique username
-    const existingUserByUsername = await this.userRepository.findByUsername(
-      request.username,
-    );
-    if (existingUserByUsername) {
-      throw new BadRequestException('Username already exists');
-    }
-
     // Validate unique email
     const existingUserByEmail = await this.userRepository.findByEmail(
       request.email,
@@ -65,44 +57,55 @@ export class AddSupervisorByAdminUseCase {
       request.departmentIds,
     );
 
-    // Create new user
-    const newUser = await User.create(
-      {
-        name: request.name,
-        email: request.email,
-        username: request.username,
-        password: request.password,
-        role: Roles.SUPERVISOR,
-        employeeId: request.employeeId,
-        jobTitle: request.jobTitle,
-      },
-      true,
-    );
+    if (departments.length !== request.departmentIds.length) {
+      throw new BadRequestException('One or more departments do not exist');
+    }
 
-    const savedUser = await this.userRepository.save(newUser);
-
-    // Create new supervisor
-    const supervisor = Supervisor.create({
-      id: uuidv7(),
-      userId: savedUser.id,
+    // Create invitation token and store data in Redis
+    const invitationToken = await this.invitationService.createInvitation({
+      name: request.name,
+      email: request.email,
+      employeeId: request.employeeId,
+      jobTitle: request.jobTitle,
+      departmentIds: request.departmentIds,
       permissions: request.permissions,
-      departments,
-      assignedTasks: [],
-      employeeRequests: [],
-      promotions: [],
-      approvedTasks: [],
-      questions: [],
-      supportTicketAnswersAuthored: [],
-      performedTasks: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
     });
 
-    const savedSupervisor = await this.supervisorRepository.save(supervisor);
+    // Send invitation email
+    const baseUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3001',
+    );
+    const departmentNames = departments.map((dept) => dept.name);
+
+    await this.emailService.sendReactEmail(
+      request.email,
+      'Supervisor Invitation - Complete Your Profile Setup',
+      InviteSupervisorEmail,
+      {
+        name: request.name,
+        token: invitationToken,
+        baseUrl: `${baseUrl}/register/supervisor`,
+        jobTitle: request.jobTitle,
+        departmentNames,
+      },
+    );
 
     return {
-      supervisor: savedSupervisor,
-      user: savedUser,
+      invitation: {
+        token: invitationToken,
+        name: request.name,
+        email: request.email,
+        employeeId: request.employeeId,
+        jobTitle: request.jobTitle,
+        departmentNames: departmentNames,
+        permissions: request.permissions,
+        status: 'pending',
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        completedAt: undefined,
+      },
+      message: `Invitation sent successfully to ${request.email}. The invitation will expire in 7 days.`,
     };
   }
 }

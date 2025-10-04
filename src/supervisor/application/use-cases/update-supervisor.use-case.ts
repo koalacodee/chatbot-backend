@@ -20,14 +20,12 @@ export class UpdateSupervisorUseCase {
     id: string,
     supervisor: UpdateSupervisorRequest,
   ): Promise<void> {
-    const { permissions, departmentIds, password, email, ...userData } =
-      supervisor;
+    const { permissions, departmentIds, email, ...userData } = supervisor;
     const user = await this.userRepository.findBySupervisorId(id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
     user.email = Email.create(email);
-    password ? await user.changePassword(password) : '';
     await this.userRepository.save(Object.assign(user, userData));
 
     const existingSupervisor = await this.supervisorRepository.findById(id);

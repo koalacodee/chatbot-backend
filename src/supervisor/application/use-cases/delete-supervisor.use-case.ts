@@ -1,16 +1,26 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupervisorRepository } from '../../domain/repository/supervisor.repository';
+import { UserRepository } from 'src/shared/repositories/user.repository';
 
 @Injectable()
 export class DeleteSupervisorUseCase {
-  constructor(private readonly supervisorRepository: SupervisorRepository) {}
+  constructor(
+    private readonly supervisorRepository: SupervisorRepository,
+    private readonly userRepository: UserRepository,
+  ) {}
 
   async execute(id: string): Promise<void> {
-    const exists = await this.supervisorRepository.exists(id);
-    if (!exists) {
+    const [supervisorExists, userExists] = await Promise.all([
+      this.supervisorRepository.exists(id),
+      this.userRepository.findBySupervisorId(id),
+    ]);
+    if (!supervisorExists || !userExists) {
       throw new NotFoundException('Supervisor not found');
     }
 
-    await this.supervisorRepository.delete(id);
+    await Promise.all([
+      this.userRepository.delete(userExists.id),
+      this.supervisorRepository.delete(id),
+    ]);
   }
 }

@@ -50,19 +50,7 @@ export class SupervisorController {
     const result =
       await this.addSupervisorByAdminUseCase.execute(addSupervisorDto);
 
-    return {
-      message: 'Supervisor added successfully',
-      supervisor: result.supervisor.toJSON(),
-      user: {
-        id: result.user.id.toString(),
-        name: result.user.name,
-        email: result.user.email.toString(),
-        username: result.user.username,
-        role: result.user.role.getRole(),
-        employeeId: result.user.employeeId,
-        jobTitle: result.user.jobTitle,
-      },
-    };
+    return result;
   }
 
   @Get('can-delete/:id')

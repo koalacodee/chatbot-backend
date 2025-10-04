@@ -33,6 +33,6 @@ import { UserRefreshTokenGuard } from './infrastructure/guards/refresh-token.gua
       }),
     }),
   ],
-  exports: [UserJwtAuthGuard, UserRefreshTokenGuard],
+  exports: [UserJwtAuthGuard, UserRefreshTokenGuard, TokensService],
 })
 export class UserAuthModule {}

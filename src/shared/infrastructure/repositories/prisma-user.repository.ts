@@ -113,6 +113,7 @@ export class PrismaUserRepository extends UserRepository {
         username: user.username,
         jobTitle: user.jobTitle,
         employeeId: user.employeeId,
+        profilePicture: user.profilePicture,
         employee: user.employee
           ? await Employee.create(user.employee)
           : undefined,
@@ -221,6 +222,7 @@ export class PrismaUserRepository extends UserRepository {
         ],
       },
       orderBy: { name: 'asc' },
+      include: { profilePictures: true },
     });
     return Promise.all(
       rows.map((r) =>
@@ -234,10 +236,15 @@ export class PrismaUserRepository extends UserRepository {
             username: r.username,
             employeeId: r.employeeId,
             jobTitle: r.jobTitle,
+            profilePicture: r.profilePictures[0],
           },
           false,
         ),
       ),
     );
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.user.delete({ where: { id } });
   }
 }

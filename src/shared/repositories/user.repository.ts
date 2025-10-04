@@ -20,4 +20,5 @@ export abstract class UserRepository {
   ): Promise<User | null>;
   abstract save(user: User): Promise<User>;
   abstract search(query: string): Promise<User[]>;
+  abstract delete(id: string): Promise<void>;
 }

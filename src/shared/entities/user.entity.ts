@@ -19,6 +19,7 @@ export interface UserOptions {
   role: Roles;
   employeeId?: string;
   jobTitle?: string;
+  profilePicture?: string;
   id?: string;
   employee?: Employee;
   supervisor?: Supervisor;
@@ -35,6 +36,7 @@ export class User {
   private _role: Role;
   private _employeeId?: string;
   private _jobTitle?: string;
+  private _profilePicture?: string;
   private _employee?: Employee;
   private _supervisor?: Supervisor;
   private _admin?: Admin;
@@ -49,6 +51,7 @@ export class User {
     role: Role,
     employeeId?: string,
     jobTitle?: string,
+    profilePicture?: string,
     employee?: Employee,
     supervisor?: Supervisor,
     admin?: Admin,
@@ -62,6 +65,7 @@ export class User {
     this._role = role;
     this._employeeId = employeeId;
     this._jobTitle = jobTitle;
+    this._profilePicture = profilePicture;
     this._employee = employee;
     this._supervisor = supervisor;
     this._admin = admin;
@@ -87,6 +91,7 @@ export class User {
       role,
       options.employeeId,
       options.jobTitle,
+      options.profilePicture,
       options.employee,
       options.supervisor,
       options.admin,
@@ -125,6 +130,10 @@ export class User {
 
   get jobTitle(): string | undefined {
     return this._jobTitle;
+  }
+
+  get profilePicture(): string | undefined {
+    return this._profilePicture;
   }
 
   get employee(): Employee | undefined {
@@ -167,6 +176,10 @@ export class User {
     this._jobTitle = value;
   }
 
+  set profilePicture(value: string) {
+    this._profilePicture = value;
+  }
+
   set employee(value: Employee) {
     this._employee = value;
   }
@@ -202,6 +215,7 @@ export class User {
       role: this._role.getRole(),
       employeeId: this._employeeId,
       jobTitle: this._jobTitle,
+      profilePicture: this._profilePicture,
       employee: this._employee?.toJSON(),
       supervisor: this._supervisor?.toJSON(),
       admin: this._admin?.toJSON(),
@@ -218,6 +232,7 @@ export class User {
       role: this._role.toString(),
       employeeId: this._employeeId,
       jobTitle: this._jobTitle,
+      profilePicture: this._profilePicture,
       employee: this._employee?.toJSON(),
       supervisor: this._supervisor?.toJSON(),
       admin: this._admin?.toJSON(),

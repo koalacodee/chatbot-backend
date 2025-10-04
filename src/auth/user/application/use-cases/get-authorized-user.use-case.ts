@@ -7,6 +7,7 @@ import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { User } from 'src/shared/entities/user.entity';
+import { GetUserProfilePictureUseCase } from 'src/profile/application/use-cases/get-user-profile-picture.use-case';
 
 interface GetAuthorizedUserRequest {
   userId: string;
@@ -27,6 +28,7 @@ export class GetAuthorizedUserUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly adminRepository: AdminRepository,
+    private readonly getUserProfilePicture: GetUserProfilePictureUseCase,
   ) {}
 
   async execute(
@@ -39,9 +41,13 @@ export class GetAuthorizedUserUseCase {
     }
 
     const roleEntity = await this.getRoleEntity(user);
+    const profilePicture = await this.getUserProfilePicture.execute({
+      userId: user.id,
+    });
 
     return {
       ...user.withoutPassword(),
+      profilePicture: profilePicture?.profilePicture?.id,
       permissions: roleEntity instanceof Admin ? [] : roleEntity.permissions,
     };
   }

@@ -14,12 +14,6 @@ export class AddSupervisorByAdminDto {
   @IsEmail()
   email: string;
 
-  @IsString()
-  username: string;
-
-  @IsString()
-  password: string;
-
   @IsOptional()
   @IsString()
   employeeId?: string;
