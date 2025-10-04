@@ -73,7 +73,7 @@ export class AddSupervisorByAdminUseCase {
 
     // Send invitation email
     const baseUrl = this.configService.get<string>(
-      'FRONTEND_URL',
+      'DASHBOARD_URL',
       'http://localhost:3001',
     );
     const departmentNames = departments.map((dept) => dept.name);

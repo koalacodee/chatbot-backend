@@ -52,6 +52,20 @@ export class PrismaProfilePictureRepository extends ProfilePictureRepository {
     return profilePicture ? this.mapToDomain(profilePicture) : null;
   }
 
+  async findByUserIds(userIds: string[]): Promise<ProfilePicture[]> {
+    const profilePictures = await this.prisma.profilePicture.findMany({
+      where: {
+        userId: {
+          in: userIds,
+        },
+      },
+    });
+
+    return profilePictures.map((profilePicture) =>
+      this.mapToDomain(profilePicture),
+    );
+  }
+
   async exists(id: string): Promise<boolean> {
     const count = await this.prisma.profilePicture.count({
       where: { id },

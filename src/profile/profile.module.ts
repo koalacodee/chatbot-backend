@@ -6,6 +6,7 @@ import { UploadProfilePictureUseCase } from './application/use-cases/upload-prof
 import { GetProfilePictureByTokenUseCase } from './application/use-cases/get-profile-picture-by-token.use-case';
 import { GenerateProfilePictureUploadKeyUseCase } from './application/use-cases/generate-profile-picture-upload-key.use-case';
 import { GetUserProfilePictureUseCase } from './application/use-cases/get-user-profile-picture.use-case';
+import { GetUsersProfilePicturesUseCase } from './application/use-cases/get-users-profile-pictures.use-case';
 
 @Global()
 @Module({
@@ -19,6 +20,7 @@ import { GetUserProfilePictureUseCase } from './application/use-cases/get-user-p
     GetProfilePictureByTokenUseCase,
     GenerateProfilePictureUploadKeyUseCase,
     GetUserProfilePictureUseCase,
+    GetUsersProfilePicturesUseCase,
   ],
   exports: [
     ProfilePictureRepository,
@@ -26,6 +28,7 @@ import { GetUserProfilePictureUseCase } from './application/use-cases/get-user-p
     GetProfilePictureByTokenUseCase,
     GenerateProfilePictureUploadKeyUseCase,
     GetUserProfilePictureUseCase,
+    GetUsersProfilePicturesUseCase,
   ],
 })
 export class ProfileModule {}
