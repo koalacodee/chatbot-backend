@@ -16,6 +16,7 @@ import { DeleteSupervisorUseCase } from './application/use-cases/delete-supervis
 import { SupervisorInvitationService } from './infrastructure/services/supervisor-invitation.service';
 import { ProfileModule } from 'src/profile/profile.module';
 import { UserAuthModule } from 'src/auth/user/user.module';
+import { GetSupervisorsSummaryUseCase } from './application/use-cases/get-supervisors-summary.use-case';
 
 @Global()
 @Module({
@@ -35,6 +36,7 @@ import { UserAuthModule } from 'src/auth/user/user.module';
     UpdateSupervisorUseCase,
     DeleteSupervisorUseCase,
     SupervisorInvitationService,
+    GetSupervisorsSummaryUseCase,
   ],
   exports: [SupervisorRepository],
   imports: [DepartmentModule, ProfileModule, UserAuthModule],

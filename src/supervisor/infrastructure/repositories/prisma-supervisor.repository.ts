@@ -4,7 +4,10 @@ import {
   Supervisor,
   SupervisorPermissionsEnum,
 } from '../../domain/entities/supervisor.entity';
-import { SupervisorRepository } from '../../domain/repository/supervisor.repository';
+import {
+  SupervisorRepository,
+  SupervisorSummary,
+} from '../../domain/repository/supervisor.repository';
 import { Department } from 'src/department/domain/entities/department.entity';
 import { Task } from 'src/task/domain/entities/task.entity';
 import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
@@ -287,5 +290,29 @@ export class PrismaSupervisorRepository extends SupervisorRepository {
       return false;
 
     return true; // no relations found
+  }
+
+  async getSupervisorSummaries(
+    departmentIds?: string[],
+  ): Promise<SupervisorSummary[]> {
+    const supervisors = await this.prisma.user.findMany({
+      where: {
+        supervisor: {
+          departments: { some: { id: { in: departmentIds } } },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        profilePictures: true,
+        username: true,
+      },
+    });
+    return supervisors.map((supervisor) => ({
+      id: supervisor.id,
+      name: supervisor.name,
+      profilePicture: supervisor.profilePictures?.id,
+      username: supervisor.username,
+    }));
   }
 }

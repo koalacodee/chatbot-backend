@@ -32,4 +32,8 @@ export class CreateEmployeeDirectDto {
   @IsArray()
   @IsUUID('4', { each: true })
   subDepartmentIds: string[];
+
+  @IsOptional()
+  @IsUUID()
+  supervisorUserId?: string;
 }

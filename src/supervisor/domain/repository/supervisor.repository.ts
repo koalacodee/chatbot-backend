@@ -1,5 +1,12 @@
 import { Supervisor } from '../entities/supervisor.entity';
 
+export interface SupervisorSummary {
+  name: string;
+  profilePicture: string;
+  username: string;
+  id: string;
+}
+
 export abstract class SupervisorRepository {
   abstract save(supervisor: Supervisor): Promise<Supervisor>;
 
@@ -22,4 +29,8 @@ export abstract class SupervisorRepository {
   abstract search(query: string): Promise<Supervisor[]>;
 
   abstract canDelete(id: string): Promise<boolean>;
+
+  abstract getSupervisorSummaries(
+    departmentIds?: string[],
+  ): Promise<SupervisorSummary[]>;
 }

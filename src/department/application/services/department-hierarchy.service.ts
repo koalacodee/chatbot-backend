@@ -19,7 +19,7 @@ export class DepartmentHierarchyService {
 
     const subDepartment = await this.departmentRepository.findById(
       subDepartmentId,
-      { includeParent: true }
+      { includeParent: true },
     );
 
     if (!subDepartment || !subDepartment.parent) {
@@ -35,7 +35,7 @@ export class DepartmentHierarchyService {
   async getParentDepartmentIds(subDepartmentId: string): Promise<string[]> {
     const subDepartment = await this.departmentRepository.findById(
       subDepartmentId,
-      { includeParent: true }
+      { includeParent: true },
     );
 
     if (!subDepartment || !subDepartment.parent) {
@@ -49,34 +49,58 @@ export class DepartmentHierarchyService {
    * Checks if a user has hierarchical access to a department
    * For supervisors: checks if the department is under their supervised departments
    */
+  /**
+   * Checks if a user has hierarchical access to all departments in departmentIds.
+   * For each department, user must either have direct access or be parent of the department.
+   * This is a true batch check: returns true only if user has access to ALL departments in the input.
+   */
   async hasHierarchicalAccess(
-    departmentId: string,
+    departmentIds: string | string[],
     userDepartmentIds: string[],
   ): Promise<boolean> {
-    if (!departmentId || !userDepartmentIds || userDepartmentIds.length === 0) {
+    // Normalize input to array
+    const ids: string[] = Array.isArray(departmentIds)
+      ? departmentIds
+      : [departmentIds];
+
+    if (!ids.length || !userDepartmentIds || userDepartmentIds.length === 0) {
       return false;
     }
 
-    // Check direct access
-    if (userDepartmentIds.includes(departmentId)) {
+    // Fast path: check if all are directly accessible
+    const allDirect = ids.every((id) => userDepartmentIds.includes(id));
+    if (allDirect) {
       return true;
     }
 
-    // Check hierarchical access for sub-departments
-    const department = await this.departmentRepository.findById(departmentId, {
+    // Fetch all departments with parents
+    const departments = await this.departmentRepository.findByIds(ids, {
       includeParent: true,
     });
 
-    if (!department) {
+    if (!departments || departments.length !== ids.length) {
+      // Some departments do not exist
       return false;
     }
 
-    // If it's a sub-department, check if its parent is in user's departments
-    if (department.parent) {
-      return userDepartmentIds.includes(department.parent.id.toString());
+    // For each department, check if user has direct or parent access
+    for (const dept of departments) {
+      const deptId = dept.id.toString();
+      if (userDepartmentIds.includes(deptId)) {
+        continue; // direct access
+      }
+      if (
+        dept.parent &&
+        userDepartmentIds.includes(dept.parent.id.toString())
+      ) {
+        continue; // parent access
+      }
+      // No access for this department
+      return false;
     }
 
-    return false;
+    // User has access to all departments (directly or via parent)
+    return true;
   }
 
   /**
@@ -139,11 +163,12 @@ export class DepartmentHierarchyService {
       return [];
     }
 
-    const subDepartments = await this.departmentRepository.findAllSubDepartmentsByParentIds(
-      parentDepartmentIds,
-      { includeParent: true }
-    );
+    const subDepartments =
+      await this.departmentRepository.findAllSubDepartmentsByParentIds(
+        parentDepartmentIds,
+        { includeParent: true },
+      );
 
-    return subDepartments.map(dept => dept.id.toString());
+    return subDepartments.map((dept) => dept.id.toString());
   }
 }

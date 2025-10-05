@@ -11,7 +11,10 @@ import { UserRepository } from 'src/shared/repositories/user.repository';
 import { EmployeeRepository } from '../../domain/repositories/employee.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
-import { EmployeeInvitationService } from '../../infrastructure/services/employee-invitation.service';
+import {
+  EmployeeInvitationService,
+  InvitationStatus,
+} from '../../infrastructure/services/employee-invitation.service';
 import { GenerateProfilePictureUploadKeyUseCase } from 'src/profile/application/use-cases/generate-profile-picture-upload-key.use-case';
 import { TokensService } from 'src/auth/domain/services/tokens.service';
 
@@ -53,6 +56,11 @@ export class CompleteEmployeeInvitationUseCase {
     );
     if (!invitationData) {
       throw new NotFoundException('Invalid or expired invitation token');
+    }
+
+    // Check if invitation is approved
+    if (invitationData.status !== InvitationStatus.APPROVED) {
+      throw new BadRequestException('Invitation is not approved yet');
     }
 
     // Validate unique username

@@ -18,6 +18,8 @@ import { DeleteSupervisorUseCase } from 'src/supervisor/application/use-cases/de
 import { UpdateSupervisorUseCase } from 'src/supervisor/application/use-cases/update-supervisor.use-case';
 import { UpdateSupervisorDto } from './dtos/update-supervisor.dto';
 import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
+import { GetSupervisorsSummaryUseCase } from 'src/supervisor/application/use-cases/get-supervisors-summary.use-case';
+import { GetSupervisorsSummaryDto } from './dtos/get-supervisors-summary.dto';
 
 interface SearchSupervisorQuery {
   search: string;
@@ -31,7 +33,17 @@ export class SupervisorController {
     private readonly canDeleteUseCase: CanDeleteUseCase,
     private readonly deleteSupervisorUseCase: DeleteSupervisorUseCase,
     private readonly updateSupervisorUseCase: UpdateSupervisorUseCase,
+    private readonly getSupervisorsSummaryUseCase: GetSupervisorsSummaryUseCase,
   ) {}
+
+  @Get('summaries')
+  @AdminAuth()
+  @HttpCode(HttpStatus.OK)
+  async getSupervisorsSummary(
+    @Query() query: GetSupervisorsSummaryDto,
+  ): Promise<any> {
+    return this.getSupervisorsSummaryUseCase.execute(query.departmentIds);
+  }
 
   @AdminAuth()
   @Get('search')

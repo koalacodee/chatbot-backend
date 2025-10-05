@@ -3,6 +3,12 @@ import { RedisService } from 'src/shared/infrastructure/redis/redis.service';
 import { EmployeePermissionsEnum } from '../../domain/entities/employee.entity';
 import { randomBytes } from 'crypto';
 
+export enum InvitationStatus {
+  PENDING_APPROVAL = 'PENDING_APPROVAL',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
 export interface EmployeeInvitationData {
   fullName: string;
   email: string;
@@ -11,6 +17,10 @@ export interface EmployeeInvitationData {
   supervisorId: string;
   subDepartmentIds: string[];
   permissions: EmployeePermissionsEnum[];
+  status: InvitationStatus;
+  requestedBy: string; // User ID of the requester
+  approvedBy?: string; // User ID of the approver
+  approvedAt?: Date;
   createdAt: Date;
   expiresAt: Date;
 }
@@ -123,6 +133,79 @@ export class EmployeeInvitationService {
     }
 
     return cleanedCount;
+  }
+
+  async approveInvitation(token: string, approvedBy: string): Promise<void> {
+    const invitationData = await this.getInvitation(token);
+    if (!invitationData) {
+      throw new Error('Invitation not found');
+    }
+
+    invitationData.status = InvitationStatus.APPROVED;
+    invitationData.approvedBy = approvedBy;
+    invitationData.approvedAt = new Date();
+
+    const key = this.getInvitationKey(token);
+    await this.redisService.set(
+      key,
+      JSON.stringify(invitationData),
+      this.INVITATION_EXPIRY_SECONDS,
+    );
+  }
+
+  async rejectInvitation(token: string, rejectedBy: string): Promise<void> {
+    const invitationData = await this.getInvitation(token);
+    if (!invitationData) {
+      throw new Error('Invitation not found');
+    }
+
+    invitationData.status = InvitationStatus.REJECTED;
+    invitationData.approvedBy = rejectedBy;
+    invitationData.approvedAt = new Date();
+
+    const key = this.getInvitationKey(token);
+    await this.redisService.set(
+      key,
+      JSON.stringify(invitationData),
+      this.INVITATION_EXPIRY_SECONDS,
+    );
+  }
+
+  async getAllInvitationsByStatus(
+    status?: InvitationStatus,
+  ): Promise<{ token: string; data: EmployeeInvitationData }[]> {
+    const tokens = await this.getAllInvitationTokens();
+    const invitations: { token: string; data: EmployeeInvitationData }[] = [];
+
+    for (const token of tokens) {
+      const invitation = await this.getInvitation(token);
+      if (invitation && (!status || invitation.status === status)) {
+        invitations.push({ token, data: invitation });
+      }
+    }
+
+    return invitations;
+  }
+
+  async getInvitationsByRequestedBy(
+    requestedBy: string,
+    status?: InvitationStatus,
+  ): Promise<{ token: string; data: EmployeeInvitationData }[]> {
+    const tokens = await this.getAllInvitationTokens();
+    const invitations: { token: string; data: EmployeeInvitationData }[] = [];
+
+    for (const token of tokens) {
+      const invitation = await this.getInvitation(token);
+      if (
+        invitation &&
+        invitation.requestedBy === requestedBy &&
+        (!status || invitation.status === status)
+      ) {
+        invitations.push({ token, data: invitation });
+      }
+    }
+
+    return invitations;
   }
 
   private getInvitationKey(token: string): string {

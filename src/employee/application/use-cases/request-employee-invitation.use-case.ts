@@ -12,89 +12,90 @@ import {
   EmployeeInvitationService,
   InvitationStatus,
 } from '../../infrastructure/services/employee-invitation.service';
-import { ResendEmailService } from 'src/shared/infrastructure/email/resend-email.service';
-import { InviteEmployeeEmail } from 'src/shared/infrastructure/email/InviteEmployeeEmail';
-import { ConfigService } from '@nestjs/config';
+import { DepartmentHierarchyService } from 'src/department/application/services/department-hierarchy.service';
 
-interface CreateEmployeeDirectUseCaseInput {
+interface RequestEmployeeInvitationUseCaseInput {
   email: string;
   fullName: string;
   jobTitle: string;
   employeeId?: string;
   permissions: EmployeePermissionsEnum[];
   subDepartmentIds: string[];
-  supervisorUserId?: string;
 }
 
-export interface EmployeeInvitationStatus {
+export interface EmployeeInvitationRequestStatus {
   token: string;
   fullName: string;
   email: string;
   employeeId?: string;
   jobTitle: string;
+  supervisorId: string;
   subDepartmentNames: string[];
   permissions: EmployeePermissionsEnum[];
   status: string;
+  requestedBy: string;
   createdAt: Date;
   expiresAt: Date;
-  completedAt?: Date;
 }
 
-interface CreateEmployeeDirectUseCaseOutput {
-  invitation: EmployeeInvitationStatus;
+interface RequestEmployeeInvitationUseCaseOutput {
+  request: EmployeeInvitationRequestStatus;
   message: string;
 }
 
 @Injectable()
-export class CreateEmployeeDirectUseCase {
+export class RequestEmployeeInvitationUseCase {
   constructor(
     private readonly departmentRepository: DepartmentRepository,
     private readonly userRepository: UserRepository,
     private readonly supervisorRepository: SupervisorRepository,
     private readonly invitationService: EmployeeInvitationService,
-    private readonly emailService: ResendEmailService,
-    private readonly configService: ConfigService,
+    private readonly departmentHierarchyService: DepartmentHierarchyService,
   ) {}
 
   async execute(
-    input: CreateEmployeeDirectUseCaseInput,
-    requestingUserId?: string,
-  ): Promise<CreateEmployeeDirectUseCaseOutput> {
-    // Apply department access control for supervisors
+    input: RequestEmployeeInvitationUseCaseInput,
+    requestingUserId: string,
+  ): Promise<RequestEmployeeInvitationUseCaseOutput> {
     if (!requestingUserId) {
-      throw new BadRequestException('User ID Is Required');
+      throw new BadRequestException('User ID is required');
     }
-    const user = await this.userRepository.findById(requestingUserId);
 
+    const user = await this.userRepository.findById(requestingUserId);
     if (!user) {
-      throw new BadRequestException('User Not found');
+      throw new BadRequestException('User not found');
     }
 
     const userRole = user.role.getRole();
 
-    if (userRole === Roles.ADMIN && !input.supervisorUserId) {
-      throw new BadRequestException('Supervisor ID is required');
+    // Only supervisors can request employee invitations
+    if (userRole !== Roles.SUPERVISOR) {
+      throw new ForbiddenException(
+        'Only supervisors can request employee invitations',
+      );
     }
 
-    if (userRole === Roles.SUPERVISOR) {
-      const supervisor =
-        await this.supervisorRepository.findByUserId(requestingUserId);
-      const supervisorDepartmentIds = supervisor.departments.map((d) =>
-        d.id.toString(),
-      );
-
-      // Check if supervisor can assign employees to the requested sub-departments
-      const hasAccess = input.subDepartmentIds.every((subDeptId) =>
-        supervisorDepartmentIds.includes(subDeptId),
-      );
-
-      if (!hasAccess) {
-        throw new ForbiddenException(
-          'You can only create employees in your assigned departments',
-        );
-      }
+    const supervisor =
+      await this.supervisorRepository.findByUserId(requestingUserId);
+    if (!supervisor) {
+      throw new BadRequestException('Supervisor not found');
     }
-    // Admins have full access (no restrictions)
+
+    const supervisorDepartmentIds = supervisor.departments.map((d) =>
+      d.id.toString(),
+    );
+
+    // Check if supervisor can assign employees to the requested sub-departments
+    const hasAccess = this.departmentHierarchyService.hasHierarchicalAccess(
+      input.subDepartmentIds,
+      supervisorDepartmentIds,
+    );
+
+    if (!hasAccess) {
+      throw new ForbiddenException(
+        'You can only request employees in your assigned departments',
+      );
+    }
 
     // Validate unique email
     const existingUserByEmail = await this.userRepository.findByEmail(
@@ -122,17 +123,7 @@ export class CreateEmployeeDirectUseCase {
       throw new BadRequestException('One or more sub-departments do not exist');
     }
 
-    // Validate supervisor exists
-    const supervisor = await this.supervisorRepository.findByUserId(
-      user.role.getRole() === Roles.SUPERVISOR
-        ? requestingUserId
-        : input.supervisorUserId,
-    );
-    if (!supervisor) {
-      throw new BadRequestException('Supervisor does not exist');
-    }
-
-    // Create invitation token and store data in Redis
+    // Create invitation request token and store data in Redis
     const invitationToken = await this.invitationService.createInvitation({
       fullName: input.fullName,
       email: input.email,
@@ -141,45 +132,28 @@ export class CreateEmployeeDirectUseCase {
       supervisorId: supervisor.id.toString(),
       subDepartmentIds: input.subDepartmentIds,
       permissions: input.permissions,
-      status: InvitationStatus.APPROVED, // Direct admin creation is auto-approved
+      status: InvitationStatus.PENDING_APPROVAL, // Needs admin approval
       requestedBy: requestingUserId,
     });
 
-    // Send invitation email
-    const baseUrl = this.configService.get<string>(
-      'DASHBOARD_URL',
-      'http://localhost:3001',
-    );
     const subDepartmentNames = subDepartments.map((dept) => dept.name);
 
-    await this.emailService.sendReactEmail(
-      input.email,
-      'Employee Invitation - Complete Your Profile Setup',
-      InviteEmployeeEmail,
-      {
-        name: input.fullName,
-        token: invitationToken,
-        baseUrl: `${baseUrl}/register/employee`,
-        jobTitle: input.jobTitle,
-        subDepartmentNames,
-      },
-    );
-
     return {
-      invitation: {
+      request: {
         token: invitationToken,
         fullName: input.fullName,
         email: input.email,
         employeeId: input.employeeId,
         jobTitle: input.jobTitle,
+        supervisorId: supervisor.id.toString(),
         subDepartmentNames: subDepartmentNames,
         permissions: input.permissions,
-        status: 'pending',
+        status: InvitationStatus.PENDING_APPROVAL,
+        requestedBy: requestingUserId,
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        completedAt: undefined,
       },
-      message: `Invitation sent successfully to ${input.email}. The invitation will expire in 7 days.`,
+      message: `Employee invitation request submitted successfully for ${input.email}. Awaiting admin approval.`,
     };
   }
 }

@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
 } from '@nestjs/common';
 import { GetEmployeeUseCase } from '../../application/use-cases/get-employee.use-case';
@@ -22,7 +23,12 @@ import { CanDeleteEmployeeUseCase } from 'src/employee/application/use-cases/can
 import { GetEmployeesByPermissionsUseCase } from 'src/employee/application/use-cases/get-employees-by-permissions.use-case';
 import { GetEmployeeInvitationUseCase } from 'src/employee/application/use-cases/get-employee-invitation.use-case';
 import { CompleteEmployeeInvitationUseCase } from 'src/employee/application/use-cases/complete-employee-invitation.use-case';
+import { RequestEmployeeInvitationUseCase } from 'src/employee/application/use-cases/request-employee-invitation.use-case';
+import { AcceptEmployeeInvitationRequestUseCase } from 'src/employee/application/use-cases/accept-employee-invitation-request.use-case';
+import { GetAllEmployeeInvitationRequestsUseCase } from 'src/employee/application/use-cases/get-all-employee-invitation-requests.use-case';
+import { GetMyEmployeeInvitationRequestsUseCase } from 'src/employee/application/use-cases/get-my-employee-invitation-requests.use-case';
 import { SupervisorPermissions } from 'src/rbac/decorators';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 import { CompleteEmployeeInvitationDto } from 'src/employee/interface/http/dtos/complete-employee-invitation.dto';
 
@@ -40,6 +46,10 @@ export class EmployeeController {
     private readonly getEmployeesByPermissionsUseCase: GetEmployeesByPermissionsUseCase,
     private readonly getEmployeeInvitationUseCase: GetEmployeeInvitationUseCase,
     private readonly completeEmployeeInvitationUseCase: CompleteEmployeeInvitationUseCase,
+    private readonly requestEmployeeInvitationUseCase: RequestEmployeeInvitationUseCase,
+    private readonly acceptEmployeeInvitationRequestUseCase: AcceptEmployeeInvitationRequestUseCase,
+    private readonly getAllEmployeeInvitationRequestsUseCase: GetAllEmployeeInvitationRequestsUseCase,
+    private readonly getMyEmployeeInvitationRequestsUseCase: GetMyEmployeeInvitationRequestsUseCase,
   ) {}
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_STAFF_DIRECTLY)
@@ -56,6 +66,7 @@ export class EmployeeController {
         employeeId: createEmployeeDto.employeeId,
         permissions: createEmployeeDto.permissions,
         subDepartmentIds: createEmployeeDto.subDepartmentIds,
+        supervisorUserId: createEmployeeDto.supervisorUserId,
       },
       req.user.id,
     );
@@ -74,6 +85,62 @@ export class EmployeeController {
     body: CompleteEmployeeInvitationDto,
   ): Promise<any> {
     return this.completeEmployeeInvitationUseCase.execute(body);
+  }
+
+  @SupervisorPermissions()
+  @Post('invitation/request')
+  async requestInvitation(
+    @Body()
+    body: {
+      email: string;
+      fullName: string;
+      jobTitle: string;
+      employeeId?: string;
+      permissions: any[];
+      subDepartmentIds: string[];
+    },
+    @Req() req: any,
+  ): Promise<any> {
+    return this.requestEmployeeInvitationUseCase.execute(
+      body as any,
+      req.user.id,
+    );
+  }
+
+  @AdminAuth()
+  @Post('invitation/accept/:token')
+  async acceptInvitationRequest(
+    @Param('token') token: string,
+    @Req() req: any,
+  ): Promise<any> {
+    return this.acceptEmployeeInvitationRequestUseCase.execute(
+      { token },
+      req.user.id,
+    );
+  }
+
+  @AdminAuth()
+  @Get('invitation/requests')
+  async getAllInvitationRequests(
+    @Req() req: any,
+    @Query('status') status?: string,
+  ): Promise<any> {
+    return this.getAllEmployeeInvitationRequestsUseCase.execute(
+      { status: status as any },
+      req.user.id,
+    );
+  }
+
+  @SupervisorPermissions()
+  @Get('invitation/my-requests')
+  async getMyInvitationRequests(
+    @Req() req: any,
+    @Query('status') status?: string,
+  ): Promise<any> {
+    return this.getMyEmployeeInvitationRequestsUseCase.execute(
+      { status: status as any },
+      req.user.id,
+    );
   }
 
   @SupervisorPermissions()
