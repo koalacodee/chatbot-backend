@@ -6,7 +6,6 @@ import {
   MinLength,
   MaxLength,
   IsPhoneNumber,
-  IsStrongPassword,
 } from 'class-validator';
 
 export class RegisterGuestDto {

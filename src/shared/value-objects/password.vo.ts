@@ -1,5 +1,4 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { isStrongPassword } from 'class-validator';
 import { hash, verify } from 'argon2';
 
 export class Password {
@@ -10,10 +9,6 @@ export class Password {
   }
 
   static async fromPlain(plain: string): Promise<Password> {
-    if (!isStrongPassword(plain)) {
-      throw new BadRequestException({ password: 'password_weak' });
-    }
-
     const hashed = await hash(plain);
     return this.fromHash(hashed);
   }

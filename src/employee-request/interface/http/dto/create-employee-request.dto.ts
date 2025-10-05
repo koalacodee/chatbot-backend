@@ -1,10 +1,4 @@
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsString,
-  IsOptional,
-  IsStrongPassword,
-} from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, IsOptional } from 'class-validator';
 
 export class CreateEmployeeRequestDto {
   @IsEmail()
@@ -27,7 +21,7 @@ export class CreateEmployeeRequestDto {
   newEmployeeId: string;
 
   @IsNotEmpty()
-  @IsStrongPassword()
+  @IsString()
   temporaryPassword: string;
 
   @IsOptional()

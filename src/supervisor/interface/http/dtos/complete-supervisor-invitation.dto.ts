@@ -5,7 +5,6 @@ import {
   MinLength,
   MaxLength,
   Matches,
-  IsStrongPassword,
 } from 'class-validator';
 
 export class CompleteSupervisorInvitationDto {
@@ -25,7 +24,7 @@ export class CompleteSupervisorInvitationDto {
   @MaxLength(100)
   name: string;
 
-  @IsStrongPassword()
+  @IsString()
   password: string;
 
   @IsOptional()
