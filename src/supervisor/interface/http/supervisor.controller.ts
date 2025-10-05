@@ -20,6 +20,8 @@ import { UpdateSupervisorDto } from './dtos/update-supervisor.dto';
 import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 import { GetSupervisorsSummaryUseCase } from 'src/supervisor/application/use-cases/get-supervisors-summary.use-case';
 import { GetSupervisorsSummaryDto } from './dtos/get-supervisors-summary.dto';
+import { DelegateSupervisorUseCase } from 'src/supervisor/application/use-cases/delegate-supervisor.use-case';
+import { DelegateSupervisorDto } from './dtos/delegate-supervisor.dto';
 
 interface SearchSupervisorQuery {
   search: string;
@@ -34,6 +36,7 @@ export class SupervisorController {
     private readonly deleteSupervisorUseCase: DeleteSupervisorUseCase,
     private readonly updateSupervisorUseCase: UpdateSupervisorUseCase,
     private readonly getSupervisorsSummaryUseCase: GetSupervisorsSummaryUseCase,
+    private readonly delegateSupervisorUseCase: DelegateSupervisorUseCase,
   ) {}
 
   @Get('summaries')
@@ -87,5 +90,21 @@ export class SupervisorController {
     @Body() body: UpdateSupervisorDto,
   ): Promise<any> {
     return this.updateSupervisorUseCase.execute(id, body);
+  }
+
+  @Post('delegate')
+  @AdminAuth()
+  @HttpCode(HttpStatus.OK)
+  async delegateSupervisor(
+    @Body() delegateSupervisorDto: DelegateSupervisorDto,
+  ): Promise<{ message: string }> {
+    await this.delegateSupervisorUseCase.execute({
+      fromSupervisorUserId: delegateSupervisorDto.fromSupervisorUserId,
+      toSupervisorUserId: delegateSupervisorDto.toSupervisorUserId,
+    });
+
+    return {
+      message: 'Supervisor responsibilities successfully delegated',
+    };
   }
 }

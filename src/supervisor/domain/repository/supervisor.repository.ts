@@ -33,4 +33,11 @@ export abstract class SupervisorRepository {
   abstract getSupervisorSummaries(
     departmentIds?: string[],
   ): Promise<SupervisorSummary[]>;
+
+  abstract delegateSupervisorResponsibilities(
+    fromSupervisorId: string,
+    toSupervisorId: string,
+  ): Promise<void>;
+
+  abstract softDeleteSupervisor(id: string): Promise<void>;
 }
