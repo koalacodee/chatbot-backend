@@ -13,6 +13,8 @@ import {
   InvitationStatus,
 } from '../../infrastructure/services/employee-invitation.service';
 import { DepartmentHierarchyService } from 'src/department/application/services/department-hierarchy.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { StaffRequestCreatedEvent } from 'src/employee-request/domain/events/staff-request-created.event';
 
 interface RequestEmployeeInvitationUseCaseInput {
   email: string;
@@ -51,6 +53,7 @@ export class RequestEmployeeInvitationUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly invitationService: EmployeeInvitationService,
     private readonly departmentHierarchyService: DepartmentHierarchyService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(
@@ -171,6 +174,18 @@ export class RequestEmployeeInvitationUseCase {
     });
 
     const subDepartmentNames = subDepartments.map((dept) => dept.name);
+
+    // Emit the same event used by employee-request flow, so existing
+    // notification listeners react without any new listeners.
+    this.eventEmitter.emit(
+      StaffRequestCreatedEvent.name,
+      new StaffRequestCreatedEvent(
+        invitationToken, // use token as request identifier
+        input.fullName, // reuse email as username surrogate
+        supervisor.id.toString(),
+        new Date(),
+      ),
+    );
 
     return {
       request: {

@@ -25,16 +25,9 @@ import { CreatePromotionDto } from './dtos/create-promotion.dto';
 import { SupervisorPermissions } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 import { GuestIdInterceptor } from 'src/shared/interceptors/guest-id.interceptor';
+import { UpdatePromotionDto } from './dtos/update-promotion.dto';
 
-interface UpdatePromotionDto {
-  id: string;
-  title?: string;
-  attach?: boolean;
-  audience?: any;
-  startDate?: string;
-  endDate?: string;
-  deleteAttachments?: string[];
-}
+// moved to ./dtos/update-promotion.dto
 
 @Controller('promotions')
 export class PromotionController {

@@ -15,6 +15,8 @@ import {
 import { ResendEmailService } from 'src/shared/infrastructure/email/resend-email.service';
 import { InviteEmployeeEmail } from 'src/shared/infrastructure/email/InviteEmployeeEmail';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { StaffRequestResolvedEvent } from 'src/employee-request/domain/events/staff-request-resolved.event';
 
 interface AcceptEmployeeInvitationRequestUseCaseInput {
   token: string;
@@ -42,6 +44,7 @@ export class AcceptEmployeeInvitationRequestUseCase {
     private readonly invitationService: EmployeeInvitationService,
     private readonly emailService: ResendEmailService,
     private readonly configService: ConfigService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async execute(
@@ -147,6 +150,18 @@ export class AcceptEmployeeInvitationRequestUseCase {
         jobTitle: invitationData.jobTitle,
         subDepartmentNames,
       },
+    );
+
+    // Emit the same resolved event used in employee-request domain
+    this.eventEmitter.emit(
+      StaffRequestResolvedEvent.name,
+      new StaffRequestResolvedEvent(
+        input.token, // requestId equivalent
+        invitationData.email, // newEmployeeUsername surrogate
+        invitationData.supervisorId,
+        'approved',
+        new Date(),
+      ),
     );
 
     return {
