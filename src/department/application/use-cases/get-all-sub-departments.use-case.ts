@@ -16,28 +16,42 @@ export class GetAllSubDepartmentsUseCase {
     private readonly userRepository: UserRepository,
   ) {}
 
-  async execute({ departmentId }: GetAllSubDepartmentsInput, userId?: string): Promise<any[]> {
+  async execute(
+    { departmentId }: GetAllSubDepartmentsInput,
+    userId?: string,
+  ): Promise<any[]> {
     // Apply department access control for supervisors
     if (userId) {
       const user = await this.userRepository.findById(userId);
       const userRole = user.role.getRole();
-      
+
       if (userRole === Roles.SUPERVISOR) {
         const supervisor = await this.supervisorRepository.findByUserId(userId);
-        const supervisorDepartmentIds = supervisor.departments.map((d) => d.id.toString());
-        
+        const supervisorDepartmentIds = supervisor.departments.map((d) =>
+          d.id.toString(),
+        );
+
         // If departmentId is specified, validate supervisor has access to it
         if (departmentId && !supervisorDepartmentIds.includes(departmentId)) {
-          throw new ForbiddenException('You do not have access to sub-departments of this department');
+          throw new ForbiddenException({
+            details: [
+              {
+                field: 'departmentId',
+                message:
+                  'You do not have access to sub-departments of this department',
+              },
+            ],
+          });
         }
-        
+
         // If no departmentId specified, only return sub-departments from supervisor's departments
         if (!departmentId) {
-          const filteredSubDepartments = await this.departmentRepo.findAllSubDepartmentsByParentIds(
-            supervisorDepartmentIds,
-            { includeQuestions: true, includeParent: true }
-          );
-          
+          const filteredSubDepartments =
+            await this.departmentRepo.findAllSubDepartmentsByParentIds(
+              supervisorDepartmentIds,
+              { includeQuestions: true, includeParent: true },
+            );
+
           return filteredSubDepartments.map((dept) => dept.toJSON());
         }
       }

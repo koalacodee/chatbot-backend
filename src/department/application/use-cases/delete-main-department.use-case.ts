@@ -18,14 +18,23 @@ export class DeleteMainDepartmentUseCase {
     if (userId) {
       const user = await this.userRepository.findById(userId);
       const userRole = user.role.getRole();
-      
+
       if (userRole === Roles.SUPERVISOR) {
         const supervisor = await this.supervisorRepository.findByUserId(userId);
-        const supervisorDepartmentIds = supervisor.departments.map((d) => d.id.toString());
-        
+        const supervisorDepartmentIds = supervisor.departments.map((d) =>
+          d.id.toString(),
+        );
+
         // Check if supervisor has access to this department
         if (!supervisorDepartmentIds.includes(id)) {
-          throw new ForbiddenException('You do not have access to delete this department');
+          throw new ForbiddenException({
+            details: [
+              {
+                field: 'departmentId',
+                message: 'You do not have access to delete this department',
+              },
+            ],
+          });
         }
       }
       // Admins have full access (no restrictions)

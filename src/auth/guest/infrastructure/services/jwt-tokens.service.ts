@@ -71,11 +71,19 @@ export class JwtTokenService extends TokensService {
       await this.refreshTokenRepository.findByToken(refreshToken);
 
     if (!storedToken || storedToken.isRevoked) {
-      throw new UnauthorizedException('Invalid guest refresh token');
+      throw new UnauthorizedException({
+        details: [
+          { field: 'refreshToken', message: 'Invalid guest refresh token' },
+        ],
+      });
     }
 
     if (storedToken.isExpired) {
-      throw new UnauthorizedException('Guest refresh token expired');
+      throw new UnauthorizedException({
+        details: [
+          { field: 'refreshToken', message: 'Guest refresh token expired' },
+        ],
+      });
     }
 
     // Decode the token to get guest information
@@ -84,7 +92,11 @@ export class JwtTokenService extends TokensService {
         secret: this.GUEST_REFRESH_TOKEN_SECRET,
       })
       .catch(() => {
-        throw new UnauthorizedException('Invalid guest refresh token');
+        throw new UnauthorizedException({
+          details: [
+            { field: 'refreshToken', message: 'Invalid guest refresh token' },
+          ],
+        });
       })) as {
       sub: string;
       email: string;
@@ -92,7 +104,11 @@ export class JwtTokenService extends TokensService {
     };
 
     if (decoded.role !== 'guest') {
-      throw new UnauthorizedException('Invalid guest refresh token');
+      throw new UnauthorizedException({
+        details: [
+          { field: 'refreshToken', message: 'Invalid guest refresh token' },
+        ],
+      });
     }
 
     // Revoke the old refresh token

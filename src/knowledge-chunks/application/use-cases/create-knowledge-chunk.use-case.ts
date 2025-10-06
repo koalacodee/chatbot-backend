@@ -23,15 +23,22 @@ export class CreateKnowledgeChunkUseCase {
     private readonly knowledgeChunksQueue: Queue,
   ) {}
 
-  async execute(dto: CreateKnowledgeChunkDto): Promise<{ knowledgeChunk: KnowledgeChunk; uploadKey?: string }> {
+  async execute(
+    dto: CreateKnowledgeChunkDto,
+  ): Promise<{ knowledgeChunk: KnowledgeChunk; uploadKey?: string }> {
     await this.accessControl.canAccessDepartment(dto.userId, dto.departmentId);
     const department = await this.departmentRepo.findById(dto.departmentId);
 
     if (!department) {
-      throw new NotFoundException('Department not found');
+      throw new NotFoundException({
+        details: [{ field: 'departmentId', message: 'Department not found' }],
+      });
     }
 
-    const knowledgeChunk = KnowledgeChunk.create({ content: dto.content, department });
+    const knowledgeChunk = KnowledgeChunk.create({
+      content: dto.content,
+      department,
+    });
 
     // Add the processing job to the queue
     await this.knowledgeChunksQueue.add('create', {

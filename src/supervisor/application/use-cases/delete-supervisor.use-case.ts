@@ -15,7 +15,9 @@ export class DeleteSupervisorUseCase {
       this.userRepository.findBySupervisorId(id),
     ]);
     if (!supervisorExists || !userExists) {
-      throw new NotFoundException('Supervisor not found');
+      throw new NotFoundException({
+        details: [{ field: 'id', message: 'Supervisor not found' }],
+      });
     }
 
     await Promise.all([

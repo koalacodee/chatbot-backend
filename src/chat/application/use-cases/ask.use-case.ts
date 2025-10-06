@@ -46,7 +46,11 @@ export class AskUseCase {
     );
 
     if (!faqId && !question)
-      throw new BadRequestException('Either faqId or question is required');
+      throw new BadRequestException({
+        details: [
+          { field: 'input', message: 'Either faqId or question is required' },
+        ],
+      });
 
     const conversationExists = conversationId
       ? await this.conversationRepo.exists(conversationId)
@@ -231,13 +235,24 @@ export class AskUseCase {
       const c = await this.conversationRepo.findById(id);
       if (!c) {
         this.logger.warn(`Conversation not found: ${id}`);
-        throw new NotFoundException('conversation_not_found');
+        throw new NotFoundException({
+          details: [
+            { field: 'conversationId', message: 'Conversation not found' },
+          ],
+        });
       }
       if (c.guest.id.value !== guestId && c.anonymousId.value !== guestId) {
         this.logger.warn(
           `Unauthorized user access attempt for conversation: ${id}`,
         );
-        throw new ForbiddenException('conversation_not_owned');
+        throw new ForbiddenException({
+          details: [
+            {
+              field: 'conversationId',
+              message: 'Conversation not owned by user',
+            },
+          ],
+        });
       }
 
       return c;

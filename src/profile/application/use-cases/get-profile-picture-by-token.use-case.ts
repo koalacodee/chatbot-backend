@@ -34,7 +34,11 @@ export class GetProfilePictureByTokenUseCase {
         request.tokenOrId,
       );
       if (!profilePicture) {
-        throw new NotFoundException('Profile picture not found');
+        throw new NotFoundException({
+          details: [
+            { field: 'tokenOrId', message: 'Profile picture not found' },
+          ],
+        });
       }
     } else {
       // Token-based lookup - get profile picture ID from Redis
@@ -42,14 +46,22 @@ export class GetProfilePictureByTokenUseCase {
       const profilePictureId = await this.redisService.get(redisKey);
 
       if (!profilePictureId) {
-        throw new NotFoundException('Token not found or expired');
+        throw new NotFoundException({
+          details: [
+            { field: 'tokenOrId', message: 'Token not found or expired' },
+          ],
+        });
       }
 
       // Get profile picture from database
       profilePicture =
         await this.profilePictureRepository.findById(profilePictureId);
       if (!profilePicture) {
-        throw new NotFoundException('Profile picture not found');
+        throw new NotFoundException({
+          details: [
+            { field: 'tokenOrId', message: 'Profile picture not found' },
+          ],
+        });
       }
     }
 

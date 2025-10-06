@@ -15,7 +15,9 @@ export class VerifyRegisterUseCase {
   async execute(code: string) {
     const guest = await this.redis.get(`guest:${code}:reg`).then((val) => {
       if (!val) {
-        throw new BadRequestException({ code: 'code_incorrect' });
+        throw new BadRequestException({
+          details: [{ field: 'code', message: 'Code is incorrect' }],
+        });
       }
 
       return Guest.fromJSON(JSON.parse(val));

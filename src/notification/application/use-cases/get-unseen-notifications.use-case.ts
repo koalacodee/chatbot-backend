@@ -18,7 +18,9 @@ export class GetUnseenNotificationsUseCase {
     userId,
   }: GetUnseenNotificationsInput): Promise<UnseenNotificationsResult> {
     if (!userId) {
-      throw new BadRequestException('User ID is required');
+      throw new BadRequestException({
+        details: [{ field: 'userId', message: 'User ID is required' }],
+      });
     }
 
     console.log(userId);

@@ -55,7 +55,9 @@ export class AnswerTicketUseCase {
     ]);
 
     if (!ticket) {
-      throw new NotFoundException({ ticket: 'not_found' });
+      throw new NotFoundException({
+        details: [{ field: 'ticketId', message: 'Ticket not found' }],
+      });
     }
 
     // Check department access
@@ -69,11 +71,15 @@ export class AnswerTicketUseCase {
       ticket.status == SupportTicketStatus.ANSWERED ||
       ticket.status == SupportTicketStatus.CLOSED
     ) {
-      throw new BadRequestException({ ticket: 'ticket_answered' });
+      throw new BadRequestException({
+        details: [{ field: 'ticket', message: 'Ticket is already answered' }],
+      });
     }
 
     if (!answerer) {
-      throw new NotFoundException({ answerer: 'not_found' });
+      throw new NotFoundException({
+        details: [{ field: 'answererId', message: 'Answerer not found' }],
+      });
     }
 
     ticket.status = SupportTicketStatus.ANSWERED;
@@ -187,7 +193,14 @@ export class AnswerTicketUseCase {
     }
 
     if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this department');
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'departmentId',
+            message: 'You do not have access to this department',
+          },
+        ],
+      });
     }
   }
 }

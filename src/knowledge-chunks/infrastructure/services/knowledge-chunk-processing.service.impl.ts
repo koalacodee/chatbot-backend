@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { KnowledgeChunkProcessingService, ProcessKnowledgeChunkData } from '../../domain/services/knowledge-chunk-processing.service';
+import {
+  KnowledgeChunkProcessingService,
+  ProcessKnowledgeChunkData,
+} from '../../domain/services/knowledge-chunk-processing.service';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { EmbeddingService } from 'src/shared/embedding/embedding-service.interface';
@@ -21,11 +24,15 @@ export class KnowledgeChunkProcessingServiceImpl extends KnowledgeChunkProcessin
     super();
   }
 
-  async processKnowledgeChunk(data: ProcessKnowledgeChunkData): Promise<KnowledgeChunk> {
+  async processKnowledgeChunk(
+    data: ProcessKnowledgeChunkData,
+  ): Promise<KnowledgeChunk> {
     const department = await this.departmentRepo.findById(data.departmentId);
 
     if (!department) {
-      throw new NotFoundException('Department not found');
+      throw new NotFoundException({
+        details: [{ field: 'departmentId', message: 'Department not found' }],
+      });
     }
 
     // Generate embedding for the content
@@ -47,7 +54,7 @@ export class KnowledgeChunkProcessingServiceImpl extends KnowledgeChunkProcessin
       pointId: savedPoint.id.value,
       department,
     });
-    
+
     const savedChunk = await this.chunkRepo.save(chunk);
 
     // Emit event for further processing

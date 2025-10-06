@@ -27,11 +27,15 @@ export class RegisterGuestUseCase {
     ]);
 
     if (existsByEmail) {
-      throw new ConflictException({ email: 'already_exists' });
+      throw new ConflictException({
+        details: [{ field: 'email', message: 'Email already exists' }],
+      });
     }
 
     if (existsByPhone) {
-      throw new ConflictException({ phone: 'already_exists' });
+      throw new ConflictException({
+        details: [{ field: 'phone', message: 'Phone number already exists' }],
+      });
     }
 
     const guest = Guest.create({

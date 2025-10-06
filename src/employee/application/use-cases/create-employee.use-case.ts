@@ -62,18 +62,28 @@ export class CreateEmployeeDirectUseCase {
   ): Promise<CreateEmployeeDirectUseCaseOutput> {
     // Apply department access control for supervisors
     if (!requestingUserId) {
-      throw new BadRequestException('User ID Is Required');
+      throw new BadRequestException({
+        details: [
+          { field: 'requestingUserId', message: 'User ID Is Required' },
+        ],
+      });
     }
     const user = await this.userRepository.findById(requestingUserId);
 
     if (!user) {
-      throw new BadRequestException('User Not found');
+      throw new BadRequestException({
+        details: [{ field: 'requestingUserId', message: 'User Not found' }],
+      });
     }
 
     const userRole = user.role.getRole();
 
     if (userRole === Roles.ADMIN && !input.supervisorUserId) {
-      throw new BadRequestException('Supervisor ID is required');
+      throw new BadRequestException({
+        details: [
+          { field: 'supervisorUserId', message: 'Supervisor ID is required' },
+        ],
+      });
     }
 
     if (userRole === Roles.SUPERVISOR) {
@@ -89,9 +99,15 @@ export class CreateEmployeeDirectUseCase {
       );
 
       if (!hasAccess) {
-        throw new ForbiddenException(
-          'You can only create employees in your assigned departments',
-        );
+        throw new ForbiddenException({
+          details: [
+            {
+              field: 'subDepartmentIds',
+              message:
+                'You can only create employees in your assigned departments',
+            },
+          ],
+        });
       }
     }
     // Admins have full access (no restrictions)
@@ -101,7 +117,9 @@ export class CreateEmployeeDirectUseCase {
       input.email,
     );
     if (existingUserByEmail) {
-      throw new BadRequestException('Email already exists');
+      throw new BadRequestException({
+        details: [{ field: 'email', message: 'Email already exists' }],
+      });
     }
 
     // Validate unique employee ID if provided
@@ -109,7 +127,11 @@ export class CreateEmployeeDirectUseCase {
       const existingUserByEmployeeId =
         await this.userRepository.findByEmployeeId(input.employeeId);
       if (existingUserByEmployeeId) {
-        throw new BadRequestException('Employee ID already exists');
+        throw new BadRequestException({
+          details: [
+            { field: 'employeeId', message: 'Employee ID already exists' },
+          ],
+        });
       }
     }
 
@@ -119,7 +141,14 @@ export class CreateEmployeeDirectUseCase {
     );
 
     if (subDepartments.length !== input.subDepartmentIds.length) {
-      throw new BadRequestException('One or more sub-departments do not exist');
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'subDepartmentIds',
+            message: 'One or more sub-departments do not exist',
+          },
+        ],
+      });
     }
 
     // Validate supervisor exists
@@ -129,7 +158,11 @@ export class CreateEmployeeDirectUseCase {
         : input.supervisorUserId,
     );
     if (!supervisor) {
-      throw new BadRequestException('Supervisor does not exist');
+      throw new BadRequestException({
+        details: [
+          { field: 'supervisorUserId', message: 'Supervisor does not exist' },
+        ],
+      });
     }
 
     // Create invitation token and store data in Redis

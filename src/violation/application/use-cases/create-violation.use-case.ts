@@ -30,24 +30,35 @@ export class CreateViolationUseCase {
     ]);
 
     if (!driver) {
-      throw new NotFoundException('Driver not found');
+      throw new NotFoundException({
+        details: [{ field: 'driverId', message: 'Driver not found' }],
+      });
     }
 
     if (!vehicle) {
-      throw new NotFoundException('Vehicle not found');
+      throw new NotFoundException({
+        details: [{ field: 'vehicleId', message: 'Vehicle not found' }],
+      });
     }
 
     if (!rule) {
-      throw new NotFoundException('Violation rule not found');
+      throw new NotFoundException({
+        details: [{ field: 'ruleId', message: 'Violation rule not found' }],
+      });
     }
 
     // Check if driver is assigned to the vehicle
     const isDriverAssigned = vehicle.driver.id === driver.id;
 
     if (!isDriverAssigned) {
-      throw new NotFoundException(
-        'Driver is not assigned to the specified vehicle',
-      );
+      throw new NotFoundException({
+        details: [
+          {
+            field: 'driverId',
+            message: 'Driver is not assigned to the specified vehicle',
+          },
+        ],
+      });
     }
 
     // Create the violation

@@ -50,7 +50,11 @@ export class CompleteSupervisorInvitationUseCase {
       request.token,
     );
     if (!invitationData) {
-      throw new NotFoundException('Invalid or expired invitation token');
+      throw new NotFoundException({
+        details: [
+          { field: 'token', message: 'Invalid or expired invitation token' },
+        ],
+      });
     }
 
     // Validate unique username
@@ -58,7 +62,9 @@ export class CompleteSupervisorInvitationUseCase {
       request.username,
     );
     if (existingUserByUsername) {
-      throw new BadRequestException('Username already exists');
+      throw new BadRequestException({
+        details: [{ field: 'username', message: 'Username already exists' }],
+      });
     }
 
     // Validate unique email (should not happen since we checked during invitation creation)
@@ -66,7 +72,9 @@ export class CompleteSupervisorInvitationUseCase {
       invitationData.email,
     );
     if (existingUserByEmail) {
-      throw new BadRequestException('Email already exists');
+      throw new BadRequestException({
+        details: [{ field: 'email', message: 'Email already exists' }],
+      });
     }
 
     // Validate unique employee ID if provided
@@ -74,7 +82,11 @@ export class CompleteSupervisorInvitationUseCase {
       const existingUserByEmployeeId =
         await this.userRepository.findByEmployeeId(invitationData.employeeId);
       if (existingUserByEmployeeId) {
-        throw new BadRequestException('Employee ID already exists');
+        throw new BadRequestException({
+          details: [
+            { field: 'employeeId', message: 'Employee ID already exists' },
+          ],
+        });
       }
     }
 
@@ -84,7 +96,14 @@ export class CompleteSupervisorInvitationUseCase {
     );
 
     if (departments.length !== invitationData.departmentIds.length) {
-      throw new BadRequestException('One or more departments no longer exist');
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'departmentIds',
+            message: 'One or more departments no longer exist',
+          },
+        ],
+      });
     }
 
     // Create new user

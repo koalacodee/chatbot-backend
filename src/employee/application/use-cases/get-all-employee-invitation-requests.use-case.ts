@@ -54,21 +54,32 @@ export class GetAllEmployeeInvitationRequestsUseCase {
     requestingUserId: string,
   ): Promise<GetAllEmployeeInvitationRequestsUseCaseOutput> {
     if (!requestingUserId) {
-      throw new BadRequestException('User ID is required');
+      throw new BadRequestException({
+        details: [
+          { field: 'requestingUserId', message: 'User ID is required' },
+        ],
+      });
     }
 
     const user = await this.userRepository.findById(requestingUserId);
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException({
+        details: [{ field: 'requestingUserId', message: 'User not found' }],
+      });
     }
 
     const userRole = user.role.getRole();
 
     // Only admins can view all invitation requests
     if (userRole !== Roles.ADMIN) {
-      throw new ForbiddenException(
-        'Only admins can view all employee invitation requests',
-      );
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'role',
+            message: 'Only admins can view all employee invitation requests',
+          },
+        ],
+      });
     }
 
     // Get all invitations by status

@@ -28,7 +28,10 @@ export class UpdateVehicleUseCase {
 
   async execute(id: string, dto: UpdateVehicleInputDto): Promise<Vehicle> {
     const existing = await this.vehicleRepo.findById(id);
-    if (!existing) throw new NotFoundException({ id: 'vehicle_not_found' });
+    if (!existing)
+      throw new NotFoundException({
+        details: [{ field: 'id', message: 'Vehicle not found' }],
+      });
 
     if (dto.make !== undefined) existing.make = dto.make;
     if (dto.model !== undefined) existing.model = dto.model;
@@ -58,7 +61,11 @@ export class UpdateVehicleUseCase {
         !license.licenseNumber ||
         !license.licenseIssueDate
       ) {
-        throw new BadRequestException({ license: 'data_incomplete' });
+        throw new BadRequestException({
+          details: [
+            { field: 'license', message: 'License data is incomplete' },
+          ],
+        });
       }
 
       vehicle.license = VehicleLicense.create({

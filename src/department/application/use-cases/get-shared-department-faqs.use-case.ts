@@ -23,20 +23,26 @@ export class GetSharedDepartmentFaqsUseCase {
 
   async execute({ key }: GetSharedDepartmentFaqsDto) {
     if (key.length !== +this.config.get('SHARE_LINK_KEY_LENGTH', 64) * 2) {
-      throw new BadRequestException('Invalid key');
+      throw new BadRequestException({
+        details: [{ field: 'key', message: 'Invalid key' }],
+      });
     }
 
     const departmentId = await this.redis.get(key);
 
     if (!departmentId) {
-      throw new NotFoundException('Key Not Found');
+      throw new NotFoundException({
+        details: [{ field: 'key', message: 'Key not found' }],
+      });
     }
 
     const department =
       await this.departmentRepository.findMainDepartmentById(departmentId);
 
     if (!department) {
-      throw new NotFoundException('Department not found');
+      throw new NotFoundException({
+        details: [{ field: 'departmentId', message: 'Department not found' }],
+      });
     }
 
     const faqs = await this.questionRepository.findByDepartmentIds([

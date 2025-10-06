@@ -41,16 +41,27 @@ export class ProfilePictureUploadService {
   ): Promise<ProfilePictureUploadResult> {
     // Validate file type
     if (!this.allowedMimeTypes.includes(mimeType)) {
-      throw new BadRequestException(
-        'Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.',
-      );
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'mimeType',
+            message:
+              'Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.',
+          },
+        ],
+      });
     }
 
     // Validate file size
     if (fileSize > this.maxFileSize) {
-      throw new BadRequestException(
-        'File size too large. Maximum allowed size is 5MB.',
-      );
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'fileSize',
+            message: 'File size too large. Maximum allowed size is 5MB.',
+          },
+        ],
+      });
     }
 
     // Generate unique filename
@@ -81,7 +92,11 @@ export class ProfilePictureUploadService {
         url,
       };
     } catch (error) {
-      throw new BadRequestException('Failed to upload profile picture');
+      throw new BadRequestException({
+        details: [
+          { field: 'file', message: 'Failed to upload profile picture' },
+        ],
+      });
     }
   }
 

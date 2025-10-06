@@ -24,13 +24,17 @@ export class GetSharedSubDepartmentFaqsUseCase {
 
   async execute({ key, subDepartmentId }: GetSharedSubDepartmentFaqsDto) {
     if (key.length !== +this.config.get('SHARE_LINK_KEY_LENGTH', 64) * 2) {
-      throw new BadRequestException('Invalid key');
+      throw new BadRequestException({
+        details: [{ field: 'key', message: 'Invalid key' }],
+      });
     }
 
     const departmentId = await this.redis.get(key);
 
     if (!departmentId) {
-      throw new NotFoundException('Key Not Found');
+      throw new NotFoundException({
+        details: [{ field: 'key', message: 'Key not found' }],
+      });
     }
 
     // Verify the sub-department belongs to the shared department
@@ -42,7 +46,11 @@ export class GetSharedSubDepartmentFaqsUseCase {
     );
 
     if (!subDepartment) {
-      throw new NotFoundException('Sub-department not found');
+      throw new NotFoundException({
+        details: [
+          { field: 'subDepartmentId', message: 'Sub-department not found' },
+        ],
+      });
     }
 
     if (

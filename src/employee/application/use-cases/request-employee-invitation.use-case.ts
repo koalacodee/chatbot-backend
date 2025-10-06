@@ -58,27 +58,42 @@ export class RequestEmployeeInvitationUseCase {
     requestingUserId: string,
   ): Promise<RequestEmployeeInvitationUseCaseOutput> {
     if (!requestingUserId) {
-      throw new BadRequestException('User ID is required');
+      throw new BadRequestException({
+        details: [
+          { field: 'requestingUserId', message: 'User ID is required' },
+        ],
+      });
     }
 
     const user = await this.userRepository.findById(requestingUserId);
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException({
+        details: [{ field: 'requestingUserId', message: 'User not found' }],
+      });
     }
 
     const userRole = user.role.getRole();
 
     // Only supervisors can request employee invitations
     if (userRole !== Roles.SUPERVISOR) {
-      throw new ForbiddenException(
-        'Only supervisors can request employee invitations',
-      );
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'root',
+            message: 'Only supervisors can request employee invitations',
+          },
+        ],
+      });
     }
 
     const supervisor =
       await this.supervisorRepository.findByUserId(requestingUserId);
     if (!supervisor) {
-      throw new BadRequestException('Supervisor not found');
+      throw new BadRequestException({
+        details: [
+          { field: 'requestingUserId', message: 'Supervisor not found' },
+        ],
+      });
     }
 
     const supervisorDepartmentIds = supervisor.departments.map((d) =>
@@ -92,9 +107,15 @@ export class RequestEmployeeInvitationUseCase {
     );
 
     if (!hasAccess) {
-      throw new ForbiddenException(
-        'You can only request employees in your assigned departments',
-      );
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'subDepartmentIds',
+            message:
+              'You can only request employees in your assigned departments',
+          },
+        ],
+      });
     }
 
     // Validate unique email
@@ -102,7 +123,9 @@ export class RequestEmployeeInvitationUseCase {
       input.email,
     );
     if (existingUserByEmail) {
-      throw new BadRequestException('Email already exists');
+      throw new BadRequestException({
+        details: [{ field: 'email', message: 'Email already exists' }],
+      });
     }
 
     // Validate unique employee ID if provided
@@ -110,7 +133,11 @@ export class RequestEmployeeInvitationUseCase {
       const existingUserByEmployeeId =
         await this.userRepository.findByEmployeeId(input.employeeId);
       if (existingUserByEmployeeId) {
-        throw new BadRequestException('Employee ID already exists');
+        throw new BadRequestException({
+          details: [
+            { field: 'employeeId', message: 'Employee ID already exists' },
+          ],
+        });
       }
     }
 
@@ -120,7 +147,14 @@ export class RequestEmployeeInvitationUseCase {
     );
 
     if (subDepartments.length !== input.subDepartmentIds.length) {
-      throw new BadRequestException('One or more sub-departments do not exist');
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'subDepartmentIds',
+            message: 'One or more sub-departments do not exist',
+          },
+        ],
+      });
     }
 
     // Create invitation request token and store data in Redis

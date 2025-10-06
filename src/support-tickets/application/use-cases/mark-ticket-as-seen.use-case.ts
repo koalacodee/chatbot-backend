@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { SupportTicketStatus } from 'src/support-tickets/domain/entities/support-ticket.entity';
 import { SupportTicketRepository } from 'src/support-tickets/domain/repositories/support-ticket.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
@@ -25,14 +29,20 @@ export class MarkTicketAsSeenUseCase {
     const ticket = await this.ticketRepository.findById(ticketId);
 
     if (!ticket) {
-      throw new NotFoundException({ ticket: 'not_found' });
+      throw new NotFoundException({
+        details: [{ field: 'ticketId', message: 'Ticket not found' }],
+      });
     }
 
     // Check department access if userId is provided
     if (userId) {
       const user = await this.userRepository.findById(userId);
       const userRole = user.role.getRole();
-      await this.checkDepartmentAccess(userId, ticket.departmentId.toString(), userRole);
+      await this.checkDepartmentAccess(
+        userId,
+        ticket.departmentId.toString(),
+        userRole,
+      );
     }
 
     ticket.status = SupportTicketStatus.SEEN;
@@ -82,7 +92,14 @@ export class MarkTicketAsSeenUseCase {
     }
 
     if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this department');
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'departmentId',
+            message: 'You do not have access to this department',
+          },
+        ],
+      });
     }
   }
 }

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
@@ -28,7 +32,9 @@ export class GenerateShareKeyUseCase {
     const department = await this.departmentRepository.findById(departmentId);
 
     if (!department) {
-      throw new NotFoundException({ department: 'not_found' });
+      throw new NotFoundException({
+        details: [{ field: 'departmentId', message: 'Department not found' }],
+      });
     }
 
     // Check department access if userId is provided
@@ -91,7 +97,14 @@ export class GenerateShareKeyUseCase {
     }
 
     if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this department');
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'departmentId',
+            message: 'You do not have access to this department',
+          },
+        ],
+      });
     }
   }
 }

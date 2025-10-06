@@ -50,21 +50,33 @@ export class GetMyEmployeeInvitationRequestsUseCase {
     requestingUserId: string,
   ): Promise<GetMyEmployeeInvitationRequestsUseCaseOutput> {
     if (!requestingUserId) {
-      throw new BadRequestException('User ID is required');
+      throw new BadRequestException({
+        details: [
+          { field: 'requestingUserId', message: 'User ID is required' },
+        ],
+      });
     }
 
     const user = await this.userRepository.findById(requestingUserId);
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException({
+        details: [{ field: 'requestingUserId', message: 'User not found' }],
+      });
     }
 
     const userRole = user.role.getRole();
 
     // Only supervisors can view their own invitation requests
     if (userRole !== Roles.SUPERVISOR) {
-      throw new ForbiddenException(
-        'Only supervisors can view their employee invitation requests',
-      );
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'root',
+            message:
+              'Only supervisors can view their employee invitation requests',
+          },
+        ],
+      });
     }
 
     // Get invitations requested by this supervisor

@@ -47,7 +47,9 @@ export class GetAttachmentMetadataByTokenUseCase {
         console.log(
           'GetAttachmentMetadataByTokenUseCase - Attachment not found in database',
         );
-        throw new NotFoundException('Attachment not found');
+        throw new NotFoundException({
+          details: [{ field: 'attachmentId', message: 'Attachment not found' }],
+        });
       }
     } else {
       console.log(
@@ -61,7 +63,9 @@ export class GetAttachmentMetadataByTokenUseCase {
         console.log(
           'GetAttachmentMetadataByTokenUseCase - Token not found in Redis',
         );
-        throw new NotFoundException('Token not found or expired');
+        throw new NotFoundException({
+          details: [{ field: 'token', message: 'Token not found or expired' }],
+        });
       }
 
       console.log(
@@ -75,7 +79,9 @@ export class GetAttachmentMetadataByTokenUseCase {
         console.log(
           'GetAttachmentMetadataByTokenUseCase - Attachment not found in database',
         );
-        throw new NotFoundException('Attachment not found');
+        throw new NotFoundException({
+          details: [{ field: 'attachmentId', message: 'Attachment not found' }],
+        });
       }
 
       // Get token expiry date for token-based requests
@@ -109,7 +115,9 @@ export class GetAttachmentMetadataByTokenUseCase {
       console.log(
         'GetAttachmentMetadataByTokenUseCase - File does not exist on disk',
       );
-      throw new NotFoundException('File not found on disk');
+      throw new NotFoundException({
+        details: [{ field: 'file', message: 'File not found on disk' }],
+      });
     }
 
     // Get file stats for size

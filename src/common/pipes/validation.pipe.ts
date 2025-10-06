@@ -11,30 +11,31 @@ export class ValidationPipe extends NestValidationPipe {
       forbidNonWhitelisted: true,
       transform: true,
       exceptionFactory(errors: ValidationError[]) {
-        const formattedErrors: Record<string, any> = {};
+        const details: Array<{ field: string; message: string }> = [];
 
         const buildErrorTree = (
           errors: ValidationError[],
-          target: Record<string, any>,
+          parentPath: string = '',
         ) => {
           errors.forEach((error) => {
+            const fieldPath = parentPath
+              ? `${parentPath}.${error.property}`
+              : error.property;
+
             if (error.constraints) {
-              // Take only the last constraint (first decoratorâ€™s message)
-              target[error.property] = Object.values(error.constraints).pop();
+              // Take only the last constraint (first decorator's message)
+              const message = Object.values(error.constraints).pop() as string;
+              details.push({ field: fieldPath, message });
             } else if (error.children?.length) {
-              // Initialize nested object if it does not exist
-              if (!target[error.property]) {
-                target[error.property] = {}; // Simplified: always an object
-              }
-              // Recurse on error.children
-              buildErrorTree(error.children, target[error.property]);
+              // Recurse on error.children with the current path
+              buildErrorTree(error.children, fieldPath);
             }
           });
         };
 
-        buildErrorTree(errors, formattedErrors);
+        buildErrorTree(errors);
 
-        return new BadRequestException(formattedErrors || {});
+        return new BadRequestException({ details });
       },
     });
   }

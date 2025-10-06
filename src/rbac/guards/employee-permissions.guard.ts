@@ -31,7 +31,11 @@ export class EmployeePermissionsGuard implements CanActivate {
     }
 
     if (!user?.permissions) {
-      throw new ForbiddenException('No permissions found for user');
+      throw new ForbiddenException({
+        details: [
+          { field: 'permissions', message: 'No permissions found for user' },
+        ],
+      });
     }
 
     const hasAccess = requiredPermissions.every((p) =>
@@ -39,7 +43,14 @@ export class EmployeePermissionsGuard implements CanActivate {
     );
 
     if (!hasAccess) {
-      throw new ForbiddenException('Insufficient employee permissions');
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'permissions',
+            message: 'Insufficient employee permissions',
+          },
+        ],
+      });
     }
 
     return true;

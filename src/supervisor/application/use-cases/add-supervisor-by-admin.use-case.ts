@@ -40,7 +40,9 @@ export class AddSupervisorByAdminUseCase {
       request.email,
     );
     if (existingUserByEmail) {
-      throw new BadRequestException('Email already exists');
+      throw new BadRequestException({
+        details: [{ field: 'email', message: 'Email already exists' }],
+      });
     }
 
     // Validate unique employee ID if provided
@@ -48,7 +50,11 @@ export class AddSupervisorByAdminUseCase {
       const existingUserByEmployeeId =
         await this.userRepository.findByEmployeeId(request.employeeId);
       if (existingUserByEmployeeId) {
-        throw new BadRequestException('Employee ID already exists');
+        throw new BadRequestException({
+          details: [
+            { field: 'employeeId', message: 'Employee ID already exists' },
+          ],
+        });
       }
     }
 
@@ -58,7 +64,14 @@ export class AddSupervisorByAdminUseCase {
     );
 
     if (departments.length !== request.departmentIds.length) {
-      throw new BadRequestException('One or more departments do not exist');
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'departmentIds',
+            message: 'One or more departments do not exist',
+          },
+        ],
+      });
     }
 
     // Create invitation token and store data in Redis

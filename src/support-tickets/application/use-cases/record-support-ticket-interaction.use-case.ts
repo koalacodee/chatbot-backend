@@ -46,7 +46,11 @@ export class RecordSupportTicketInteractionUseCase {
       input.supportTicketId,
     );
     if (!supportTicket) {
-      throw new NotFoundException('Support ticket not found');
+      throw new NotFoundException({
+        details: [
+          { field: 'supportTicketId', message: 'Support ticket not found' },
+        ],
+      });
     }
 
     // // Validate guest ownership - ensure the guest owns this support ticket

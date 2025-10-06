@@ -55,12 +55,18 @@ export class CompleteEmployeeInvitationUseCase {
       request.token,
     );
     if (!invitationData) {
-      throw new NotFoundException('Invalid or expired invitation token');
+      throw new NotFoundException({
+        details: [
+          { field: 'token', message: 'Invalid or expired invitation token' },
+        ],
+      });
     }
 
     // Check if invitation is approved
     if (invitationData.status !== InvitationStatus.APPROVED) {
-      throw new BadRequestException('Invitation is not approved yet');
+      throw new BadRequestException({
+        details: [{ field: 'root', message: 'Invitation is not approved yet' }],
+      });
     }
 
     // Validate unique username
@@ -68,7 +74,9 @@ export class CompleteEmployeeInvitationUseCase {
       request.username,
     );
     if (existingUserByUsername) {
-      throw new BadRequestException('Username already exists');
+      throw new BadRequestException({
+        details: [{ field: 'username', message: 'Username already exists' }],
+      });
     }
 
     // Validate unique email (should not happen since we checked during invitation creation)
@@ -76,7 +84,9 @@ export class CompleteEmployeeInvitationUseCase {
       invitationData.email,
     );
     if (existingUserByEmail) {
-      throw new BadRequestException('Email already exists');
+      throw new BadRequestException({
+        details: [{ field: 'email', message: 'Email already exists' }],
+      });
     }
 
     // Validate unique employee ID if provided
@@ -84,7 +94,11 @@ export class CompleteEmployeeInvitationUseCase {
       const existingUserByEmployeeId =
         await this.userRepository.findByEmployeeId(invitationData.employeeId);
       if (existingUserByEmployeeId) {
-        throw new BadRequestException('Employee ID already exists');
+        throw new BadRequestException({
+          details: [
+            { field: 'employeeId', message: 'Employee ID already exists' },
+          ],
+        });
       }
     }
 
@@ -94,9 +108,14 @@ export class CompleteEmployeeInvitationUseCase {
     );
 
     if (subDepartments.length !== invitationData.subDepartmentIds.length) {
-      throw new BadRequestException(
-        'One or more sub-departments no longer exist',
-      );
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'subDepartmentIds',
+            message: 'One or more sub-departments no longer exist',
+          },
+        ],
+      });
     }
 
     // Validate supervisor still exists
@@ -104,7 +123,11 @@ export class CompleteEmployeeInvitationUseCase {
       invitationData.supervisorId,
     );
     if (!supervisor) {
-      throw new BadRequestException('Supervisor no longer exists');
+      throw new BadRequestException({
+        details: [
+          { field: 'supervisor', message: 'Supervisor no longer exists' },
+        ],
+      });
     }
 
     // Create new user

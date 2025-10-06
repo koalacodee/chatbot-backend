@@ -36,12 +36,23 @@ export class RefreshTokenStrategy extends PassportStrategy(
     const refreshToken = req.cookies['refresh_token'];
 
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token not found');
+      throw new UnauthorizedException({
+        details: [
+          { field: 'refreshToken', message: 'Refresh token not found' },
+        ],
+      });
     }
 
     // Reject guest tokens
     if (payload.role === 'guest') {
-      throw new UnauthorizedException('Guest refresh tokens not accepted');
+      throw new UnauthorizedException({
+        details: [
+          {
+            field: 'refreshToken',
+            message: 'Guest refresh tokens not accepted',
+          },
+        ],
+      });
     }
 
     // Verify that the refresh token exists in the database and hasn't been revoked
@@ -49,26 +60,40 @@ export class RefreshTokenStrategy extends PassportStrategy(
       await this.refreshTokenRepository.findByToken(refreshToken);
 
     if (!storedToken) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException({
+        details: [{ field: 'refreshToken', message: 'Invalid refresh token' }],
+      });
     }
 
     if (storedToken.isRevoked) {
-      throw new UnauthorizedException('Refresh token has been revoked');
+      throw new UnauthorizedException({
+        details: [
+          { field: 'refreshToken', message: 'Refresh token has been revoked' },
+        ],
+      });
     }
 
     if (storedToken.isExpired) {
-      throw new UnauthorizedException('Refresh token has expired');
+      throw new UnauthorizedException({
+        details: [
+          { field: 'refreshToken', message: 'Refresh token has expired' },
+        ],
+      });
     }
 
     // Verify the token belongs to the user in the payload
     if (storedToken.targetId.toString() !== payload.sub) {
-      throw new UnauthorizedException('Invalid token owner');
+      throw new UnauthorizedException({
+        details: [{ field: 'refreshToken', message: 'Invalid token owner' }],
+      });
     }
 
     const user = await this.userRepository.findById(payload.sub);
 
     if (!user) {
-      throw new UnauthorizedException('user_not_found');
+      throw new UnauthorizedException({
+        details: [{ field: 'userId', message: 'User not found' }],
+      });
     }
 
     return {

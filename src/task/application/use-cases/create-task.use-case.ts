@@ -81,12 +81,25 @@ export class CreateTaskUseCase {
     }
 
     if (Object.keys(validationErrors).length > 0) {
-      throw new BadRequestException(validationErrors);
+      const details = Object.entries(validationErrors).map(
+        ([field, message]) => ({
+          field,
+          message: `${field} is ${message}`,
+        }),
+      );
+      throw new BadRequestException({ details });
     }
 
     // Security check: Ensure assigner is the requesting user
     if (userId && dto.assignerId !== userId) {
-      throw new ForbiddenException('You can only create tasks as yourself');
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'assignerId',
+            message: 'You can only create tasks as yourself',
+          },
+        ],
+      });
     }
 
     // Check department access if userId is provided
@@ -128,11 +141,27 @@ export class CreateTaskUseCase {
       throw new NotFoundException({ assigneeId: 'not_found' });
     if (!assigner) throw new NotFoundException({ assignerId: 'not_found' });
     if (dto.approverId && !approverAdmin && !approverSupervisor)
-      throw new NotFoundException({ approverId: 'not_found' });
+      throw new NotFoundException({
+        details: [{ field: 'approverId', message: 'Approver not found' }],
+      });
     if (dto.targetDepartmentId && !targetDepartment)
-      throw new NotFoundException({ targetDepartmentId: 'not_found' });
+      throw new NotFoundException({
+        details: [
+          {
+            field: 'targetDepartmentId',
+            message: 'Target department not found',
+          },
+        ],
+      });
     if (dto.targetSubDepartmentId && !targetSubDepartment)
-      throw new NotFoundException({ targetSubDepartmentId: 'not_found' });
+      throw new NotFoundException({
+        details: [
+          {
+            field: 'targetSubDepartmentId',
+            message: 'Target sub-department not found',
+          },
+        ],
+      });
 
     const task = Task.create({
       id: UUID.create().toString(),
@@ -241,7 +270,14 @@ export class CreateTaskUseCase {
       if (dto.assignmentType === 'INDIVIDUAL' && dto.assigneeId) {
         // Employees can only assign tasks to themselves
         if (dto.assigneeId !== userId) {
-          throw new ForbiddenException('You can only assign tasks to yourself');
+          throw new ForbiddenException({
+            details: [
+              {
+                field: 'assigneeId',
+                message: 'You can only assign tasks to yourself',
+              },
+            ],
+          });
         }
       } else {
         // Employees cannot create department-wide tasks

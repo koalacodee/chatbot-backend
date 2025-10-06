@@ -8,7 +8,10 @@ export class GetVehicleUseCase {
 
   async execute(id: string): Promise<Vehicle> {
     const vehicle = await this.vehicleRepo.findById(id);
-    if (!vehicle) throw new NotFoundException({ id: 'vehicle_not_found' });
+    if (!vehicle)
+      throw new NotFoundException({
+        details: [{ field: 'id', message: 'Vehicle not found' }],
+      });
     return vehicle;
   }
 }

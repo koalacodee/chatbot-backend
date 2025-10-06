@@ -33,7 +33,9 @@ export class AnswerFaqUseCase {
     const question = await this.questionsRepo.findById(id);
 
     if (!question) {
-      throw new NotFoundException({ id: 'question_not_found' });
+      throw new NotFoundException({
+        details: [{ field: 'id', message: 'Question not found' }],
+      });
     }
 
     const conversation = await this.ensureConversation({
@@ -78,11 +80,22 @@ export class AnswerFaqUseCase {
     if (id) {
       return this.conversationRepo.findById(id).then((c) => {
         if (!c) {
-          throw new NotFoundException('conversation_not_found');
+          throw new NotFoundException({
+            details: [
+              { field: 'conversationId', message: 'Conversation not found' },
+            ],
+          });
         }
 
         if (c.guest.id.value !== guestId) {
-          throw new ForbiddenException('conversation_not_owned');
+          throw new ForbiddenException({
+            details: [
+              {
+                field: 'conversationId',
+                message: 'Conversation not owned by user',
+              },
+            ],
+          });
         }
 
         return c;

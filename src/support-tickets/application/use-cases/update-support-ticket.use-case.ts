@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
 import { SupportTicketRepository } from '../../domain/repositories/support-ticket.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
@@ -26,7 +30,10 @@ export class UpdateSupportTicketUseCase {
     private readonly departmentRepository: DepartmentRepository,
   ) {}
 
-  async execute(id: string, dto: UpdateSupportTicketInputDto): Promise<SupportTicket> {
+  async execute(
+    id: string,
+    dto: UpdateSupportTicketInputDto,
+  ): Promise<SupportTicket> {
     const existing = await this.supportTicketRepo.findById(id);
     if (!existing)
       throw new NotFoundException({ id: 'support_ticket_not_found' });
@@ -90,7 +97,14 @@ export class UpdateSupportTicketUseCase {
     }
 
     if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this department');
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'departmentId',
+            message: 'You do not have access to this department',
+          },
+        ],
+      });
     }
   }
 }

@@ -50,19 +50,30 @@ export class RejectTaskSubmissionUseCase {
     attachments: { [taskSubmissionId: string]: string[] };
   }> {
     if (!userId) {
-      throw new BadRequestException('User ID is required');
+      throw new BadRequestException({
+        details: [{ field: 'userId', message: 'User ID is required' }],
+      });
     }
     const taskSubmission = await this.taskSubmissionRepo.findById(
       dto.taskSubmissionId,
     );
     if (!taskSubmission)
-      throw new NotFoundException({ id: 'task_submission_not_found' });
+      throw new NotFoundException({
+        details: [
+          { field: 'taskSubmissionId', message: 'Task submission not found' },
+        ],
+      });
 
     // Check if submission is already reviewed
     if (taskSubmission.status !== TaskSubmissionStatus.SUBMITTED) {
-      throw new BadRequestException(
-        'Task submission has already been reviewed',
-      );
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'taskSubmissionId',
+            message: 'Task submission has already been reviewed',
+          },
+        ],
+      });
     }
 
     // Check department access if userId is provided
@@ -117,7 +128,9 @@ export class RejectTaskSubmissionUseCase {
       case 'INDIVIDUAL':
         return this.validateIndividualRejection(userId, task, role);
       default:
-        throw new ForbiddenException('Invalid task assignment type');
+        throw new ForbiddenException({
+          details: [{ field: 'task', message: 'Invalid task assignment type' }],
+        });
     }
   }
 
@@ -128,16 +141,27 @@ export class RejectTaskSubmissionUseCase {
   ): Promise<Admin> {
     // Department level tasks can only be rejected by admins
     if (role !== Roles.ADMIN) {
-      throw new ForbiddenException(
-        'Department-level tasks can only be reject by administrators',
-      );
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'role',
+            message:
+              'Department-level tasks can only be reject by administrators',
+          },
+        ],
+      });
     }
 
     // Ensure task has target department
     if (!task.targetDepartment) {
-      throw new BadRequestException(
-        'Department-level task must have target department',
-      );
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'task',
+            message: 'Department-level task must have target department',
+          },
+        ],
+      });
     }
 
     return this.adminRepository.findByUserId(userId);
@@ -157,7 +181,9 @@ export class RejectTaskSubmissionUseCase {
     if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
       if (!supervisor) {
-        throw new ForbiddenException('Supervisor not found');
+        throw new ForbiddenException({
+          details: [{ field: 'supervisorId', message: 'Supervisor not found' }],
+        });
       }
 
       const supervisorDepartmentIds = supervisor.departments.map((d) =>
@@ -165,9 +191,15 @@ export class RejectTaskSubmissionUseCase {
       );
 
       if (!task.targetSubDepartment) {
-        throw new BadRequestException(
-          'Sub-department level task must have target sub-department',
-        );
+        throw new BadRequestException({
+          details: [
+            {
+              field: 'task',
+              message:
+                'Sub-department level task must have target sub-department',
+            },
+          ],
+        });
       }
 
       const hasAccess =
@@ -177,17 +209,29 @@ export class RejectTaskSubmissionUseCase {
         );
 
       if (!hasAccess) {
-        throw new ForbiddenException(
-          'You do not have permission to reject tasks for this sub-department',
-        );
+        throw new ForbiddenException({
+          details: [
+            {
+              field: 'permission',
+              message:
+                'You do not have permission to reject tasks for this sub-department',
+            },
+          ],
+        });
       }
 
       return supervisor;
     }
 
-    throw new ForbiddenException(
-      'Only administrators and supervisors can reject sub-department level tasks',
-    );
+    throw new ForbiddenException({
+      details: [
+        {
+          field: 'role',
+          message:
+            'Only administrators and supervisors can reject sub-department level tasks',
+        },
+      ],
+    });
   }
 
   private async validateIndividualRejection(
@@ -204,7 +248,9 @@ export class RejectTaskSubmissionUseCase {
     if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
       if (!supervisor) {
-        throw new ForbiddenException('Supervisor not found');
+        throw new ForbiddenException({
+          details: [{ field: 'supervisorId', message: 'Supervisor not found' }],
+        });
       }
 
       const supervisorDepartmentIds = supervisor.departments.map((d) =>
@@ -212,7 +258,14 @@ export class RejectTaskSubmissionUseCase {
       );
 
       if (!task.assignee) {
-        throw new BadRequestException('Employee-level task must have assignee');
+        throw new BadRequestException({
+          details: [
+            {
+              field: 'task',
+              message: 'Employee-level task must have assignee',
+            },
+          ],
+        });
       }
 
       // Get employee's department/sub-department
@@ -220,7 +273,9 @@ export class RejectTaskSubmissionUseCase {
         task.assignee.id.toString(),
       );
       if (!employee) {
-        throw new NotFoundException('Employee not found');
+        throw new NotFoundException({
+          details: [{ field: 'employeeId', message: 'Employee not found' }],
+        });
       }
 
       let employeeDepartmentIds: string[] = [];
@@ -250,16 +305,28 @@ export class RejectTaskSubmissionUseCase {
       );
 
       if (!hasAccess) {
-        throw new ForbiddenException(
-          'You do not have permission to reject tasks for this employee',
-        );
+        throw new ForbiddenException({
+          details: [
+            {
+              field: 'permission',
+              message:
+                'You do not have permission to reject tasks for this employee',
+            },
+          ],
+        });
       }
 
       return supervisor;
     }
 
-    throw new ForbiddenException(
-      'Only administrators and supervisors can reject employee-level tasks',
-    );
+    throw new ForbiddenException({
+      details: [
+        {
+          field: 'role',
+          message:
+            'Only administrators and supervisors can reject employee-level tasks',
+        },
+      ],
+    });
   }
 }

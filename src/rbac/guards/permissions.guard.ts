@@ -27,7 +27,11 @@ export class PermissionsGuard implements CanActivate {
     const { user } = context.switchToHttp().getRequest();
 
     if (!user?.permissions) {
-      throw new ForbiddenException('No permissions found for user');
+      throw new ForbiddenException({
+        details: [
+          { field: 'permissions', message: 'No permissions found for user' },
+        ],
+      });
     }
 
     // Decide: every vs some
@@ -36,7 +40,11 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!hasAccess) {
-      throw new ForbiddenException('Insufficient permissions');
+      throw new ForbiddenException({
+        details: [
+          { field: 'permissions', message: 'Insufficient permissions' },
+        ],
+      });
     }
 
     return true;

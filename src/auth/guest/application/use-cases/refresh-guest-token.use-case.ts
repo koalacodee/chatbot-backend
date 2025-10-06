@@ -32,7 +32,11 @@ export class RefreshGuestTokenUseCase {
         error.message.includes('Invalid') ||
         error.message.includes('expired')
       ) {
-        throw new UnauthorizedException({ token: 'invalid_or_expired' });
+        throw new UnauthorizedException({
+          details: [
+            { field: 'refreshToken', message: 'Invalid or expired token' },
+          ],
+        });
       }
       throw error;
     }

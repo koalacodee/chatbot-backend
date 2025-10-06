@@ -23,14 +23,18 @@ export class UpdateSupervisorUseCase {
     const { permissions, departmentIds, email, ...userData } = supervisor;
     const user = await this.userRepository.findBySupervisorId(id);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException({
+        details: [{ field: 'id', message: 'User not found' }],
+      });
     }
     user.email = Email.create(email);
     await this.userRepository.save(Object.assign(user, userData));
 
     const existingSupervisor = await this.supervisorRepository.findById(id);
     if (!existingSupervisor) {
-      throw new NotFoundException('Supervisor not found');
+      throw new NotFoundException({
+        details: [{ field: 'id', message: 'Supervisor not found' }],
+      });
     }
 
     if (

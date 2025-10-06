@@ -19,11 +19,17 @@ export class GetConversationUseCase {
     const conversation = await this.conversationRepo.findById(id);
 
     if (!conversation) {
-      throw new NotFoundException({ id: 'conversation_not_found' });
+      throw new NotFoundException({
+        details: [{ field: 'id', message: 'Conversation not found' }],
+      });
     }
 
     if (conversation.guest.id.value !== guestId) {
-      throw new ForbiddenException('conversation_not_owned');
+      throw new ForbiddenException({
+        details: [
+          { field: 'guestId', message: 'Conversation not owned by guest' },
+        ],
+      });
     }
 
     return conversation.toJSON();

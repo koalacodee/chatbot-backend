@@ -23,7 +23,9 @@ export class LoginGuestUseCase {
       ? this.guestRepo.findByEmail(identifier)
       : this.guestRepo.findByPhone(identifier));
     if (!guest) {
-      throw new NotFoundException({ guest: 'guest_not_found' });
+      throw new NotFoundException({
+        details: [{ field: 'identifier', message: 'Guest not found' }],
+      });
     }
     const code = randomInt(100000, 1000000).toString();
     await Promise.all([

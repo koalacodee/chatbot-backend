@@ -31,7 +31,11 @@ export class SupervisorPermissionsGuard implements CanActivate {
     }
 
     if (!user?.permissions) {
-      throw new ForbiddenException('No permissions found for user');
+      throw new ForbiddenException({
+        details: [
+          { field: 'permissions', message: 'No permissions found for user' },
+        ],
+      });
     }
 
     // For supervisor guard, we don't skip validation for any role
@@ -40,7 +44,14 @@ export class SupervisorPermissionsGuard implements CanActivate {
     );
 
     if (!hasAccess) {
-      throw new ForbiddenException('Insufficient supervisor permissions');
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'permissions',
+            message: 'Insufficient supervisor permissions',
+          },
+        ],
+      });
     }
 
     return true;

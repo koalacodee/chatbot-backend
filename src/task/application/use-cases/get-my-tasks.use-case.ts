@@ -51,7 +51,9 @@ export class GetMyTasksUseCase {
   async execute(dto: GetMyTasksInputDto): Promise<MyTasksResult> {
     const user = await this.userRepo.findById(dto.userId);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException({
+        details: [{ field: 'userId', message: 'User not found' }],
+      });
     }
 
     const userRole = user.role.getRole();
@@ -62,9 +64,15 @@ export class GetMyTasksUseCase {
       case Roles.EMPLOYEE:
         return this.getEmployeeTasks(dto);
       case Roles.ADMIN:
-        throw new ForbiddenException('Admins do not have my-tasks endpoint');
+        throw new ForbiddenException({
+          details: [
+            { field: 'role', message: 'Admins do not have my-tasks endpoint' },
+          ],
+        });
       default:
-        throw new ForbiddenException('Invalid user role');
+        throw new ForbiddenException({
+          details: [{ field: 'role', message: 'Invalid user role' }],
+        });
     }
   }
 
@@ -73,7 +81,9 @@ export class GetMyTasksUseCase {
   ): Promise<MyTasksResult> {
     const supervisor = await this.supervisorRepository.findByUserId(dto.userId);
     if (!supervisor) {
-      throw new NotFoundException('Supervisor not found');
+      throw new NotFoundException({
+        details: [{ field: 'userId', message: 'Supervisor not found' }],
+      });
     }
 
     const supervisorDepartmentIds = supervisor.departments.map((d) =>
@@ -130,7 +140,9 @@ export class GetMyTasksUseCase {
   ): Promise<MyTasksResult> {
     const employee = await this.employeeRepository.findByUserId(dto.userId);
     if (!employee) {
-      throw new NotFoundException('Employee not found');
+      throw new NotFoundException({
+        details: [{ field: 'userId', message: 'Employee not found' }],
+      });
     }
 
     const employeeSubDepartmentIds = employee.subDepartments

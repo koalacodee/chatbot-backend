@@ -18,7 +18,11 @@ export class GetTaskSubmissionUseCase {
       await this.taskSubmissionRepo.findById(taskSubmissionId);
 
     if (!taskSubmission) {
-      throw new NotFoundException('Task submission not found');
+      throw new NotFoundException({
+        details: [
+          { field: 'taskSubmissionId', message: 'Task submission not found' },
+        ],
+      });
     }
 
     // Get attachments for this task submission

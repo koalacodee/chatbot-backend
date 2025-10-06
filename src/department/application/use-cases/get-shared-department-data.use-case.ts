@@ -23,7 +23,9 @@ export class GetSharedDepartmentDataUseCase {
     const departmentId = await this.redis.get(key);
 
     if (!departmentId) {
-      throw new NotFoundException('Key Not Found');
+      throw new NotFoundException({
+        details: [{ field: 'key', message: 'Key not found' }],
+      });
     }
 
     const department = await this.departmentRepository.findMainDepartmentById(
@@ -34,7 +36,9 @@ export class GetSharedDepartmentDataUseCase {
     );
 
     if (!department) {
-      throw new NotFoundException('Department not found');
+      throw new NotFoundException({
+        details: [{ field: 'departmentId', message: 'Department not found' }],
+      });
     }
 
     return department;

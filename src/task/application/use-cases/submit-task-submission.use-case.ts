@@ -80,10 +80,18 @@ export class SubmitTaskSubmissionUseCase {
         .then((user) => this.getSubmitterByUser(user)),
     ]);
 
-    if (!existingTask) throw new NotFoundException({ id: 'task_not_found' });
-    if (!submitter) throw new NotFoundException({ submittedBy: 'not_found' });
+    if (!existingTask)
+      throw new NotFoundException({
+        details: [{ field: 'taskId', message: 'Task not found' }],
+      });
+    if (!submitter)
+      throw new NotFoundException({
+        details: [{ field: 'submittedBy', message: 'Submitter not found' }],
+      });
     if (existingTask.status === TaskStatus.COMPLETED) {
-      throw new BadRequestException({ task: 'already_completed' });
+      throw new BadRequestException({
+        details: [{ field: 'root', message: 'Task is already completed' }],
+      });
     }
 
     // Check department access if userId is provided
@@ -103,7 +111,9 @@ export class SubmitTaskSubmissionUseCase {
     } else if (submitter instanceof Employee) {
       performerType = 'employee';
     } else {
-      throw new BadRequestException('Invalid performer type');
+      throw new BadRequestException({
+        details: [{ field: 'submittedBy', message: 'Invalid performer type' }],
+      });
     }
 
     const taskSubmission = TaskSubmission.create({

@@ -38,7 +38,9 @@ export class AddDriverBySupervisorUseCase {
       dto.supervisorId,
     );
     if (!supervisor) {
-      throw new NotFoundException('Supervisor not found');
+      throw new NotFoundException({
+        details: [{ field: 'supervisorId', message: 'Supervisor not found' }],
+      });
     }
 
     // Check if username already exists
@@ -46,7 +48,9 @@ export class AddDriverBySupervisorUseCase {
       dto.username,
     );
     if (existingUserByUsername) {
-      throw new ConflictException('Username already exists');
+      throw new ConflictException({
+        details: [{ field: 'username', message: 'Username already exists' }],
+      });
     }
 
     // Check if email already exists
@@ -54,14 +58,23 @@ export class AddDriverBySupervisorUseCase {
       dto.email,
     );
     if (existingUserByEmail) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException({
+        details: [{ field: 'email', message: 'Email already exists' }],
+      });
     }
 
     // Check if licensing number already exists
     const existingDriverByLicense =
       await this.driverRepository.findByLicensingNumber(dto.licensingNumber);
     if (existingDriverByLicense) {
-      throw new ConflictException('Licensing number already exists');
+      throw new ConflictException({
+        details: [
+          {
+            field: 'licensingNumber',
+            message: 'Licensing number already exists',
+          },
+        ],
+      });
     }
 
     // Check if employee ID already exists (if provided)
@@ -69,7 +82,11 @@ export class AddDriverBySupervisorUseCase {
       const existingUserByEmployeeId =
         await this.userRepository.findByEmployeeId(dto.employeeId);
       if (existingUserByEmployeeId) {
-        throw new ConflictException('Employee ID already exists');
+        throw new ConflictException({
+          details: [
+            { field: 'employeeId', message: 'Employee ID already exists' },
+          ],
+        });
       }
     }
 

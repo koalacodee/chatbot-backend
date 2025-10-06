@@ -25,7 +25,9 @@ export class GetPromotionForUserUseCase {
   }: GetPromotionForUserInput): Promise<GetPromotionForUserOutput> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException({
+        details: [{ field: 'userId', message: 'User not found' }],
+      });
     }
     const promotion = await this.promotionRepository.getPromotionForUser(
       user.role.getRole(),

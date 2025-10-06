@@ -48,7 +48,14 @@ export class VerifySupportTicketUseCase {
       dto.verificationCode,
     );
     if (!isValid) {
-      throw new BadRequestException('Invalid or expired verification code');
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'verificationCode',
+            message: 'Invalid or expired verification code',
+          },
+        ],
+      });
     }
 
     // Retrieve ticket from Redis
@@ -56,7 +63,14 @@ export class VerifySupportTicketUseCase {
       dto.verificationCode,
     );
     if (!ticketData) {
-      throw new NotFoundException('Ticket not found or already verified');
+      throw new NotFoundException({
+        details: [
+          {
+            field: 'verificationCode',
+            message: 'Ticket not found or already verified',
+          },
+        ],
+      });
     }
 
     // Reconstruct ticket from stored data

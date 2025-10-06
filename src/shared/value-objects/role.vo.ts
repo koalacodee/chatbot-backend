@@ -13,7 +13,9 @@ export class Role {
 
   static create(role: string): Role {
     if (!Object.values(Roles).includes(role as Roles)) {
-      throw new BadRequestException({ role: 'role_invalid' });
+      throw new BadRequestException({
+        details: [{ field: 'role', message: 'Role is invalid' }],
+      });
     }
 
     return new Role(role as Roles);

@@ -25,7 +25,9 @@ export class Password {
     const isCorrect = await verify(this.hashed, plain);
 
     if (!isCorrect) {
-      throw new UnauthorizedException({ password: 'password_incorrect' });
+      throw new UnauthorizedException({
+        details: [{ field: 'password', message: 'Password is incorrect' }],
+      });
     }
 
     return true;

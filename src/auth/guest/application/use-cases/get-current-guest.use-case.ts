@@ -23,7 +23,9 @@ export class GetCurrentGuestUseCase {
 
     const guest = await this.guestRepository.findById(guestId);
     if (!guest) {
-      throw new UnauthorizedException({ guest: 'guest_not_found' });
+      throw new UnauthorizedException({
+        details: [{ field: 'guestId', message: 'Guest not found' }],
+      });
     }
 
     return {

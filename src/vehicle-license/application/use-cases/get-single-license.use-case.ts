@@ -9,7 +9,10 @@ export class GetSingleLicenseUseCase {
 
   async execute(input: GetSingleLicenseInputDto): Promise<VehicleLicense> {
     const license = await this.repo.findById(input.licenseId);
-    if (!license) throw new NotFoundException('Vehicle license not found');
+    if (!license)
+      throw new NotFoundException({
+        details: [{ field: 'licenseId', message: 'Vehicle license not found' }],
+      });
     return license;
   }
 }

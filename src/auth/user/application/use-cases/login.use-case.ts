@@ -31,7 +31,9 @@ export class LoginUseCase {
     const user = await this.userRepo.findByUsername(input.username);
 
     if (!user) {
-      throw new NotFoundException({ user: 'user_not_found' });
+      throw new NotFoundException({
+        details: [{ field: 'username', message: 'User not found' }],
+      });
     }
 
     await user.password.verify(input.password);

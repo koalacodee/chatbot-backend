@@ -9,14 +9,16 @@ export class DeleteViolationUseCase {
   async execute(input: ViolationIdDto): Promise<{ success: boolean }> {
     // Check if violation exists
     const exists = await this.violationRepository.exists(input.violationId);
-    
+
     if (!exists) {
-      throw new NotFoundException('Violation not found');
+      throw new NotFoundException({
+        details: [{ field: 'violationId', message: 'Violation not found' }],
+      });
     }
 
     // Delete the violation
     await this.violationRepository.removeById(input.violationId);
-    
+
     return { success: true };
   }
 }

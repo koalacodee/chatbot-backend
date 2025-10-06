@@ -38,9 +38,14 @@ export class CanDeleteEmployeeUseCase {
 
         // Check if employee is directly supervised by this supervisor
         if (employee.supervisorId.toString() !== supervisor.id.toString()) {
-          throw new ForbiddenException(
-            'You do not have access to this employee',
-          );
+          throw new ForbiddenException({
+            details: [
+              {
+                field: 'employeeId',
+                message: 'You do not have access to this employee',
+              },
+            ],
+          });
         }
       }
       // Admins have full access (no restrictions)

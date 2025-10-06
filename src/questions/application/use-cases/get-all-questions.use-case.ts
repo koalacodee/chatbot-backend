@@ -37,9 +37,14 @@ export class GetAllQuestionsUseCase {
 
         // If departmentId is specified, validate supervisor has access to it
         if (departmentId && !supervisorDepartmentIds.includes(departmentId)) {
-          throw new ForbiddenException(
-            'You do not have access to this department',
-          );
+          throw new ForbiddenException({
+            details: [
+              {
+                field: 'departmentId',
+                message: 'You do not have access to this department',
+              },
+            ],
+          });
         }
 
         // If no departmentId specified, return questions from all supervisor's departments
@@ -62,9 +67,14 @@ export class GetAllQuestionsUseCase {
 
         // If departmentId is specified, validate employee has access to it
         if (departmentId && !employeeDepartmentIds.includes(departmentId)) {
-          throw new ForbiddenException(
-            'You do not have access to this department',
-          );
+          throw new ForbiddenException({
+            details: [
+              {
+                field: 'departmentId',
+                message: 'You do not have access to this department',
+              },
+            ],
+          });
         }
 
         // If no departmentId specified, return questions from all employee's departments

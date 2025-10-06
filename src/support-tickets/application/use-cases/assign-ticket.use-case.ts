@@ -41,7 +41,9 @@ export class AssignTicketUseCase {
     }
 
     if (!ticket) {
-      throw new NotFoundException({ ticket: 'not_found' });
+      throw new NotFoundException({
+        details: [{ field: 'ticketId', message: 'Ticket not found' }],
+      });
     }
 
     // Check department access if currentUserId is provided
@@ -97,16 +99,25 @@ export class AssignTicketUseCase {
         );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          `Employee ${employee.user?.name || employee.id} does not have HANDLE_TICKETS permission`,
-        );
+        throw new ForbiddenException({
+          details: [
+            {
+              field: 'employee',
+              message: `Employee ${employee.user?.name || employee.id} does not have HANDLE_TICKETS permission`,
+            },
+          ],
+        });
       }
       return;
     }
 
     // Only supervisors can assign tickets (employees cannot assign tickets)
     if (currentUserRole !== Roles.SUPERVISOR) {
-      throw new ForbiddenException('Only supervisors can assign tickets');
+      throw new ForbiddenException({
+        details: [
+          { field: 'role', message: 'Only supervisors can assign tickets' },
+        ],
+      });
     }
 
     // Get supervisor's department access
@@ -135,9 +146,14 @@ export class AssignTicketUseCase {
       );
 
     if (!isValidAssignment) {
-      throw new ForbiddenException(
-        `Employee ${employee.user?.name || employee.id} must have HANDLE_TICKETS permission and belong to one of your assigned departments`,
-      );
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'employee',
+            message: `Employee ${employee.user?.name || employee.id} must have HANDLE_TICKETS permission and belong to one of your assigned departments`,
+          },
+        ],
+      });
     }
   }
 
@@ -170,7 +186,14 @@ export class AssignTicketUseCase {
     );
 
     if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this department');
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'departmentId',
+            message: 'You do not have access to this department',
+          },
+        ],
+      });
     }
   }
 }

@@ -33,7 +33,9 @@ export class ReopenTicketUseCase {
     const ticket = await this.ticketRepository.findById(ticketId);
 
     if (!ticket) {
-      throw new NotFoundException({ ticket: 'not_found' });
+      throw new NotFoundException({
+        details: [{ field: 'ticketId', message: 'Ticket not found' }],
+      });
     }
 
     // Check department access if userId is provided
@@ -48,7 +50,9 @@ export class ReopenTicketUseCase {
     }
 
     if (ticket.status === SupportTicketStatus.CLOSED) {
-      throw new BadRequestException({ ticket: 'ticket_closed' });
+      throw new BadRequestException({
+        details: [{ field: 'ticket', message: 'Ticket is closed' }],
+      });
     }
 
     ticket.status = SupportTicketStatus.SEEN;
@@ -118,7 +122,14 @@ export class ReopenTicketUseCase {
     }
 
     if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this department');
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'departmentId',
+            message: 'You do not have access to this department',
+          },
+        ],
+      });
     }
   }
 }

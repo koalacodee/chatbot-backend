@@ -39,7 +39,10 @@ export class UpdateKnowledgeChunkUseCase {
       dto.userId,
       chunk.department.id.value,
     );
-    if (!chunk) throw new NotFoundException('Knowledge chunk not found');
+    if (!chunk)
+      throw new NotFoundException({
+        details: [{ field: 'id', message: 'Knowledge chunk not found' }],
+      });
 
     if (dto.content) {
       const embedding = await this.embeddingService.embed(dto.content);
@@ -69,7 +72,10 @@ export class UpdateKnowledgeChunkUseCase {
 
     if (dto.departmentId) {
       const department = await this.departmentRepo.findById(dto.departmentId);
-      if (!department) throw new NotFoundException('Department not found');
+      if (!department)
+        throw new NotFoundException({
+          details: [{ field: 'departmentId', message: 'Department not found' }],
+        });
       chunk.updateDepartment(department);
     }
 

@@ -27,7 +27,10 @@ export class DeleteTaskUseCase {
 
   async execute(id: string, userId?: string): Promise<Task | null> {
     const existing = await this.taskRepo.findById(id);
-    if (!existing) throw new NotFoundException({ id: 'task_not_found' });
+    if (!existing)
+      throw new NotFoundException({
+        details: [{ field: 'taskId', message: 'Task not found' }],
+      });
 
     // Check department access if userId is provided
     if (userId) {
@@ -58,7 +61,9 @@ export class DeleteTaskUseCase {
       case 'EMPLOYEE_LEVEL':
         return this.validateEmployeeLevelRejection(userId, task, role);
       default:
-        throw new ForbiddenException('Invalid task rejection level');
+        throw new ForbiddenException({
+          details: [{ field: 'task', message: 'Invalid task rejection level' }],
+        });
     }
   }
 
@@ -75,9 +80,14 @@ export class DeleteTaskUseCase {
 
     // Ensure task has target department
     if (!task.targetDepartment) {
-      throw new BadRequestException(
-        'Department-level task must have target department',
-      );
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'targetDepartment',
+            message: 'Department-level task must have target department',
+          },
+        ],
+      });
     }
 
     return;
@@ -97,7 +107,9 @@ export class DeleteTaskUseCase {
     if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
       if (!supervisor) {
-        throw new ForbiddenException('Supervisor not found');
+        throw new ForbiddenException({
+          details: [{ field: 'supervisorId', message: 'Supervisor not found' }],
+        });
       }
 
       const supervisorDepartmentIds = supervisor.departments.map((d) =>
@@ -105,9 +117,15 @@ export class DeleteTaskUseCase {
       );
 
       if (!task.targetSubDepartment) {
-        throw new BadRequestException(
-          'Sub-department level task must have target sub-department',
-        );
+        throw new BadRequestException({
+          details: [
+            {
+              field: 'targetSubDepartment',
+              message:
+                'Sub-department level task must have target sub-department',
+            },
+          ],
+        });
       }
 
       const hasAccess =
@@ -144,7 +162,9 @@ export class DeleteTaskUseCase {
     if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
       if (!supervisor) {
-        throw new ForbiddenException('Supervisor not found');
+        throw new ForbiddenException({
+          details: [{ field: 'supervisorId', message: 'Supervisor not found' }],
+        });
       }
 
       const supervisorDepartmentIds = supervisor.departments.map((d) =>
@@ -152,7 +172,14 @@ export class DeleteTaskUseCase {
       );
 
       if (!task.assignee) {
-        throw new BadRequestException('Employee-level task must have assignee');
+        throw new BadRequestException({
+          details: [
+            {
+              field: 'assignee',
+              message: 'Employee-level task must have assignee',
+            },
+          ],
+        });
       }
 
       // Get employee's department/sub-department
@@ -160,7 +187,9 @@ export class DeleteTaskUseCase {
         task.assignee.id.toString(),
       );
       if (!employee) {
-        throw new NotFoundException('Employee not found');
+        throw new NotFoundException({
+          details: [{ field: 'employeeId', message: 'Employee not found' }],
+        });
       }
 
       let employeeDepartmentIds: string[] = [];

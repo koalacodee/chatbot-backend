@@ -41,9 +41,14 @@ export class CanDeleteUseCase {
         );
 
         if (!hasAccess) {
-          throw new ForbiddenException(
-            'You do not have access to this department',
-          );
+          throw new ForbiddenException({
+            details: [
+              {
+                field: 'departmentId',
+                message: 'You do not have access to this department',
+              },
+            ],
+          });
         }
       } else if (userRole === Roles.EMPLOYEE) {
         const employee = await this.employeeRepository.findByUserId(userId);
@@ -59,9 +64,14 @@ export class CanDeleteUseCase {
         );
 
         if (!hasAccess) {
-          throw new ForbiddenException(
-            'You do not have access to this department',
-          );
+          throw new ForbiddenException({
+            details: [
+              {
+                field: 'departmentId',
+                message: 'You do not have access to this department',
+              },
+            ],
+          });
         }
       }
       // Admins have full access (no restrictions)

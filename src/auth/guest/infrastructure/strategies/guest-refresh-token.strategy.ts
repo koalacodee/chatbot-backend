@@ -36,12 +36,23 @@ export class GuestRefreshTokenStrategy extends PassportStrategy(
     const refreshToken = req.cookies['guest_refresh_token'];
 
     if (!refreshToken) {
-      throw new UnauthorizedException('Guest refresh token not found');
+      throw new UnauthorizedException({
+        details: [
+          { field: 'refreshToken', message: 'Guest refresh token not found' },
+        ],
+      });
     }
 
     // Only handle guest tokens
     if (payload.role !== 'guest') {
-      throw new UnauthorizedException('Non-guest refresh tokens not accepted');
+      throw new UnauthorizedException({
+        details: [
+          {
+            field: 'refreshToken',
+            message: 'Non-guest refresh tokens not accepted',
+          },
+        ],
+      });
     }
 
     // Verify that the refresh token exists in the database and hasn't been revoked
@@ -49,26 +60,47 @@ export class GuestRefreshTokenStrategy extends PassportStrategy(
       await this.refreshTokenRepository.findByToken(refreshToken);
 
     if (!storedToken) {
-      throw new UnauthorizedException('Invalid guest refresh token');
+      throw new UnauthorizedException({
+        details: [
+          { field: 'refreshToken', message: 'Invalid guest refresh token' },
+        ],
+      });
     }
 
     if (storedToken.isRevoked) {
-      throw new UnauthorizedException('Guest refresh token has been revoked');
+      throw new UnauthorizedException({
+        details: [
+          {
+            field: 'refreshToken',
+            message: 'Guest refresh token has been revoked',
+          },
+        ],
+      });
     }
 
     if (storedToken.isExpired) {
-      throw new UnauthorizedException('Guest refresh token has expired');
+      throw new UnauthorizedException({
+        details: [
+          { field: 'refreshToken', message: 'Guest refresh token has expired' },
+        ],
+      });
     }
 
     // Verify the token belongs to the guest in the payload
     if (storedToken.targetId.toString() !== payload.sub) {
-      throw new UnauthorizedException('Invalid guest token owner');
+      throw new UnauthorizedException({
+        details: [
+          { field: 'refreshToken', message: 'Invalid guest token owner' },
+        ],
+      });
     }
 
     const guest = await this.guestRepository.findById(payload.sub);
 
     if (!guest) {
-      throw new UnauthorizedException('guest_not_found');
+      throw new UnauthorizedException({
+        details: [{ field: 'guestId', message: 'Guest not found' }],
+      });
     }
 
     return {

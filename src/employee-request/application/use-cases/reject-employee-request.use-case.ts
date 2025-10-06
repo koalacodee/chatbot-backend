@@ -34,15 +34,28 @@ export class RejectEmployeeRequestUseCase {
     const admin = await this.adminRepository.findByUserId(dto.adminId);
 
     if (!admin) {
-      throw new NotFoundException('Admin not found');
+      throw new NotFoundException({
+        details: [{ field: 'adminId', message: 'Admin not found' }],
+      });
     }
 
     if (!employeeRequest) {
-      throw new NotFoundException('Employee request not found');
+      throw new NotFoundException({
+        details: [
+          { field: 'employeeRequestId', message: 'Employee request not found' },
+        ],
+      });
     }
 
     if (employeeRequest.status !== 'PENDING') {
-      throw new BadRequestException('Employee request is not pending');
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'employeeRequestId',
+            message: 'Employee request is not pending',
+          },
+        ],
+      });
     }
 
     employeeRequest.status = RequestStatus.REJECTED;

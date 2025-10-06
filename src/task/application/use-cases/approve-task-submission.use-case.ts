@@ -55,14 +55,26 @@ export class ApproveTaskSubmissionUseCase {
     ]);
 
     if (!taskSubmission)
-      throw new NotFoundException({ id: 'task_submission_not_found' });
-    if (!approver) throw new NotFoundException({ approverId: 'not_found' });
+      throw new NotFoundException({
+        details: [
+          { field: 'taskSubmissionId', message: 'Task submission not found' },
+        ],
+      });
+    if (!approver)
+      throw new NotFoundException({
+        details: [{ field: 'approverId', message: 'Approver not found' }],
+      });
 
     // Check if submission is already reviewed
     if (taskSubmission.status !== TaskSubmissionStatus.SUBMITTED) {
-      throw new BadRequestException(
-        'Task submission has already been reviewed',
-      );
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'taskSubmissionId',
+            message: 'Task submission has already been reviewed',
+          },
+        ],
+      });
     }
 
     // Validate approval rights based on task level and user role
@@ -121,7 +133,9 @@ export class ApproveTaskSubmissionUseCase {
       case 'INDIVIDUAL':
         return this.validateIndividualApproval(userId, task, role);
       default:
-        throw new ForbiddenException('Invalid task assignment type');
+        throw new ForbiddenException({
+          details: [{ field: 'task', message: 'Invalid task assignment type' }],
+        });
     }
   }
 
@@ -132,16 +146,26 @@ export class ApproveTaskSubmissionUseCase {
   ): Promise<Admin> {
     // Department tasks can only be approved by admins
     if (role !== Roles.ADMIN) {
-      throw new ForbiddenException(
-        'Department tasks can only be approved by administrators',
-      );
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'role',
+            message: 'Department tasks can only be approved by administrators',
+          },
+        ],
+      });
     }
 
     // Ensure task has target department
     if (!task.targetDepartment) {
-      throw new BadRequestException(
-        'Department task must have target department',
-      );
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'task',
+            message: 'Department task must have target department',
+          },
+        ],
+      });
     }
 
     return this.adminRepository.findByUserId(userId);
@@ -161,7 +185,9 @@ export class ApproveTaskSubmissionUseCase {
     if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
       if (!supervisor) {
-        throw new ForbiddenException('Supervisor not found');
+        throw new ForbiddenException({
+          details: [{ field: 'supervisorId', message: 'Supervisor not found' }],
+        });
       }
 
       const supervisorDepartmentIds = supervisor.departments.map((d) =>
@@ -169,9 +195,15 @@ export class ApproveTaskSubmissionUseCase {
       );
 
       if (!task.targetSubDepartment) {
-        throw new BadRequestException(
-          'Sub-department level task must have target sub-department',
-        );
+        throw new BadRequestException({
+          details: [
+            {
+              field: 'task',
+              message:
+                'Sub-department level task must have target sub-department',
+            },
+          ],
+        });
       }
 
       const hasAccess =
@@ -181,17 +213,29 @@ export class ApproveTaskSubmissionUseCase {
         );
 
       if (!hasAccess) {
-        throw new ForbiddenException(
-          'You do not have permission to approve tasks for this sub-department',
-        );
+        throw new ForbiddenException({
+          details: [
+            {
+              field: 'permission',
+              message:
+                'You do not have permission to approve tasks for this sub-department',
+            },
+          ],
+        });
       }
 
       return supervisor;
     }
 
-    throw new ForbiddenException(
-      'Only administrators and supervisors can approve sub-department level tasks',
-    );
+    throw new ForbiddenException({
+      details: [
+        {
+          field: 'role',
+          message:
+            'Only administrators and supervisors can approve sub-department level tasks',
+        },
+      ],
+    });
   }
 
   private async validateIndividualApproval(
@@ -207,7 +251,9 @@ export class ApproveTaskSubmissionUseCase {
     if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
       if (!supervisor) {
-        throw new ForbiddenException('Supervisor not found');
+        throw new ForbiddenException({
+          details: [{ field: 'supervisorId', message: 'Supervisor not found' }],
+        });
       }
 
       const supervisorDepartmentIds = supervisor.departments.map((d) =>
@@ -215,7 +261,14 @@ export class ApproveTaskSubmissionUseCase {
       );
 
       if (!task.assignee) {
-        throw new BadRequestException('Employee-level task must have assignee');
+        throw new BadRequestException({
+          details: [
+            {
+              field: 'task',
+              message: 'Employee-level task must have assignee',
+            },
+          ],
+        });
       }
 
       // Get employee's department/sub-department
@@ -223,7 +276,9 @@ export class ApproveTaskSubmissionUseCase {
         task.assignee.id.toString(),
       );
       if (!employee) {
-        throw new NotFoundException('Employee not found');
+        throw new NotFoundException({
+          details: [{ field: 'employeeId', message: 'Employee not found' }],
+        });
       }
 
       let employeeDepartmentIds: string[] = [];
@@ -253,16 +308,28 @@ export class ApproveTaskSubmissionUseCase {
       );
 
       if (!hasAccess) {
-        throw new ForbiddenException(
-          'You do not have permission to approve tasks for this employee',
-        );
+        throw new ForbiddenException({
+          details: [
+            {
+              field: 'permission',
+              message:
+                'You do not have permission to approve tasks for this employee',
+            },
+          ],
+        });
       }
 
       return supervisor;
     }
 
-    throw new ForbiddenException(
-      'Only administrators and supervisors can approve employee-level tasks',
-    );
+    throw new ForbiddenException({
+      details: [
+        {
+          field: 'role',
+          message:
+            'Only administrators and supervisors can approve employee-level tasks',
+        },
+      ],
+    });
   }
 }

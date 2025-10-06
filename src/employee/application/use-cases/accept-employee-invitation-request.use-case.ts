@@ -49,21 +49,30 @@ export class AcceptEmployeeInvitationRequestUseCase {
     approvingUserId: string,
   ): Promise<AcceptEmployeeInvitationRequestUseCaseOutput> {
     if (!approvingUserId) {
-      throw new BadRequestException('User ID is required');
+      throw new BadRequestException({
+        details: [{ field: 'approvingUserId', message: 'User ID is required' }],
+      });
     }
 
     const approvingUser = await this.userRepository.findById(approvingUserId);
     if (!approvingUser) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException({
+        details: [{ field: 'approvingUserId', message: 'User not found' }],
+      });
     }
 
     const userRole = approvingUser.role.getRole();
 
     // Only admins can approve employee invitation requests
     if (userRole !== Roles.ADMIN) {
-      throw new ForbiddenException(
-        'Only admins can approve employee invitation requests',
-      );
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'role',
+            message: 'Only admins can approve employee invitation requests',
+          },
+        ],
+      });
     }
 
     // Get invitation data from Redis
@@ -71,12 +80,20 @@ export class AcceptEmployeeInvitationRequestUseCase {
       input.token,
     );
     if (!invitationData) {
-      throw new NotFoundException('Invalid or expired invitation token');
+      throw new NotFoundException({
+        details: [
+          { field: 'token', message: 'Invalid or expired invitation token' },
+        ],
+      });
     }
 
     // Check if invitation is pending approval
     if (invitationData.status !== InvitationStatus.PENDING_APPROVAL) {
-      throw new BadRequestException('Invitation is not pending approval');
+      throw new BadRequestException({
+        details: [
+          { field: 'token', message: 'Invitation is not pending approval' },
+        ],
+      });
     }
 
     // Validate that the supervisor still exists
@@ -84,7 +101,11 @@ export class AcceptEmployeeInvitationRequestUseCase {
       invitationData.supervisorId,
     );
     if (!supervisor) {
-      throw new BadRequestException('Supervisor no longer exists');
+      throw new BadRequestException({
+        details: [
+          { field: 'supervisorId', message: 'Supervisor no longer exists' },
+        ],
+      });
     }
 
     // Validate that sub-departments still exist
@@ -92,9 +113,14 @@ export class AcceptEmployeeInvitationRequestUseCase {
       invitationData.subDepartmentIds,
     );
     if (subDepartments.length !== invitationData.subDepartmentIds.length) {
-      throw new BadRequestException(
-        'One or more sub-departments no longer exist',
-      );
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'subDepartmentIds',
+            message: 'One or more sub-departments no longer exist',
+          },
+        ],
+      });
     }
 
     // Approve the invitation

@@ -19,7 +19,10 @@ export class RejectTaskUseCase {
 
   async execute(dto: RejectTaskInputDto, userId?: string): Promise<Task> {
     const task = await this.taskRepo.findById(dto.taskId);
-    if (!task) throw new NotFoundException({ id: 'task_not_found' });
+    if (!task)
+      throw new NotFoundException({
+        details: [{ field: 'taskId', message: 'Task not found' }],
+      });
 
     // Find all pending task submissions
     const taskSubmissions = await this.taskSubmissionRepo.findByTaskId(
@@ -30,7 +33,14 @@ export class RejectTaskUseCase {
     );
 
     if (pendingSubmissions.length === 0) {
-      throw new NotFoundException('No pending submissions found for this task');
+      throw new NotFoundException({
+        details: [
+          {
+            field: 'taskId',
+            message: 'No pending submissions found for this task',
+          },
+        ],
+      });
     }
 
     // Reject all pending submissions

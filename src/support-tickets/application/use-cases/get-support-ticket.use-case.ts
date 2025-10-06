@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
 import { SupportTicketRepository } from '../../domain/repositories/support-ticket.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
@@ -19,15 +23,20 @@ export class GetSupportTicketUseCase {
 
   async execute(id: string, userId?: string): Promise<SupportTicket> {
     const ticket = await this.supportTicketRepo.findById(id);
-    if (!ticket) throw new NotFoundException({ id: 'support_ticket_not_found' });
-    
+    if (!ticket)
+      throw new NotFoundException({ id: 'support_ticket_not_found' });
+
     // Check department access if userId is provided
     if (userId) {
       const user = await this.userRepository.findById(userId);
       const userRole = user.role.getRole();
-      await this.checkDepartmentAccess(userId, ticket.departmentId.toString(), userRole);
+      await this.checkDepartmentAccess(
+        userId,
+        ticket.departmentId.toString(),
+        userRole,
+      );
     }
-    
+
     return ticket;
   }
 
@@ -71,7 +80,14 @@ export class GetSupportTicketUseCase {
     }
 
     if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this department');
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'departmentId',
+            message: 'You do not have access to this department',
+          },
+        ],
+      });
     }
   }
 }

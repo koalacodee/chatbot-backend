@@ -8,7 +8,10 @@ export class DeleteVehicleUseCase {
 
   async execute(id: string): Promise<Vehicle | null> {
     const existing = await this.vehicleRepo.findById(id);
-    if (!existing) throw new NotFoundException({ id: 'vehicle_not_found' });
+    if (!existing)
+      throw new NotFoundException({
+        details: [{ field: 'id', message: 'Vehicle not found' }],
+      });
     await this.vehicleRepo.removeById(id);
     return existing;
   }

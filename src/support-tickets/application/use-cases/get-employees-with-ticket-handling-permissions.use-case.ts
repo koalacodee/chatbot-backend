@@ -23,21 +23,33 @@ export class GetEmployeesWithTicketHandlingPermissionsUseCase {
 
     if (userRole === Roles.ADMIN) {
       // Admins can see all employees with HANDLE_TICKETS permissions
-      return this.employeeRepository.findByPermissions([EmployeePermissionsEnum.HANDLE_TICKETS]);
+      return this.employeeRepository.findByPermissions([
+        EmployeePermissionsEnum.HANDLE_TICKETS,
+      ]);
     }
 
     if (userRole !== Roles.SUPERVISOR) {
-      throw new ForbiddenException('Only supervisors can access this endpoint');
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'role',
+            message: 'Only supervisors can access this endpoint',
+          },
+        ],
+      });
     }
 
     // Get supervisor's department access
     const supervisor = await this.supervisorRepository.findByUserId(userId);
-    const mainDepartmentIds = supervisor.departments.map((d) => d.id.toString());
+    const mainDepartmentIds = supervisor.departments.map((d) =>
+      d.id.toString(),
+    );
 
     // Get all sub-departments for supervisor's main departments
     const allDepartmentIds = [...mainDepartmentIds];
     for (const deptId of mainDepartmentIds) {
-      const subDepartments = await this.departmentRepository.findSubDepartmentByParentId(deptId);
+      const subDepartments =
+        await this.departmentRepository.findSubDepartmentByParentId(deptId);
       allDepartmentIds.push(...subDepartments.map((sub) => sub.id.toString()));
     }
 

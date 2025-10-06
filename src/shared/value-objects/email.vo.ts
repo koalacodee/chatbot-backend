@@ -6,7 +6,9 @@ export class Email {
 
   static create(value: string): Email {
     if (!isEmail(value)) {
-      throw new BadRequestException({ email: 'email_invalid' });
+      throw new BadRequestException({
+        details: [{ field: 'email', message: 'Email is invalid' }],
+      });
     }
 
     return new Email(value);

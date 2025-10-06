@@ -53,9 +53,15 @@ export class UploadProfilePictureUseCase {
   ): Promise<UploadProfilePictureResponse> {
     // Validate file type
     if (!this.allowedMimeTypes.includes(request.mimeType)) {
-      throw new BadRequestException(
-        'Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.',
-      );
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'mimeType',
+            message:
+              'Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.',
+          },
+        ],
+      });
     }
 
     // Generate unique filename
@@ -83,9 +89,14 @@ export class UploadProfilePictureUseCase {
         // Clean up the uploaded file
         const { unlinkSync } = require('fs');
         unlinkSync(filepath);
-        throw new BadRequestException(
-          'File size too large. Maximum allowed size is 5MB.',
-        );
+        throw new BadRequestException({
+          details: [
+            {
+              field: 'fileSize',
+              message: 'File size too large. Maximum allowed size is 5MB.',
+            },
+          ],
+        });
       }
 
       // Create or update profile picture entity
@@ -139,9 +150,14 @@ export class UploadProfilePictureUseCase {
       };
     } catch (error) {
       console.error('Profile picture upload error:', error);
-      throw new BadRequestException(
-        `Failed to upload profile picture: ${error.message || 'Unknown error'}`,
-      );
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'file',
+            message: `Failed to upload profile picture: ${error.message || 'Unknown error'}`,
+          },
+        ],
+      });
     }
   }
 

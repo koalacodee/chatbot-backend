@@ -10,7 +10,9 @@ export class UUID {
 
   public static create(value?: string) {
     if (value && !isUUID(value)) {
-      throw new BadRequestException({ id: 'id_invalid' });
+      throw new BadRequestException({
+        details: [{ field: 'id', message: 'ID is invalid' }],
+      });
     }
     return new UUID(value ?? uuid());
   }
@@ -21,7 +23,9 @@ export class UUID {
 
   public set value(newValue: string) {
     if (!isUUID(newValue)) {
-      throw new BadRequestException({ id: 'id_invalid' });
+      throw new BadRequestException({
+        details: [{ field: 'id', message: 'ID is invalid' }],
+      });
     }
     this._value = newValue;
   }

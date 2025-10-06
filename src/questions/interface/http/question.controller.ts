@@ -107,7 +107,9 @@ export class QuestionController {
 
     const handler = handlers[params.type];
     if (!handler) {
-      throw new BadRequestException('Invalid interaction type');
+      throw new BadRequestException({
+        details: [{ field: 'type', message: 'Invalid interaction type' }],
+      });
     }
 
     return handler();

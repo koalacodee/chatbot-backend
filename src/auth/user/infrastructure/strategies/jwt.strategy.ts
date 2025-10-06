@@ -20,14 +20,18 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: any) {
     // Reject guest tokens
     if (payload.role === 'guest') {
-      throw new UnauthorizedException('Guest tokens not accepted');
+      throw new UnauthorizedException({
+        details: [{ field: 'token', message: 'Guest tokens not accepted' }],
+      });
     }
 
     // Only handle authenticated users (not guests)
     const user = await this.userRepository.findById(payload.sub);
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException({
+        details: [{ field: 'userId', message: 'User not found' }],
+      });
     }
 
     // Return user data that will be attached to the request object

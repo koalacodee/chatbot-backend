@@ -14,7 +14,9 @@ export class VerifyLoginUseCase {
   async execute(code: string) {
     const guestId = await this.redis.get(`guest:${code}:login`).then((val) => {
       if (!val) {
-        throw new BadRequestException({ code: 'code_incorrect' });
+        throw new BadRequestException({
+          details: [{ field: 'code', message: 'Code is incorrect' }],
+        });
       }
 
       return val;

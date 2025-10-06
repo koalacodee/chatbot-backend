@@ -50,14 +50,25 @@ export class ApproveEmployeeRequestUseCase {
       console.error(
         `[ApproveEmployeeRequestUseCase] Employee request not found: ${dto.employeeRequestId}`,
       );
-      throw new NotFoundException('Employee request not found');
+      throw new NotFoundException({
+        details: [
+          { field: 'employeeRequestId', message: 'Employee request not found' },
+        ],
+      });
     }
 
     if (employeeRequest.status !== 'PENDING') {
       console.warn(
         `[ApproveEmployeeRequestUseCase] Employee request is not pending. Current status: ${employeeRequest.status}`,
       );
-      throw new BadRequestException('Employee request is not pending');
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'employeeRequestId',
+            message: 'Employee request is not pending',
+          },
+        ],
+      });
     }
 
     // Check if email already exists
@@ -68,7 +79,11 @@ export class ApproveEmployeeRequestUseCase {
       console.warn(
         `[ApproveEmployeeRequestUseCase] Email already exists: ${employeeRequest.newEmployeeEmail.toString()}`,
       );
-      throw new BadRequestException('Email already exists');
+      throw new BadRequestException({
+        details: [
+          { field: 'newEmployeeEmail', message: 'Email already exists' },
+        ],
+      });
     }
 
     // Check if username already exists
@@ -79,7 +94,11 @@ export class ApproveEmployeeRequestUseCase {
       console.warn(
         `[ApproveEmployeeRequestUseCase] Username already exists: ${employeeRequest.newEmployeeUsername}`,
       );
-      throw new BadRequestException('Username already exists');
+      throw new BadRequestException({
+        details: [
+          { field: 'newEmployeeUsername', message: 'Username already exists' },
+        ],
+      });
     }
 
     const newUser = await User.create({

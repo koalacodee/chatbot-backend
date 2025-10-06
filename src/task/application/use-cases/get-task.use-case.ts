@@ -33,7 +33,10 @@ export class GetTaskUseCase {
     attachments: { [taskId: string]: string[] };
   }> {
     const task = await this.taskRepo.findById(id);
-    if (!task) throw new NotFoundException({ id: 'task_not_found' });
+    if (!task)
+      throw new NotFoundException({
+        details: [{ field: 'taskId', message: 'Task not found' }],
+      });
 
     // Check department access if userId is provided
     if (userId) {
@@ -99,7 +102,11 @@ export class GetTaskUseCase {
     }
 
     if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this task');
+      throw new ForbiddenException({
+        details: [
+          { field: 'taskId', message: 'You do not have access to this task' },
+        ],
+      });
     }
   }
 }

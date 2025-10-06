@@ -34,7 +34,11 @@ export class GetEmployeeInvitationUseCase {
       request.token,
     );
     if (!invitationData) {
-      throw new NotFoundException('Invalid or expired invitation token');
+      throw new NotFoundException({
+        details: [
+          { field: 'token', message: 'Invalid or expired invitation token' },
+        ],
+      });
     }
 
     // Get sub-department names
