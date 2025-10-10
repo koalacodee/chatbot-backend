@@ -26,6 +26,9 @@ import {
   GetTasksWithFiltersUseCase,
   GetTeamTasksUseCase,
   GetMyTasksUseCase,
+  SaveTaskPresetUseCase,
+  GetTaskPresetsUseCase,
+  CreateTaskFromPresetUseCase,
 } from '../../application/use-cases';
 import {
   CreateTaskInputDto,
@@ -33,6 +36,8 @@ import {
   GetTasksWithFiltersDto,
   SubmitTaskSubmissionInputDto,
   RejectTaskSubmissionInputDto,
+  SaveTaskPresetDto,
+  CreateTaskFromPresetDto,
 } from './dto';
 import { GetTeamTasksDto } from './dto/get-team-tasks.dto';
 import { Task, TaskAssignmentType } from '../../domain/entities/task.entity';
@@ -60,6 +65,9 @@ export class TaskController {
     private readonly getTasksWithFiltersUseCase: GetTasksWithFiltersUseCase,
     private readonly getTeamTasksUseCase: GetTeamTasksUseCase,
     private readonly getMyTasksUseCase: GetMyTasksUseCase,
+    private readonly saveTaskPresetUseCase: SaveTaskPresetUseCase,
+    private readonly getTaskPresetsUseCase: GetTaskPresetsUseCase,
+    private readonly createTaskFromPresetUseCase: CreateTaskFromPresetUseCase,
   ) {}
 
   @Post()
@@ -75,6 +83,7 @@ export class TaskController {
         assignerRole: req.user.role,
         assignmentType: TaskAssignmentType[input.assignmentType],
         status: input.status ?? TaskStatus.TODO,
+        savePreset: input.savePreset,
       },
       req.user.id,
     );
@@ -259,5 +268,84 @@ export class TaskController {
       metrics: result.metrics,
       attachments: result.attachments,
     };
+  }
+
+  // Task Preset endpoints
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
+  @Post('presets')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Save a task as a preset' })
+  @ApiResponse({
+    status: 201,
+    description: 'Task preset created successfully',
+  })
+  async saveTaskPreset(
+    @Body() input: SaveTaskPresetDto,
+    @Req() req: any,
+  ): Promise<{ preset: any }> {
+    const result = await this.saveTaskPresetUseCase.execute({
+      taskId: input.taskId,
+      presetName: input.presetName,
+      userId: req.user.id,
+    });
+
+    return {
+      preset: result.preset.toJSON(),
+    };
+  }
+
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
+  @Get('presets')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get user task presets' })
+  @ApiResponse({
+    status: 200,
+    description: 'Task presets retrieved successfully',
+  })
+  async getTaskPresets(
+    @Req() req: any,
+    @Query('offset') offset?: string,
+    @Query('limit') limit?: string,
+  ): Promise<{ presets: any[]; total: number }> {
+    const result = await this.getTaskPresetsUseCase.execute({
+      userId: req.user.id,
+      offset: offset ? parseInt(offset, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+    });
+
+    return {
+      presets: result.presets.map((preset) => preset.toJSON()),
+      total: result.total,
+    };
+  }
+
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
+  @Post('from-preset')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a new task from a preset' })
+  @ApiResponse({
+    status: 201,
+    description: 'Task created from preset successfully',
+  })
+  async createTaskFromPreset(
+    @Body() input: CreateTaskFromPresetDto,
+    @Req() req: any,
+  ): Promise<{ task: Task; uploadKey?: string }> {
+    return this.createTaskFromPresetUseCase.execute({
+      presetId: input.presetId,
+      assignerId: req.user.id,
+      assignerRole: req.user.role,
+      title: input.title,
+      description: input.description,
+      dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
+      assigneeId: input.assigneeId,
+      approverId: input.approverId,
+      assignmentType: input.assignmentType,
+      targetDepartmentId: input.targetDepartmentId,
+      targetSubDepartmentId: input.targetSubDepartmentId,
+      priority: input.priority,
+      attach: input.attach,
+      reminderInterval: input.reminderInterval,
+    });
   }
 }

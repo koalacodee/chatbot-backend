@@ -8,6 +8,7 @@ import {
   IsPositive,
   Min,
 } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 import { TaskStatus, TaskPriority } from 'src/task/domain/entities/task.entity';
 
 export enum CreateTaskAssignmentType {
@@ -64,4 +65,13 @@ export class CreateTaskInputDto {
   @IsPositive()
   @Min(60000) // Minimum 1 minute (60000ms)
   reminderInterval?: number; // in milliseconds
+
+  @ApiProperty({
+    description: 'Whether to save this task as a preset automatically',
+    example: false,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  savePreset?: boolean;
 }

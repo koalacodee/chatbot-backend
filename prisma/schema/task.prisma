@@ -115,3 +115,32 @@ model TaskSubmission {
   @@index([reviewedByAdminId, reviewedBySupervisorId])
   @@map("task_submissions")
 }
+
+model TaskPreset {
+  id          String    @id @map("id") @db.Uuid
+  name        String    @map("name") @db.VarChar(255)
+  title       String    @map("title") @db.VarChar(255)
+  description String    @map("description") @db.Text
+  dueDate     DateTime? @map("due_date")
+
+  assigneeId String? @map("assignee_id") @db.Uuid
+  assignerId String  @map("assigner_id") @db.Uuid
+  assignerRole String @map("assigner_role") @db.VarChar(20) // 'ADMIN' or 'SUPERVISOR'
+  approverId String? @map("approver_id") @db.Uuid
+
+  assignmentType TaskAssignmentType @map("assignment_type")
+  priority       TaskPriority       @default(MEDIUM) @map("priority")
+
+  targetDepartmentId    String? @map("target_department_id") @db.Uuid
+  targetSubDepartmentId String? @map("target_sub_department_id") @db.Uuid
+
+  reminderInterval Int? @map("reminder_interval")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([assignerId])
+  @@index([assignerRole])
+  @@index([name])
+  @@map("task_presets")
+}

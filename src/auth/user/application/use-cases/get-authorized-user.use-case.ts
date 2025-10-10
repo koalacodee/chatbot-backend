@@ -19,6 +19,7 @@ interface GetAuthorizedUserResponse {
   email: string;
   role: string;
   permissions: string[];
+  departmentNames?: string[];
 }
 
 @Injectable()
@@ -45,10 +46,13 @@ export class GetAuthorizedUserUseCase {
       userId: user.id,
     });
 
+    const departmentNames = this.getDepartmentNames(roleEntity);
+
     return {
       ...user.withoutPassword(),
       profilePicture: profilePicture?.profilePicture?.id,
       permissions: roleEntity instanceof Admin ? [] : roleEntity.permissions,
+      departmentNames,
     };
   }
 
@@ -63,5 +67,23 @@ export class GetAuthorizedUserUseCase {
       default:
         throw new Error('Invalid role');
     }
+  }
+
+  private getDepartmentNames(
+    roleEntity: Supervisor | Admin | Employee,
+  ): string[] | undefined {
+    if (roleEntity instanceof Admin) {
+      return undefined;
+    }
+
+    if (roleEntity instanceof Supervisor) {
+      return roleEntity.departments?.map((dept) => dept.name) || [];
+    }
+
+    if (roleEntity instanceof Employee) {
+      return roleEntity.subDepartments?.map((dept) => dept.name) || [];
+    }
+
+    return undefined;
   }
 }

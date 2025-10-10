@@ -20,6 +20,7 @@ import { AdminRepository } from 'src/admin/domain/repositories/admin.repository'
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
 import { TaskCreatedEvent } from '../../domain/events/task-created.event';
+import { TaskPresetCreatedEvent } from '../../domain/events/task-preset-created.event';
 import { FilesService } from 'src/files/domain/services/files.service';
 import { ReminderQueueService } from '../../infrastructure/queues/reminder.queue';
 
@@ -39,6 +40,7 @@ interface CreateTaskInputDto {
   priority?: TaskPriority;
   attach?: boolean;
   reminderInterval?: number; // in milliseconds
+  savePreset?: boolean;
 }
 
 @Injectable()
@@ -205,6 +207,19 @@ export class CreateTaskUseCase {
       await this.reminderQueueService.scheduleReminder(
         saved.id.toString(),
         dto.reminderInterval,
+      );
+    }
+
+    // Emit preset creation event if savePreset is true
+    if (dto.savePreset) {
+      await this.eventEmitter.emitAsync(
+        TaskPresetCreatedEvent.name,
+        new TaskPresetCreatedEvent(
+          saved.id.toString(),
+          dto.assignerId,
+          dto.assignerRole.toString(),
+          `${saved.title} - Preset`,
+        ),
       );
     }
 
