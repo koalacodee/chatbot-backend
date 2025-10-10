@@ -161,7 +161,7 @@ export class SupportTicketController {
       guestPhone: dto.guestPhone,
       guestEmail: dto.guestEmail,
       attach: dto.attach,
-      guestId: req.guest?.id,
+      // guestId: req.guest?.id,
     });
   }
 

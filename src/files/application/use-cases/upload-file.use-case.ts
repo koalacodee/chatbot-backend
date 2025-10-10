@@ -10,6 +10,7 @@ interface UploadFileInput {
   expirationDate?: Date;
   userId?: string;
   guestId?: string;
+  isGlobal?: boolean;
 }
 
 @Injectable()
@@ -26,6 +27,7 @@ export class UploadFileUseCase {
     expirationDate,
     userId,
     guestId,
+    isGlobal,
   }: UploadFileInput) {
     const attachment = await this.attachmentRepository.save(
       Attachment.create({
@@ -36,6 +38,7 @@ export class UploadFileUseCase {
         expirationDate,
         userId,
         guestId,
+        isGlobal,
       }),
     );
 

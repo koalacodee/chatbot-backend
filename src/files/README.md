@@ -9,8 +9,9 @@ The files module now supports tracking which user or guest uploaded each attachm
 ### Database Schema
 
 - Added `userId` and `guestId` nullable fields to the `Attachment` model
-- Both fields are indexed for efficient queries
-- Migration: `20251010092058_add_user_guest_to_attachments`
+- Added `isGlobal` boolean field to the `Attachment` model (defaults to false)
+- All fields are indexed for efficient queries
+- Migrations: `20251010092058_add_user_guest_to_attachments`, `20251010095301_add_isglobal_to_attachments`
 
 ### API Changes
 
@@ -53,6 +54,7 @@ const { token } = await tokenResponse.json();
 const formData = new FormData();
 formData.append('file', file);
 formData.append('expirationDate', '2024-12-31');
+formData.append('isGlobal', 'true'); // Optional: mark as global attachment
 
 await fetch('/files/single', {
   method: 'POST',
@@ -79,6 +81,7 @@ const { token } = await tokenResponse.json();
 // Upload file using the token
 const formData = new FormData();
 formData.append('file', file);
+formData.append('isGlobal', 'false'); // Optional: explicitly mark as non-global
 
 await fetch('/files/single', {
   method: 'POST',
@@ -95,7 +98,7 @@ await fetch('/files/single', {
 
 ### Database Queries
 
-You can now query attachments by user or guest:
+You can now query attachments by user, guest, or global status:
 
 ```sql
 -- Find all attachments uploaded by a specific user
@@ -104,14 +107,31 @@ SELECT * FROM attachments WHERE user_id = 'user-uuid';
 -- Find all attachments uploaded by a specific guest
 SELECT * FROM attachments WHERE guest_id = 'guest-uuid';
 
+-- Find all global attachments
+SELECT * FROM attachments WHERE is_global = true;
+
 -- Find attachments for a target uploaded by a specific user
 SELECT * FROM attachments
 WHERE target_id = 'target-uuid' AND user_id = 'user-uuid';
+
+-- Find global attachments for a specific target
+SELECT * FROM attachments
+WHERE target_id = 'target-uuid' AND is_global = true;
 ```
+
+### Global Attachments
+
+The `isGlobal` field allows marking attachments as globally accessible:
+
+- **Default**: `false` - attachments are scoped to their target entity
+- **Global**: `true` - attachments can be accessed across different contexts
+- **Form Data**: Send `isGlobal` as `'true'` or `'false'` string in multipart form
+- **Multiple Files**: Use `isGlobalValues[0]`, `isGlobalValues[1]`, etc. for multiple file uploads
 
 ### Security Considerations
 
 - Upload tokens are single-use and expire after use
 - User/guest information is validated against the token data
 - Only one of `userId` or `guestId` should be provided, not both
+- Global attachments may have different access control rules
 - The system maintains backward compatibility for existing integrations

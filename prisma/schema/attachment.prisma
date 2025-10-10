@@ -6,6 +6,7 @@ model Attachment {
   expirationDate DateTime? @map("expiration_date")
   userId         String?   @map("user_id") @db.Uuid
   guestId        String?   @map("guest_id") @db.Uuid
+  isGlobal       Boolean   @default(false) @map("is_global")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -15,5 +16,6 @@ model Attachment {
   @@index([targetId])
   @@index([userId])
   @@index([guestId])
+  @@index([isGlobal])
   @@map("attachments")
 }

@@ -150,6 +150,7 @@ export class FilesController {
       let file: { filename: string; originalName: string };
       const uploadsDir = join(process.cwd(), 'uploads');
       let expirationDate: string = '';
+      let isGlobal: boolean = false;
 
       // Ensure uploads directory exists
       try {
@@ -197,6 +198,15 @@ export class FilesController {
           );
 
           expirationDate = multipartPart.value;
+        } else if (multipartPart.fieldname === 'isGlobal') {
+          // This part is an isGlobal field
+          console.log(
+            'Found isGlobal field:',
+            multipartPart.fieldname,
+            multipartPart.value,
+          );
+
+          isGlobal = multipartPart.value === 'true';
         }
       }
 
@@ -211,6 +221,7 @@ export class FilesController {
         expirationDate: expirationDate ? new Date(expirationDate) : undefined,
         userId: req.headers['x-user-id'] as any,
         guestId: req.headers['x-guest-id'] as any,
+        isGlobal,
       });
 
       // Get file stats for size
@@ -246,6 +257,7 @@ export class FilesController {
       const files = [];
       const uploadsDir = join(process.cwd(), 'uploads');
       let expirationDates: string[] = [];
+      let isGlobalValues: boolean[] = [];
 
       // Ensure uploads directory exists
       try {
@@ -304,6 +316,26 @@ export class FilesController {
             }
             expirationDates[index] = multipartPart.value || '';
           }
+        } else if (multipartPart.fieldname?.startsWith('isGlobalValues[')) {
+          // This part is an isGlobal field like isGlobalValues[0], isGlobalValues[1], etc.
+          console.log(
+            'Found isGlobal field:',
+            multipartPart.fieldname,
+            multipartPart.value,
+          );
+
+          // Extract index from fieldname like "isGlobalValues[0]" -> 0
+          const match = multipartPart.fieldname.match(
+            /isGlobalValues\[(\d+)\]/,
+          );
+          if (match) {
+            const index = parseInt(match[1], 10);
+            // Ensure the array is large enough
+            while (isGlobalValues.length <= index) {
+              isGlobalValues.push(false);
+            }
+            isGlobalValues[index] = multipartPart.value === 'true';
+          }
         }
       }
 
@@ -323,6 +355,7 @@ export class FilesController {
                 : undefined,
             userId: req.headers['x-user-id'] as any,
             guestId: req.headers['x-guest-id'] as any,
+            isGlobal: isGlobalValues[index] ?? false,
           }),
         ),
       );

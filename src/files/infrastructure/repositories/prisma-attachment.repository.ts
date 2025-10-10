@@ -21,6 +21,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
       targetId: rec.targetId,
       userId: rec.userId,
       guestId: rec.guestId,
+      isGlobal: rec.isGlobal,
     });
   }
 
@@ -34,6 +35,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
       targetId: attachment.targetId,
       userId: attachment.userId,
       guestId: attachment.guestId,
+      isGlobal: attachment.isGlobal,
       createdAt: attachment.createdAt,
       updatedAt: attachment.updatedAt,
     } as const;
@@ -48,6 +50,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
         targetId: data.targetId,
         userId: data.userId,
         guestId: data.guestId,
+        isGlobal: data.isGlobal,
         updatedAt: new Date(),
       },
       create: data,
@@ -105,6 +108,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
         | 'targetId'
         | 'userId'
         | 'guestId'
+        | 'isGlobal'
       >
     >,
   ): Promise<Attachment> {
@@ -118,6 +122,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
     if (typeof update.targetId !== 'undefined') data.targetId = update.targetId;
     if (typeof update.userId !== 'undefined') data.userId = update.userId;
     if (typeof update.guestId !== 'undefined') data.guestId = update.guestId;
+    if (typeof update.isGlobal !== 'undefined') data.isGlobal = update.isGlobal;
     data.updatedAt = new Date();
 
     const rec = await this.prisma.attachment.update({ where: { id }, data });
