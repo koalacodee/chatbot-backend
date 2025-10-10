@@ -11,6 +11,7 @@ interface UploadFileInput {
   userId?: string;
   guestId?: string;
   isGlobal?: boolean;
+  size?: number;
 }
 
 @Injectable()
@@ -28,6 +29,7 @@ export class UploadFileUseCase {
     userId,
     guestId,
     isGlobal,
+    size,
   }: UploadFileInput) {
     const attachment = await this.attachmentRepository.save(
       Attachment.create({
@@ -39,6 +41,7 @@ export class UploadFileUseCase {
         userId,
         guestId,
         isGlobal,
+        size,
       }),
     );
 

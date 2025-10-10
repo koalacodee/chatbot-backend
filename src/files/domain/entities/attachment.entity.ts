@@ -12,6 +12,7 @@ export interface AttachmentOptions {
   userId?: string;
   guestId?: string;
   isGlobal?: boolean;
+  size?: number;
 }
 
 export class Attachment {
@@ -26,6 +27,7 @@ export class Attachment {
   private readonly _userId: UUID | null;
   private readonly _guestId: UUID | null;
   private readonly _isGlobal: boolean;
+  private readonly _size: number;
 
   private constructor(options: AttachmentOptions) {
     this._id = UUID.create(options.id);
@@ -42,6 +44,7 @@ export class Attachment {
     this._userId = options.userId ? UUID.create(options.userId) : null;
     this._guestId = options.guestId ? UUID.create(options.guestId) : null;
     this._isGlobal = options.isGlobal ?? false;
+    this._size = options.size ?? 0;
   }
 
   static create(options: AttachmentOptions): Attachment {
@@ -116,6 +119,10 @@ export class Attachment {
     return this._isGlobal;
   }
 
+  get size(): number {
+    return this._size;
+  }
+
   toJSON(): AttachmentOptions {
     return {
       id: this._id.value,
@@ -129,6 +136,7 @@ export class Attachment {
       userId: this._userId?.value,
       guestId: this._guestId?.value,
       isGlobal: this._isGlobal,
+      size: this._size,
     };
   }
 }

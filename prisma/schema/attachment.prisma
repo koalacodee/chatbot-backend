@@ -7,6 +7,7 @@ model Attachment {
   userId         String?   @map("user_id") @db.Uuid
   guestId        String?   @map("guest_id") @db.Uuid
   isGlobal       Boolean   @default(false) @map("is_global")
+  size           Int       @map("size") @default(0)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

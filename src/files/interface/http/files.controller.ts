@@ -1,10 +1,20 @@
-import { Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Req,
+  Res,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { extname, join } from 'path';
 import { createWriteStream, mkdirSync, statSync } from 'fs';
 import { pipeline } from 'stream/promises';
 import { UploadFileUseCase } from 'src/files/application/use-cases/upload-file.use-case';
+import { GetMyAttachmentsUseCase } from 'src/files/application/use-cases/get-my-attachments.use-case';
 import { FileUploadGuard } from 'src/files/infrastructure/guards/file-upload.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 
 // Type for multipart parts
@@ -17,7 +27,10 @@ type MultipartPart = {
 
 @Controller('files')
 export class FilesController {
-  constructor(private readonly uploadFileUseCase: UploadFileUseCase) {}
+  constructor(
+    private readonly uploadFileUseCase: UploadFileUseCase,
+    private readonly getMyAttachmentsUseCase: GetMyAttachmentsUseCase,
+  ) {}
 
   private getContentType(filename: string): string {
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -141,6 +154,46 @@ export class FilesController {
     return fileTypes[ext || ''] || fileTypes.default;
   }
 
+  @Get('my-attachments')
+  @UseGuards(UserJwtAuthGuard)
+  async getMyAttachments(
+    @Req() req: any,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      return { error: 'User not authenticated' };
+    }
+
+    const limitNum = limit ? parseInt(limit, 10) : 50;
+    const offsetNum = offset ? parseInt(offset, 10) : 0;
+
+    const result = await this.getMyAttachmentsUseCase.execute({
+      userId,
+      limit: limitNum,
+      offset: offsetNum,
+    });
+
+    // Add metadata and tokens to each attachment
+    const attachmentsWithMetadata = result.attachments.map((attachment) => {
+      const fileType = this.getFileType(attachment.originalName);
+      const contentType = this.getContentType(attachment.originalName);
+
+      return {
+        ...attachment.toJSON(),
+        fileType,
+        contentType,
+      };
+    });
+
+    return {
+      attachments: attachmentsWithMetadata,
+      totalCount: result.totalCount,
+      hasMore: result.hasMore,
+    };
+  }
+
   @Post('single')
   @UseGuards(FileUploadGuard)
   async uploadSingle(@Req() req: FastifyRequest, @Res() res: FastifyReply) {
@@ -213,6 +266,9 @@ export class FilesController {
       if (!file) {
         return res.status(400).send({ error: 'No file uploaded' });
       }
+      // Get file stats for size
+      const filePath = join(uploadsDir, file.filename);
+      const stats = statSync(filePath);
 
       const results = await this.uploadFileUseCase.execute({
         targetId: req.headers['x-target-id'] as any,
@@ -222,11 +278,8 @@ export class FilesController {
         userId: req.headers['x-user-id'] as any,
         guestId: req.headers['x-guest-id'] as any,
         isGlobal,
+        size: stats.size,
       });
-
-      // Get file stats for size
-      const filePath = join(uploadsDir, file.filename);
-      const stats = statSync(filePath);
 
       // Get additional file information
       const fileType = this.getFileType(file.originalName);
@@ -344,8 +397,15 @@ export class FilesController {
       }
 
       const results = await Promise.all(
-        files.map((file, index) =>
-          this.uploadFileUseCase.execute({
+        files.map(async (file, index) => {
+          const filePath = join(uploadsDir, file.filename);
+          const stats = statSync(filePath);
+
+          const fileType = this.getFileType(file.originalName);
+          const contentType = this.getContentType(file.originalName);
+          const sizeInBytes = stats.size;
+
+          const uploaded = await this.uploadFileUseCase.execute({
             targetId: req.headers['x-target-id'] as any,
             filename: file.filename,
             originalName: file.originalName,
@@ -356,29 +416,19 @@ export class FilesController {
             userId: req.headers['x-user-id'] as any,
             guestId: req.headers['x-guest-id'] as any,
             isGlobal: isGlobalValues[index] ?? false,
-          }),
-        ),
+            size: sizeInBytes,
+          });
+
+          return {
+            ...uploaded.toJSON(),
+            fileType,
+            sizeInBytes,
+            contentType,
+          };
+        }),
       );
 
-      // Get additional file information for each file
-      const response = results.map((result, index) => {
-        const file = files[index];
-        const filePath = join(uploadsDir, file.filename);
-        const stats = statSync(filePath);
-
-        const fileType = this.getFileType(file.originalName);
-        const contentType = this.getContentType(file.originalName);
-        const sizeInBytes = stats.size;
-
-        return {
-          ...result.toJSON(),
-          fileType,
-          sizeInBytes,
-          contentType,
-        };
-      });
-
-      return res.send(response);
+      return res.send(results);
     } catch (error) {
       console.error('Multiple file upload error:', error);
       return res.status(500).send({ error: 'File upload failed' });

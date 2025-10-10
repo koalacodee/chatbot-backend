@@ -22,6 +22,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
       userId: rec.userId,
       guestId: rec.guestId,
       isGlobal: rec.isGlobal,
+      size: rec.size,
     });
   }
 
@@ -36,6 +37,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
       userId: attachment.userId,
       guestId: attachment.guestId,
       isGlobal: attachment.isGlobal,
+      size: attachment.size,
       createdAt: attachment.createdAt,
       updatedAt: attachment.updatedAt,
     } as const;
@@ -51,6 +53,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
         userId: data.userId,
         guestId: data.guestId,
         isGlobal: data.isGlobal,
+        size: data.size,
         updatedAt: new Date(),
       },
       create: data,
@@ -94,6 +97,79 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
     if (!rec) return null;
     await this.prisma.attachment.delete({ where: { id } });
     return rec;
+  }
+
+  async findByUserId(
+    userId: string,
+    limit = 50,
+    offset = 0,
+  ): Promise<Attachment[]> {
+    const items = await this.prisma.attachment.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset,
+    });
+    return items.map((r) => this.toDomain(r));
+  }
+
+  async countByUserId(userId: string): Promise<number> {
+    return this.prisma.attachment.count({ where: { userId } });
+  }
+
+  async findGlobalAttachments(limit = 50, offset = 0): Promise<Attachment[]> {
+    const items = await this.prisma.attachment.findMany({
+      where: { isGlobal: true },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset,
+    });
+    return items.map((r) => this.toDomain(r));
+  }
+
+  async countGlobalAttachments(): Promise<number> {
+    return this.prisma.attachment.count({ where: { isGlobal: true } });
+  }
+
+  async findUserAndGlobalAttachments(
+    userId: string,
+    limit = 50,
+    offset = 0,
+  ): Promise<Attachment[]> {
+    const items = await this.prisma.attachment.findMany({
+      where: {
+        OR: [
+          { userId }, // User's attachments
+          { isGlobal: true }, // Global attachments
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset,
+      select: {
+        // contentType: true,
+        expirationDate: true,
+        // fileType: true,
+        id: true,
+        isGlobal: true,
+        originalName: true,
+        type: true,
+        targetId: true,
+        size: true,
+      },
+    });
+    return items.map((r) => this.toDomain(r));
+  }
+
+  async countUserAndGlobalAttachments(userId: string): Promise<number> {
+    return this.prisma.attachment.count({
+      where: {
+        OR: [
+          { userId }, // User's attachments
+          { isGlobal: true }, // Global attachments
+        ],
+      },
+    });
   }
 
   async update(
