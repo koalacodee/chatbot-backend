@@ -93,7 +93,9 @@ export class ReplyToTicketUseCase {
     ticket.status = SupportTicketStatus.ANSWERED;
 
     const [uploadKey] = await Promise.all([
-      attach ? this.filesService.genUploadKey(answer.id.toString()) : undefined,
+      attach
+        ? this.filesService.genUploadKey(answer.id.toString(), userId)
+        : undefined,
       this.ticketRepository.save(ticket),
       this.ticketAnswerRepo.save(answer),
       newFawDepartment

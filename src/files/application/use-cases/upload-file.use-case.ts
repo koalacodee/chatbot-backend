@@ -8,6 +8,8 @@ interface UploadFileInput {
   filename: string;
   originalName: string;
   expirationDate?: Date;
+  userId?: string;
+  guestId?: string;
 }
 
 @Injectable()
@@ -22,6 +24,8 @@ export class UploadFileUseCase {
     filename,
     originalName,
     expirationDate,
+    userId,
+    guestId,
   }: UploadFileInput) {
     const attachment = await this.attachmentRepository.save(
       Attachment.create({
@@ -30,6 +34,8 @@ export class UploadFileUseCase {
         type: filename.split('.').pop(),
         originalName,
         expirationDate,
+        userId,
+        guestId,
       }),
     );
 

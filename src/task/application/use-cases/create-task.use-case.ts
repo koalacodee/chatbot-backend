@@ -186,7 +186,7 @@ export class CreateTaskUseCase {
     const [saved, uploadKey] = await Promise.all([
       this.taskRepo.save(task),
       dto.attach
-        ? this.filesService.genUploadKey(task.id.toString())
+        ? this.filesService.genUploadKey(task.id.toString(), userId)
         : undefined,
       this.eventEmitter.emitAsync(
         TaskCreatedEvent.name,

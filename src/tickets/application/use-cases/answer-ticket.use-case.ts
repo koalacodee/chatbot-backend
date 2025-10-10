@@ -85,7 +85,10 @@ export class AnswerTicketUseCase {
     ticket.answer = savedAnswer;
 
     const uploadKey = attach
-      ? await this.filesService.genUploadKey(savedAnswer.id.toString())
+      ? await this.filesService.genUploadKey(
+          savedAnswer.id.toString(),
+          answeredBy,
+        )
       : undefined;
 
     return {

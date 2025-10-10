@@ -209,6 +209,8 @@ export class FilesController {
         filename: file.filename,
         originalName: file.originalName,
         expirationDate: expirationDate ? new Date(expirationDate) : undefined,
+        userId: req.headers['x-user-id'] as any,
+        guestId: req.headers['x-guest-id'] as any,
       });
 
       // Get file stats for size
@@ -319,6 +321,8 @@ export class FilesController {
               expirationDates[index] && expirationDates[index].trim() !== ''
                 ? new Date(expirationDates[index])
                 : undefined,
+            userId: req.headers['x-user-id'] as any,
+            guestId: req.headers['x-guest-id'] as any,
           }),
         ),
       );

@@ -55,13 +55,17 @@ export class PromotionController {
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_PROMOTIONS)
   @Put()
-  async update(@Body() dto: UpdatePromotionDto) {
+  async update(@Body() dto: UpdatePromotionDto, @Req() req: any) {
     const { id, ...updateData } = dto;
-    return this.updatePromotionUseCase.execute(id, {
-      ...updateData,
-      startDate: dto.startDate ? new Date(dto.startDate) : undefined,
-      endDate: dto.endDate ? new Date(dto.endDate) : undefined,
-    });
+    return this.updatePromotionUseCase.execute(
+      id,
+      {
+        ...updateData,
+        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
+      },
+      req.user.id,
+    );
   }
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_PROMOTIONS)

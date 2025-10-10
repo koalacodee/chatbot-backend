@@ -25,6 +25,7 @@ export class UpdatePromotionUseCase {
   async execute(
     id: string,
     dto: UpdatePromotionInputDto,
+    userId?: string,
   ): Promise<{ promotion: Promotion; uploadKey?: string }> {
     const existing = await this.promotionRepo.findById(id);
     if (!existing) throw new NotFoundException({ id: 'promotion_not_found' });
@@ -44,7 +45,7 @@ export class UpdatePromotionUseCase {
 
     const [savedPromotion, uploadKey] = await Promise.all([
       this.promotionRepo.save(existing),
-      dto.attach ? this.filesService.genUploadKey(id) : undefined,
+      dto.attach ? this.filesService.genUploadKey(id, userId) : undefined,
     ]);
 
     return { promotion: savedPromotion, uploadKey };

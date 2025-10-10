@@ -46,7 +46,11 @@ export class CreateTicketUseCase {
     );
 
     const uploadKey = attach
-      ? await this.filesService.genUploadKey(ticket.id.toString())
+      ? await this.filesService.genUploadKey(
+          ticket.id.toString(),
+          undefined,
+          guestId,
+        )
       : undefined;
 
     return { ticket: ticket.ticketCode.toString(), uploadKey };

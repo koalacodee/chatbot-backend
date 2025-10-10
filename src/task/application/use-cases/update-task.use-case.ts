@@ -155,7 +155,7 @@ export class UpdateTaskUseCase {
 
     const [savedTask, uploadKey] = await Promise.all([
       this.taskRepo.save(existing),
-      dto.attach ? this.filesService.genUploadKey(id) : undefined,
+      dto.attach ? this.filesService.genUploadKey(id, userId) : undefined,
     ]);
 
     return { task: savedTask, uploadKey };

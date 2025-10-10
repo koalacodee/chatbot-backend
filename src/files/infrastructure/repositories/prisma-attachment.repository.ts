@@ -19,6 +19,8 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
       createdAt: rec.createdAt,
       updatedAt: rec.updatedAt,
       targetId: rec.targetId,
+      userId: rec.userId,
+      guestId: rec.guestId,
     });
   }
 
@@ -30,6 +32,8 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
       originalName: attachment.originalName,
       expirationDate: attachment.expirationDate ?? null,
       targetId: attachment.targetId,
+      userId: attachment.userId,
+      guestId: attachment.guestId,
       createdAt: attachment.createdAt,
       updatedAt: attachment.updatedAt,
     } as const;
@@ -42,6 +46,8 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
         originalName: data.originalName,
         expirationDate: data.expirationDate,
         targetId: data.targetId,
+        userId: data.userId,
+        guestId: data.guestId,
         updatedAt: new Date(),
       },
       create: data,
@@ -92,7 +98,13 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
     update: Partial<
       Pick<
         Attachment,
-        'type' | 'filename' | 'originalName' | 'expirationDate' | 'targetId'
+        | 'type'
+        | 'filename'
+        | 'originalName'
+        | 'expirationDate'
+        | 'targetId'
+        | 'userId'
+        | 'guestId'
       >
     >,
   ): Promise<Attachment> {
@@ -104,6 +116,8 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
     if (typeof update.expirationDate !== 'undefined')
       data.expirationDate = update.expirationDate ?? null;
     if (typeof update.targetId !== 'undefined') data.targetId = update.targetId;
+    if (typeof update.userId !== 'undefined') data.userId = update.userId;
+    if (typeof update.guestId !== 'undefined') data.guestId = update.guestId;
     data.updatedAt = new Date();
 
     const rec = await this.prisma.attachment.update({ where: { id }, data });

@@ -11,11 +11,20 @@ export class LocalFilesService implements FilesService {
     private readonly attachmentRepository: AttachmentRepository,
   ) {}
 
-  async genUploadKey(targetId: string): Promise<string> {
+  async genUploadKey(
+    targetId: string,
+    userId?: string,
+    guestId?: string,
+  ): Promise<string> {
     const key = randomBytes(32).toString('base64url');
 
     const redisKey = `upload:token:${key}`;
-    await this.redis.set(redisKey, targetId);
+    const tokenData = {
+      targetId,
+      userId: userId || null,
+      guestId: guestId || null,
+    };
+    await this.redis.set(redisKey, JSON.stringify(tokenData));
 
     return key;
   }
@@ -29,19 +38,24 @@ export class LocalFilesService implements FilesService {
   }
 
   async deleteFilesByTargetId(targetId: string): Promise<void> {
-    const attachments = await this.attachmentRepository.findByTargetId(targetId);
-    
+    const attachments =
+      await this.attachmentRepository.findByTargetId(targetId);
+
     // Delete all attachments for this target
     for (const attachment of attachments) {
       await this.attachmentRepository.removeById(attachment.id);
     }
   }
 
-  async replaceFilesByTargetId(targetId: string): Promise<string> {
+  async replaceFilesByTargetId(
+    targetId: string,
+    userId?: string,
+    guestId?: string,
+  ): Promise<string> {
     // First delete existing files
     await this.deleteFilesByTargetId(targetId);
-    
+
     // Generate new upload key for replacement
-    return this.genUploadKey(targetId);
+    return this.genUploadKey(targetId, userId, guestId);
   }
 }

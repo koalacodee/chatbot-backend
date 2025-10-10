@@ -94,7 +94,7 @@ export class AnswerTicketUseCase {
       await Promise.all([
         attach
           ? this.fileService
-              .genUploadKey(existingAnswer.id.toString())
+              .genUploadKey(existingAnswer.id.toString(), userId)
               .then((key) => (uploadKey = key))
           : undefined,
         this.ticketAnswerRepository.save(existingAnswer),
@@ -115,7 +115,7 @@ export class AnswerTicketUseCase {
             savedAnswer = saved;
             attach
               ? this.fileService
-                  .genUploadKey(saved.id.toString())
+                  .genUploadKey(saved.id.toString(), userId)
                   .then((key) => (uploadKey = key))
               : undefined;
           }),

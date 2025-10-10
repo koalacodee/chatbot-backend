@@ -63,7 +63,7 @@ export class UpdateQuestionUseCase {
 
     const [updatedQuestion, uploadKey] = await Promise.all([
       this.questionRepo.update(id, update),
-      dto.attach ? this.filesService.genUploadKey(id) : undefined,
+      dto.attach ? this.filesService.genUploadKey(id, dto.userId) : undefined,
     ]);
 
     this.eventEmitter.emit(

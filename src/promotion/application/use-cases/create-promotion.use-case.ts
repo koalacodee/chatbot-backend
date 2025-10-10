@@ -54,7 +54,10 @@ export class CreatePromotionUseCase {
     const [saved, uploadKey] = await Promise.all([
       this.promotionRepo.save(promotion),
       dto.attach
-        ? this.fileService.genUploadKey(promotion.id.toString())
+        ? this.fileService.genUploadKey(
+            promotion.id.toString(),
+            dto.createdByUserId,
+          )
         : undefined,
       this.eventEmitter.emitAsync(
         PromotionCreatedEvent.name,

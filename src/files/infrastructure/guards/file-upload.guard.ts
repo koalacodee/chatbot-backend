@@ -4,6 +4,8 @@ import { FastifyRequest } from 'fastify';
 
 interface UploadRequest extends FastifyRequest {
   targetId?: string;
+  userId?: string;
+  guestId?: string;
 }
 
 @Injectable()
@@ -17,13 +19,23 @@ export class FileUploadGuard implements CanActivate {
     if (!token) return false;
 
     const redisKey = `upload:token:${token}`;
-    const targetId = await this.redis.get(redisKey);
+    const tokenData = await this.redis.get(redisKey);
 
-    if (!targetId) return false;
+    if (!tokenData) return false;
 
     await this.redis.del(redisKey);
 
-    request.headers['x-target-id'] = targetId;
+    // Parse token data which should contain targetId, userId, and guestId
+    const parsedData = JSON.parse(tokenData);
+
+    request.headers['x-target-id'] = parsedData.targetId;
+    if (parsedData.userId) {
+      request.headers['x-user-id'] = parsedData.userId;
+    }
+    if (parsedData.guestId) {
+      request.headers['x-guest-id'] = parsedData.guestId;
+    }
+
     return true;
   }
 }

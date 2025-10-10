@@ -48,7 +48,10 @@ export class CreateKnowledgeChunkUseCase {
     });
 
     const uploadKey = dto.attach
-      ? await this.filesService.genUploadKey(knowledgeChunk.id.toString())
+      ? await this.filesService.genUploadKey(
+          knowledgeChunk.id.toString(),
+          dto.userId,
+        )
       : undefined;
 
     return { knowledgeChunk, uploadKey };

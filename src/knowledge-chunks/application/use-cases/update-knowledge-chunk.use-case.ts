@@ -88,7 +88,7 @@ export class UpdateKnowledgeChunkUseCase {
 
     const [savedChunk, uploadKey] = await Promise.all([
       this.chunkRepo.save(chunk),
-      dto.attach ? this.filesService.genUploadKey(id) : undefined,
+      dto.attach ? this.filesService.genUploadKey(id, dto.userId) : undefined,
     ]);
 
     return { knowledgeChunk: savedChunk, uploadKey };

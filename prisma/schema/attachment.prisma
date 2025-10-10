@@ -4,6 +4,8 @@ model Attachment {
   filename       String    @map("filename") @db.VarChar(500)
   originalName   String    @map("original_name") @db.VarChar(500)
   expirationDate DateTime? @map("expiration_date")
+  userId         String?   @map("user_id") @db.Uuid
+  guestId        String?   @map("guest_id") @db.Uuid
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -11,5 +13,7 @@ model Attachment {
   targetId  String   @map("target_id") @db.Uuid
 
   @@index([targetId])
+  @@index([userId])
+  @@index([guestId])
   @@map("attachments")
 }

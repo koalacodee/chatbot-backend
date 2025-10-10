@@ -132,7 +132,10 @@ export class SubmitTaskSubmissionUseCase {
       this.taskSubmissionRepo.save(taskSubmission),
       this.taskRepo.save(existingTask),
       dto.attach
-        ? this.filesService.genUploadKey(taskSubmission.id.toString())
+        ? this.filesService.genUploadKey(
+            taskSubmission.id.toString(),
+            dto.submittedBy,
+          )
         : undefined,
       this.eventEmitter.emitAsync(
         TaskPerformedEvent.name,

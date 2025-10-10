@@ -9,6 +9,8 @@ export interface AttachmentOptions {
   createdAt?: Date;
   updatedAt?: Date;
   targetId: string;
+  userId?: string;
+  guestId?: string;
 }
 
 export class Attachment {
@@ -20,6 +22,8 @@ export class Attachment {
   private _createdAt: Date;
   private _updatedAt: Date;
   private readonly _targetId: UUID;
+  private readonly _userId: UUID | null;
+  private readonly _guestId: UUID | null;
 
   private constructor(options: AttachmentOptions) {
     this._id = UUID.create(options.id);
@@ -33,6 +37,8 @@ export class Attachment {
       throw new Error('Target ID is required');
     }
     this._targetId = UUID.create(options.targetId);
+    this._userId = options.userId ? UUID.create(options.userId) : null;
+    this._guestId = options.guestId ? UUID.create(options.guestId) : null;
   }
 
   static create(options: AttachmentOptions): Attachment {
@@ -95,6 +101,14 @@ export class Attachment {
     return this._targetId.value;
   }
 
+  get userId(): string | null {
+    return this._userId?.value ?? null;
+  }
+
+  get guestId(): string | null {
+    return this._guestId?.value ?? null;
+  }
+
   toJSON(): AttachmentOptions {
     return {
       id: this._id.value,
@@ -105,6 +119,8 @@ export class Attachment {
       createdAt: this._createdAt,
       updatedAt: this._updatedAt,
       targetId: this._targetId.value,
+      userId: this._userId?.value,
+      guestId: this._guestId?.value,
     };
   }
 }
