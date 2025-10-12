@@ -1,8 +1,6 @@
 import { Injectable, NotFoundException, GoneException } from '@nestjs/common';
 import { AttachmentRepository } from '../../domain/repositories/attachment.repository';
 import { RedisService } from 'src/shared/infrastructure/redis';
-import { existsSync, statSync } from 'fs';
-import { join } from 'path';
 import { isUUID } from 'class-validator';
 
 interface GetAttachmentMetadataByTokenInput {
@@ -56,7 +54,7 @@ export class GetAttachmentMetadataByTokenUseCase {
         'GetAttachmentMetadataByTokenUseCase - Input is token, checking Redis',
       );
       // Token-based lookup - get attachment ID from Redis
-      const redisKey = `attachment:token:${token}`;
+      const redisKey = `shareKey:${token}`;
       const attachmentId = await this.redis.get(redisKey);
 
       if (!attachmentId) {
@@ -106,28 +104,6 @@ export class GetAttachmentMetadataByTokenUseCase {
       throw new GoneException('Attachment has expired');
     }
 
-    // Construct file path
-    const filePath = join(process.cwd(), 'uploads', attachment.filename);
-    console.log('GetAttachmentMetadataByTokenUseCase - File path:', filePath);
-
-    // Check if file exists
-    if (!existsSync(filePath)) {
-      console.log(
-        'GetAttachmentMetadataByTokenUseCase - File does not exist on disk',
-      );
-      throw new NotFoundException({
-        details: [{ field: 'file', message: 'File not found on disk' }],
-      });
-    }
-
-    // Get file stats for size
-    const stats = statSync(filePath);
-    console.log('GetAttachmentMetadataByTokenUseCase - File stats:', {
-      size: stats.size,
-      isFile: stats.isFile(),
-      mtime: stats.mtime,
-    });
-
     // Determine file type based on file extension
     const fileType = this.getFileType(attachment.filename);
     console.log('GetAttachmentMetadataByTokenUseCase - File type:', fileType);
@@ -142,7 +118,7 @@ export class GetAttachmentMetadataByTokenUseCase {
     return {
       fileType,
       originalName: attachment.originalName,
-      sizeInBytes: stats.size,
+      sizeInBytes: attachment.size,
       expiryDate: attachment.expirationDate,
       tokenExpiryDate,
       contentType,

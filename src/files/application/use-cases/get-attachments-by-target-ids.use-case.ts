@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AttachmentRepository } from '../../domain/repositories/attachment.repository';
 import { RedisService } from 'src/shared/infrastructure/redis';
 import { randomBytes } from 'crypto';
+import { FileManagementClass } from 'src/files/domain/services/file-mangement.service';
 
 interface GetAttachmentsByTargetIdsInput {
   targetIds: string[];
@@ -15,6 +16,7 @@ export interface AttachmentTokensByTarget {
 export class GetAttachmentsByTargetIdsUseCase {
   constructor(
     private readonly attachmentRepository: AttachmentRepository,
+    private readonly fileManagementService: FileManagementClass,
     private readonly redis: RedisService,
   ) {}
 
@@ -39,13 +41,10 @@ export class GetAttachmentsByTargetIdsUseCase {
 
         const tokens = await Promise.all(
           validAttachments.map(async (attachment) => {
-            const token = randomBytes(32).toString('base64url');
-            const redisKey = `attachment:token:${token}`;
-
-            // Store attachment ID in Redis with 24 hour expiry
-            await this.redis.set(redisKey, attachment.id, 24 * 60 * 60);
-
-            return token;
+            return this.fileManagementService.genShareKey(
+              attachment.id,
+              24 * 60 * 60,
+            );
           }),
         );
 

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { FilesService } from 'src/files/domain/services/files.service';
 
 interface GenTokenInput {
-  targetId: string;
+  targetId?: string;
   userId?: string;
   guestId?: string;
 }

@@ -1,14 +1,21 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  MethodNotAllowedException,
+  Param,
+  Res,
+} from '@nestjs/common';
 import { FastifyReply } from 'fastify';
 import { GetAttachmentByTokenUseCase } from '../../application/use-cases/get-attachment-by-token.use-case';
 import { GetAttachmentMetadataByTokenUseCase } from '../../application/use-cases/get-attachment-metadata-by-token.use-case';
-import { createReadStream } from 'fs';
+import { FileManagementClass } from '../../domain/services/file-mangement.service';
 
 @Controller('attachment')
 export class AttachmentController {
   constructor(
     private readonly getAttachmentByTokenUseCase: GetAttachmentByTokenUseCase,
     private readonly getAttachmentMetadataByTokenUseCase: GetAttachmentMetadataByTokenUseCase,
+    private readonly fileManagementService: FileManagementClass,
   ) {}
 
   @Get(':tokenOrId')
@@ -16,9 +23,15 @@ export class AttachmentController {
     @Param('tokenOrId') tokenOrId: string,
     @Res() res: FastifyReply,
   ) {
-    const result = await this.getAttachmentByTokenUseCase.execute({
-      tokenOrId,
-    });
+    const [result, stream] = await Promise.all([
+      this.getAttachmentByTokenUseCase.execute({
+        tokenOrId,
+      }),
+      this.fileManagementService.getFileStream(tokenOrId),
+    ]);
+    if (!stream) {
+      throw new MethodNotAllowedException('File Stream Is Not Supported');
+    }
     res.header('Content-Type', result.contentType);
     const encodedFilename = encodeURIComponent(result.originalName);
     res.header(
@@ -27,7 +40,6 @@ export class AttachmentController {
     );
     res.header('Cache-Control', 'private, max-age=3600');
     res.header('Accept-Ranges', 'bytes');
-    const stream = createReadStream(result.filePath);
     return res.send(stream);
   }
 
@@ -36,5 +48,18 @@ export class AttachmentController {
     return this.getAttachmentMetadataByTokenUseCase.execute({
       token: tokenOrId,
     });
+  }
+
+  @Get('signed/:shareKey')
+  async getSignedUrlByShareKey(@Param('shareKey') shareKey: string) {
+    const signedUrl = await this.fileManagementService.getSignedUrl(shareKey);
+
+    if (!signedUrl) {
+      throw new MethodNotAllowedException(
+        'Signed URLs are not supported by the current file management service',
+      );
+    }
+
+    return { signedUrl };
   }
 }

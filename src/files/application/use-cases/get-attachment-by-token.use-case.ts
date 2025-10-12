@@ -52,7 +52,7 @@ export class GetAttachmentByTokenUseCase {
         'GetAttachmentByTokenUseCase - Input is token, checking Redis',
       );
       // Token-based lookup - get attachment ID from Redis
-      const redisKey = `attachment:token:${tokenOrId}`;
+      const redisKey = `shareKey:${tokenOrId}`;
       const attachmentId = await this.redis.get(redisKey);
 
       if (!attachmentId) {

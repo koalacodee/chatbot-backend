@@ -8,7 +8,7 @@ export interface AttachmentOptions {
   expirationDate?: Date;
   createdAt?: Date;
   updatedAt?: Date;
-  targetId: string;
+  targetId?: string;
   userId?: string;
   guestId?: string;
   isGlobal?: boolean;
@@ -23,7 +23,7 @@ export class Attachment {
   private _expirationDate: Date | null;
   private _createdAt: Date;
   private _updatedAt: Date;
-  private readonly _targetId: UUID;
+  private readonly _targetId: UUID | null;
   private readonly _userId: UUID | null;
   private readonly _guestId: UUID | null;
   private readonly _isGlobal: boolean;
@@ -37,10 +37,7 @@ export class Attachment {
     this._expirationDate = options.expirationDate ?? null;
     this._createdAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
-    if (!options.targetId) {
-      throw new Error('Target ID is required');
-    }
-    this._targetId = UUID.create(options.targetId);
+    this._targetId = options.targetId ? UUID.create(options.targetId) : null;
     this._userId = options.userId ? UUID.create(options.userId) : null;
     this._guestId = options.guestId ? UUID.create(options.guestId) : null;
     this._isGlobal = options.isGlobal ?? false;
@@ -103,8 +100,8 @@ export class Attachment {
     this._updatedAt = value;
   }
 
-  get targetId(): string {
-    return this._targetId.value;
+  get targetId(): string | null {
+    return this._targetId?.value ?? null;
   }
 
   get userId(): string | null {
@@ -132,7 +129,7 @@ export class Attachment {
       expirationDate: this._expirationDate,
       createdAt: this._createdAt,
       updatedAt: this._updatedAt,
-      targetId: this._targetId.value,
+      targetId: this._targetId?.value ?? null,
       userId: this._userId?.value,
       guestId: this._guestId?.value,
       isGlobal: this._isGlobal,

@@ -12,7 +12,7 @@ model Attachment {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   // Generic target reference; indexed for fast lookup
-  targetId  String   @map("target_id") @db.Uuid
+  targetId  String?   @map("target_id") @db.Uuid
 
   @@index([targetId])
   @@index([userId])

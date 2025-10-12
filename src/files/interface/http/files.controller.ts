@@ -6,30 +6,24 @@ import {
   Res,
   UseGuards,
   Query,
+  Param,
+  Body,
 } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { extname, join } from 'path';
-import { createWriteStream, mkdirSync, statSync } from 'fs';
-import { pipeline } from 'stream/promises';
-import { UploadFileUseCase } from 'src/files/application/use-cases/upload-file.use-case';
 import { GetMyAttachmentsUseCase } from 'src/files/application/use-cases/get-my-attachments.use-case';
+import { ShareAttachmentUseCase } from 'src/files/application/use-cases/share-attachment.use-case';
+import { GenTokenUseCase } from 'src/files/application/use-cases/gen-token.use-case';
 import { FileUploadGuard } from 'src/files/infrastructure/guards/file-upload.guard';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { UUID } from 'src/shared/value-objects/uuid.vo';
-
-// Type for multipart parts
-type MultipartPart = {
-  file?: NodeJS.ReadableStream;
-  filename?: string;
-  fieldname: string;
-  value?: string;
-};
+import { FileManagementClass } from 'src/files/domain/services/file-mangement.service';
 
 @Controller('files')
 export class FilesController {
   constructor(
-    private readonly uploadFileUseCase: UploadFileUseCase,
     private readonly getMyAttachmentsUseCase: GetMyAttachmentsUseCase,
+    private readonly shareAttachmentUseCase: ShareAttachmentUseCase,
+    private readonly genTokenUseCase: GenTokenUseCase,
+    private readonly fileManagementService: FileManagementClass,
   ) {}
 
   private getContentType(filename: string): string {
@@ -197,241 +191,70 @@ export class FilesController {
   @Post('single')
   @UseGuards(FileUploadGuard)
   async uploadSingle(@Req() req: FastifyRequest, @Res() res: FastifyReply) {
-    try {
-      console.log('Starting single file upload...');
-      const parts = req.parts();
-      let file: { filename: string; originalName: string };
-      const uploadsDir = join(process.cwd(), 'uploads');
-      let expirationDate: string = '';
-      let isGlobal: boolean = false;
-
-      // Ensure uploads directory exists
-      try {
-        mkdirSync(uploadsDir, { recursive: true });
-      } catch (error) {
-        // Directory might already exist, ignore error
-      }
-
-      // Process each part of the multipart form
-      for await (const part of parts) {
-        console.log('Processing part:', {
-          fieldname: part.fieldname,
-          filename: (part as any).filename,
-          hasFile: !!(part as any).file,
-        });
-
-        const multipartPart = part as MultipartPart;
-
-        if (multipartPart.file && !file) {
-          // This part is a file
-          console.log('Found file:', multipartPart.filename);
-          const ext = extname(multipartPart.filename || '');
-          const filename = `${UUID.create().toString()}${ext}`;
-          const filepath = join(uploadsDir, filename);
-
-          // Create write stream with optimized settings for streaming
-          const writeStream = createWriteStream(filepath, {
-            highWaterMark: 64 * 1024, // 64KB buffer for streaming
-            flags: 'w',
-          });
-
-          // Stream the file directly to disk without buffering in memory
-          await pipeline(multipartPart.file, writeStream);
-
-          file = {
-            filename,
-            originalName: multipartPart.filename || '',
-          };
-        } else if (multipartPart.fieldname === 'expirationDate') {
-          // This part is an expiration date field
-          console.log(
-            'Found expiration date field:',
-            multipartPart.fieldname,
-            multipartPart.value,
-          );
-
-          expirationDate = multipartPart.value;
-        } else if (multipartPart.fieldname === 'isGlobal') {
-          // This part is an isGlobal field
-          console.log(
-            'Found isGlobal field:',
-            multipartPart.fieldname,
-            multipartPart.value,
-          );
-
-          isGlobal = multipartPart.value === 'true';
-        }
-      }
-
-      if (!file) {
-        return res.status(400).send({ error: 'No file uploaded' });
-      }
-      // Get file stats for size
-      const filePath = join(uploadsDir, file.filename);
-      const stats = statSync(filePath);
-
-      const results = await this.uploadFileUseCase.execute({
-        targetId: req.headers['x-target-id'] as any,
-        filename: file.filename,
-        originalName: file.originalName,
-        expirationDate: expirationDate ? new Date(expirationDate) : undefined,
-        userId: req.headers['x-user-id'] as any,
-        guestId: req.headers['x-guest-id'] as any,
-        isGlobal,
-        size: stats.size,
-      });
-
-      // Get additional file information
-      const fileType = this.getFileType(file.originalName);
-      const contentType = this.getContentType(file.originalName);
-      const sizeInBytes = stats.size;
-
-      // Return the attachment data with additional fields
-      const response = {
-        ...results.toJSON(),
-        fileType,
-        sizeInBytes,
-        contentType,
-      };
-
-      return res.send(response);
-    } catch (error) {
-      console.error('Multiple file upload error:', error);
-      return res.status(500).send({ error: 'File upload failed' });
-    }
+    return this.fileManagementService.uploadSingle(req, res);
   }
 
   @Post('multiple')
   @UseGuards(FileUploadGuard)
   async uploadMultiple(@Req() req: FastifyRequest, @Res() res: FastifyReply) {
+    return this.fileManagementService.uploadMultiple(req, res);
+  }
+
+  @Post('share/:attachmentId')
+  @UseGuards(UserJwtAuthGuard)
+  async shareAttachment(
+    @Param('attachmentId') attachmentId: string,
+    @Req() req: any,
+    @Body() body: { expirationDate?: string },
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      return { error: 'User not authenticated' };
+    }
+
     try {
-      console.log('Starting multiple file upload...');
-      const parts = req.parts();
-      const files = [];
-      const uploadsDir = join(process.cwd(), 'uploads');
-      let expirationDates: string[] = [];
-      let isGlobalValues: boolean[] = [];
+      const expirationDate = body.expirationDate
+        ? new Date(body.expirationDate)
+        : undefined;
 
-      // Ensure uploads directory exists
-      try {
-        mkdirSync(uploadsDir, { recursive: true });
-      } catch (error) {
-        // Directory might already exist, ignore error
-      }
+      const result = await this.shareAttachmentUseCase.execute({
+        attachmentId,
+        userId,
+        expirationDate,
+      });
 
-      // Process each part of the multipart form
-      for await (const part of parts) {
-        console.log('Processing part:', {
-          fieldname: part.fieldname,
-          filename: (part as any).filename,
-          hasFile: !!(part as any).file,
-        });
-
-        const multipartPart = part as MultipartPart;
-
-        if (multipartPart.file) {
-          // This part is a file
-          console.log('Found file:', multipartPart.filename);
-          const ext = extname(multipartPart.filename || '');
-          const filename = `${UUID.create().toString()}${ext}`;
-          const filepath = join(uploadsDir, filename);
-
-          // Create write stream with optimized settings for streaming
-          const writeStream = createWriteStream(filepath, {
-            highWaterMark: 64 * 1024, // 64KB buffer for streaming
-            flags: 'w',
-          });
-
-          // Stream the file directly to disk without buffering in memory
-          await pipeline(multipartPart.file, writeStream);
-
-          files.push({
-            filename,
-            originalName: multipartPart.filename || '',
-          });
-        } else if (multipartPart.fieldname?.startsWith('expirationDates[')) {
-          // This part is an expiration date field like expirationDates[0], expirationDates[1], etc.
-          console.log(
-            'Found expiration date field:',
-            multipartPart.fieldname,
-            multipartPart.value,
-          );
-
-          // Extract index from fieldname like "expirationDates[0]" -> 0
-          const match = multipartPart.fieldname.match(
-            /expirationDates\[(\d+)\]/,
-          );
-          if (match) {
-            const index = parseInt(match[1], 10);
-            // Ensure the array is large enough
-            while (expirationDates.length <= index) {
-              expirationDates.push('');
-            }
-            expirationDates[index] = multipartPart.value || '';
-          }
-        } else if (multipartPart.fieldname?.startsWith('isGlobalValues[')) {
-          // This part is an isGlobal field like isGlobalValues[0], isGlobalValues[1], etc.
-          console.log(
-            'Found isGlobal field:',
-            multipartPart.fieldname,
-            multipartPart.value,
-          );
-
-          // Extract index from fieldname like "isGlobalValues[0]" -> 0
-          const match = multipartPart.fieldname.match(
-            /isGlobalValues\[(\d+)\]/,
-          );
-          if (match) {
-            const index = parseInt(match[1], 10);
-            // Ensure the array is large enough
-            while (isGlobalValues.length <= index) {
-              isGlobalValues.push(false);
-            }
-            isGlobalValues[index] = multipartPart.value === 'true';
-          }
-        }
-      }
-
-      if (files.length === 0) {
-        return res.status(400).send({ error: 'No files uploaded' });
-      }
-
-      const results = await Promise.all(
-        files.map(async (file, index) => {
-          const filePath = join(uploadsDir, file.filename);
-          const stats = statSync(filePath);
-
-          const fileType = this.getFileType(file.originalName);
-          const contentType = this.getContentType(file.originalName);
-          const sizeInBytes = stats.size;
-
-          const uploaded = await this.uploadFileUseCase.execute({
-            targetId: req.headers['x-target-id'] as any,
-            filename: file.filename,
-            originalName: file.originalName,
-            expirationDate:
-              expirationDates[index] && expirationDates[index].trim() !== ''
-                ? new Date(expirationDates[index])
-                : undefined,
-            userId: req.headers['x-user-id'] as any,
-            guestId: req.headers['x-guest-id'] as any,
-            isGlobal: isGlobalValues[index] ?? false,
-            size: sizeInBytes,
-          });
-
-          return {
-            ...uploaded.toJSON(),
-            fileType,
-            sizeInBytes,
-            contentType,
-          };
-        }),
-      );
-
-      return res.send(results);
+      return {
+        shareKey: result.shareKey,
+        expiresAt: result.expiresAt,
+      };
     } catch (error) {
-      console.error('Multiple file upload error:', error);
-      return res.status(500).send({ error: 'File upload failed' });
+      return {
+        error: error.message,
+      };
+    }
+  }
+
+  @Post('generate-upload-key')
+  @UseGuards(UserJwtAuthGuard)
+  async generateUploadKey(@Req() req: any) {
+    const userId = req.user?.id;
+    if (!userId) {
+      return { error: 'User not authenticated' };
+    }
+
+    try {
+      const uploadKey = await this.genTokenUseCase.execute({
+        userId,
+      });
+
+      return {
+        uploadKey,
+        message: 'Upload key generated successfully',
+      };
+    } catch (error) {
+      return {
+        error: error.message,
+      };
     }
   }
 }

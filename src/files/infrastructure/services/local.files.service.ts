@@ -12,7 +12,7 @@ export class LocalFilesService implements FilesService {
   ) {}
 
   async genUploadKey(
-    targetId: string,
+    targetId?: string,
     userId?: string,
     guestId?: string,
   ): Promise<string> {
