@@ -34,6 +34,9 @@ export class AliOSSFileManagementService implements FileManagementClass {
       accessKeySecret: this.config.getOrThrow<string>('OSS_ACCESS_KEY_SECRET'),
       bucket: this.config.getOrThrow<string>('OSS_BUCKET'),
       endpoint: this.config.getOrThrow<string>('OSS_ENDPOINT'),
+      timeout: parseInt(
+        this.config.getOrThrow<string>('OSS_TIMEOUT', '300000'),
+      ),
     });
   }
 
