@@ -11,6 +11,7 @@ import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.e
 import { NotificationRepository } from 'src/notification/domain/repositories/notification.repository';
 import { Notification } from 'src/notification/domain/entities/notification.entity';
 import { TicketCreatedEvent } from '../../domain/events/ticket-created.event';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface CreateSupportTicketInputDto {
   subject: string;
@@ -20,6 +21,7 @@ interface CreateSupportTicketInputDto {
   guestName?: string;
   guestPhone?: string;
   guestEmail?: string;
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -32,6 +34,7 @@ export class CreateSupportTicketUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly notificationRepository: NotificationRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async execute(
@@ -58,28 +61,36 @@ export class CreateSupportTicketUseCase {
       guestEmail: dto.guestEmail,
     });
 
-    const [uploadKey] = await Promise.all([
+    const [savedTicket, uploadKey] = await Promise.all([
+      this.supportTicketRepo.save(ticket),
       dto.attach
         ? this.fileService.genUploadKey(ticket.id.toString()).then((key) => key)
         : undefined,
-      this.supportTicketRepo.save(ticket),
       this.notify(ticket),
     ]);
+
+    // Clone attachments if provided
+    if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: dto.chooseAttachments,
+        targetId: savedTicket.id.toString(),
+      });
+    }
 
     // Emit ticket created event
     this.eventEmitter.emit(
       TicketCreatedEvent.name,
       new TicketCreatedEvent(
-        ticket.id.toString(),
-        ticket.subject,
-        ticket.departmentId.toString(),
+        savedTicket.id.toString(),
+        savedTicket.subject,
+        savedTicket.departmentId.toString(),
         department.id.toString(), // categoryId - using department as category
         department.parentId?.toString(), // subDepartmentId
-        ticket.createdAt,
+        savedTicket.createdAt,
       ),
     );
 
-    return { ticket, uploadKey };
+    return { ticket: savedTicket, uploadKey };
   }
 
   async notify(supportTicket: SupportTicket) {

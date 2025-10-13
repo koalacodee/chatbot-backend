@@ -8,6 +8,7 @@ import { SupervisorRepository } from 'src/supervisor/domain/repository/superviso
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PromotionCreatedEvent } from 'src/promotion/domain/events/promotion-created.event';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface CreatePromotionInputDto {
   title: string;
@@ -16,6 +17,7 @@ interface CreatePromotionInputDto {
   startDate?: Date;
   endDate?: Date;
   createdByUserId: string;
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -27,6 +29,7 @@ export class CreatePromotionUseCase {
     private readonly supervisorRepo: SupervisorRepository,
     private readonly fileService: FilesService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async execute(
@@ -70,6 +73,14 @@ export class CreatePromotionUseCase {
         ),
       ),
     ]);
+
+    // Clone attachments if provided
+    if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: dto.chooseAttachments,
+        targetId: saved.id.toString(),
+      });
+    }
 
     return { saved, uploadKey };
   }

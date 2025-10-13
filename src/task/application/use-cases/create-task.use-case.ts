@@ -23,6 +23,7 @@ import { TaskCreatedEvent } from '../../domain/events/task-created.event';
 import { TaskPresetCreatedEvent } from '../../domain/events/task-preset-created.event';
 import { FilesService } from 'src/files/domain/services/files.service';
 import { ReminderQueueService } from '../../infrastructure/queues/reminder.queue';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface CreateTaskInputDto {
   title: string;
@@ -41,6 +42,7 @@ interface CreateTaskInputDto {
   attach?: boolean;
   reminderInterval?: number; // in milliseconds
   savePreset?: boolean;
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -56,6 +58,7 @@ export class CreateTaskUseCase {
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
     private readonly reminderQueueService: ReminderQueueService,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async execute(
@@ -201,6 +204,14 @@ export class CreateTaskUseCase {
         ),
       ),
     ]);
+
+    // Clone attachments if provided
+    if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: dto.chooseAttachments,
+        targetId: saved.id.toString(),
+      });
+    }
 
     // Schedule reminder job if reminderInterval is provided
     if (dto.reminderInterval) {

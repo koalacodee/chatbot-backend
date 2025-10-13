@@ -7,6 +7,8 @@ import {
   IsBoolean,
   IsPositive,
   Min,
+  IsArray,
+  IsUUID,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TaskStatus, TaskPriority } from 'src/task/domain/entities/task.entity';
@@ -74,4 +76,10 @@ export class CreateTaskInputDto {
   @IsOptional()
   @IsBoolean()
   savePreset?: boolean;
+
+  @ApiProperty({ description: 'Attachment IDs to clone', required: false })
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  chooseAttachments?: string[];
 }

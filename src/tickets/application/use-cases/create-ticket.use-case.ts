@@ -4,12 +4,14 @@ import { GuestRepository } from 'src/guest/domain/repositories/guest.repository'
 import { Ticket } from 'src/tickets/domain/entities/ticket.entity';
 import { TicketRepository } from 'src/tickets/domain/repositories/ticket.repository';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface CreateTicketInput {
   departmentId: string;
   question: string;
   guestId?: string;
   attach?: boolean;
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -19,6 +21,7 @@ export class CreateTicketUseCase {
     private readonly ticketRepo: TicketRepository,
     private readonly guestRepo: GuestRepository,
     private readonly filesService: FilesService,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async execute({
@@ -26,6 +29,7 @@ export class CreateTicketUseCase {
     question,
     guestId,
     attach,
+    chooseAttachments,
   }: CreateTicketInput) {
     const ticket = await this.ticketRepo.save(
       await Ticket.create({
@@ -52,6 +56,14 @@ export class CreateTicketUseCase {
           guestId,
         )
       : undefined;
+
+    // Clone attachments if provided
+    if (chooseAttachments && chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: chooseAttachments,
+        targetId: ticket.id.toString(),
+      });
+    }
 
     return { ticket: ticket.ticketCode.toString(), uploadKey };
   }

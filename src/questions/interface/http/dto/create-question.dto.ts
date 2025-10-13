@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsArray,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateQuestionInputDto {
   @IsString()
@@ -18,4 +24,9 @@ export class CreateQuestionInputDto {
   @IsOptional()
   @IsBoolean()
   attach?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  chooseAttachments?: string[];
 }

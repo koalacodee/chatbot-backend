@@ -5,12 +5,14 @@ import { DepartmentRepository } from 'src/department/domain/repositories/departm
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
 import { KnowledgeChunk } from 'src/knowledge-chunks/domain/entities/knowledge-chunk.entity';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface CreateKnowledgeChunkDto {
   content: string;
   departmentId: string;
   userId: string;
   attach?: boolean;
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -19,6 +21,7 @@ export class CreateKnowledgeChunkUseCase {
     private readonly departmentRepo: DepartmentRepository,
     private readonly accessControl: AccessControlService,
     private readonly filesService: FilesService,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
     @InjectQueue('knowledge-chunks')
     private readonly knowledgeChunksQueue: Queue,
   ) {}
@@ -53,6 +56,14 @@ export class CreateKnowledgeChunkUseCase {
           dto.userId,
         )
       : undefined;
+
+    // Clone attachments if provided
+    if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: dto.chooseAttachments,
+        targetId: knowledgeChunk.id.toString(),
+      });
+    }
 
     return { knowledgeChunk, uploadKey };
   }

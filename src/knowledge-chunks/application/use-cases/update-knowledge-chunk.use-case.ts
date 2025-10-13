@@ -9,6 +9,7 @@ import { Point } from 'src/shared/entities/point.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
 import { FilesService } from 'src/files/domain/services/files.service';
 import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/delete-attachments-by-ids.use-case';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface UpdateKnowledgeChunkDto {
   content?: string;
@@ -16,6 +17,7 @@ interface UpdateKnowledgeChunkDto {
   userId: string;
   attach?: boolean;
   deleteAttachments?: string[];
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -28,6 +30,7 @@ export class UpdateKnowledgeChunkUseCase {
     private readonly accessControl: AccessControlService,
     private readonly filesService: FilesService,
     private readonly deleteAttachmentsUseCase: DeleteAttachmentsByIdsUseCase,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async execute(
@@ -90,6 +93,14 @@ export class UpdateKnowledgeChunkUseCase {
       this.chunkRepo.save(chunk),
       dto.attach ? this.filesService.genUploadKey(id, dto.userId) : undefined,
     ]);
+
+    // Clone attachments if provided
+    if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: dto.chooseAttachments,
+        targetId: id,
+      });
+    }
 
     return { knowledgeChunk: savedChunk, uploadKey };
   }

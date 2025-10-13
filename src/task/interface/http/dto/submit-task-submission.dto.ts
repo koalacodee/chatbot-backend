@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsUUID } from 'class-validator';
 
 export class SubmitTaskSubmissionInputDto {
   @IsOptional()
@@ -7,4 +7,9 @@ export class SubmitTaskSubmissionInputDto {
 
   @IsOptional()
   attach?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  chooseAttachments?: string[];
 }

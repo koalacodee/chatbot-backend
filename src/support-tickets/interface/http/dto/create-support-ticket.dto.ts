@@ -1,4 +1,12 @@
-import { IsNotEmpty, IsString, IsUUID, IsEmail, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  IsEmail,
+  IsOptional,
+  IsBoolean,
+  IsArray,
+} from 'class-validator';
 
 export class CreateSupportTicketDto {
   @IsNotEmpty()
@@ -25,4 +33,9 @@ export class CreateSupportTicketDto {
   @IsOptional()
   @IsBoolean()
   attach?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  chooseAttachments?: string[];
 }

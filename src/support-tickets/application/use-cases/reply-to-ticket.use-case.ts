@@ -16,6 +16,7 @@ import { SupportTicketStatus } from 'src/support-tickets/domain/entities/support
 import { SupportTicketAnswerRepository } from 'src/support-tickets/domain/repositories/support-ticket-answer.repository';
 import { SupportTicketRepository } from 'src/support-tickets/domain/repositories/support-ticket.repository';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface ReplyToTicketInput {
   ticketId: string;
@@ -24,6 +25,7 @@ interface ReplyToTicketInput {
   newFawDepartmentId?: string;
   userId: string;
   attach?: boolean;
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -38,6 +40,7 @@ export class ReplyToTicketUseCase {
     private readonly departmentRepo: DepartmentRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async execute({
@@ -47,6 +50,7 @@ export class ReplyToTicketUseCase {
     newFawDepartmentId,
     userId,
     attach,
+    chooseAttachments,
   }: ReplyToTicketInput): Promise<{ uploadKey?: string }> {
     if (promoteToFaq && !newFawDepartmentId) {
       throw new BadRequestException({
@@ -107,6 +111,14 @@ export class ReplyToTicketUseCase {
           })
         : undefined,
     ]);
+
+    // Clone attachments if provided
+    if (chooseAttachments && chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: chooseAttachments,
+        targetId: answer.id.toString(),
+      });
+    }
 
     return { uploadKey };
   }

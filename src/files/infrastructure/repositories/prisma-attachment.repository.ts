@@ -67,6 +67,13 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
     return rec ? this.toDomain(rec) : null;
   }
 
+  async findByIds(ids: string[]): Promise<Attachment[]> {
+    const items = await this.prisma.attachment.findMany({
+      where: { id: { in: ids } },
+    });
+    return items.map((r) => this.toDomain(r));
+  }
+
   async exists(id: string): Promise<boolean> {
     const count = await this.prisma.attachment.count({ where: { id } });
     return count > 0;

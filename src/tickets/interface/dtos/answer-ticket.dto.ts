@@ -1,4 +1,4 @@
-import { IsString, IsUUID } from 'class-validator';
+import { IsString, IsUUID, IsOptional, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class AnswerTicketDto {
@@ -10,6 +10,12 @@ export class AnswerTicketDto {
   @ApiProperty({ description: 'Answer content' })
   @IsString()
   content: string;
+
+  @ApiProperty({ description: 'Attachment IDs to clone', required: false })
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  chooseAttachments?: string[];
 }
 
 export class AnswerTicketResponseDto {

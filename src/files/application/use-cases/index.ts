@@ -6,3 +6,4 @@ export * from './get-attachments-by-target-ids.use-case';
 export * from './get-attachment-ids-by-target-ids.use-case';
 export * from './gen-token.use-case';
 export * from './share-attachment.use-case';
+export * from './clone-attachment.use-case';

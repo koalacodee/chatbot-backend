@@ -10,6 +10,7 @@ import { Roles } from 'src/shared/value-objects/role.vo';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FaqCreatedEvent } from 'src/questions/domain/events/faq-created.event';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface CreateQuestionDto {
   text: string;
@@ -18,6 +19,7 @@ interface CreateQuestionDto {
   answer?: string;
   creatorId: string;
   attach?: boolean;
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -31,6 +33,7 @@ export class CreateQuestionUseCase {
     private readonly departmentRepository: DepartmentRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async execute(
@@ -81,6 +84,14 @@ export class CreateQuestionUseCase {
         ),
       ),
     ]);
+
+    // Clone attachments if provided
+    if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: dto.chooseAttachments,
+        targetId: savedQuestion.id.toString(),
+      });
+    }
 
     return { question: savedQuestion, uploadKey };
   }

@@ -3,6 +3,7 @@ import { Promotion } from '../../domain/entities/promotion.entity';
 import { PromotionRepository } from '../../domain/repositories/promotion.repository';
 import { FilesService } from 'src/files/domain/services/files.service';
 import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/delete-attachments-by-ids.use-case';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface UpdatePromotionInputDto {
   title?: string;
@@ -12,6 +13,7 @@ interface UpdatePromotionInputDto {
   endDate?: Date | null;
   attach?: boolean;
   deleteAttachments?: string[];
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -20,6 +22,7 @@ export class UpdatePromotionUseCase {
     private readonly promotionRepo: PromotionRepository,
     private readonly filesService: FilesService,
     private readonly deleteAttachmentsUseCase: DeleteAttachmentsByIdsUseCase,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async execute(
@@ -47,6 +50,14 @@ export class UpdatePromotionUseCase {
       this.promotionRepo.save(existing),
       dto.attach ? this.filesService.genUploadKey(id, userId) : undefined,
     ]);
+
+    // Clone attachments if provided
+    if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: dto.chooseAttachments,
+        targetId: id,
+      });
+    }
 
     return { promotion: savedPromotion, uploadKey };
   }

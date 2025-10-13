@@ -17,6 +17,7 @@ import { DepartmentRepository } from 'src/department/domain/repositories/departm
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TicketAnsweredEvent } from 'src/support-tickets/domain/events/ticket-answered.event';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface AnswerTicketInput {
   ticketId: string;
@@ -24,6 +25,7 @@ interface AnswerTicketInput {
   userRole: Roles;
   content: string;
   attach?: boolean;
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -37,6 +39,7 @@ export class AnswerTicketUseCase {
     private readonly departmentRepository: DepartmentRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly fileService: FilesService,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async execute({
@@ -45,6 +48,7 @@ export class AnswerTicketUseCase {
     content,
     userRole,
     attach,
+    chooseAttachments,
   }: AnswerTicketInput) {
     const [answerer, ticket, existingAnswer] = await Promise.all([
       this.getAnswererByRole(userRole, userId),
@@ -122,6 +126,14 @@ export class AnswerTicketUseCase {
         this.ticketRepository.save(ticket),
       ]);
     }
+    // Clone attachments if provided
+    if (chooseAttachments && chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: chooseAttachments,
+        targetId: savedAnswer.id.toString(),
+      });
+    }
+
     this.eventEmitter.emitAsync(
       TicketAnsweredEvent.name,
       new TicketAnsweredEvent(

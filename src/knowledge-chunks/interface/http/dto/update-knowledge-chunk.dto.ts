@@ -26,4 +26,9 @@ export class UpdateKnowledgeChunkInputDto {
   @IsArray()
   @IsUUID(undefined, { each: true })
   deleteAttachments?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  chooseAttachments?: string[];
 }

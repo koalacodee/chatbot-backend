@@ -1,18 +1,26 @@
-import { Type } from "class-transformer";
-import { IsBoolean, IsDate, IsEnum, IsOptional, IsString } from "class-validator";
-import { AudienceType } from "src/promotion/domain/entities/promotion.entity";
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsDate,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsArray,
+  IsUUID,
+} from 'class-validator';
+import { AudienceType } from 'src/promotion/domain/entities/promotion.entity';
 
 export class CreatePromotionDto {
   @IsString()
   title: string;
-  
+
   @IsBoolean()
   @IsOptional()
   attach?: boolean;
-  
+
   @IsEnum(AudienceType)
   audience?: AudienceType;
-  
+
   @IsDate()
   @IsOptional()
   @Type(() => Date)
@@ -22,4 +30,9 @@ export class CreatePromotionDto {
   @IsOptional()
   @Type(() => Date)
   endDate?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  chooseAttachments?: string[];
 }

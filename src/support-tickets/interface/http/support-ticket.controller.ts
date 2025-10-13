@@ -66,6 +66,7 @@ interface ReplyToTicketDto {
   reply: string;
   promoteToFaq?: true;
   newFawDepartmentId?: string;
+  chooseAttachments?: string[];
 }
 
 interface SearchTicketsDto {

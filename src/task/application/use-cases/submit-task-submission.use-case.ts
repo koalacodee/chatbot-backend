@@ -30,12 +30,14 @@ import {
   TaskAssignmentType,
   TaskStatus,
 } from '../../domain/entities/task.entity';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface SubmitTaskSubmissionInputDto {
   taskId: string;
   submittedBy: string;
   notes?: string;
   attach?: boolean;
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -51,6 +53,7 @@ export class SubmitTaskSubmissionUseCase {
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async getSubmitterByUser(
@@ -152,6 +155,14 @@ export class SubmitTaskSubmissionUseCase {
         ),
       ),
     ]);
+
+    // Clone attachments if provided
+    if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: dto.chooseAttachments,
+        targetId: savedSubmission.id.toString(),
+      });
+    }
 
     // Emit unified task submitted event based on assignment type
     if (existingTask.assignmentType === TaskAssignmentType.DEPARTMENT) {

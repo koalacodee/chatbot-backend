@@ -3,6 +3,7 @@ import { Attachment } from '../entities/attachment.entity';
 export abstract class AttachmentRepository {
   abstract save(attachment: Attachment): Promise<Attachment>;
   abstract findById(id: string): Promise<Attachment | null>;
+  abstract findByIds(ids: string[]): Promise<Attachment[]>;
   abstract exists(id: string): Promise<boolean>;
 
   // Target helpers

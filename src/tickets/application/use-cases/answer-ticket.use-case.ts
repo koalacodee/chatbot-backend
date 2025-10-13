@@ -9,12 +9,14 @@ import { Answer } from 'src/tickets/domain/entities/answer.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { TicketStatusEnum } from 'src/tickets/domain/value-objects/ticket-status.vo';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface AnswerTicketUseCaseInput {
   ticketId: string;
   content: string;
   answeredBy?: string; // User ID who is answering
   attach?: boolean;
+  chooseAttachments?: string[];
 }
 
 interface AnswerTicketUseCaseOutput {
@@ -31,6 +33,7 @@ export class AnswerTicketUseCase {
     private readonly ticketRepository: TicketRepository,
     private readonly answerRepository: AnswerRepository,
     private readonly filesService: FilesService,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async execute({
@@ -38,6 +41,7 @@ export class AnswerTicketUseCase {
     content,
     answeredBy,
     attach,
+    chooseAttachments,
   }: AnswerTicketUseCaseInput): Promise<AnswerTicketUseCaseOutput> {
     // Find the ticket
     const ticket = await this.ticketRepository.findById(ticketId);
@@ -90,6 +94,14 @@ export class AnswerTicketUseCase {
           answeredBy,
         )
       : undefined;
+
+    // Clone attachments if provided
+    if (chooseAttachments && chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: chooseAttachments,
+        targetId: savedAnswer.id.toString(),
+      });
+    }
 
     return {
       ticketId: ticketId,

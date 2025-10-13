@@ -70,4 +70,9 @@ export class UpdateTaskInputDto {
   @IsPositive()
   @Min(60000) // Minimum 1 minute (60000ms)
   reminderInterval?: number | null; // in milliseconds, null to remove
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  chooseAttachments?: string[];
 }

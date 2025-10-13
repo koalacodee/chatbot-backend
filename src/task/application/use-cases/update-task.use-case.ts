@@ -20,6 +20,7 @@ import { Roles } from 'src/shared/value-objects/role.vo';
 import { FilesService } from 'src/files/domain/services/files.service';
 import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/delete-attachments-by-ids.use-case';
 import { ReminderQueueService } from '../../infrastructure/queues/reminder.queue';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 
 interface UpdateTaskInputDto {
   title?: string;
@@ -38,6 +39,7 @@ interface UpdateTaskInputDto {
   attach?: boolean;
   deleteAttachments?: string[];
   reminderInterval?: number | null; // in milliseconds, null to remove
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -52,6 +54,7 @@ export class UpdateTaskUseCase {
     private readonly filesService: FilesService,
     private readonly deleteAttachmentsUseCase: DeleteAttachmentsByIdsUseCase,
     private readonly reminderQueueService: ReminderQueueService,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
   ) {}
 
   async execute(
@@ -157,6 +160,14 @@ export class UpdateTaskUseCase {
       this.taskRepo.save(existing),
       dto.attach ? this.filesService.genUploadKey(id, userId) : undefined,
     ]);
+
+    // Clone attachments if provided
+    if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: dto.chooseAttachments,
+        targetId: id,
+      });
+    }
 
     return { task: savedTask, uploadKey };
   }

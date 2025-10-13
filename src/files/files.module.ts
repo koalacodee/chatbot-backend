@@ -18,6 +18,7 @@ import { DeleteAttachmentsByIdsUseCase } from './application/use-cases/delete-at
 import { GetAttachmentIdsByTargetIdsUseCase } from './application/use-cases/get-attachment-ids-by-target-ids.use-case';
 import { GetMyAttachmentsUseCase } from './application/use-cases/get-my-attachments.use-case';
 import { ShareAttachmentUseCase } from './application/use-cases/share-attachment.use-case';
+import { CloneAttachmentUseCase } from './application/use-cases/clone-attachment.use-case';
 import { SharedModule } from '../shared/shared.module';
 import { RedisService } from 'src/shared/infrastructure/redis/redis.service';
 
@@ -68,6 +69,7 @@ import { RedisService } from 'src/shared/infrastructure/redis/redis.service';
     GetAttachmentIdsByTargetIdsUseCase,
     GetMyAttachmentsUseCase,
     ShareAttachmentUseCase,
+    CloneAttachmentUseCase,
   ],
   exports: [
     AttachmentRepository,
@@ -82,6 +84,7 @@ import { RedisService } from 'src/shared/infrastructure/redis/redis.service';
     GetAttachmentIdsByTargetIdsUseCase,
     GetMyAttachmentsUseCase,
     ShareAttachmentUseCase,
+    CloneAttachmentUseCase,
   ],
 })
 export class FileModule {}
