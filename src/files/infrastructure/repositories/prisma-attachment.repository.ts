@@ -23,6 +23,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
       guestId: rec.guestId,
       isGlobal: rec.isGlobal,
       size: rec.size,
+      cloned: rec.cloned,
     });
   }
 
@@ -40,6 +41,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
       size: attachment.size,
       createdAt: attachment.createdAt,
       updatedAt: attachment.updatedAt,
+      cloned: attachment.cloned,
     } as const;
 
     const upsert = await this.prisma.attachment.upsert({
@@ -55,6 +57,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
         isGlobal: data.isGlobal,
         size: data.size,
         updatedAt: new Date(),
+        cloned: attachment.cloned,
       },
       create: data,
     });
@@ -112,7 +115,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
     offset = 0,
   ): Promise<Attachment[]> {
     const items = await this.prisma.attachment.findMany({
-      where: { userId },
+      where: { userId, cloned: false },
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset,
@@ -121,12 +124,12 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
   }
 
   async countByUserId(userId: string): Promise<number> {
-    return this.prisma.attachment.count({ where: { userId } });
+    return this.prisma.attachment.count({ where: { userId, cloned: false } });
   }
 
   async findGlobalAttachments(limit = 50, offset = 0): Promise<Attachment[]> {
     const items = await this.prisma.attachment.findMany({
-      where: { isGlobal: true },
+      where: { isGlobal: true, cloned: false },
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset,
@@ -135,7 +138,9 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
   }
 
   async countGlobalAttachments(): Promise<number> {
-    return this.prisma.attachment.count({ where: { isGlobal: true } });
+    return this.prisma.attachment.count({
+      where: { isGlobal: true, cloned: false },
+    });
   }
 
   async findUserAndGlobalAttachments(
@@ -149,6 +154,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
           { userId }, // User's attachments
           { isGlobal: true }, // Global attachments
         ],
+        cloned: false,
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
@@ -163,6 +169,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
         type: true,
         targetId: true,
         size: true,
+        cloned: true,
       },
     });
     return items.map((r) => this.toDomain(r));
@@ -175,6 +182,7 @@ export class PrismaAttachmentRepository extends AttachmentRepository {
           { userId }, // User's attachments
           { isGlobal: true }, // Global attachments
         ],
+        cloned: false,
       },
     });
   }

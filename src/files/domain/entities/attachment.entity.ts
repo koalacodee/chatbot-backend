@@ -13,6 +13,7 @@ export interface AttachmentOptions {
   guestId?: string;
   isGlobal?: boolean;
   size?: number;
+  cloned?: boolean;
 }
 
 export class Attachment {
@@ -28,6 +29,7 @@ export class Attachment {
   private readonly _guestId: UUID | null;
   private readonly _isGlobal: boolean;
   private readonly _size: number;
+  private readonly _cloned: boolean;
 
   private constructor(options: AttachmentOptions) {
     this._id = UUID.create(options.id);
@@ -42,6 +44,7 @@ export class Attachment {
     this._guestId = options.guestId ? UUID.create(options.guestId) : null;
     this._isGlobal = options.isGlobal ?? false;
     this._size = options.size ?? 0;
+    this._cloned = options.cloned ?? false;
   }
 
   static create(options: AttachmentOptions): Attachment {
@@ -120,6 +123,10 @@ export class Attachment {
     return this._size;
   }
 
+  get cloned(): boolean {
+    return this._cloned;
+  }
+
   toJSON(): AttachmentOptions {
     return {
       id: this._id.value,
@@ -134,6 +141,7 @@ export class Attachment {
       guestId: this._guestId?.value,
       isGlobal: this._isGlobal,
       size: this._size,
+      cloned: this._cloned,
     };
   }
 }

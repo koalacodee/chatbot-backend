@@ -59,6 +59,7 @@ export class CloneAttachmentUseCase {
             guestId: originalAttachment.guestId,
             isGlobal: originalAttachment.isGlobal,
             size: originalAttachment.size,
+            cloned: true,
           }),
         );
 

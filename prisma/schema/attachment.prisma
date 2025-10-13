@@ -13,10 +13,12 @@ model Attachment {
   updatedAt DateTime @updatedAt @map("updated_at")
   // Generic target reference; indexed for fast lookup
   targetId  String?   @map("target_id") @db.Uuid
+  cloned    Boolean   @default(false) @map("cloned")
 
   @@index([targetId])
   @@index([userId])
   @@index([guestId])
   @@index([isGlobal])
+  @@index([cloned])
   @@map("attachments")
 }
