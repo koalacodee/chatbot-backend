@@ -1,15 +1,9 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { randomBytes, randomInt } from 'crypto';
+import { randomInt } from 'crypto';
 import { extname } from 'path';
-// import OSS from 'ali-oss';
-const OSS = require('ali-oss');
+import * as OSS from 'ali-oss';
 import { FileManagementClass } from '../../domain/services/file-mangement.service';
 import { RedisService } from '../../../shared/infrastructure/redis';
 import { UploadFileUseCase } from '../../application/use-cases/upload-file.use-case';
@@ -20,7 +14,8 @@ import { AttachmentRepository } from 'src/files/domain/repositories/attachment.r
 @Injectable()
 export class AliOSSFileManagementService implements FileManagementClass {
   private readonly logger = new Logger(AliOSSFileManagementService.name);
-  private readonly ossClient: any;
+  private readonly ossClient: OSS;
+  private readonly MIN_PART_SIZE: number = 3 * 1024 * 1024; // 3MB
   constructor(
     private readonly config: ConfigService,
     private readonly redis: RedisService,
@@ -37,6 +32,7 @@ export class AliOSSFileManagementService implements FileManagementClass {
       timeout: parseInt(
         this.config.getOrThrow<string>('OSS_TIMEOUT', '300000'),
       ),
+      secure: true,
     });
   }
 
@@ -167,65 +163,105 @@ export class AliOSSFileManagementService implements FileManagementClass {
       console.log('Starting single file upload...');
       const parts = req.parts();
       let file: { filename: string; originalName: string } | null = null;
-      let expirationDate: string = '';
-      let isGlobal: boolean = false;
+      let expirationDate = '';
+      let isGlobal = false;
       let fileSize = 0;
 
-      // Process each part of the multipart form
       for await (const part of parts) {
-        console.log('Processing part:', {
-          fieldname: part.fieldname,
-          filename: (part as any).filename,
-          hasFile: !!(part as any).file,
-        });
-
-        const multipartPart = part as any;
-
-        if (multipartPart.file && !file) {
-          // This part is a file
-          console.log('Found file:', multipartPart.filename);
+        if (part.type === 'file' && part.file && !file) {
+          const multipartPart = part;
           const ext = extname(multipartPart.filename || '');
           const filename = `${UUID.create().toString()}${ext}`;
 
-          try {
-            // Upload to Ali-OSS
-            await this.ossClient.putStream(filename, multipartPart.file);
+          const multipartUpload =
+            await this.ossClient.initMultipartUpload(filename);
+          console.log(
+            'Initialized multipart upload with upload ID:',
+            multipartUpload.uploadId,
+          );
 
-            const meta = await this.ossClient.getObjectMeta(filename);
+          let buffer = Buffer.alloc(0);
+          let partNumber = 1;
+          let offset = 0;
+          const partsList: { number: number; etag: string }[] = [];
 
-            // Get file size from OSS result
-            fileSize = +meta.res?.headers['content-length'] || 0;
+          for await (const chunk of multipartPart.file) {
+            buffer = Buffer.concat([buffer, chunk]);
 
-            // multipartPart.file stream might be consumed, but OSS handles it internally
-            file = {
-              filename,
-              originalName: multipartPart.filename || '',
-            };
-          } catch (error) {
-            this.logger.error(
-              `Failed to upload file to OSS: ${filename}`,
-              error,
-            );
-            throw new Error(`OSS upload failed: ${error.message}`);
+            // لو وصلنا حجم جزء كفاية نرفعه كـ part
+            if (buffer.length >= this.MIN_PART_SIZE) {
+              const start = offset;
+              const end = offset + buffer.length;
+
+              const uploadPartResult = await this.ossClient.uploadPart(
+                filename,
+                multipartUpload.uploadId,
+                partNumber,
+                buffer,
+                start,
+                end,
+              );
+
+              console.log(
+                `Uploaded part ${partNumber} (${buffer.length} bytes)`,
+              );
+
+              partsList.push({
+                number: partNumber,
+                etag: uploadPartResult.etag,
+              });
+
+              offset = end;
+              fileSize += buffer.length;
+              partNumber++;
+              buffer = Buffer.alloc(0); // reset buffer
+            }
           }
-        } else if (multipartPart.fieldname === 'expirationDate') {
-          // This part is an expiration date field
-          console.log(
-            'Found expiration date field:',
-            multipartPart.fieldname,
-            multipartPart.value,
+
+          // آخر جزء (اللي أقل من 5MB)
+          if (buffer.length > 0) {
+            const start = offset;
+            const end = offset + buffer.length;
+
+            const uploadPartResult = await this.ossClient.uploadPart(
+              filename,
+              multipartUpload.uploadId,
+              partNumber,
+              buffer,
+              start,
+              end,
+            );
+
+            console.log(
+              `Uploaded final part ${partNumber} (${buffer.length} bytes)`,
+            );
+
+            partsList.push({
+              number: partNumber,
+              etag: uploadPartResult.etag,
+            });
+
+            fileSize += buffer.length;
+          }
+
+          await this.ossClient.completeMultipartUpload(
+            filename,
+            multipartUpload.uploadId,
+            partsList,
           );
 
-          expirationDate = multipartPart.value;
-        } else if (multipartPart.fieldname === 'isGlobal') {
-          // This part is an isGlobal field
-          console.log(
-            'Found isGlobal field:',
-            multipartPart.fieldname,
-            multipartPart.value,
-          );
-
-          isGlobal = multipartPart.value === 'true';
+          console.log('✅ Completed multipart upload');
+          file = {
+            filename,
+            originalName: multipartPart.filename || '',
+          };
+        } else if (
+          part.type === 'field' &&
+          part.fieldname === 'expirationDate'
+        ) {
+          expirationDate = part.value as string;
+        } else if (part.type === 'field' && part.fieldname === 'isGlobal') {
+          isGlobal = part.value === 'true';
         }
       }
 
@@ -244,20 +280,15 @@ export class AliOSSFileManagementService implements FileManagementClass {
         size: fileSize,
       });
 
-      // Get additional file information
       const fileType = this.getFileType(file.originalName);
       const contentType = this.getContentType(file.originalName);
-      const sizeInBytes = fileSize;
 
-      // Return the attachment data with additional fields
-      const response = {
+      return res.send({
         ...results.toJSON(),
         fileType,
-        sizeInBytes,
+        sizeInBytes: fileSize,
         contentType,
-      };
-
-      return res.send(response);
+      });
     } catch (error) {
       console.error('Single file upload error:', error);
       return res.status(500).send({ error: 'File upload failed' });
@@ -291,17 +322,86 @@ export class AliOSSFileManagementService implements FileManagementClass {
 
           try {
             // Upload to Ali-OSS
-            const result = await this.ossClient.putStream(
-              filename,
-              multipartPart.file,
+            const multipartUpload =
+              await this.ossClient.initMultipartUpload(filename);
+            console.log(
+              'Initialized multipart upload with upload ID:',
+              multipartUpload.uploadId,
             );
-            this.logger.log(
-              `Uploaded multiple file to OSS: ${filename}`,
-              result.url,
+
+            let buffer = Buffer.alloc(0);
+            let partNumber = 1;
+            let offset = 0;
+            let fileSize = 0;
+            const partsList: { number: number; etag: string }[] = [];
+
+            for await (const chunk of multipartPart.file) {
+              buffer = Buffer.concat([buffer, chunk]);
+
+              // لو وصلنا حجم جزء كفاية نرفعه كـ part
+              if (buffer.length >= this.MIN_PART_SIZE) {
+                const start = offset;
+                const end = offset + buffer.length;
+
+                const uploadPartResult = await this.ossClient.uploadPart(
+                  filename,
+                  multipartUpload.uploadId,
+                  partNumber,
+                  buffer,
+                  start,
+                  end,
+                );
+
+                console.log(
+                  `Uploaded part ${partNumber} (${buffer.length} bytes)`,
+                );
+
+                partsList.push({
+                  number: partNumber,
+                  etag: uploadPartResult.etag,
+                });
+
+                offset = end;
+                fileSize += buffer.length;
+                partNumber++;
+                buffer = Buffer.alloc(0); // reset buffer
+              }
+            }
+
+            // آخر جزء (اللي أقل من 5MB)
+            if (buffer.length > 0) {
+              const start = offset;
+              const end = offset + buffer.length;
+
+              const uploadPartResult = await this.ossClient.uploadPart(
+                filename,
+                multipartUpload.uploadId,
+                partNumber,
+                buffer,
+                start,
+                end,
+              );
+
+              console.log(
+                `Uploaded final part ${partNumber} (${buffer.length} bytes)`,
+              );
+
+              partsList.push({
+                number: partNumber,
+                etag: uploadPartResult.etag,
+              });
+
+              fileSize += buffer.length;
+            }
+
+            await this.ossClient.completeMultipartUpload(
+              filename,
+              multipartUpload.uploadId,
+              partsList,
             );
 
             // Store file size for later use
-            fileSizes.push(result.res?.headers['content-length'] || 0);
+            fileSizes.push(fileSize);
 
             files.push({
               filename,
@@ -363,7 +463,7 @@ export class AliOSSFileManagementService implements FileManagementClass {
 
       const results = await Promise.all(
         files.map(async (file, index) => {
-          const meta = await this.ossClient.getObjectMeta(file.filename);
+          const meta = await this.ossClient.head(file.filename);
 
           const fileSize = +meta.res?.headers['content-length'] || 0;
 
