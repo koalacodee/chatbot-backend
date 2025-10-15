@@ -14,6 +14,7 @@ model User {
   driver         Driver?
   notifications  RecipientNotification[]
   profilePictures ProfilePicture?
+  attachmentGroups AttachmentGroup[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

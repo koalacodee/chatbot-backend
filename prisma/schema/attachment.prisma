@@ -8,10 +8,10 @@ model Attachment {
   guestId        String?   @map("guest_id") @db.Uuid
   isGlobal       Boolean   @default(false) @map("is_global")
   size           Int       @map("size") @default(0)
+  attachmentGroups AttachmentGroup[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  // Generic target reference; indexed for fast lookup
   targetId  String?   @map("target_id") @db.Uuid
   cloned    Boolean   @default(false) @map("cloned")
 
@@ -21,4 +21,19 @@ model Attachment {
   @@index([isGlobal])
   @@index([cloned])
   @@map("attachments")
+}
+
+model AttachmentGroup {
+  id String @id @map("id") @db.Uuid
+  createdById String @map("created_by_id") @db.Uuid
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  attachments Attachment[]
+  key   String @map("key") @db.VarChar(255)
+  ips String[] @map("ips") @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@index([key])
+  @@index([createdById])
+  @@map("attachment_groups")
 }

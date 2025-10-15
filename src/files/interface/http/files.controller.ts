@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Req,
   Res,
   UseGuards,
@@ -13,6 +14,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { GetMyAttachmentsUseCase } from 'src/files/application/use-cases/get-my-attachments.use-case';
 import { ShareAttachmentUseCase } from 'src/files/application/use-cases/share-attachment.use-case';
 import { GenTokenUseCase } from 'src/files/application/use-cases/gen-token.use-case';
+import { DeleteMyAttachmentUseCase } from 'src/files/application/use-cases/delete-my-attachment.use-case';
 import { FileUploadGuard } from 'src/files/infrastructure/guards/file-upload.guard';
 import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { FileManagementClass } from 'src/files/domain/services/file-mangement.service';
@@ -23,6 +25,7 @@ export class FilesController {
     private readonly getMyAttachmentsUseCase: GetMyAttachmentsUseCase,
     private readonly shareAttachmentUseCase: ShareAttachmentUseCase,
     private readonly genTokenUseCase: GenTokenUseCase,
+    private readonly deleteMyAttachmentUseCase: DeleteMyAttachmentUseCase,
     private readonly fileManagementService: FileManagementClass,
   ) {}
 
@@ -256,5 +259,24 @@ export class FilesController {
         error: error.message,
       };
     }
+  }
+
+  @Delete(':attachmentId')
+  @UseGuards(UserJwtAuthGuard)
+  async deleteMyAttachment(
+    @Param('attachmentId') attachmentId: string,
+    @Req() req: any,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      return { error: 'User not authenticated' };
+    }
+
+    const result = await this.deleteMyAttachmentUseCase.execute({
+      attachmentId,
+      userId,
+    });
+
+    return result;
   }
 }

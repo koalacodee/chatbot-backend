@@ -29,6 +29,7 @@ import { DriverModule } from './driver/driver.module';
 import { EmployeeRequestModule } from './employee-request/employee-request.module';
 import { NotificationModule } from './notification/notification.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { AttachmentGroupModule } from './attachment-group/attachment-group.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -74,6 +75,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     EmployeeRequestModule,
     NotificationModule,
     DashboardModule,
+    AttachmentGroupModule,
   ],
 })
 export class AppModule {}

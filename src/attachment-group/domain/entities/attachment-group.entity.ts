@@ -1,0 +1,97 @@
+import { UUID } from 'src/shared/value-objects/uuid.vo';
+
+export interface AttachmentGroupOptions {
+  id?: string;
+  createdById: string;
+  key: string;
+  ips?: string[];
+  attachmentIds?: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export class AttachmentGroup {
+  private readonly _id: UUID;
+  private readonly _createdById: UUID;
+  private _key: string;
+  private _ips: string[];
+  private _attachmentIds: UUID[];
+  private _createdAt: Date;
+  private _updatedAt: Date;
+
+  private constructor(options: AttachmentGroupOptions) {
+    this._id = UUID.create(options.id);
+    this._createdById = UUID.create(options.createdById);
+    this._key = options.key;
+    this._ips = options.ips || [];
+    this._attachmentIds = (options.attachmentIds || []).map((id) =>
+      UUID.create(id),
+    );
+    this._createdAt = options.createdAt || new Date();
+    this._updatedAt = options.updatedAt || new Date();
+  }
+
+  static create(options: AttachmentGroupOptions): AttachmentGroup {
+    return new AttachmentGroup(options);
+  }
+
+  get id(): string {
+    return this._id.value;
+  }
+
+  get createdById(): string {
+    return this._createdById.value;
+  }
+
+  get key(): string {
+    return this._key;
+  }
+
+  set key(value: string) {
+    this._key = value;
+  }
+
+  get ips(): string[] {
+    return [...this._ips];
+  }
+
+  addIp(ip: string): void {
+    if (!this._ips.includes(ip)) {
+      this._ips.push(ip);
+      this._updatedAt = new Date();
+    }
+  }
+
+  get attachmentIds(): string[] {
+    return this._attachmentIds.map((id) => id.value);
+  }
+
+  updateAttachments(attachmentIds: string[]): void {
+    this._attachmentIds = attachmentIds.map((id) => UUID.create(id));
+    this._updatedAt = new Date();
+  }
+
+  get createdAt(): Date {
+    return this._createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this._updatedAt;
+  }
+
+  set updatedAt(value: Date) {
+    this._updatedAt = value;
+  }
+
+  toJSON() {
+    return {
+      id: this._id.value,
+      createdById: this._createdById.value,
+      key: this._key,
+      ips: this._ips,
+      attachmentIds: this._attachmentIds.map((id) => id.value),
+      createdAt: this._createdAt,
+      updatedAt: this._updatedAt,
+    };
+  }
+}

@@ -15,6 +15,7 @@ import { GetAttachmentsByTargetIdsUseCase } from './application/use-cases/get-at
 import { GetAttachmentByTokenUseCase } from './application/use-cases/get-attachment-by-token.use-case';
 import { GetAttachmentMetadataByTokenUseCase } from './application/use-cases/get-attachment-metadata-by-token.use-case';
 import { DeleteAttachmentsByIdsUseCase } from './application/use-cases/delete-attachments-by-ids.use-case';
+import { DeleteMyAttachmentUseCase } from './application/use-cases/delete-my-attachment.use-case';
 import { GetAttachmentIdsByTargetIdsUseCase } from './application/use-cases/get-attachment-ids-by-target-ids.use-case';
 import { GetMyAttachmentsUseCase } from './application/use-cases/get-my-attachments.use-case';
 import { ShareAttachmentUseCase } from './application/use-cases/share-attachment.use-case';
@@ -66,6 +67,7 @@ import { RedisService } from 'src/shared/infrastructure/redis/redis.service';
     GetAttachmentByTokenUseCase,
     GetAttachmentMetadataByTokenUseCase,
     DeleteAttachmentsByIdsUseCase,
+    DeleteMyAttachmentUseCase,
     GetAttachmentIdsByTargetIdsUseCase,
     GetMyAttachmentsUseCase,
     ShareAttachmentUseCase,
@@ -81,6 +83,7 @@ import { RedisService } from 'src/shared/infrastructure/redis/redis.service';
     GetAttachmentByTokenUseCase,
     GetAttachmentMetadataByTokenUseCase,
     DeleteAttachmentsByIdsUseCase,
+    DeleteMyAttachmentUseCase,
     GetAttachmentIdsByTargetIdsUseCase,
     GetMyAttachmentsUseCase,
     ShareAttachmentUseCase,
