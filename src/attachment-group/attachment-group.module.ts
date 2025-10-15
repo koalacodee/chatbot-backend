@@ -7,6 +7,7 @@ import { GetAttachmentGroupDetailsUseCase } from './application/use-cases/get-at
 import { GetMyAttachmentGroupsUseCase } from './application/use-cases/get-my-attachment-groups.use-case';
 import { UpdateAttachmentGroupUseCase } from './application/use-cases/update-attachment-group.use-case';
 import { DeleteAttachmentGroupUseCase } from './application/use-cases/delete-attachment-group.use-case';
+import { CloseAttachmentGroupUseCase } from './application/use-cases/close-attachment-group.use-case';
 import { AttachmentGroupController } from './interface/http/attachment-group.controller';
 import { FileModule } from '../files/files.module';
 
@@ -24,6 +25,7 @@ import { FileModule } from '../files/files.module';
     GetMyAttachmentGroupsUseCase,
     UpdateAttachmentGroupUseCase,
     DeleteAttachmentGroupUseCase,
+    CloseAttachmentGroupUseCase,
   ],
   exports: [
     AttachmentGroupRepository,
@@ -33,6 +35,7 @@ import { FileModule } from '../files/files.module';
     GetMyAttachmentGroupsUseCase,
     UpdateAttachmentGroupUseCase,
     DeleteAttachmentGroupUseCase,
+    CloseAttachmentGroupUseCase,
   ],
 })
 export class AttachmentGroupModule {}

@@ -19,6 +19,7 @@ import { GetAttachmentGroupDetailsUseCase } from '../../application/use-cases/ge
 import { GetMyAttachmentGroupsUseCase } from '../../application/use-cases/get-my-attachment-groups.use-case';
 import { UpdateAttachmentGroupUseCase } from '../../application/use-cases/update-attachment-group.use-case';
 import { DeleteAttachmentGroupUseCase } from '../../application/use-cases/delete-attachment-group.use-case';
+import { CloseAttachmentGroupUseCase } from '../../application/use-cases/close-attachment-group.use-case';
 import { CreateAttachmentGroupDto } from './dto/create-attachment-group.dto';
 import { UpdateAttachmentGroupDto } from './dto/update-attachment-group.dto';
 import { FastifyRequest } from 'fastify';
@@ -32,6 +33,7 @@ export class AttachmentGroupController {
     private readonly getMyAttachmentGroupsUseCase: GetMyAttachmentGroupsUseCase,
     private readonly updateAttachmentGroupUseCase: UpdateAttachmentGroupUseCase,
     private readonly deleteAttachmentGroupUseCase: DeleteAttachmentGroupUseCase,
+    private readonly closeAttachmentGroupUseCase: CloseAttachmentGroupUseCase,
   ) {}
 
   // Create a new attachment group
@@ -256,6 +258,31 @@ export class AttachmentGroupController {
     } catch (error) {
       throw new HttpException(
         error.message || 'Failed to delete attachment group',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // Close an attachment group (remove IP from watchers)
+  @Post('close/:key')
+  async closeAttachmentGroup(
+    @Param('key') key: string,
+    @Req() req: FastifyRequest,
+  ) {
+    try {
+      const ip = req.ip || '0.0.0.0';
+
+      const result = await this.closeAttachmentGroupUseCase.execute({
+        key,
+        ip,
+      });
+
+      return {
+        success: result.success,
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to close attachment group',
         HttpStatus.BAD_REQUEST,
       );
     }
