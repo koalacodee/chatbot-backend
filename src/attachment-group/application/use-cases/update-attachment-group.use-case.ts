@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AttachmentGroupRepository } from '../../domain/repositories/attachment-group.repository';
 import { AttachmentRepository } from 'src/files/domain/repositories/attachment.repository';
+import { AttachmentGroupNotificationService } from '../../domain/services/attachment-group-notification.service';
 
 interface UpdateAttachmentGroupUseCaseRequest {
   groupId: string;
@@ -17,6 +18,7 @@ export class UpdateAttachmentGroupUseCase {
   constructor(
     private readonly attachmentGroupRepository: AttachmentGroupRepository,
     private readonly attachmentRepository: AttachmentRepository,
+    private readonly notificationService: AttachmentGroupNotificationService,
   ) {}
 
   async execute(
@@ -62,6 +64,18 @@ export class UpdateAttachmentGroupUseCase {
     await this.attachmentGroupRepository.update(groupId, {
       attachmentIds,
     });
+
+    // Notify subscribers about the update
+    try {
+      this.notificationService.notifyGroupUpdate(attachmentGroup.key, {
+        attachmentIds,
+        attachments: attachments.map((attachment) => attachment.toJSON()),
+        updatedAt: new Date(),
+      });
+    } catch (error) {
+      // Log the error but don't fail the update operation
+      console.error('Failed to notify subscribers:', error);
+    }
 
     return {
       success: true,

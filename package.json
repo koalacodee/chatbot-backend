@@ -34,8 +34,10 @@
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-fastify": "^11.1.6",
+    "@nestjs/platform-socket.io": "^11.1.6",
     "@nestjs/schedule": "^6.0.0",
     "@nestjs/swagger": "^11.2.0",
+    "@nestjs/websockets": "^11.1.6",
     "@prisma/client": "6.16.0",
     "@qdrant/js-client-rest": "^1.15.1",
     "@react-email/components": "^0.5.3",
@@ -58,8 +60,10 @@
     "reflect-metadata": "^0.2.2",
     "resend": "^6.0.3",
     "rxjs": "^7.8.2",
+    "socket.io": "^4.8.1",
     "uuidv7": "^1.0.2",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.10",
@@ -69,6 +73,7 @@
     "@types/react": "^19.1.12",
     "@types/supertest": "^6.0.3",
     "@types/web-push": "^3.6.4",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.43.0",
     "@typescript-eslint/parser": "^8.43.0",
     "eslint": "^9.35.0",

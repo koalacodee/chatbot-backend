@@ -9,6 +9,8 @@ import { UpdateAttachmentGroupUseCase } from './application/use-cases/update-att
 import { DeleteAttachmentGroupUseCase } from './application/use-cases/delete-attachment-group.use-case';
 import { CloseAttachmentGroupUseCase } from './application/use-cases/close-attachment-group.use-case';
 import { AttachmentGroupController } from './interface/http/attachment-group.controller';
+import { AttachmentGroupGateway } from './interface/websocket/attachment-group.gateway';
+import { AttachmentGroupNotificationService } from './domain/services/attachment-group-notification.service';
 import { FileModule } from '../files/files.module';
 
 @Module({
@@ -19,6 +21,8 @@ import { FileModule } from '../files/files.module';
       provide: AttachmentGroupRepository,
       useClass: PrismaAttachmentGroupRepository,
     },
+    AttachmentGroupGateway,
+    AttachmentGroupNotificationService,
     CreateAttachmentGroupUseCase,
     GetAttachmentGroupByKeyUseCase,
     GetAttachmentGroupDetailsUseCase,
@@ -29,6 +33,8 @@ import { FileModule } from '../files/files.module';
   ],
   exports: [
     AttachmentGroupRepository,
+    AttachmentGroupGateway,
+    AttachmentGroupNotificationService,
     CreateAttachmentGroupUseCase,
     GetAttachmentGroupByKeyUseCase,
     GetAttachmentGroupDetailsUseCase,
