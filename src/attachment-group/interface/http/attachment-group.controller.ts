@@ -8,11 +8,9 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
 import { CreateAttachmentGroupUseCase } from '../../application/use-cases/create-attachment-group.use-case';
 import { GetAttachmentGroupByKeyUseCase } from '../../application/use-cases/get-attachment-group-by-key.use-case';
 import { GetAttachmentGroupDetailsUseCase } from '../../application/use-cases/get-attachment-group-details.use-case';
@@ -23,6 +21,8 @@ import { CloseAttachmentGroupUseCase } from '../../application/use-cases/close-a
 import { CreateAttachmentGroupDto } from './dto/create-attachment-group.dto';
 import { UpdateAttachmentGroupDto } from './dto/update-attachment-group.dto';
 import { FastifyRequest } from 'fastify';
+import { EmployeePermissions } from 'src/rbac/decorators';
+import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 
 @Controller('attachment-groups')
 export class AttachmentGroupController {
@@ -38,7 +38,7 @@ export class AttachmentGroupController {
 
   // Create a new attachment group
   @Post()
-  @UseGuards(UserJwtAuthGuard)
+  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS)
   async createAttachmentGroup(
     @Req() req: any,
     @Body() createDto: CreateAttachmentGroupDto,
@@ -104,7 +104,7 @@ export class AttachmentGroupController {
 
   // Get attachment group details (for creators)
   @Get(':id')
-  @UseGuards(UserJwtAuthGuard)
+  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS)
   async getAttachmentGroupDetails(@Param('id') id: string, @Req() req: any) {
     try {
       const userId = req.user?.id;
@@ -147,7 +147,7 @@ export class AttachmentGroupController {
 
   // Get all attachment groups for a user
   @Get()
-  @UseGuards(UserJwtAuthGuard)
+  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS)
   async getMyAttachmentGroups(
     @Req() req: any,
     @Query('limit') limit?: string,
@@ -202,7 +202,7 @@ export class AttachmentGroupController {
 
   // Update an attachment group
   @Put(':id')
-  @UseGuards(UserJwtAuthGuard)
+  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS)
   async updateAttachmentGroup(
     @Param('id') id: string,
     @Req() req: any,
@@ -236,7 +236,7 @@ export class AttachmentGroupController {
 
   // Delete an attachment group
   @Delete(':id')
-  @UseGuards(UserJwtAuthGuard)
+  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS)
   async deleteAttachmentGroup(@Param('id') id: string, @Req() req: any) {
     try {
       const userId = req.user?.id;

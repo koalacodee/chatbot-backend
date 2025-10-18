@@ -9,7 +9,7 @@ import { RedisTicketStorageService } from '../../infrastructure/services/redis-t
 import { ResendEmailService } from 'src/shared/infrastructure/email/resend-email.service';
 import { SupportTicketVerificationEmail } from 'src/shared/infrastructure/email/templates/support-ticket-verification.template';
 import { ConfigService } from '@nestjs/config';
-import { randomInt, randomUUID } from 'crypto';
+import { randomInt } from 'crypto';
 
 interface CreateSupportTicketWithVerificationInputDto {
   subject: string;

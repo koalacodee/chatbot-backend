@@ -5,6 +5,7 @@ enum EmployeePermissions {
   VIEW_ANALYTICS          @map("view_analytics")
   CLOSE_TICKETS           @map("close_tickets")
   MANAGE_KNOWLEDGE_CHUNKS @map("manage_knowledge_chunks")
+  MANAGE_ATTACHMENT_GROUPS @map("manage_attachment_groups")
 
   @@map("permissions")
 }
