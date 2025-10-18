@@ -89,42 +89,46 @@ export class AnswerTicketUseCase {
     ticket.status = SupportTicketStatus.ANSWERED;
 
     let savedAnswer: SupportTicketAnswer;
-    let uploadKey: string;
+    let uploadKey: string | undefined;
 
     if (existingAnswer) {
       if (content) existingAnswer.content = content;
       existingAnswer.answerer = answerer;
 
+      // Save the answer and ticket first
       await Promise.all([
-        attach
-          ? this.fileService
-              .genUploadKey(existingAnswer.id.toString(), userId)
-              .then((key) => (uploadKey = key))
-          : undefined,
         this.ticketAnswerRepository.save(existingAnswer),
         this.ticketRepository.save(ticket),
       ]);
+
       savedAnswer = existingAnswer;
+
+      // Generate upload key if needed
+      if (attach) {
+        uploadKey = await this.fileService.genUploadKey(
+          existingAnswer.id.toString(),
+          userId,
+        );
+      }
     } else {
-      await Promise.all([
-        this.ticketAnswerRepository
-          .save(
-            SupportTicketAnswer.create({
-              content,
-              supportTicket: ticket,
-              answerer,
-            }),
-          )
-          .then((saved) => {
-            savedAnswer = saved;
-            attach
-              ? this.fileService
-                  .genUploadKey(saved.id.toString(), userId)
-                  .then((key) => (uploadKey = key))
-              : undefined;
-          }),
-        this.ticketRepository.save(ticket),
-      ]);
+      // Save the answer and ticket first
+      savedAnswer = await this.ticketAnswerRepository.save(
+        SupportTicketAnswer.create({
+          content,
+          supportTicket: ticket,
+          answerer,
+        }),
+      );
+
+      await this.ticketRepository.save(ticket);
+
+      // Generate upload key if needed
+      if (attach) {
+        uploadKey = await this.fileService.genUploadKey(
+          savedAnswer.id.toString(),
+          userId,
+        );
+      }
     }
     // Clone attachments if provided
     if (chooseAttachments && chooseAttachments.length > 0) {
@@ -134,7 +138,7 @@ export class AnswerTicketUseCase {
       });
     }
 
-    this.eventEmitter.emitAsync(
+    await this.eventEmitter.emitAsync(
       TicketAnsweredEvent.name,
       new TicketAnsweredEvent(
         ticket.subject,
@@ -149,7 +153,7 @@ export class AnswerTicketUseCase {
       ),
     );
 
-    return { answer: savedAnswer, uploadKey };
+    return { answer: savedAnswer.toJSON(), uploadKey };
   }
 
   async getAnswererByRole(role: Roles, id: string) {

@@ -205,27 +205,20 @@ export class SupportTicketController {
     );
   }
 
-  // @UseGuards(UserJwtAuthGuard, RolesGuard)
-  // @UseRoles(Roles.ADMIN, Roles.SUPERVISOR)
-  // @Put()
-  // async update(@Body() dto: UpdateSupportTicketDto): Promise<SupportTicket> {
-  //   const { id, ...updateData } = dto;
-  //   return this.updateUseCase.execute(id, updateData);
-  // }
-
   @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)
   @Put(':id/answer')
   async answerTicket(
     @Body() dto: AnswerSupportTicketDto,
     @Param('id') id: string,
     @Req() req: any,
-  ): Promise<{ answer: SupportTicketAnswer; uploadKey?: string }> {
+  ): Promise<{ answer: unknown; uploadKey?: string }> {
     return this.answerTicketUseCase.execute({
       ticketId: id,
       content: dto.content,
       attach: dto.attach,
       userId: req.user.id,
       userRole: req.user.role,
+      chooseAttachments: dto.chooseAttachments,
     });
   }
 
