@@ -1,0 +1,25 @@
+model Translation {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  lang      TranslationLanguage
+  content   String   @map("content") @db.Text
+  targetId  String   @map("target_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([targetId])
+  @@index([lang])
+  @@map("translations")
+}
+
+enum TranslationLanguage {
+  EN @map("en")
+  ES @map("es")
+  FR @map("fr")
+  DE @map("de")
+  AR @map("ar")
+  PT @map("pt")
+  RU @map("ru")
+  ZH @map("zh")
+  JA @map("ja")
+  TR @map("tr")
+}
