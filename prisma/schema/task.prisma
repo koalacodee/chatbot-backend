@@ -123,10 +123,10 @@ model TaskPreset {
   description String    @map("description") @db.Text
   dueDate     DateTime? @map("due_date")
 
-  assigneeId String? @map("assignee_id") @db.Uuid
-  assignerId String  @map("assigner_id") @db.Uuid
-  assignerRole String @map("assigner_role") @db.VarChar(20) // 'ADMIN' or 'SUPERVISOR'
-  approverId String? @map("approver_id") @db.Uuid
+  assigneeId   String? @map("assignee_id") @db.Uuid
+  assignerId   String  @map("assigner_id") @db.Uuid
+  assignerRole String  @map("assigner_role") @db.VarChar(20) // 'ADMIN' or 'SUPERVISOR'
+  approverId   String? @map("approver_id") @db.Uuid
 
   assignmentType TaskAssignmentType @map("assignment_type")
   priority       TaskPriority       @default(MEDIUM) @map("priority")

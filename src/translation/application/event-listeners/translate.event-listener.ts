@@ -51,6 +51,7 @@ export class TranslateEventListener {
                 content: translatedContent,
                 lang: targetLang,
                 targetId: event.targetId,
+                subTarget: event.subTarget,
               });
 
               translations.push(translation);

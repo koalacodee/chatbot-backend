@@ -1,19 +1,19 @@
 model Attachment {
-  id             String    @id @map("id") @db.Uuid
-  type           String    @map("type") @db.VarChar(255)
-  filename       String    @map("filename") @db.VarChar(500)
-  originalName   String    @map("original_name") @db.VarChar(500)
-  expirationDate DateTime? @map("expiration_date")
-  userId         String?   @map("user_id") @db.Uuid
-  guestId        String?   @map("guest_id") @db.Uuid
-  isGlobal       Boolean   @default(false) @map("is_global")
-  size           Int       @map("size") @default(0)
+  id               String            @id @map("id") @db.Uuid
+  type             String            @map("type") @db.VarChar(255)
+  filename         String            @map("filename") @db.VarChar(500)
+  originalName     String            @map("original_name") @db.VarChar(500)
+  expirationDate   DateTime?         @map("expiration_date")
+  userId           String?           @map("user_id") @db.Uuid
+  guestId          String?           @map("guest_id") @db.Uuid
+  isGlobal         Boolean           @default(false) @map("is_global")
+  size             Int               @default(0) @map("size")
   attachmentGroups AttachmentGroup[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  targetId  String?   @map("target_id") @db.Uuid
-  cloned    Boolean   @default(false) @map("cloned")
+  targetId  String?  @map("target_id") @db.Uuid
+  cloned    Boolean  @default(false) @map("cloned")
 
   @@index([targetId])
   @@index([userId])
@@ -24,15 +24,15 @@ model Attachment {
 }
 
 model AttachmentGroup {
-  id String @id @map("id") @db.Uuid
-  createdById String @map("created_by_id") @db.Uuid
-  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  id          String       @id @map("id") @db.Uuid
+  createdById String       @map("created_by_id") @db.Uuid
+  createdBy   User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
   attachments Attachment[]
-  key   String @map("key") @db.VarChar(255)
-  ips String[] @map("ips") @db.VarChar(255)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  
+  key         String       @map("key") @db.VarChar(255)
+  ips         String[]     @map("ips") @db.VarChar(255)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
   @@index([key])
   @@index([createdById])
   @@map("attachment_groups")

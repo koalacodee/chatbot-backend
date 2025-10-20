@@ -8,6 +8,7 @@ import { DepartmentModule } from '../department/department.module';
 import { FaqCreatedListener } from './application/listeners/faq-created.listener';
 import { FaqUpdatedListener } from './application/listeners/faq-updated.listener';
 import { ActivityLogModule } from 'src/activity-log/activity-log.module';
+import { TranslationModule } from 'src/translation/translation.module';
 
 @Module({
   providers: [
@@ -20,7 +21,12 @@ import { ActivityLogModule } from 'src/activity-log/activity-log.module';
     FaqUpdatedListener,
   ],
   controllers: [QuestionController],
-  imports: [KnowledgeChunkModule, DepartmentModule, ActivityLogModule],
+  imports: [
+    KnowledgeChunkModule,
+    DepartmentModule,
+    ActivityLogModule,
+    TranslationModule,
+  ],
   exports: [QuestionRepository],
 })
 export class QuestionModule {}

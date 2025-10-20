@@ -5,5 +5,6 @@ export class TranslateEvent {
     public readonly content: string,
     public readonly targetId: string,
     public readonly targetLanguages: SupportedLanguage[],
+    public readonly subTarget?: string,
   ) {}
 }

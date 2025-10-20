@@ -10,6 +10,19 @@ export type SupportedLanguage =
   | 'ja' // Japanese
   | 'tr'; // Turkish
 
+export enum SupportedLanguageEnum {
+  en = 'en',
+  es = 'es',
+  fr = 'fr',
+  de = 'de',
+  ar = 'ar',
+  pt = 'pt',
+  ru = 'ru',
+  zh = 'zh',
+  ja = 'ja',
+  tr = 'tr',
+}
+
 export abstract class TranslationService {
   abstract translate(
     text: string,

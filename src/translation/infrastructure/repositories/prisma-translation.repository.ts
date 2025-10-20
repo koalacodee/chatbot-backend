@@ -52,6 +52,14 @@ export class PrismaTranslationRepository extends TranslationRepository {
     return translations.map((t) => this.toDomain(t));
   }
 
+  async findByTargetIds(targetIds: string[]): Promise<Translation[]> {
+    const translations = await this.prisma.translation.findMany({
+      where: { targetId: { in: targetIds } },
+      orderBy: { createdAt: 'asc' },
+    });
+    return translations.map((t) => this.toDomain(t));
+  }
+
   async findByTargetIdAndLang(
     targetId: string,
     lang: SupportedLanguage,

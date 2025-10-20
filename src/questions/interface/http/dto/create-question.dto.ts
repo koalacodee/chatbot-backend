@@ -4,7 +4,9 @@ import {
   IsBoolean,
   IsArray,
   IsUUID,
+  IsEnum,
 } from 'class-validator';
+import { SupportedLanguageEnum } from 'src/translation/domain/services/translation.service';
 
 export class CreateQuestionInputDto {
   @IsString()
@@ -29,4 +31,9 @@ export class CreateQuestionInputDto {
   @IsArray()
   @IsUUID(undefined, { each: true })
   chooseAttachments?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(SupportedLanguageEnum, { each: true })
+  translateTo?: SupportedLanguageEnum[];
 }

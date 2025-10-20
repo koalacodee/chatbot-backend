@@ -1,10 +1,10 @@
 enum EmployeePermissions {
-  HANDLE_TICKETS          @map("handle_tickets")
-  HANDLE_TASKS            @map("handle_tasks")
-  ADD_FAQS                @map("add_faqs")
-  VIEW_ANALYTICS          @map("view_analytics")
-  CLOSE_TICKETS           @map("close_tickets")
-  MANAGE_KNOWLEDGE_CHUNKS @map("manage_knowledge_chunks")
+  HANDLE_TICKETS           @map("handle_tickets")
+  HANDLE_TASKS             @map("handle_tasks")
+  ADD_FAQS                 @map("add_faqs")
+  VIEW_ANALYTICS           @map("view_analytics")
+  CLOSE_TICKETS            @map("close_tickets")
+  MANAGE_KNOWLEDGE_CHUNKS  @map("manage_knowledge_chunks")
   MANAGE_ATTACHMENT_GROUPS @map("manage_attachment_groups")
 
   @@map("permissions")

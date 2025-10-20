@@ -5,6 +5,7 @@ import { QwenMtTranslationService } from './infrastructure/services/qwen-mt-tran
 import { TranslationRepository } from './domain/repositories/translation.repository';
 import { PrismaTranslationRepository } from './infrastructure/repositories/prisma-translation.repository';
 import { TranslateEventListener } from './application/event-listeners/translate.event-listener';
+import { GetTranslationsByTargetIdsUseCase } from './application/use-cases/get-translations-by-target-ids.use-case';
 
 @Module({
   imports: [EventEmitterModule],
@@ -18,7 +19,8 @@ import { TranslateEventListener } from './application/event-listeners/translate.
       useClass: PrismaTranslationRepository,
     },
     TranslateEventListener,
+    GetTranslationsByTargetIdsUseCase,
   ],
-  exports: [TranslationService, TranslationRepository],
+  exports: [GetTranslationsByTargetIdsUseCase],
 })
 export class TranslationModule {}

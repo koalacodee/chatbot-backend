@@ -8,6 +8,7 @@ export class TranslationOptions {
   targetId: string;
   createdAt?: Date;
   updatedAt?: Date;
+  subTarget?: string;
 }
 
 export class Translation {
@@ -17,6 +18,7 @@ export class Translation {
   private _targetId: UUID;
   private _createdAt: Date;
   private _updatedAt: Date;
+  private _subTarget?: string;
 
   private constructor(options: TranslationOptions) {
     this._id = UUID.create(options.id);
@@ -25,6 +27,7 @@ export class Translation {
     this._targetId = UUID.create(options.targetId);
     this._createdAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
+    this._subTarget = options.subTarget;
   }
 
   static create(options: TranslationOptions): Translation {
@@ -71,6 +74,13 @@ export class Translation {
     this._updatedAt = value;
   }
 
+  get subTarget(): string | undefined {
+    return this._subTarget;
+  }
+  set subTarget(value: string | undefined) {
+    this._subTarget = value;
+  }
+
   toJSON() {
     return {
       id: this._id.toString(),
@@ -79,6 +89,7 @@ export class Translation {
       targetId: this._targetId.toString(),
       createdAt: this._createdAt,
       updatedAt: this._updatedAt,
+      subTarget: this._subTarget,
     };
   }
 }

@@ -30,6 +30,7 @@ import { EmployeeRequestModule } from './employee-request/employee-request.modul
 import { NotificationModule } from './notification/notification.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AttachmentGroupModule } from './attachment-group/attachment-group.module';
+import { TranslationModule } from './translation/translation.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -76,6 +77,7 @@ import { AttachmentGroupModule } from './attachment-group/attachment-group.modul
     NotificationModule,
     DashboardModule,
     AttachmentGroupModule,
+    TranslationModule,
   ],
 })
 export class AppModule {}

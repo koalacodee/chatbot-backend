@@ -11,6 +11,11 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FaqCreatedEvent } from 'src/questions/domain/events/faq-created.event';
 import { FilesService } from 'src/files/domain/services/files.service';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
+import {
+  SupportedLanguage,
+  SupportedLanguageEnum,
+} from 'src/translation/domain/services/translation.service';
+import { TranslateEvent } from 'src/translation/domain/events/translate.event';
 
 interface CreateQuestionDto {
   text: string;
@@ -20,6 +25,7 @@ interface CreateQuestionDto {
   creatorId: string;
   attach?: boolean;
   chooseAttachments?: string[];
+  translateTo?: SupportedLanguageEnum[];
 }
 
 @Injectable()
@@ -69,20 +75,52 @@ export class CreateQuestionUseCase {
           : undefined,
     });
 
-    const [savedQuestion, uploadKey] = await Promise.all([
-      this.questionRepo.save(question),
+    const savedQuestion = await this.questionRepo.save(question);
+
+    const translationPromises =
+      dto.translateTo && dto.translateTo.length > 0
+        ? Promise.all(
+            [
+              this.eventEmitter.emitAsync(
+                TranslateEvent.name,
+                new TranslateEvent(
+                  savedQuestion.text,
+                  savedQuestion.id.toString(),
+                  dto.translateTo,
+                  'question',
+                ),
+              ),
+              savedQuestion.answer &&
+                this.eventEmitter.emitAsync(
+                  TranslateEvent.name,
+                  new TranslateEvent(
+                    savedQuestion.answer,
+                    savedQuestion.id.toString(),
+                    dto.translateTo,
+                    'answer',
+                  ),
+                ),
+            ].filter(Boolean),
+          )
+        : Promise.resolve(undefined);
+
+    const [uploadKey] = await Promise.all([
       dto.attach
-        ? this.filesService.genUploadKey(question.id.toString(), dto.creatorId)
+        ? this.filesService.genUploadKey(
+            savedQuestion.id.toString(),
+            dto.creatorId,
+          )
         : undefined,
       this.eventEmitter.emitAsync(
         FaqCreatedEvent.name,
         new FaqCreatedEvent(
-          question.text,
-          question.id.toString(),
+          savedQuestion.text,
+          savedQuestion.id.toString(),
           dto.creatorId,
           new Date(),
         ),
       ),
+      translationPromises,
     ]);
 
     // Clone attachments if provided
