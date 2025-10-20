@@ -73,6 +73,7 @@ export class CreateQuestionUseCase {
               await this.supervisorRepository.findByUserId(dto.creatorId)
             ).id.toString()
           : undefined,
+      availableLangs: dto.translateTo ?? [],
     });
 
     const savedQuestion = await this.questionRepo.save(question);

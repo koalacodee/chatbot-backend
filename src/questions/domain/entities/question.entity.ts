@@ -1,5 +1,6 @@
 import { Department } from 'src/department/domain/entities/department.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
+import { SupportedLanguage } from 'src/translation/domain/services/translation.service';
 
 interface ConstructQuestionOptions {
   id?: string;
@@ -14,6 +15,7 @@ interface ConstructQuestionOptions {
   satisfaction?: number;
   dissatisfaction?: number;
   views?: number;
+  availableLangs?: SupportedLanguage[];
 }
 
 export class Question {
@@ -29,6 +31,7 @@ export class Question {
   private _satisfaction: number;
   private _dissatisfaction: number;
   private _views: number;
+  private _availableLangs?: SupportedLanguage[];
 
   private constructor({
     id,
@@ -43,6 +46,7 @@ export class Question {
     satisfaction,
     dissatisfaction,
     views,
+    availableLangs,
   }: ConstructQuestionOptions) {
     this._id = UUID.create(id);
     this._text = text;
@@ -64,6 +68,7 @@ export class Question {
     this._satisfaction = satisfaction ?? 0;
     this._dissatisfaction = dissatisfaction ?? 0;
     this._views = views ?? 0;
+    this._availableLangs = availableLangs;
   }
 
   public static create(options: ConstructQuestionOptions): Question {
@@ -162,6 +167,14 @@ export class Question {
     this._views = newViews;
   }
 
+  get availableLangs(): SupportedLanguage[] | undefined {
+    return this._availableLangs;
+  }
+
+  set availableLangs(newAvailableLangs: SupportedLanguage[] | undefined) {
+    this._availableLangs = newAvailableLangs;
+  }
+
   toJSON() {
     return {
       id: this._id.value,
@@ -184,6 +197,7 @@ export class Question {
       satisfaction: this.satisfaction,
       dissatisfaction: this.dissatisfaction,
       views: this.views,
+      availableLangs: this.availableLangs,
     };
   }
 }

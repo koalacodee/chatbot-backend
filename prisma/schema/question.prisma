@@ -19,6 +19,7 @@ model Question {
   dissatisfaction     Int                   @default(0) @map("dissatisfaction")
   views               Int                   @default(0) @map("views")
   questionViews       QuestionView[]
+  availableLangs      String[]              @default([]) @map("available_langs")
 
   @@index([departmentId])
   @@index([views])

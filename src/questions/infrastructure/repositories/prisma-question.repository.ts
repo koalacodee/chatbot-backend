@@ -28,6 +28,7 @@ export class PrismaQuestionRepository extends QuestionRepository {
       satisfaction: q.satisfaction,
       dissatisfaction: q.dissatisfaction,
       views: q.views,
+      availableLangs: q.availableLangs,
     });
   }
 
@@ -56,6 +57,7 @@ export class PrismaQuestionRepository extends QuestionRepository {
         views: data.views,
         answer: data.answer,
         id: data.id,
+        availableLangs: data.availableLangs,
       },
     });
     return this.toDomain(upsert);
@@ -114,6 +116,7 @@ export class PrismaQuestionRepository extends QuestionRepository {
     if (update.dissatisfaction) data.dissatisfaction = update.dissatisfaction;
     if (update.views) data.views = update.views;
     if (update.answer) data.answer = update.answer;
+    if (update.availableLangs) data.availableLangs = update.availableLangs;
     const updated = await this.prisma.question.update({ where: { id }, data });
     return this.toDomain(updated);
   }
@@ -294,6 +297,7 @@ export class PrismaQuestionRepository extends QuestionRepository {
         q.created_at       AS created_at,
         q.updated_at       AS updated_at,
         q.answer           AS answer,
+        q.available_langs  AS available_langs,
         d.id               AS department_id,
         d.name             AS department_name,
         COALESCE(d.parent_id, d.id) AS parent_department_id
@@ -315,7 +319,8 @@ export class PrismaQuestionRepository extends QuestionRepository {
           'dissatisfaction', qwp.question_dissatisfaction,
           'created_at', qwp.created_at,
           'updated_at', qwp.updated_at,
-          'answer', qwp.answer
+          'answer', qwp.answer,
+          'availableLangs', qwp.available_langs
         )
         || CASE 
             WHEN qwp.department_id != pd.id 

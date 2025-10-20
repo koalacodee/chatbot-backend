@@ -520,4 +520,15 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
 
     return false;
   }
+
+  async updateDepartmentVisibilityByParentId(
+    parentId: string,
+    visibility: Department['visibility'],
+  ) {
+    const updated = await this.prisma.department.updateMany({
+      where: { parentId: parentId },
+      data: { visibility },
+    });
+    return updated;
+  }
 }

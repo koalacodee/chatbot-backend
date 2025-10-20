@@ -58,6 +58,12 @@ export class UpdateMainDepartmentUseCase {
         ? (input.visibility as DepartmentVisibility)
         : undefined,
     };
+    if (input.visibility) {
+      await this.departmentRepository.updateDepartmentVisibilityByParentId(
+        id,
+        input.visibility as DepartmentVisibility,
+      );
+    }
     return this.departmentRepository.updateMainDepartment(id, updateData);
   }
 }

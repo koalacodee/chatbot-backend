@@ -12,6 +12,11 @@ import { FaqUpdatedEvent } from '../listeners/faq-updated.listener';
 import { FilesService } from 'src/files/domain/services/files.service';
 import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/delete-attachments-by-ids.use-case';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
+import {
+  SupportedLanguage,
+  SupportedLanguageEnum,
+} from 'src/translation/domain/services/translation.service';
+import { TranslateEvent } from 'src/translation/domain/events/translate.event';
 
 interface UpdateQuestionDto {
   text?: string;
@@ -22,6 +27,7 @@ interface UpdateQuestionDto {
   attach?: boolean;
   deleteAttachments?: string[];
   chooseAttachments?: string[];
+  translateTo?: SupportedLanguageEnum[];
 }
 
 @Injectable()
@@ -56,6 +62,16 @@ export class UpdateQuestionUseCase {
     if (dto.knowledgeChunkId)
       update.knowledgeChunkId = { value: dto.knowledgeChunkId };
     if (dto.answer) update.answer = dto.answer;
+    if (dto.translateTo && dto.translateTo.length > 0) {
+      const updateTranslationResult = await this.updateTranslations(
+        question.availableLangs,
+        dto.translateTo,
+        question,
+      );
+      if (updateTranslationResult) {
+        update.availableLangs = updateTranslationResult;
+      }
+    }
 
     // Handle attachment deletion if specified
     if (dto.deleteAttachments && dto.deleteAttachments.length > 0) {
@@ -139,5 +155,58 @@ export class UpdateQuestionUseCase {
         ],
       });
     }
+  }
+
+  private arraysEqualUnique<T>(a: T[], b: T[]): boolean {
+    if (a.length !== b.length) return false;
+    const setA = new Set(a);
+    const setB = new Set(b);
+    for (const val of setA) {
+      if (!setB.has(val)) return false;
+    }
+    return true;
+  }
+
+  private async updateTranslations(
+    oldAvailableLangs: SupportedLanguage[],
+    newAvailableLangs: SupportedLanguage[],
+    question: Question,
+  ): Promise<SupportedLanguage[] | undefined> {
+    if (this.arraysEqualUnique(oldAvailableLangs, newAvailableLangs)) {
+      return undefined;
+    }
+
+    const translationsToDelete = oldAvailableLangs.filter(
+      (lang) => !newAvailableLangs.includes(lang),
+    );
+    const translationsToAdd = newAvailableLangs.filter(
+      (lang) => !oldAvailableLangs.includes(lang),
+    );
+
+    await Promise.all(
+      [
+        this.eventEmitter.emitAsync(
+          TranslateEvent.name,
+          new TranslateEvent(
+            question.text,
+            question.id.toString(),
+            translationsToAdd,
+            'question',
+          ),
+        ),
+        question.answer &&
+          this.eventEmitter.emitAsync(
+            TranslateEvent.name,
+            new TranslateEvent(
+              question.answer,
+              question.id.toString(),
+              translationsToAdd,
+              'answer',
+            ),
+          ),
+      ].filter(Boolean),
+    );
+
+    return newAvailableLangs;
   }
 }

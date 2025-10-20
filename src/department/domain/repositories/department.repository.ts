@@ -189,4 +189,9 @@ export abstract class DepartmentRepository {
     departmentId: string,
     userDepartmentIds: string[],
   ): Promise<boolean>;
+
+  abstract updateDepartmentVisibilityByParentId(
+    parentId: string,
+    visibility: Department['visibility'],
+  );
 }
