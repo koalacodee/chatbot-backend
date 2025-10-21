@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
-import { PointRepository } from 'src/shared/repositories/point.repository';
+import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
 import { FilesService } from 'src/files/domain/services/files.service';
 
 @Injectable()

@@ -4,7 +4,6 @@ import { TicketRepository } from './domain/repositories/ticket.repository';
 import { PrismaTicketRepository } from './infrastructure/repositories/prisma-ticket.repository';
 import { ClassifierService } from './domain/classifier/classifier-service.interface';
 import { BartClassifierService } from './infrastructure/classifier/bart.classifier-service';
-import { CreateTicketListener } from './application/listeners/create-ticket.listener';
 import { DepartmentModule } from 'src/department/department.module';
 import { PushManagerModule } from 'src/common/push-manager';
 import { AnswerTicketListener } from './application/listeners/answer-ticket.listener';
@@ -36,7 +35,6 @@ import { TicketController } from './interface/ticket.controller';
       provide: AnswerRepository,
       useClass: PrismaAnswerRepository,
     },
-    CreateTicketListener,
     AnswerTicketListener,
     CreateTicketUseCase,
     AnswerTicketUseCase,

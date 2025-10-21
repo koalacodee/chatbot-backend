@@ -5,12 +5,13 @@ import {
 } from '../../domain/services/knowledge-chunk-processing.service';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
-import { EmbeddingService } from 'src/shared/embedding/embedding-service.interface';
+
 import { Vector } from 'src/shared/value-objects/vector.vo';
-import { PointRepository } from 'src/shared/repositories/point.repository';
+import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Point } from 'src/shared/entities/point.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EmbeddingService } from 'src/knowledge-chunks/domain/services/embedding.service';
 
 @Injectable()
 export class KnowledgeChunkProcessingServiceImpl extends KnowledgeChunkProcessingService {
@@ -36,7 +37,7 @@ export class KnowledgeChunkProcessingServiceImpl extends KnowledgeChunkProcessin
     }
 
     // Generate embedding for the content
-    const vector = await this.embeddingService.embed(data.content);
+    const vector = await this.embeddingService.embed(data.content, 2048);
     const vectorObj = Vector.create({
       vector,
       dim: vector.length as 2048,

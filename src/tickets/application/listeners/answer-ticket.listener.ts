@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { KnowledgeChunkRepository } from 'src/knowledge-chunks/domain/repositories/knowledge-chunk.repository';
 import { TicketRepository } from 'src/tickets/domain/repositories/ticket.repository';
-import { PointRepository } from 'src/shared/repositories/point.repository';
+import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
 import { ConfigService } from '@nestjs/config';
 import { PushNotificationService } from 'src/common/push-manager';
 import { KNOWLEDGE_CHUNK_EVENTS } from 'src/knowledge-chunks/domain/events/knowledge-chunk.events';

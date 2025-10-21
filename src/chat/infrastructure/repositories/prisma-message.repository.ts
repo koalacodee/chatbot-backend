@@ -20,6 +20,22 @@ export class PrismaMessageRepository extends MessageRepository {
     });
   }
 
+  async createMany(messages: Message[]): Promise<Message[]> {
+    const data = messages.map((message) => ({
+      id: message.id.value,
+      content: message.content,
+      role: message.role,
+      conversationId: message.conversationId.value,
+      createdAt: message.createdAt,
+      updatedAt: message.updatedAt,
+    }));
+    await this.prisma.message.createMany({
+      data,
+      skipDuplicates: true,
+    });
+    return messages;
+  }
+
   async save(message: Message): Promise<Message> {
     const data = {
       id: message.id.value,
@@ -68,5 +84,14 @@ export class PrismaMessageRepository extends MessageRepository {
 
   async count(): Promise<number> {
     return this.prisma.message.count();
+  }
+
+  async findByConversationId(conversationId: string): Promise<Message[]> {
+    const rows = await this.prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return rows.map(this.toDomain);
   }
 }

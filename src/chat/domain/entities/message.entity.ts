@@ -3,7 +3,7 @@ import { UUID } from 'src/shared/value-objects/uuid.vo';
 interface CreateMessageOptions {
   id?: string;
   conversationId?: string;
-  role: 'USER' | 'ASSISTANT';
+  role: string;
   content: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -12,7 +12,7 @@ interface CreateMessageOptions {
 export class Message {
   private readonly _id: UUID;
   private _conversationId?: UUID;
-  private _role: 'USER' | 'ASSISTANT';
+  private _role: string;
   private _content: string;
   private _createdAt: Date;
   private _updatedAt: Date;
@@ -20,7 +20,7 @@ export class Message {
   private constructor(options: {
     id: UUID;
     conversationId?: UUID;
-    role: 'USER' | 'ASSISTANT';
+    role: string;
     content: string;
     createdAt: Date;
     updatedAt: Date;
@@ -54,7 +54,7 @@ export class Message {
     return this._conversationId;
   }
 
-  get role(): 'USER' | 'ASSISTANT' {
+  get role(): string {
     return this._role;
   }
 

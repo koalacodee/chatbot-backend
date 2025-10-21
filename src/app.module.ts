@@ -57,7 +57,7 @@ import { TranslationModule } from './translation/translation.module';
     QdrantModule,
     KnowledgeChunkModule,
     ChatModule,
-    TicketModule,
+    // TicketModule,
     PushManagerModule,
     QuestionModule,
     SupportTicketModule,

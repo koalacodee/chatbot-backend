@@ -1,7 +1,7 @@
 model Message {
   id             String          @id @map("id") @db.Uuid
   content        String          @map("content") @db.Text
-  role           MessageRole     @map("role")
+  role           String          @map("role") @db.VarChar(20)
   conversationId String          @map("conversation_id") @db.Uuid
   conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   retrievedChunk RetrievedChunk?
@@ -10,11 +10,4 @@ model Message {
 
   @@index([conversationId])
   @@map("messages")
-}
-
-enum MessageRole {
-  USER      @map("user")
-  ASSISTANT @map("assistant")
-
-  @@map("message_role")
 }

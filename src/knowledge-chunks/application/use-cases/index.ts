@@ -6,3 +6,4 @@ export * from './get-knowledge-chunk.use-case';
 export * from './get-all-knowledge-chunks.use-case';
 export * from './find-knowledge-chunks-by-department.use-case';
 export * from './update-knowledge-chunk.use-case';
+export * from './search-knowledge-chunks.use-case';
