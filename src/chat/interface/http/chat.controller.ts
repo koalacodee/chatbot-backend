@@ -5,7 +5,6 @@ import {
   Param,
   Post,
   Req,
-  Res,
   Sse,
   UseInterceptors,
 } from '@nestjs/common';
@@ -15,7 +14,6 @@ import { GetConversationUseCase } from 'src/chat/application/use-cases/get-conve
 import { GuestIdInterceptor } from 'src/shared/interceptors/guest-id.interceptor';
 import { ChatUseCase } from 'src/chat/application/use-cases/chat.use-case';
 import { Observable } from 'rxjs';
-import { FastifyReply } from 'fastify';
 
 @Controller('chat')
 export class AskController {
@@ -41,50 +39,44 @@ export class AskController {
   }
 
   @Post()
+  @Sse() // ← registers SSE route: POST -> /chat
   @UseInterceptors(GuestIdInterceptor)
-  chat(@Body() dto: AskDto, @Res() res: FastifyReply, @Req() req: any) {
-    res.raw.setHeader('Content-Type', 'text/event-stream');
-    res.raw.setHeader('Cache-Control', 'no-cache');
-    res.raw.setHeader('Connection', 'keep-alive');
-
+  chat(@Body() dto: AskDto, @Req() req: any): Observable<MessageEvent> {
     const generator = this.chatUseCase.execute({
       content: dto.question,
       conversationId: dto.conversationId,
       guestId: req.guest.id,
     });
 
-    (async () => {
-      try {
-        while (true) {
-          const { value, done } = await generator.next();
-          if (done) {
-            res.raw.write(
-              `data: ${JSON.stringify({ type: 'conversation_meta', data: { conversationId: value } })}\n\n`,
-            );
-            break;
+    return new Observable<MessageEvent>((subscriber) => {
+      (async () => {
+        try {
+          while (true) {
+            const { done, value } = await generator.next();
+
+            if (done) {
+              subscriber.next({
+                type: 'conversation_meta',
+                data: { conversationId: value },
+              } as MessageEvent);
+              break;
+            }
+
+            // Construct a proper MessageEvent for SSE
+            subscriber.next({
+              type: 'message',
+              data: value,
+            } as MessageEvent);
           }
-          res.raw.write(
-            `data: ${JSON.stringify({ type: 'message', data: value })}\n\n`,
-          );
+          subscriber.next({
+            data: '[DONE]',
+          } as MessageEvent);
+          subscriber.complete();
+        } catch (error) {
+          subscriber.error('Something went wrong');
+          console.error(error);
         }
-        res.raw.write(`data: [DONE]\n\n`);
-        res.raw.end();
-      } catch (err) {
-        res.raw.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
-        res.raw.end();
-      }
-    })();
-    // (async () => {
-    //   try {
-    //     for await (const chunk of generator) {
-    //       res.raw.write(`data: ${chunk}\n\n`);
-    //     }
-    //     res.raw.write(`data: [DONE]\n\n`);
-    //     res.raw.end();
-    //   } catch (err) {
-    //     res.raw.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
-    //     res.raw.end();
-    //   }
-    // })()  }
+      })();
+    });
   }
 }

@@ -16,35 +16,41 @@ export class KimiLLMService implements LLMService {
     string,
     (...args: unknown[]) => Promise<unknown>
   >;
-  private readonly TOOLS: [
+  private readonly TOOLS = [
     {
-      type: 'function';
+      type: 'function',
       function: {
-        name: 'search';
-        description: "Search Knowledge Base when your knowledge can't answer the user's question.";
+        name: 'search', // must match what you put in TOOLS_MAP
+        description:
+          'Search the internal knowledge base when you lack information.',
         parameters: {
-          type: 'object';
-          required: ['query'];
+          type: 'object',
+          required: ['query'],
           properties: {
             query: {
-              type: 'string';
-              description: "User's query to search for.";
-            };
-          };
-        };
-      };
+              type: 'string',
+              description:
+                'Short English query that summarises what the user is asking.',
+            },
+          },
+        },
+      },
     },
   ];
   private readonly BASE_DATA: Record<string, unknown>;
-  private readonly SYSTEM_MESSAGE;
+  private readonly SYSTEM_MESSAGE = {
+    role: 'system',
+    content:
+      'You are Smarty from SmartHelp, an intelligent assistant that answers user questions accurately.\n\nHard rules – no exceptions:\n1. You have EXACTLY one tool: the function `search`.\n2. If the user asks about **anything** that could conceivably be internal, proprietary, company-specific, or newer than your training cut-off, you **MUST** call `search` **immediately**; you are **forbidden** to answer from your own memory.\n3. You **MUST NOT** write any text—no filler, no introduction, no “I’ll look that up”—before the tool call.\n4. You **MUST** call the tool **in your first turn**; failure to do so is a violation.\n5. The query you send to `search` must be in **English**, 2-8 words, no quotation marks.\n6. After the tool returns, synthesise **only** the retrieved text into a concise, confident answer; never mention the search, never show the query, never apologise.\n7. If the tool returns nothing useful, reply “I don’t have that information.” and stop.\n8. For universal, timeless facts (e.g., “What is NestJS?”) you **may** skip the tool, but if in doubt, **always** use the tool.\n\nObey these rules literally—no deviations.',
+  };
   constructor(
     private readonly searchUseCase: SearchKnowledgeChunksUseCase,
     private readonly config: ConfigService,
   ) {
     this.TOOLS_MAP = {
-      search: async (query: string) =>
+      search: async (query: { query: string }) =>
         this.searchUseCase
-          .execute({ query })
+          .execute({ query: query.query })
           .then((chunks) => chunks.join('\n')),
     };
     this.BASE_DATA = {
@@ -124,7 +130,7 @@ export class KimiLLMService implements LLMService {
   private async *runStreamingChatGenerator(messages: KimiMessage[]) {
     const response = await axios.post(
       this.config.getOrThrow('MOONSHOT_API_URL'),
-      { ...this.BASE_DATA, messages },
+      { ...this.BASE_DATA, messages: [this.SYSTEM_MESSAGE, ...messages] },
       {
         headers: {
           'Content-Type': 'application/json',

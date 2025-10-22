@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   KnowledgeChunkProcessingService,
   ProcessKnowledgeChunkData,
@@ -15,6 +15,9 @@ import { EmbeddingService } from 'src/knowledge-chunks/domain/services/embedding
 
 @Injectable()
 export class KnowledgeChunkProcessingServiceImpl extends KnowledgeChunkProcessingService {
+  private readonly logger = new Logger(
+    KnowledgeChunkProcessingServiceImpl.name,
+  );
   constructor(
     private readonly chunkRepo: KnowledgeChunkRepository,
     private readonly embeddingService: EmbeddingService,
@@ -36,33 +39,36 @@ export class KnowledgeChunkProcessingServiceImpl extends KnowledgeChunkProcessin
       });
     }
 
-    // Generate embedding for the content
-    const vector = await this.embeddingService.embed(data.content, 2048);
-    const vectorObj = Vector.create({
-      vector,
-      dim: vector.length as 2048,
-    });
+    try {
+      // Generate embedding for the content
+      const vector = await this.embeddingService.embed(data.content, 2048);
+      const vectorObj = Vector.create({
+        vector,
+        dim: vector.length as 2048,
+      });
 
-    // Create the point for vector storage
-    const point = Point.create({
-      vector: vectorObj,
-    });
-    const savedPoint = await this.pointRepo.save(point);
+      // Create the point for vector storage
+      const point = Point.create({
+        vector: vectorObj,
+      });
+      const savedPoint = await this.pointRepo.save(point);
 
-    // Create the knowledge chunk
-    const chunk = KnowledgeChunk.create({
-      content: data.content,
-      pointId: savedPoint.id.value,
-      department,
-    });
+      // Create the knowledge chunk
+      const chunk = KnowledgeChunk.create({
+        content: data.content,
+        pointId: savedPoint.id.value,
+        department,
+      });
 
-    const savedChunk = await this.chunkRepo.save(chunk);
+      const savedChunk = await this.chunkRepo.save(chunk);
 
-    // Emit event for further processing
-    this.eventEmitter.emit('knowledgeChunk.created', {
-      knowledgeChunkId: savedChunk.id.toString(),
-    });
-
-    return savedChunk;
+      // Emit event for further processing
+      this.eventEmitter.emit('knowledgeChunk.created', {
+        knowledgeChunkId: savedChunk.id.toString(),
+      });
+      return savedChunk;
+    } catch (error) {
+      this.logger.error(error);
+    }
   }
 }
