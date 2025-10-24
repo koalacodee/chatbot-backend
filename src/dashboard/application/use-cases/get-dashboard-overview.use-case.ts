@@ -22,6 +22,7 @@ export class GetDashboardOverviewUseCase {
       recentActivityItems,
       performance,
       analyticsSummary,
+      expiredAttachments,
     ] = await Promise.all([
       this.dashboardRepo.getSummary(),
       this.employeeReqRepo.countPending(),
@@ -29,6 +30,7 @@ export class GetDashboardOverviewUseCase {
       this.activityRepo.getRecentActivity(limit),
       this.dashboardRepo.getWeeklyPerformance(days),
       this.dashboardRepo.getAnalyticsSummary(days),
+      this.dashboardRepo.getExpiredAttachments(),
     ]);
 
     const pendingRequests = {
@@ -57,6 +59,7 @@ export class GetDashboardOverviewUseCase {
       performance: performanceWrapped,
       analyticsSummary,
       generatedAt: new Date().toISOString(),
+      expiredAttachments,
     };
   }
 }

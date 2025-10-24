@@ -2,6 +2,8 @@ export interface DashboardSummary {
   totalUsers: number;
   activeTickets: number;
   completedTasks: number;
+  completedTickets: number;
+  pendingTasks: number;
   faqSatisfaction: number;
 }
 
@@ -32,4 +34,22 @@ export abstract class DashboardRepository {
     kpis: AnalyticsSummaryKpi[];
     departmentPerformance: DepartmentPerformanceItem[];
   }>;
+
+  abstract getExpiredAttachments(): Promise<
+    {
+      id: string;
+      type: string;
+      filename: string;
+      originalName: string;
+      expirationDate: Date;
+      userId: string;
+      guestId: string;
+      isGlobal: boolean;
+      size: number;
+      createdAt: Date;
+      updatedAt: Date;
+      targetId: string;
+      cloned: boolean;
+    }[]
+  >;
 }

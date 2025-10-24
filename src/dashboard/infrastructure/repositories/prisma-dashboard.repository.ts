@@ -6,6 +6,8 @@ export interface DashboardSummary {
   totalUsers: number;
   activeTickets: number;
   completedTasks: number;
+  completedTickets: number;
+  pendingTasks: number;
   faqSatisfaction: number;
 }
 
@@ -38,6 +40,8 @@ export class PrismaDashboardRepository extends DashboardRepository {
         totalUsers: number;
         activeTickets: number;
         completedTasks: number;
+        completedTickets: number;
+        pendingTasks: number;
         faqSatisfaction: number;
       }>
     >`WITH users_cte AS (
@@ -49,10 +53,20 @@ export class PrismaDashboardRepository extends DashboardRepository {
         FROM "support_tickets"
         WHERE status <> 'closed'
       ),
+      completed_tickets_cte AS (
+        SELECT COUNT(*)::int AS completed_tickets
+        FROM "support_tickets"
+        WHERE status = 'closed'
+      ),
       completed_tasks_cte AS (
         SELECT COUNT(*)::int AS completed_tasks
         FROM "tasks"
         WHERE status = 'completed'
+      ),
+      pending_tasks_cte AS (
+        SELECT COUNT(*)::int AS pending_tasks
+        FROM "tasks"
+        WHERE status <> 'completed'
       ),
       faq_satisfaction_cte AS (
         SELECT COALESCE(
@@ -68,10 +82,14 @@ export class PrismaDashboardRepository extends DashboardRepository {
         u.total_users      AS "totalUsers",
         at.active_tickets  AS "activeTickets",
         ct.completed_tasks AS "completedTasks",
+        ctc.completed_tickets AS "completedTickets",
+        pt.pending_tasks   AS "pendingTasks",
         fs.faq_satisfaction AS "faqSatisfaction"
       FROM users_cte u,
            active_tickets_cte at,
+           completed_tickets_cte ctc,
            completed_tasks_cte ct,
+           pending_tasks_cte pt,
            faq_satisfaction_cte fs;`;
 
     return (
@@ -79,6 +97,8 @@ export class PrismaDashboardRepository extends DashboardRepository {
         totalUsers: 0,
         activeTickets: 0,
         completedTasks: 0,
+        completedTickets: 0,
+        pendingTasks: 0,
         faqSatisfaction: 0,
       }
     );
@@ -278,5 +298,74 @@ export class PrismaDashboardRepository extends DashboardRepository {
     );
 
     return { kpis, departmentPerformance };
+  }
+
+  async getExpiredAttachments(): Promise<
+    {
+      id: string;
+      type: string;
+      filename: string;
+      originalName: string;
+      expirationDate: Date;
+      userId: string | null;
+      guestId: string | null;
+      isGlobal: boolean;
+      size: number;
+      createdAt: Date;
+      updatedAt: Date;
+      targetId: string;
+      cloned: boolean;
+    }[]
+  > {
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        id: string;
+        type: string;
+        filename: string;
+        original_name: string;
+        expiration_date: Date;
+        user_id: string | null;
+        guest_id: string | null;
+        is_global: boolean;
+        size: number;
+        created_at: Date;
+        updated_at: Date;
+        target_id: string;
+        cloned: boolean;
+      }>
+    >`SELECT 
+        a.id,
+        a.type,
+        a.filename,
+        a.original_name,
+        a.expiration_date,
+        a.user_id,
+        a.guest_id,
+        a.is_global,
+        a.size,
+        a.created_at,
+        a.updated_at,
+        a.target_id,
+        a.cloned
+      FROM attachments a
+      WHERE a.expiration_date IS NOT NULL 
+        AND a.expiration_date < NOW() AND cloned = false
+      ORDER BY a.expiration_date ASC;`;
+
+    return rows.map((row) => ({
+      id: row.id,
+      type: row.type,
+      filename: row.filename,
+      originalName: row.original_name,
+      expirationDate: row.expiration_date,
+      userId: row.user_id,
+      guestId: row.guest_id,
+      isGlobal: row.is_global,
+      size: row.size,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      targetId: row.target_id,
+      cloned: row.cloned,
+    }));
   }
 }
