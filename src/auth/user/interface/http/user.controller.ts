@@ -8,13 +8,15 @@ import {
   Res,
   HttpCode,
 } from '@nestjs/common';
-import { LoginDto } from '../dto/login.dto';
+import { LoginDto, SendResetPasswordCodeDto, ResetPasswordDto } from '../dto';
 import { ConfigService } from '@nestjs/config';
 import {
   GetAuthorizedUserUseCase,
   LoginUseCase,
   LogoutUseCase,
   RefreshTokenUseCase,
+  SendResetPasswordCodeUseCase,
+  ResetPasswordUseCase,
 } from '../../application/use-cases';
 import { UserRefreshTokenGuard } from '../../infrastructure/guards/refresh-token.guard';
 import { UserJwtAuthGuard } from '../../infrastructure/guards/jwt-auth.guard';
@@ -27,6 +29,8 @@ export class UserAuthController {
     private readonly refreshToken: RefreshTokenUseCase,
     private readonly logout: LogoutUseCase,
     private readonly getAuthorizedUser: GetAuthorizedUserUseCase,
+    private readonly sendResetPasswordCodeUseCase: SendResetPasswordCodeUseCase,
+    private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly config: ConfigService,
   ) {}
 
@@ -81,6 +85,30 @@ export class UserAuthController {
     }
 
     return await this.getAuthorizedUser.execute({ userId });
+  }
+
+  @Post('forgot-password')
+  @HttpCode(200)
+  async sendResetPasswordCode(@Body() dto: SendResetPasswordCodeDto) {
+    return await this.sendResetPasswordCodeUseCase.execute(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(200)
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+    @Res({ passthrough: true }) res: FastifyReply,
+  ) {
+    const result = await this.resetPasswordUseCase.execute(dto);
+
+    // Set refresh token as HTTP-only cookie (same as login)
+    this.setRefreshTokenCookie(res, result.refreshToken);
+
+    // Return only the access token and user info
+    return {
+      user: result.user,
+      accessToken: result.accessToken,
+    };
   }
 
   private setRefreshTokenCookie(res: FastifyReply, token: string) {
