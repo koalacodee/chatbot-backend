@@ -1,32 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/prisma/prisma.service';
-import { DashboardRepository } from 'src/dashboard/domain/repositories/dashboard.repository';
-
-export interface DashboardSummary {
-  totalUsers: number;
-  activeTickets: number;
-  completedTasks: number;
-  completedTickets: number;
-  pendingTasks: number;
-  faqSatisfaction: number;
-}
-
-export interface PerformanceSeriesPoint {
-  label: string;
-  tasksCompleted: number;
-  ticketsClosed: number;
-  avgFirstResponseSeconds: number;
-}
-
-export interface AnalyticsSummaryKpi {
-  label: string;
-  value: string;
-}
-
-export interface DepartmentPerformanceItem {
-  name: string;
-  score: number;
-}
+import {
+  DashboardRepository,
+  DashboardSummary,
+  PerformanceSeriesPoint,
+  AnalyticsSummaryKpi,
+  DepartmentPerformanceItem,
+  EmployeeDashboardSummary,
+  EmployeeDashboardData,
+  PendingTask,
+  PendingTicket,
+  ExpiredFile,
+} from 'src/dashboard/domain/repositories/dashboard.repository';
 
 @Injectable()
 export class PrismaDashboardRepository extends DashboardRepository {
@@ -464,5 +449,197 @@ export class PrismaDashboardRepository extends DashboardRepository {
       targetId: row.target_id,
       cloned: row.cloned,
     }));
+  }
+
+  async getEmployeeDashboardSummary(
+    employeeId: string,
+  ): Promise<EmployeeDashboardSummary> {
+    const query = `
+      WITH completed_tasks AS (
+        SELECT COUNT(*)::int AS count
+        FROM tasks t
+        WHERE t.assignee_id = $1::uuid
+          AND t.status = 'completed'
+      ),
+      closed_tickets AS (
+        SELECT COUNT(*)::int AS count
+        FROM support_tickets st
+        WHERE st.assignee_id = $1::uuid
+          AND st.status = 'closed'
+      ),
+      expired_files AS (
+        SELECT COUNT(*)::int AS count
+        FROM attachments a
+        WHERE a.user_id = $1::uuid
+          AND a.expiration_date IS NOT NULL
+          AND a.expiration_date < NOW()
+          AND a.cloned = false
+      )
+      SELECT
+        (SELECT count FROM completed_tasks) AS completed_tasks,
+        (SELECT count FROM closed_tickets) AS closed_tickets,
+        (SELECT count FROM expired_files) AS expired_files;
+    `;
+
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{
+        completed_tasks: number;
+        closed_tickets: number;
+        expired_files: number;
+      }>
+    >(query, employeeId);
+
+    const result = rows[0] ?? {
+      completed_tasks: 0,
+      closed_tickets: 0,
+      expired_files: 0,
+    };
+
+    return {
+      completedTasks: result.completed_tasks,
+      closedTickets: result.closed_tickets,
+      expiredFiles: result.expired_files,
+    };
+  }
+
+  async getEmployeeDashboard(
+    employeeId: string,
+    taskLimit: number = 10,
+    ticketLimit: number = 10,
+  ): Promise<EmployeeDashboardData> {
+    // Get summary
+    const summary = await this.getEmployeeDashboardSummary(employeeId);
+
+    // Get pending tasks
+    const tasksQuery = `
+      SELECT
+        t.id,
+        t.title,
+        t.description,
+        t.priority,
+        t.due_date,
+        t.status,
+        t.created_at,
+        t.updated_at
+      FROM tasks t
+      WHERE t.assignee_id = $1::uuid
+        AND t.status IN ('to_do', 'seen', 'pending_review')
+      ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC
+      LIMIT $2;
+    `;
+
+    const tasksRows = await this.prisma.$queryRawUnsafe<
+      Array<{
+        id: string;
+        title: string;
+        description: string;
+        priority: string;
+        due_date: Date | null;
+        status: string;
+        created_at: Date;
+        updated_at: Date;
+      }>
+    >(tasksQuery, employeeId, taskLimit);
+
+    const pendingTasks: PendingTask[] = tasksRows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      priority: row.priority,
+      dueDate: row.due_date,
+      status: row.status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+
+    // Get pending tickets
+    const ticketsQuery = `
+      SELECT
+        st.id,
+        st.subject,
+        st.description,
+        st.status,
+        'MEDIUM' as priority,
+        st.created_at,
+        st.updated_at,
+        st.code
+      FROM support_tickets st
+      WHERE st.assignee_id = $1::uuid
+        AND st.status IN ('new', 'seen')
+      ORDER BY st.created_at DESC
+      LIMIT $2;
+    `;
+
+    const ticketsRows = await this.prisma.$queryRawUnsafe<
+      Array<{
+        id: string;
+        subject: string;
+        description: string;
+        status: string;
+        priority: string;
+        created_at: Date;
+        updated_at: Date;
+        code: string;
+      }>
+    >(ticketsQuery, employeeId, ticketLimit);
+
+    const pendingTickets: PendingTicket[] = ticketsRows.map((row) => ({
+      id: row.id,
+      subject: row.subject,
+      description: row.description,
+      status: row.status,
+      priority: row.priority,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      code: row.code,
+    }));
+
+    // Get expired files
+    const filesQuery = `
+      SELECT
+        a.id,
+        a.filename,
+        a.original_name,
+        a.type,
+        a.size,
+        a.expiration_date,
+        a.created_at
+      FROM attachments a
+      WHERE a.user_id = $1::uuid
+        AND a.expiration_date IS NOT NULL
+        AND a.expiration_date < NOW()
+        AND a.cloned = false
+      ORDER BY a.expiration_date DESC
+      LIMIT 10;
+    `;
+
+    const filesRows = await this.prisma.$queryRawUnsafe<
+      Array<{
+        id: string;
+        filename: string;
+        original_name: string;
+        type: string;
+        size: number;
+        expiration_date: Date;
+        created_at: Date;
+      }>
+    >(filesQuery, employeeId);
+
+    const expiredFiles: ExpiredFile[] = filesRows.map((row) => ({
+      id: row.id,
+      filename: row.filename,
+      originalName: row.original_name,
+      type: row.type,
+      size: Number(row.size),
+      expirationDate: row.expiration_date,
+      createdAt: row.created_at,
+    }));
+
+    return {
+      summary,
+      pendingTasks,
+      pendingTickets,
+      expiredFiles,
+    };
   }
 }
