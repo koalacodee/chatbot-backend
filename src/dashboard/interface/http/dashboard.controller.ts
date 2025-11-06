@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Req } from '@nestjs/common';
 import {
   GetDashboardSummaryUseCase,
   GetWeeklyPerformanceUseCase,
@@ -6,6 +6,9 @@ import {
   GetDashboardOverviewUseCase,
 } from '../../application/use-cases';
 import { DashboardSummaryResponseDto } from './dto';
+import { FastifyRequest } from 'fastify';
+import { SupervisorPermissions } from 'src/rbac/decorators';
+import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 
 @Controller('dashboard')
 export class DashboardController {
@@ -14,15 +17,21 @@ export class DashboardController {
     private readonly getWeeklyPerformance: GetWeeklyPerformanceUseCase,
     private readonly getAnalyticsSummary: GetAnalyticsSummaryUseCase,
     private readonly getDashboardOverview: GetDashboardOverviewUseCase,
-  ) {}
+  ) { }
 
   @Get('summary')
-  async summary(): Promise<DashboardSummaryResponseDto> {
-    return this.getSummary.execute();
+  @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_ANALYTICS)
+  async summary(@Req() req: FastifyRequest & { user?: { id: string } }): Promise<DashboardSummaryResponseDto> {
+    const userId = req.user?.id;
+    return this.getSummary.execute(userId);
   }
 
   @Get('performance')
-  async performance(@Query('range') range?: string): Promise<{
+  @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_ANALYTICS)
+  async performance(
+    @Query('range') range?: string,
+    @Req() req?: FastifyRequest & { user?: { id: string } },
+  ): Promise<{
     series: Array<{
       label: string;
       tasksCompleted: number;
@@ -30,25 +39,35 @@ export class DashboardController {
       avgFirstResponseSeconds: number;
     }>;
   }> {
-    return this.getWeeklyPerformance.execute(range ?? '7d');
+    const userId = req?.user?.id;
+    return this.getWeeklyPerformance.execute(range ?? '7d', userId);
   }
 
   @Get('analytics-summary')
-  async analyticsSummary(@Query('range') range?: string): Promise<{
+  @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_ANALYTICS)
+  async analyticsSummary(
+    @Query('range') range?: string,
+    @Req() req?: FastifyRequest & { user?: { id: string } },
+  ): Promise<{
     kpis: { label: string; value: string }[];
     departmentPerformance: { name: string; score: number }[];
   }> {
-    return this.getAnalyticsSummary.execute(range ?? '7d');
+    const userId = req?.user?.id;
+    return this.getAnalyticsSummary.execute(range ?? '7d', userId);
   }
 
   @Get('overview')
+  @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_ANALYTICS)
   async overview(
     @Query('range') range?: string,
     @Query('limit') limit?: string,
+    @Req() req?: FastifyRequest & { user?: { id: string } },
   ): Promise<any> {
+    const userId = req?.user?.id;
     return this.getDashboardOverview.execute(
       range ?? '7d',
       limit ? parseInt(limit, 10) : 10,
+      userId,
     );
   }
 }

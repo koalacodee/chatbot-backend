@@ -34,39 +34,48 @@ export class PrismaDashboardRepository extends DashboardRepository {
     super();
   }
 
-  async getSummary(): Promise<DashboardSummary> {
-    const rows = await this.prisma.$queryRaw<
-      Array<{
-        totalUsers: number;
-        activeTickets: number;
-        completedTasks: number;
-        completedTickets: number;
-        pendingTasks: number;
-        faqSatisfaction: number;
-      }>
-    >`WITH users_cte AS (
+  async getSummary(departmentIds?: string[]): Promise<DashboardSummary> {
+    // Build department filter CTE
+    const deptFilterArray = departmentIds && departmentIds.length > 0
+      ? departmentIds.map(id => `'${id}'::uuid`).join(',')
+      : 'NULL::uuid';
+    const deptFilterCondition = departmentIds && departmentIds.length > 0 ? 'true' : 'false';
+
+    const query = `WITH dept_filter AS (
+        SELECT unnest(ARRAY[${deptFilterArray}]) AS dept_id
+        WHERE ${deptFilterCondition}
+      ),
+      users_cte AS (
         SELECT COUNT(*)::int AS total_users
         FROM "users"
       ),
       active_tickets_cte AS (
         SELECT COUNT(*)::int AS active_tickets
-        FROM "support_tickets"
+        FROM "support_tickets" st
         WHERE status <> 'closed'
+          AND (NOT EXISTS (SELECT 1 FROM dept_filter) OR st.department_id IN (SELECT dept_id FROM dept_filter))
       ),
       completed_tickets_cte AS (
         SELECT COUNT(*)::int AS completed_tickets
-        FROM "support_tickets"
+        FROM "support_tickets" st
         WHERE status = 'closed'
+          AND (NOT EXISTS (SELECT 1 FROM dept_filter) OR st.department_id IN (SELECT dept_id FROM dept_filter))
       ),
       completed_tasks_cte AS (
         SELECT COUNT(*)::int AS completed_tasks
-        FROM "tasks"
+        FROM "tasks" t
         WHERE status = 'completed'
+          AND (NOT EXISTS (SELECT 1 FROM dept_filter) 
+               OR t.target_department_id IN (SELECT dept_id FROM dept_filter)
+               OR t.target_sub_department_id IN (SELECT dept_id FROM dept_filter))
       ),
       pending_tasks_cte AS (
         SELECT COUNT(*)::int AS pending_tasks
-        FROM "tasks"
+        FROM "tasks" t
         WHERE status <> 'completed'
+          AND (NOT EXISTS (SELECT 1 FROM dept_filter) 
+               OR t.target_department_id IN (SELECT dept_id FROM dept_filter)
+               OR t.target_sub_department_id IN (SELECT dept_id FROM dept_filter))
       ),
       faq_satisfaction_cte AS (
         SELECT COALESCE(
@@ -76,7 +85,8 @@ export class PrismaDashboardRepository extends DashboardRepository {
                  ),
                  0
                )::int AS faq_satisfaction
-        FROM "questions"
+        FROM "questions" q
+        WHERE (NOT EXISTS (SELECT 1 FROM dept_filter) OR q.department_id IN (SELECT dept_id FROM dept_filter))
       )
       SELECT
         u.total_users      AS "totalUsers",
@@ -92,6 +102,17 @@ export class PrismaDashboardRepository extends DashboardRepository {
            pending_tasks_cte pt,
            faq_satisfaction_cte fs;`;
 
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{
+        totalUsers: number;
+        activeTickets: number;
+        completedTasks: number;
+        completedTickets: number;
+        pendingTasks: number;
+        faqSatisfaction: number;
+      }>
+    >(query);
+
     return (
       rows[0] ?? {
         totalUsers: 0,
@@ -106,15 +127,19 @@ export class PrismaDashboardRepository extends DashboardRepository {
 
   async getWeeklyPerformance(
     rangeDays: number = 7,
+    departmentIds?: string[],
   ): Promise<PerformanceSeriesPoint[]> {
-    const rows = await this.prisma.$queryRaw<
-      Array<{
-        day_label: string;
-        tasks_completed: number;
-        tickets_closed: number;
-        avg_first_response_seconds: number | null;
-      }>
-    >`WITH days AS (
+    // Build department filter CTE
+    const deptFilterArray = departmentIds && departmentIds.length > 0
+      ? departmentIds.map(id => `'${id}'::uuid`).join(',')
+      : 'NULL::uuid';
+    const deptFilterCondition = departmentIds && departmentIds.length > 0 ? 'true' : 'false';
+
+    const query = `WITH dept_filter AS (
+        SELECT unnest(ARRAY[${deptFilterArray}]) AS dept_id
+        WHERE ${deptFilterCondition}
+      ),
+      days AS (
         SELECT generate_series(
                  (CURRENT_DATE - (${rangeDays}::int - 1) * INTERVAL '1 day')::date,
                  CURRENT_DATE::date,
@@ -129,6 +154,7 @@ export class PrismaDashboardRepository extends DashboardRepository {
         JOIN support_ticket_answers sta ON sta.support_ticket_id = st.id
         WHERE sta.created_at >= (CURRENT_DATE - (${rangeDays}::int - 1) * INTERVAL '1 day')
           AND sta.created_at <  (CURRENT_DATE + INTERVAL '1 day')
+          AND (NOT EXISTS (SELECT 1 FROM dept_filter) OR st.department_id IN (SELECT dept_id FROM dept_filter))
         GROUP BY st.id, st.created_at
       ),
       daily_ticket AS (
@@ -145,6 +171,9 @@ export class PrismaDashboardRepository extends DashboardRepository {
         WHERE t.completed_at IS NOT NULL
           AND t.completed_at >= (CURRENT_DATE - (${rangeDays}::int - 1) * INTERVAL '1 day')
           AND t.completed_at <  (CURRENT_DATE + INTERVAL '1 day')
+          AND (NOT EXISTS (SELECT 1 FROM dept_filter) 
+               OR t.target_department_id IN (SELECT dept_id FROM dept_filter)
+               OR t.target_sub_department_id IN (SELECT dept_id FROM dept_filter))
         GROUP BY 1
       )
       SELECT to_char(d.day, 'Dy') AS day_label,
@@ -156,6 +185,15 @@ export class PrismaDashboardRepository extends DashboardRepository {
       LEFT JOIN daily_ticket dt ON dt.day = d.day
       ORDER BY d.day;`;
 
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{
+        day_label: string;
+        tasks_completed: number;
+        tickets_closed: number;
+        avg_first_response_seconds: number | null;
+      }>
+    >(query);
+
     return rows.map((r) => ({
       label: r.day_label,
       tasksCompleted: Number(r.tasks_completed),
@@ -166,21 +204,26 @@ export class PrismaDashboardRepository extends DashboardRepository {
     }));
   }
 
-  async getAnalyticsSummary(rangeDays: number = 7): Promise<{
+  async getAnalyticsSummary(
+    rangeDays: number = 7,
+    departmentIds?: string[],
+  ): Promise<{
     kpis: AnalyticsSummaryKpi[];
     departmentPerformance: DepartmentPerformanceItem[];
   }> {
-    const rows = await this.prisma.$queryRaw<
-      Array<{
-        avg_response_seconds: number | null;
-        task_completion_rate: number | null;
-        faq_satisfaction: number | null;
-        active_users: number | null;
-        departments: Array<{ name: string; score_raw: number }>;
-      }>
-    >`WITH params AS (
+    // Build department filter CTE
+    const deptFilterArray = departmentIds && departmentIds.length > 0
+      ? departmentIds.map(id => `'${id}'::uuid`).join(',')
+      : 'NULL::uuid';
+    const deptFilterCondition = departmentIds && departmentIds.length > 0 ? 'true' : 'false';
+
+    const query = `WITH dept_filter AS (
+        SELECT unnest(ARRAY[${deptFilterArray}]) AS dept_id
+        WHERE ${deptFilterCondition}
+      ),
+      params AS (
         SELECT (CURRENT_DATE - (${rangeDays}::int - 1) * INTERVAL '1 day')::timestamp AS start_ts,
-               (CURRENT_DATE + INTERVAL '1 day')::timestamp                                                    AS end_ts
+               (CURRENT_DATE + INTERVAL '1 day')::timestamp AS end_ts
       ),
       answered_tickets AS (
         SELECT st.id,
@@ -189,6 +232,7 @@ export class PrismaDashboardRepository extends DashboardRepository {
         FROM support_tickets st
         JOIN support_ticket_answers sta ON sta.support_ticket_id = st.id
         JOIN params p ON sta.created_at >= p.start_ts AND sta.created_at < p.end_ts
+        WHERE (NOT EXISTS (SELECT 1 FROM dept_filter) OR st.department_id IN (SELECT dept_id FROM dept_filter))
       ),
       avg_response AS (
         SELECT AVG(response_seconds) AS avg_response_seconds
@@ -198,11 +242,17 @@ export class PrismaDashboardRepository extends DashboardRepository {
         SELECT id
         FROM tasks t
         JOIN params p ON t.created_at >= p.start_ts AND t.created_at < p.end_ts
+        WHERE (NOT EXISTS (SELECT 1 FROM dept_filter) 
+               OR t.target_department_id IN (SELECT dept_id FROM dept_filter)
+               OR t.target_sub_department_id IN (SELECT dept_id FROM dept_filter))
       ),
       tasks_completed AS (
         SELECT id
         FROM tasks t
         JOIN params p ON t.completed_at IS NOT NULL AND t.completed_at >= p.start_ts AND t.completed_at < p.end_ts
+        WHERE (NOT EXISTS (SELECT 1 FROM dept_filter) 
+               OR t.target_department_id IN (SELECT dept_id FROM dept_filter)
+               OR t.target_sub_department_id IN (SELECT dept_id FROM dept_filter))
       ),
       task_completion AS (
         SELECT CASE WHEN (SELECT COUNT(*) FROM tasks_created) = 0 THEN NULL
@@ -212,6 +262,7 @@ export class PrismaDashboardRepository extends DashboardRepository {
       faq_stats AS (
         SELECT SUM(q.satisfaction)::float AS sat, SUM(q.dissatisfaction)::float AS diss
         FROM questions q
+        WHERE (NOT EXISTS (SELECT 1 FROM dept_filter) OR q.department_id IN (SELECT dept_id FROM dept_filter))
       ),
       faq_rate AS (
         SELECT CASE WHEN (sat + diss) = 0 THEN NULL ELSE (sat / (sat + diss) * 100) END AS rate
@@ -231,6 +282,9 @@ export class PrismaDashboardRepository extends DashboardRepository {
         SELECT COALESCE(t.target_sub_department_id, t.target_department_id) AS dept_id, COUNT(*)::int AS cnt
         FROM tasks t
         JOIN params p ON t.completed_at IS NOT NULL AND t.completed_at >= p.start_ts AND t.completed_at < p.end_ts
+        WHERE (NOT EXISTS (SELECT 1 FROM dept_filter) 
+               OR t.target_department_id IN (SELECT dept_id FROM dept_filter)
+               OR t.target_sub_department_id IN (SELECT dept_id FROM dept_filter))
         GROUP BY COALESCE(t.target_sub_department_id, t.target_department_id)
       ),
       dept_aggregate AS (
@@ -240,6 +294,7 @@ export class PrismaDashboardRepository extends DashboardRepository {
         FROM departments d
         LEFT JOIN tickets_by_dept tbd ON tbd.dept_id = d.id
         LEFT JOIN completed_tasks_by_dept ctbd ON ctbd.dept_id = d.id
+        WHERE (NOT EXISTS (SELECT 1 FROM dept_filter) OR d.id IN (SELECT dept_id FROM dept_filter))
       ),
       max_score AS (
         SELECT GREATEST(1, COALESCE(MAX(score_raw), 0)) AS mx FROM dept_aggregate
@@ -256,6 +311,16 @@ export class PrismaDashboardRepository extends DashboardRepository {
           ) ORDER BY da.score_raw DESC), '[]')
           FROM dept_aggregate da
         ) AS departments;`;
+
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{
+        avg_response_seconds: number | null;
+        task_completion_rate: number | null;
+        faq_satisfaction: number | null;
+        active_users: number | null;
+        departments: Array<{ name: string; score_raw: number }>;
+      }>
+    >(query);
 
     const result = rows[0] ?? {
       avg_response_seconds: null,
@@ -300,7 +365,7 @@ export class PrismaDashboardRepository extends DashboardRepository {
     return { kpis, departmentPerformance };
   }
 
-  async getExpiredAttachments(): Promise<
+  async getExpiredAttachments(departmentIds?: string[]): Promise<
     {
       id: string;
       type: string;
@@ -317,23 +382,17 @@ export class PrismaDashboardRepository extends DashboardRepository {
       cloned: boolean;
     }[]
   > {
-    const rows = await this.prisma.$queryRaw<
-      Array<{
-        id: string;
-        type: string;
-        filename: string;
-        original_name: string;
-        expiration_date: Date;
-        user_id: string | null;
-        guest_id: string | null;
-        is_global: boolean;
-        size: number;
-        created_at: Date;
-        updated_at: Date;
-        target_id: string;
-        cloned: boolean;
-      }>
-    >`SELECT 
+    // Build department filter CTE
+    const deptFilterArray = departmentIds && departmentIds.length > 0
+      ? departmentIds.map(id => `'${id}'::uuid`).join(',')
+      : 'NULL::uuid';
+    const deptFilterCondition = departmentIds && departmentIds.length > 0 ? 'true' : 'false';
+
+    const query = `WITH dept_filter AS (
+        SELECT unnest(ARRAY[${deptFilterArray}]) AS dept_id
+        WHERE ${deptFilterCondition}
+      )
+      SELECT 
         a.id,
         a.type,
         a.filename,
@@ -349,8 +408,46 @@ export class PrismaDashboardRepository extends DashboardRepository {
         a.cloned
       FROM attachments a
       WHERE a.expiration_date IS NOT NULL 
-        AND a.expiration_date < NOW() AND cloned = false
+        AND a.expiration_date < NOW() 
+        AND cloned = false
+        AND (
+          NOT EXISTS (SELECT 1 FROM dept_filter)
+          OR a.type = 'TASK' AND EXISTS (
+            SELECT 1 FROM tasks t 
+            WHERE t.id = a.target_id 
+            AND (t.target_department_id IN (SELECT dept_id FROM dept_filter)
+                 OR t.target_sub_department_id IN (SELECT dept_id FROM dept_filter))
+          )
+          OR a.type = 'SUPPORT_TICKET' AND EXISTS (
+            SELECT 1 FROM support_tickets st 
+            WHERE st.id = a.target_id 
+            AND st.department_id IN (SELECT dept_id FROM dept_filter)
+          )
+          OR a.type = 'QUESTION' AND EXISTS (
+            SELECT 1 FROM questions q 
+            WHERE q.id = a.target_id 
+            AND q.department_id IN (SELECT dept_id FROM dept_filter)
+          )
+        )
       ORDER BY a.expiration_date ASC;`;
+
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{
+        id: string;
+        type: string;
+        filename: string;
+        original_name: string;
+        expiration_date: Date;
+        user_id: string | null;
+        guest_id: string | null;
+        is_global: boolean;
+        size: number;
+        created_at: Date;
+        updated_at: Date;
+        target_id: string;
+        cloned: boolean;
+      }>
+    >(query);
 
     return rows.map((row) => ({
       id: row.id,

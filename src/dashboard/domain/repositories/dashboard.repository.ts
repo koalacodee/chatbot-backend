@@ -24,18 +24,22 @@ export interface DepartmentPerformanceItem {
   score: number;
 }
 export abstract class DashboardRepository {
-  abstract getSummary(): Promise<DashboardSummary>;
+  abstract getSummary(departmentIds?: string[]): Promise<DashboardSummary>;
 
   abstract getWeeklyPerformance(
     rangeDays: number,
+    departmentIds?: string[],
   ): Promise<PerformanceSeriesPoint[]>;
 
-  abstract getAnalyticsSummary(rangeDays: number): Promise<{
+  abstract getAnalyticsSummary(
+    rangeDays: number,
+    departmentIds?: string[],
+  ): Promise<{
     kpis: AnalyticsSummaryKpi[];
     departmentPerformance: DepartmentPerformanceItem[];
   }>;
 
-  abstract getExpiredAttachments(): Promise<
+  abstract getExpiredAttachments(departmentIds?: string[]): Promise<
     {
       id: string;
       type: string;

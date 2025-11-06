@@ -30,7 +30,7 @@ export class GetAuthorizedUserUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly adminRepository: AdminRepository,
     private readonly getUserProfilePicture: GetUserProfilePictureUseCase,
-  ) {}
+  ) { }
 
   async execute(
     request: GetAuthorizedUserRequest,
@@ -42,6 +42,7 @@ export class GetAuthorizedUserUseCase {
     }
 
     const roleEntity = await this.getRoleEntity(user);
+
     const profilePicture = await this.getUserProfilePicture.execute({
       userId: user.id,
     });
