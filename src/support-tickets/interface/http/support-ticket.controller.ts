@@ -38,6 +38,7 @@ import { AnswerSupportTicketDto } from './dto/answer-ticket.use-case';
 import { AnswerTicketUseCase } from 'src/support-tickets/application/use-cases/answer-ticket.use-case';
 import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
 import { TrackTicketDto } from './dto/track-ticket.dto';
+import { TrackTicketOutput } from '../../application/use-cases/track-ticket.use-case';
 import { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
 import { RecordTicketInteractionDto } from './dto/record-ticket-interaction.dto';
 import { GetGuestTicketsWithDetailsDto } from './dto/get-guest-tickets-with-details.dto';
@@ -101,7 +102,7 @@ export class SupportTicketController {
     private readonly recordInteractionUseCase: RecordSupportTicketInteractionUseCase,
     private readonly getGuestTicketsWithDetailsUseCase: GetGuestTicketsWithDetailsUseCase,
     private readonly getEmployeesWithTicketHandlingPermissionsUseCase: GetEmployeesWithTicketHandlingPermissionsUseCase,
-  ) {}
+  ) { }
 
   @UseInterceptors(GuestIdInterceptor)
   @Post(':type/:ticketId')
@@ -178,7 +179,7 @@ export class SupportTicketController {
   async track(
     @Param() params: TrackTicketDto,
     @Req() req: any,
-  ): Promise<SupportTicket> {
+  ): Promise<TrackTicketOutput> {
     return this.trackTicketUseCase.execute({
       code: params.code,
       guestId: req.user?.id,

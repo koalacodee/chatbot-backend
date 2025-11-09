@@ -32,9 +32,9 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
         : undefined,
       assignee: rec.assignee
         ? await Employee.create({
-            ...rec.assignee,
-            user: await User.create(rec.assignee.user),
-          })
+          ...rec.assignee,
+          user: await User.create(rec.assignee.user),
+        })
         : undefined,
       status: SupportTicketStatus[rec.status],
       createdAt: rec.createdAt,
@@ -46,6 +46,8 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
       guestName: rec.guestName,
       guestPhone: rec.guestPhone,
       guestEmail: rec.guestEmail,
+      answer: rec?.answer?.content || undefined,
+
     });
   }
 
@@ -229,6 +231,9 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
         assignee: { include: { user: true } },
         department: true,
         interaction: true,
+        answer: {
+          select: { content: true }
+        },
       },
     });
     return rec ? this.toDomain(rec) : null;
