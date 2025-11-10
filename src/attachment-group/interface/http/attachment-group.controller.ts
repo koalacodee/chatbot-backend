@@ -21,8 +21,9 @@ import { CloseAttachmentGroupUseCase } from '../../application/use-cases/close-a
 import { CreateAttachmentGroupDto } from './dto/create-attachment-group.dto';
 import { UpdateAttachmentGroupDto } from './dto/update-attachment-group.dto';
 import { FastifyRequest } from 'fastify';
-import { EmployeePermissions } from 'src/rbac/decorators';
+import { SupervisorOrEmployeePermissions } from 'src/rbac/decorators';
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
+import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 
 @Controller('attachment-groups')
 export class AttachmentGroupController {
@@ -34,11 +35,11 @@ export class AttachmentGroupController {
     private readonly updateAttachmentGroupUseCase: UpdateAttachmentGroupUseCase,
     private readonly deleteAttachmentGroupUseCase: DeleteAttachmentGroupUseCase,
     private readonly closeAttachmentGroupUseCase: CloseAttachmentGroupUseCase,
-  ) {}
+  ) { }
 
   // Create a new attachment group
   @Post()
-  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS)
+  @SupervisorOrEmployeePermissions({ employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS], supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS] })
   async createAttachmentGroup(
     @Req() req: any,
     @Body() createDto: CreateAttachmentGroupDto,
@@ -104,7 +105,7 @@ export class AttachmentGroupController {
 
   // Get attachment group details (for creators)
   @Get(':id')
-  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS)
+  @SupervisorOrEmployeePermissions({ employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS], supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS] })
   async getAttachmentGroupDetails(@Param('id') id: string, @Req() req: any) {
     try {
       const userId = req.user?.id;
@@ -147,7 +148,7 @@ export class AttachmentGroupController {
 
   // Get all attachment groups for a user
   @Get()
-  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS)
+  @SupervisorOrEmployeePermissions({ employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS], supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS] })
   async getMyAttachmentGroups(
     @Req() req: any,
     @Query('limit') limit?: string,
@@ -202,7 +203,7 @@ export class AttachmentGroupController {
 
   // Update an attachment group
   @Put(':id')
-  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS)
+  @SupervisorOrEmployeePermissions({ employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS], supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS] })
   async updateAttachmentGroup(
     @Param('id') id: string,
     @Req() req: any,
@@ -236,7 +237,7 @@ export class AttachmentGroupController {
 
   // Delete an attachment group
   @Delete(':id')
-  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS)
+  @SupervisorOrEmployeePermissions({ employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS], supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS] })
   async deleteAttachmentGroup(@Param('id') id: string, @Req() req: any) {
     try {
       const userId = req.user?.id;
