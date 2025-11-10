@@ -5,8 +5,8 @@
 
 */
 -- AlterTable
-ALTER TABLE "messages" DROP COLUMN "role",
+ALTER TABLE "messages" DROP COLUMN IF EXISTS "role",
 ADD COLUMN     "role" VARCHAR(20) NOT NULL;
 
 -- DropEnum
-DROP TYPE "message_role";
+DROP TYPE IF EXISTS "message_role";
