@@ -55,6 +55,10 @@ export class PrismaTaskRepository extends TaskRepository {
     const assigner = assignerSupervisor ?? assignerAdmin;
     const approver = approverAdmin ?? approverSupervisor;
 
+    if (!row.creatorId) {
+      throw new Error('Task must have a creatorId');
+    }
+
     return Task.create({
       id: row.id,
       title: row.title,
@@ -62,6 +66,7 @@ export class PrismaTaskRepository extends TaskRepository {
       assignee: assignee,
       assigner: assigner,
       approver: approver,
+      creatorId: row.creatorId,
       status: row.status,
       assignmentType: row.assignmentType as TaskAssignmentType,
       priority: row.priority as TaskPriority,
@@ -93,6 +98,7 @@ export class PrismaTaskRepository extends TaskRepository {
         task.assigner && 'admin' in task.assigner
           ? task.assigner.id.toString()
           : null,
+      creatorId: task.creatorId,
       status: task.status,
       assignmentType: task.assignmentType,
       priority: task.priority,
@@ -113,6 +119,7 @@ export class PrismaTaskRepository extends TaskRepository {
         assigneeId: data.assigneeId,
         assignerSupervisorId: data.assignerSupervisorId,
         assignerAdminId: data.assignerAdminId,
+        creatorId: data.creatorId,
         status: data.status,
         assignmentType: data.assignmentType,
         priority: data.priority,

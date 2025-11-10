@@ -20,14 +20,15 @@ model Task {
   assignerAdminId      String?     @map("assigner_admin_id") @db.Uuid
   assignerAdmin        Admin?      @relation("AssignerOfTask", fields: [assignerAdminId], references: [id], onDelete: Cascade)
 
-  status         TaskStatus         @default(TODO) @map("status")
-  assignmentType TaskAssignmentType @map("assignment_type")
-  priority       TaskPriority       @default(MEDIUM) @map("priority")
-
-  targetDepartmentId    String?     @map("target_department_id") @db.Uuid
-  targetDepartment      Department? @relation("TargetDepartment", fields: [targetDepartmentId], references: [id], onDelete: Cascade)
-  targetSubDepartmentId String?     @map("target_sub_department_id") @db.Uuid
-  targetSubDepartment   Department? @relation("TargetSubDepartment", fields: [targetSubDepartmentId], references: [id], onDelete: Cascade)
+  status                TaskStatus         @default(TODO) @map("status")
+  assignmentType        TaskAssignmentType @map("assignment_type")
+  priority              TaskPriority       @default(MEDIUM) @map("priority")
+  creatorId             String?            @map("creator_id") @db.Uuid
+  creator               User?              @relation("CreatorOfTask", fields: [creatorId], references: [id], onDelete: Cascade)
+  targetDepartmentId    String?            @map("target_department_id") @db.Uuid
+  targetDepartment      Department?        @relation("TargetDepartment", fields: [targetDepartmentId], references: [id], onDelete: Cascade)
+  targetSubDepartmentId String?            @map("target_sub_department_id") @db.Uuid
+  targetSubDepartment   Department?        @relation("TargetSubDepartment", fields: [targetSubDepartmentId], references: [id], onDelete: Cascade)
 
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")

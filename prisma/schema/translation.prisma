@@ -1,10 +1,10 @@
 model Translation {
-  id         String              @id @default(uuid(7)) @db.Uuid
-  lang       TranslationLanguage
-  content    String              @map("content") @db.Text
-  targetId   String              @map("target_id") @db.Uuid
-  createdAt  DateTime            @default(now()) @map("created_at")
-  updatedAt  DateTime            @updatedAt @map("updated_at")
+  id        String              @id @default(uuid(7)) @db.Uuid
+  lang      TranslationLanguage
+  content   String              @map("content") @db.Text
+  targetId  String              @map("target_id") @db.Uuid
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
   subTarget String?             @map("sub_target") @db.VarChar(255)
 
   @@index([targetId])

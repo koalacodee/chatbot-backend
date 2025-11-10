@@ -1,10 +1,10 @@
 import { UUID } from 'src/shared/value-objects/uuid.vo';
-import { Attachment } from 'src/files/domain/entities/attachment.entity';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
 import { TaskApprovalLevel } from '../value-objects/task-approval-level.vo';
+import { User } from 'src/shared/entities/user.entity';
 
 export enum TaskStatus {
   TODO = 'TODO',
@@ -33,6 +33,8 @@ export interface TaskOptions {
   assignee?: Employee;
   assigner: Admin | Supervisor;
   approver?: Admin | Supervisor;
+  creatorId: string;
+  creator?: User;
   status: TaskStatus;
   assignmentType: TaskAssignmentType;
   priority: TaskPriority;
@@ -55,6 +57,8 @@ export class Task {
   private _assignee?: Employee;
   private _assigner: Admin | Supervisor;
   private _approver?: Admin | Supervisor;
+  private _creatorId: string;
+  private _creator?: User;
   private _status: TaskStatus;
   private _assignmentType: TaskAssignmentType;
   private _priority: TaskPriority;
@@ -76,6 +80,8 @@ export class Task {
     this._assignee = options.assignee;
     this._assigner = options.assigner;
     this._approver = options.approver;
+    this._creatorId = options.creatorId;
+    this._creator = options.creator;
     this._status = options.status;
     this._assignmentType = options.assignmentType;
     this._priority = options.priority;
@@ -144,6 +150,22 @@ export class Task {
 
   set approver(value: Admin | Supervisor | undefined) {
     this._approver = value;
+  }
+
+  get creatorId(): string {
+    return this._creatorId;
+  }
+
+  set creatorId(value: string) {
+    this._creatorId = value;
+  }
+
+  get creator(): User | undefined {
+    return this._creator;
+  }
+
+  set creator(value: User | undefined) {
+    this._creator = value;
   }
 
   get status(): TaskStatus {
@@ -269,6 +291,8 @@ export class Task {
       assignee: this.assignee?.toJSON(),
       assigner: this.assigner?.toJSON(),
       approver: this.approver?.toJSON(),
+      creatorId: this.creatorId,
+      creator: this.creator?.withoutPassword(),
       status: this.status,
       assignmentType: this.assignmentType,
       priority: this.priority,

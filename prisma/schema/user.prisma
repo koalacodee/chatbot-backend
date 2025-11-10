@@ -15,9 +15,9 @@ model User {
   notifications    RecipientNotification[]
   profilePictures  ProfilePicture?
   attachmentGroups AttachmentGroup[]
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdTasks     Task[]                  @relation("CreatorOfTask")
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
 
   @@map("users")
 }

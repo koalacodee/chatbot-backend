@@ -59,7 +59,7 @@ export class CreateTaskUseCase {
     private readonly filesService: FilesService,
     private readonly reminderQueueService: ReminderQueueService,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
-  ) {}
+  ) { }
 
   async execute(
     dto: CreateTaskInputDto,
@@ -168,6 +168,17 @@ export class CreateTaskUseCase {
         ],
       });
 
+    if (!userId) {
+      throw new BadRequestException({
+        details: [
+          {
+            field: 'userId',
+            message: 'userId is required to track task creator',
+          },
+        ],
+      });
+    }
+
     const task = Task.create({
       id: UUID.create().toString(),
       title: dto.title,
@@ -176,6 +187,7 @@ export class CreateTaskUseCase {
       assignee: assignee ?? undefined,
       assigner: assigner,
       approver: approverAdmin ?? approverSupervisor,
+      creatorId: userId,
       assignmentType: dto.assignmentType,
       targetDepartment:
         !assignee && !targetSubDepartment ? targetDepartment : undefined,
