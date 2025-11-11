@@ -1,6 +1,11 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { ReadStream } from 'fs';
 
+export interface UploadFromAsyncGeneratorOutput {
+  objectName: string,
+  bytesUploaded: number,
+}
+
 export abstract class FileManagementClass {
   abstract uploadSingle(req: FastifyRequest, res: FastifyReply): Promise<any>;
   abstract uploadMultiple(req: FastifyRequest, res: FastifyReply): Promise<any>;
@@ -16,4 +21,5 @@ export abstract class FileManagementClass {
   abstract deleteByTargetId(targetId: string): Promise<void>;
   abstract deleteByUserId(userId: string): Promise<void>;
   abstract deleteByGuestId(guestId: string): Promise<void>;
+  abstract uploadFromAsyncGenerator(objectName: string, generator: AsyncGenerator<Buffer>): Promise<UploadFromAsyncGeneratorOutput>
 }

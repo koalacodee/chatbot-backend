@@ -4,7 +4,7 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { randomInt } from 'crypto';
 import { extname } from 'path';
 import * as OSS from 'ali-oss';
-import { FileManagementClass } from '../../domain/services/file-mangement.service';
+import { FileManagementClass, UploadFromAsyncGeneratorOutput } from '../../domain/services/file-mangement.service';
 import { RedisService } from '../../../shared/infrastructure/redis';
 import { UploadFileUseCase } from '../../application/use-cases/upload-file.use-case';
 import { UUID } from '../../../shared/value-objects/uuid.vo';
@@ -619,5 +619,23 @@ export class AliOSSFileManagementService implements FileManagementClass {
     } catch (error) {
       this.logger.error('Error cleaning up share keys:', error);
     }
+  }
+
+  async uploadFromAsyncGenerator(objectName: string, generator: AsyncGenerator<Buffer>): Promise<UploadFromAsyncGeneratorOutput> {
+    const upload = await this.ossClient.initMultipartUpload(objectName);
+    let bytesUploaded = 0;
+    let partNumber = 1;
+    const partsList: { number: number; etag: string }[] = [];
+    for await (const chunk of generator) {
+      const uploadPartResult = await this.ossClient.uploadPart(objectName, upload.uploadId, partNumber, chunk, bytesUploaded, bytesUploaded + chunk.length);
+      partsList.push({
+        number: partNumber,
+        etag: uploadPartResult.etag,
+      });
+      partNumber++;
+      bytesUploaded += chunk.length;
+    }
+    await this.ossClient.completeMultipartUpload(objectName, upload.uploadId, partsList);
+    return { objectName, bytesUploaded };
   }
 }

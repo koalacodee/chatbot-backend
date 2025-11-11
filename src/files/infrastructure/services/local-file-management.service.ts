@@ -12,11 +12,12 @@ import {
   unlinkSync,
   mkdirSync,
   statSync,
+  createWriteStream,
 } from 'fs';
 import { join, extname } from 'path';
 import { randomBytes, randomInt } from 'crypto';
 import { pipeline } from 'stream/promises';
-import { FileManagementClass } from '../../domain/services/file-mangement.service';
+import { FileManagementClass, UploadFromAsyncGeneratorOutput } from '../../domain/services/file-mangement.service';
 import { RedisService } from '../../../shared/infrastructure/redis';
 import { UploadFileUseCase } from '../../application/use-cases/upload-file.use-case';
 import { UUID } from '../../../shared/value-objects/uuid.vo';
@@ -493,5 +494,15 @@ export class LocalFileManagementService implements FileManagementClass {
     } catch (error) {
       this.logger.error('Error cleaning up share keys:', error);
     }
+  }
+
+  async uploadFromAsyncGenerator(objectName: string, generator: AsyncGenerator<Buffer>): Promise<UploadFromAsyncGeneratorOutput> {
+    const filepath = join(this.uploadsDir, objectName);
+    const writeStream = createWriteStream(filepath);
+    for await (const chunk of generator) {
+      writeStream.write(chunk);
+    }
+    writeStream.end();
+    return { objectName, bytesUploaded: writeStream.bytesWritten };
   }
 }
