@@ -1,0 +1,17 @@
+model Export {
+  id         String     @id @map("id") @db.Uuid
+  type       ExportType @map("type")
+  objectPath String     @map("object_path")
+  size       Int        @map("size")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+  rows       Int        @map("rows")
+
+  @@index([type])
+  @@map("exports")
+}
+
+enum ExportType {
+  CSV  @map("csv")
+  JSON @map("json")
+}
