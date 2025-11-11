@@ -108,9 +108,22 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
     offset?: number,
     limit?: number,
     departmentIds?: string[],
+    start?: Date,
+    end?: Date,
   ): Promise<SupportTicket[]> {
+    const where: any = {};
+    if (departmentIds) {
+      where.departmentId = { in: departmentIds };
+    }
+    if (start || end) {
+      where.createdAt = {
+        ...(start ? { gte: start } : {}),
+        ...(end ? { lte: end } : {}),
+      };
+    }
+
     const rows = await this.prisma.supportTicket.findMany({
-      where: departmentIds ? { departmentId: { in: departmentIds } } : {},
+      where,
       skip: offset,
       take: limit,
       orderBy: { createdAt: 'desc' },

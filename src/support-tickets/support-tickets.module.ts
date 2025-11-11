@@ -12,6 +12,7 @@ import { TicketAnsweredListener } from './application/listeners/ticket-answered.
 import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 import { TicketInteractedListener } from './application/listeners/ticket-interacted.listener';
 import { RedisTicketStorageService } from './infrastructure/services/redis-ticket-storage.service';
+import { ExportModule } from 'src/export/export.module';
 
 @Module({
   controllers: [SupportTicketController],
@@ -34,6 +35,6 @@ import { RedisTicketStorageService } from './infrastructure/services/redis-ticke
     TicketInteractedListener,
   ],
   exports: [SupportTicketRepository, SupportTicketAnswerRepository],
-  imports: [DepartmentModule, ActivityLogModule],
+  imports: [DepartmentModule, ActivityLogModule, ExportModule],
 })
-export class SupportTicketModule {}
+export class SupportTicketModule { }

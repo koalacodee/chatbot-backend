@@ -11,10 +11,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import {
-  CreateSupportTicketUseCase,
   GetSupportTicketUseCase,
   GetAllSupportTicketsUseCase,
-  UpdateSupportTicketUseCase,
   DeleteSupportTicketUseCase,
   CountSupportTicketsUseCase,
   AssignTicketUseCase,
@@ -29,6 +27,7 @@ import {
   TrackTicketUseCase,
   RecordSupportTicketInteractionUseCase,
   GetGuestTicketsWithDetailsUseCase,
+  ExportSupportTicketsUseCase,
 } from '../../application/use-cases';
 import { CreateSupportTicketWithVerificationUseCase } from '../../application/use-cases/create-support-ticket-with-verification.use-case';
 import { VerifySupportTicketUseCase } from '../../application/use-cases/verify-support-ticket.use-case';
@@ -36,7 +35,6 @@ import { GetEmployeesWithTicketHandlingPermissionsUseCase } from '../../applicat
 import { SupportTicket } from '../../domain/entities/support-ticket.entity';
 import { AnswerSupportTicketDto } from './dto/answer-ticket.use-case';
 import { AnswerTicketUseCase } from 'src/support-tickets/application/use-cases/answer-ticket.use-case';
-import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
 import { TrackTicketDto } from './dto/track-ticket.dto';
 import { TrackTicketOutput } from '../../application/use-cases/track-ticket.use-case';
 import { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
@@ -50,14 +48,10 @@ import { EmployeePermissionsEnum as EmployeePermissionsEnum } from 'src/employee
 import { GuestIdInterceptor } from 'src/shared/interceptors/guest-id.interceptor';
 import { VerifyCodeDto } from 'src/auth/guest/interface/dto';
 import { SupportTicketMetrics } from 'src/support-tickets/domain/repositories/support-ticket.repository';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 
-interface UpdateSupportTicketDto {
-  id: string;
-  subject?: string;
-  description?: string;
-  departmentId?: string;
-  status?: 'NEW' | 'SEEN' | 'ANSWERED' | 'CLOSED';
-}
+import { ExportFileService } from 'src/export/domain/services/export-file.service';
+import { ExportTicketsDto } from './dto/export-tickets.dto';
 
 interface AssignTicketDto {
   userId: string;
@@ -80,12 +74,10 @@ interface SearchTicketsDto {
 @Controller('support-tickets')
 export class SupportTicketController {
   constructor(
-    private readonly createUseCase: CreateSupportTicketUseCase,
     private readonly createWithVerificationUseCase: CreateSupportTicketWithVerificationUseCase,
     private readonly verifyTicketUseCase: VerifySupportTicketUseCase,
     private readonly getUseCase: GetSupportTicketUseCase,
     private readonly getAllUseCase: GetAllSupportTicketsUseCase,
-    private readonly updateUseCase: UpdateSupportTicketUseCase,
     private readonly deleteUseCase: DeleteSupportTicketUseCase,
     private readonly countUseCase: CountSupportTicketsUseCase,
     private readonly assignTicketUseCase: AssignTicketUseCase,
@@ -102,6 +94,8 @@ export class SupportTicketController {
     private readonly recordInteractionUseCase: RecordSupportTicketInteractionUseCase,
     private readonly getGuestTicketsWithDetailsUseCase: GetGuestTicketsWithDetailsUseCase,
     private readonly getEmployeesWithTicketHandlingPermissionsUseCase: GetEmployeesWithTicketHandlingPermissionsUseCase,
+    private readonly exportSupportTicketsUseCase: ExportSupportTicketsUseCase,
+    private readonly exportFileService: ExportFileService,
   ) { }
 
   @UseInterceptors(GuestIdInterceptor)
@@ -128,22 +122,6 @@ export class SupportTicketController {
       limit: query.limit,
     });
   }
-
-  // @UseInterceptors(GuestIdInterceptor)
-  // @Post()
-  // async create(
-  //   @Body() dto: CreateSupportTicketDto,
-  //   @Req() req: any,
-  // ): Promise<{ ticket: SupportTicket; uploadKey?: string }> {
-  //   return this.createUseCase.execute({
-  //     subject: dto.subject,
-  //     description: dto.description,
-  //     departmentId: dto.departmentId,
-  //     guestName: dto.guestName,
-  //     guestPhone: dto.guestPhone,
-  //     guestEmail: dto.guestEmail,
-  //   });
-  // }
 
   @UseInterceptors(GuestIdInterceptor)
   @Post()
@@ -308,6 +286,19 @@ export class SupportTicketController {
   @Get('count/answered-pending')
   async countAnsweredPending(): Promise<number> {
     return this.countAnsweredPendingUseCase.execute();
+  }
+
+  @AdminAuth()
+  @Post('export')
+  async exportTickets(
+    @Body() body: ExportTicketsDto,
+  ) {
+    const exportEntity = await this.exportSupportTicketsUseCase.execute({
+      start: body.start,
+      end: body.end,
+    });
+    const { shareKey } = await this.exportFileService.genShareKey(exportEntity.id);
+    return { ...exportEntity.toJSON(), shareKey };
   }
 
   @SupervisorPermissions()

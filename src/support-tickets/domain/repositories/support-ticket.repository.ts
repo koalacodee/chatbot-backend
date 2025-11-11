@@ -21,6 +21,8 @@ export abstract class SupportTicketRepository {
     offset?: number,
     limit?: number,
     departmentIds?: string[],
+    start?: Date,
+    end?: Date,
   ): Promise<SupportTicket[]>;
   abstract removeById(id: string): Promise<SupportTicket | null>;
   abstract exists(id: string): Promise<boolean>;
