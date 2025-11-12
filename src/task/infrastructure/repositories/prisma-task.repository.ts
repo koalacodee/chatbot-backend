@@ -161,6 +161,8 @@ export class PrismaTaskRepository extends TaskRepository {
     offset?: number,
     limit?: number,
     departmentIds?: string[],
+    start?: Date,
+    end?: Date,
   ): Promise<Task[]> {
     const whereClause: any = {};
 
@@ -179,6 +181,16 @@ export class PrismaTaskRepository extends TaskRepository {
           },
         },
       ];
+    }
+
+    if (start || end) {
+      whereClause.createdAt = {};
+      if (start) {
+        whereClause.createdAt.gte = start;
+      }
+      if (end) {
+        whereClause.createdAt.lte = end;
+      }
     }
 
     const rows = await this.prisma.task.findMany({

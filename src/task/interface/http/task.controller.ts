@@ -29,6 +29,7 @@ import {
   SaveTaskPresetUseCase,
   GetTaskPresetsUseCase,
   CreateTaskFromPresetUseCase,
+  ExportTasksUseCase,
 } from '../../application/use-cases';
 import {
   CreateTaskInputDto,
@@ -39,6 +40,7 @@ import {
   SaveTaskPresetDto,
   CreateTaskFromPresetDto,
 } from './dto';
+import { ExportTasksDto } from './dto/export-tasks.dto';
 import { GetTeamTasksDto } from './dto/get-team-tasks.dto';
 import { Task, TaskAssignmentType } from '../../domain/entities/task.entity';
 import { TaskStatus } from '@prisma/client';
@@ -46,9 +48,11 @@ import {
   EmployeePermissions,
   SupervisorPermissions,
 } from 'src/rbac/decorators';
+import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 import { EmployeePermissionsEnum as EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 import { TaskIdDto } from './dto/task-id.dto';
+import { ExportFileService } from 'src/export/domain/services/export-file.service';
 @Controller('tasks')
 export class TaskController {
   constructor(
@@ -68,7 +72,9 @@ export class TaskController {
     private readonly saveTaskPresetUseCase: SaveTaskPresetUseCase,
     private readonly getTaskPresetsUseCase: GetTaskPresetsUseCase,
     private readonly createTaskFromPresetUseCase: CreateTaskFromPresetUseCase,
-  ) {}
+    private readonly exportTasksUseCase: ExportTasksUseCase,
+    private readonly exportFileService: ExportFileService,
+  ) { }
 
   @Post()
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
@@ -347,5 +353,18 @@ export class TaskController {
       attach: input.attach,
       reminderInterval: input.reminderInterval,
     });
+  }
+
+  @AdminAuth()
+  @Post('export')
+  async exportTasks(
+    @Body() body: ExportTasksDto,
+  ) {
+    const exportEntity = await this.exportTasksUseCase.execute({
+      start: body.start,
+      end: body.end,
+    });
+    const { shareKey } = await this.exportFileService.genShareKey(exportEntity.id);
+    return { ...exportEntity.toJSON(), shareKey };
   }
 }

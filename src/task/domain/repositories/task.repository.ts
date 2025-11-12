@@ -7,6 +7,8 @@ export abstract class TaskRepository {
     offset?: number,
     limit?: number,
     departmentIds?: string[],
+    start?: Date,
+    end?: Date,
   ): Promise<Task[]>;
   abstract removeById(id: string): Promise<Task | null>;
   abstract exists(id: string): Promise<boolean>;

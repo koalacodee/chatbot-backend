@@ -20,6 +20,7 @@ import { TaskPresetCreatedListener } from './application/listeners/task-preset-c
 import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 import { ReminderQueueService } from './infrastructure/queues/reminder.queue';
 import { ReminderProcessor } from './infrastructure/queues/reminder.processor';
+import { ExportModule } from 'src/export/export.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ReminderProcessor } from './infrastructure/queues/reminder.processor';
     DepartmentModule,
     SharedModule,
     ActivityLogModule,
+    ExportModule,
     BullModule.registerQueue({
       name: 'task-reminders',
       defaultJobOptions: {
@@ -68,4 +70,4 @@ import { ReminderProcessor } from './infrastructure/queues/reminder.processor';
     ReminderQueueService,
   ],
 })
-export class TaskModule {}
+export class TaskModule { }
