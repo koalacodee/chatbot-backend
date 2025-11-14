@@ -3,6 +3,7 @@ import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { Task } from './task.entity';
+import { TaskDelegationSubmission } from './task-delegation-submission.entity';
 
 export enum TaskSubmissionStatus {
   SUBMITTED = 'SUBMITTED',
@@ -13,6 +14,8 @@ export enum TaskSubmissionStatus {
 export interface TaskSubmissionOptions {
   id?: string;
   task: Task;
+  delegationSubmissionId?: string;
+  delegationSubmission?: TaskDelegationSubmission;
   performerId: string;
   performerType: 'admin' | 'supervisor' | 'employee';
   performerName?: string;
@@ -28,6 +31,8 @@ export interface TaskSubmissionOptions {
 export class TaskSubmission {
   private readonly _id: UUID;
   private _task: Task;
+  private _delegationSubmissionId?: string;
+  private _delegationSubmission?: TaskDelegationSubmission;
   private _performerId: string;
   private _performerType: 'admin' | 'supervisor' | 'employee';
   private _performerName?: string;
@@ -42,6 +47,8 @@ export class TaskSubmission {
   private constructor(options: TaskSubmissionOptions) {
     this._id = UUID.create(options.id);
     this._task = options.task;
+    this._delegationSubmissionId = options.delegationSubmissionId;
+    this._delegationSubmission = options.delegationSubmission;
     this._performerId = options.performerId;
     this._performerType = options.performerType;
     this._performerName = options.performerName ?? undefined;
@@ -181,10 +188,28 @@ export class TaskSubmission {
     return this._status === TaskSubmissionStatus.SUBMITTED;
   }
 
+  get delegationSubmission(): TaskDelegationSubmission | undefined {
+    return this._delegationSubmission;
+  }
+
+  set delegationSubmission(value: TaskDelegationSubmission | undefined) {
+    this._delegationSubmission = value;
+  }
+
+  get delegationSubmissionId(): string | undefined {
+    return this._delegationSubmissionId;
+  }
+
+  set delegationSubmissionId(value: string | undefined) {
+    this._delegationSubmissionId = value;
+  }
+
   toJSON(): any {
     return {
       id: this.id.toString(),
       taskId: this.task?.id?.toString() || null,
+      delegationSubmissionId: this.delegationSubmissionId,
+      delegationSubmission: this.delegationSubmission?.toJSON(),
       performerId: this.performerId,
       performerType: this.performerType,
       performerName: this.performerName,

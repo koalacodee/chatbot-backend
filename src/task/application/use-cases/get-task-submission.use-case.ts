@@ -1,14 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { TaskSubmission } from '../../domain/entities/task-submission.entity';
+import { TaskDelegationSubmission } from '../../domain/entities/task-delegation-submission.entity';
 import { TaskSubmissionRepository } from '../../domain/repositories/task-submission.repository';
+import { TaskDelegationSubmissionRepository } from '../../domain/repositories/task-delegation-submission.repository';
 import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 
 @Injectable()
 export class GetTaskSubmissionUseCase {
   constructor(
     private readonly taskSubmissionRepo: TaskSubmissionRepository,
+    private readonly taskDelegationSubmissionRepository: TaskDelegationSubmissionRepository,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
-  ) {}
+  ) { }
 
   async execute(taskSubmissionId: string): Promise<{
     taskSubmission: TaskSubmission;
@@ -35,15 +38,31 @@ export class GetTaskSubmissionUseCase {
 
   async executeByTaskId(taskId: string): Promise<{
     taskSubmissions: TaskSubmission[];
+    delegationSubmissions: TaskDelegationSubmission[];
     attachments: { [taskSubmissionId: string]: string[] };
   }> {
-    const taskSubmissions = await this.taskSubmissionRepo.findByTaskId(taskId);
+    const [taskSubmissions, allDelegationSubmissions] = await Promise.all([
+      this.taskSubmissionRepo.findByTaskId(taskId),
+      this.taskDelegationSubmissionRepository.findByTaskId(taskId, true),
+    ]);
 
-    // Get attachments for all task submissions
+    // Combine task submission IDs and delegation submission IDs for attachments
+    const allSubmissionIds = [
+      ...taskSubmissions.map((submission) => submission.id.toString()),
+      ...allDelegationSubmissions.map((submission) =>
+        submission.id.toString(),
+      ),
+    ];
+
+    // Get attachments for all submissions (both task submissions and forwarded delegation submissions)
     const attachments = await this.getAttachmentsUseCase.execute({
-      targetIds: taskSubmissions.map((submission) => submission.id.toString()),
+      targetIds: allSubmissionIds,
     });
 
-    return { taskSubmissions, attachments };
+    return {
+      taskSubmissions,
+      delegationSubmissions: allDelegationSubmissions,
+      attachments,
+    };
   }
 }
