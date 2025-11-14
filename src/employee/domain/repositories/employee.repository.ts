@@ -27,4 +27,16 @@ export abstract class EmployeeRepository {
     requiredPermissions: string[],
     supervisorDepartmentIds: string[],
   ): Promise<boolean>;
+  /**
+   * Find all employees that a supervisor can delegate tasks to.
+   * Returns employees that are either:
+   * - Directly supervised by the supervisor, OR
+   * - In a sub-department whose parent department is supervised by the supervisor
+   * @param searchQuery Optional search query to filter by employee user's name, email, username, or employee ID
+   */
+  abstract findDelegableEmployees(
+    supervisorId: string,
+    supervisorDepartmentIds: string[],
+    searchQuery?: string,
+  ): Promise<Employee[]>;
 }

@@ -194,4 +194,15 @@ export abstract class DepartmentRepository {
     parentId: string,
     visibility: Department['visibility'],
   );
+
+  /**
+   * Find all sub-departments that a supervisor can delegate tasks to.
+   * Returns sub-departments whose parent department is supervised by the supervisor.
+   * @param searchQuery Optional search query to filter by department name
+   */
+  abstract findDelegableSubDepartments(
+    supervisorDepartmentIds: string[],
+    queryDto?: Omit<DepartmentQueryDto, 'includeSubDepartments'>,
+    searchQuery?: string,
+  ): Promise<Department[]>;
 }

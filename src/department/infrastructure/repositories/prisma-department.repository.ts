@@ -25,40 +25,40 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
       parent: dept.parent ? Department.create(dept.parent) : undefined,
       questions: dept.questions
         ? dept.questions?.map((q: any) =>
-            Question.create({
-              id: q.id,
-              text: q.text,
-              departmentId: q.departmentId,
-              knowledgeChunkId: q.knowledgeChunkId,
-              creatorEmployeeId: q.creatorEmployeeId,
-              creatorAdminId: q.creatorAdminId,
-              creatorSupervisorId: q.creatorSupervisorId,
-              satisfaction: q.satisfaction,
-              dissatisfaction: q.dissatisfaction,
-              views: q.views,
-            }),
-          ) || []
+          Question.create({
+            id: q.id,
+            text: q.text,
+            departmentId: q.departmentId,
+            knowledgeChunkId: q.knowledgeChunkId,
+            creatorEmployeeId: q.creatorEmployeeId,
+            creatorAdminId: q.creatorAdminId,
+            creatorSupervisorId: q.creatorSupervisorId,
+            satisfaction: q.satisfaction,
+            dissatisfaction: q.dissatisfaction,
+            views: q.views,
+          }),
+        ) || []
         : [],
       knowledgeChunks: dept.knowledgeChunks
         ? dept.knowledgeChunks?.map((kc: any) =>
-            KnowledgeChunk.create({
-              id: kc.id,
-              content: kc.content,
-              point: undefined,
-              department: undefined as unknown as Department,
-            }),
-          ) || []
+          KnowledgeChunk.create({
+            id: kc.id,
+            content: kc.content,
+            point: undefined,
+            department: undefined as unknown as Department,
+          }),
+        ) || []
         : [],
       subDepartments: dept.subDepartments
         ? dept.subDepartments?.map((sd: any) =>
-            Department.create({
-              id: sd.id,
-              name: sd.name,
-              visibility: sd.visibility as DepartmentVisibility,
-              questions: sd.questions,
-              knowledgeChunks: sd.knowledgeChunks,
-            }),
-          ) || []
+          Department.create({
+            id: sd.id,
+            name: sd.name,
+            visibility: sd.visibility as DepartmentVisibility,
+            questions: sd.questions,
+            knowledgeChunks: sd.knowledgeChunks,
+          }),
+        ) || []
         : [],
     });
   }
@@ -530,5 +530,46 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
       data: { visibility },
     });
     return updated;
+  }
+
+  async findDelegableSubDepartments(
+    supervisorDepartmentIds: string[],
+    queryDto?: Omit<DepartmentQueryDto, 'includeSubDepartments'>,
+    searchQuery?: string,
+  ): Promise<Department[]> {
+    const whereConditions: any[] = [
+      {
+        parentId: {
+          in: supervisorDepartmentIds,
+        },
+      },
+      {
+        parentId: {
+          not: null,
+        },
+      },
+    ];
+
+    // Add search filter if provided
+    if (searchQuery && searchQuery.trim()) {
+      whereConditions.push({
+        name: {
+          contains: searchQuery.trim(),
+          mode: 'insensitive',
+        },
+      });
+    }
+
+    const depts = await this.prisma.department.findMany({
+      where: {
+        AND: whereConditions,
+      },
+      include: {
+        questions: queryDto?.includeQuestions ?? false,
+        knowledgeChunks: queryDto?.includeKnowledgeChunks ?? false,
+        parent: queryDto?.includeParent ?? false,
+      },
+    });
+    return depts.map(this.toDomain);
   }
 }

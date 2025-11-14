@@ -326,8 +326,8 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
         supervisorId: { in: supervisorIds },
         permissions: permissions
           ? {
-              hasEvery: permissions,
-            }
+            hasEvery: permissions,
+          }
           : undefined,
       },
       include: {
@@ -338,6 +338,87 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
         },
         user: true,
         supervisor: true,
+      },
+    });
+    return Promise.all(items.map((e) => this.toDomain(e)));
+  }
+
+  async findDelegableEmployees(
+    supervisorId: string,
+    supervisorDepartmentIds: string[],
+    searchQuery?: string,
+  ): Promise<Employee[]> {
+    const baseConditions = [
+      // Employees directly supervised by this supervisor
+      { supervisorId: supervisorId },
+      // Employees in sub-departments whose parent is supervised by this supervisor
+      {
+        subDepartments: {
+          some: {
+            department: {
+              parentId: {
+                in: supervisorDepartmentIds,
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    // Add search filter if provided
+    let whereClause: any;
+    if (searchQuery && searchQuery.trim()) {
+      const searchTerm = searchQuery.trim();
+      const searchConditions: any[] = [
+        // Search by user name
+        { user: { name: { contains: searchTerm, mode: 'insensitive' } } },
+        // Search by user email
+        { user: { email: { contains: searchTerm, mode: 'insensitive' } } },
+        // Search by user username
+        { user: { username: { contains: searchTerm, mode: 'insensitive' } } },
+      ];
+
+      // Search by user employeeId (if it exists and is a string field)
+      searchConditions.push({
+        user: { employeeId: { contains: searchTerm, mode: 'insensitive' } },
+      });
+
+      // If search term looks like a UUID (36 chars with dashes), also try exact match on employee id
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(searchTerm)) {
+        searchConditions.push({ id: searchTerm });
+      }
+
+      whereClause = {
+        AND: [
+          {
+            OR: baseConditions,
+          },
+          {
+            OR: searchConditions,
+          },
+        ],
+      };
+    } else {
+      whereClause = {
+        OR: baseConditions,
+      };
+    }
+
+    const items = await this.prisma.employee.findMany({
+      where: whereClause,
+      include: {
+        subDepartments: {
+          include: {
+            department: true,
+          },
+        },
+        user: true,
+        supervisor: {
+          include: {
+            departments: true,
+          },
+        },
       },
     });
     return Promise.all(items.map((e) => this.toDomain(e)));
