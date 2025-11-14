@@ -26,18 +26,20 @@ model EmployeeSubDepartment {
 }
 
 model Employee {
-  id                           String                  @id @map("id") @db.Uuid
-  userId                       String                  @unique @map("user_id") @db.Uuid
-  user                         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                           String                     @id @map("id") @db.Uuid
+  userId                       String                     @unique @map("user_id") @db.Uuid
+  user                         User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   permissions                  EmployeePermissions[]
-  supervisorId                 String                  @map("supervisor_id") @db.Uuid
-  supervisor                   Supervisor              @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
-  supportTicketAnswersAssigned SupportTicket[]         @relation("AssigneeOfSupportTicket")
-  assigneeTasks                Task[]                  @relation("AssigneeOfTask")
+  supervisorId                 String                     @map("supervisor_id") @db.Uuid
+  supervisor                   Supervisor                 @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  supportTicketAnswersAssigned SupportTicket[]            @relation("AssigneeOfSupportTicket")
+  assigneeTasks                Task[]                     @relation("AssigneeOfTask")
   questions                    Question[]
-  supportTicketAnswersAuthored SupportTicketAnswer[]   @relation("AnswererOfSupportTicketAnswer")
-  tasksPerformed               TaskSubmission[]        @relation("PerformerOfTaskSubmission")
+  supportTicketAnswersAuthored SupportTicketAnswer[]      @relation("AnswererOfSupportTicketAnswer")
+  tasksPerformed               TaskSubmission[]           @relation("PerformerOfTaskSubmission")
   subDepartments               EmployeeSubDepartment[]
+  delegations                  TaskDelegation[]           @relation("AssigneeOfTaskDelegation")
+  submittedTaskDelegations     TaskDelegationSubmission[] @relation("PerformerOfTaskDelegationSubmission")
 
   @@map("employees")
 }

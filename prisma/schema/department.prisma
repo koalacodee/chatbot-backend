@@ -15,11 +15,11 @@ model Department {
   employeeSubDepartments EmployeeSubDepartment[]
 
   // Task assignment relations
-  targetTasks         Task[] @relation("TargetDepartment")
-  targetSubDepartment Task[] @relation("TargetSubDepartment")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  targetTasks         Task[]           @relation("TargetDepartment")
+  targetSubDepartment Task[]           @relation("TargetSubDepartment")
+  taskDelegations     TaskDelegation[] @relation("TargetSubDepartmentOfTaskDelegation")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
 
   @@index([parentId])
   @@map("departments")
