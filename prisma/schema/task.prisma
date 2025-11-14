@@ -39,7 +39,9 @@ model Task {
 
   // Reminder interval in milliseconds (e.g., 3600000 = 1 hour, 86400000 = 1 day)
   // When set, creates a repeatable BullMQ job to fire TaskReminderEvent
-  reminderInterval Int? @map("reminder_interval")
+  reminderInterval          Int?                       @map("reminder_interval")
+  delegations               TaskDelegation[]           @relation("TaskDelegation")
+  taskDelegationSubmissions TaskDelegationSubmission[]
 
   @@index([assigneeId])
   @@index([assignerSupervisorId])
@@ -103,10 +105,12 @@ model TaskSubmission {
   submittedAt DateTime             @default(now()) @map("submitted_at")
   reviewedAt  DateTime?            @map("reviewed_at")
 
-  reviewedByAdminId      String?     @map("reviewed_by_admin_id") @db.Uuid
-  reviewedByAdmin        Admin?      @relation("ReviewerOfTaskSubmission", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
-  reviewedBySupervisorId String?     @map("reviewed_by_supervisor_id") @db.Uuid
-  reviewedBySupervisor   Supervisor? @relation("ReviewerOfTaskSubmission", fields: [reviewedBySupervisorId], references: [id], onDelete: SetNull)
+  reviewedByAdminId      String?                   @map("reviewed_by_admin_id") @db.Uuid
+  reviewedByAdmin        Admin?                    @relation("ReviewerOfTaskSubmission", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+  reviewedBySupervisorId String?                   @map("reviewed_by_supervisor_id") @db.Uuid
+  reviewedBySupervisor   Supervisor?               @relation("ReviewerOfTaskSubmission", fields: [reviewedBySupervisorId], references: [id], onDelete: SetNull)
+  delegationSubmissionId String?                   @map("delegation_submission_id") @db.Uuid
+  delegationSubmission   TaskDelegationSubmission? @relation("TaskDelegationSubmission", fields: [delegationSubmissionId], references: [id], onDelete: SetNull)
 
   @@index([taskId])
   @@index([performerAdminId])
@@ -144,4 +148,69 @@ model TaskPreset {
   @@index([assignerRole])
   @@index([name])
   @@map("task_presets")
+}
+
+model TaskDelegation {
+  id     String @id @map("id") @db.Uuid
+  taskId String @map("task_id") @db.Uuid
+  task   Task   @relation("TaskDelegation", fields: [taskId], references: [id], onDelete: Cascade)
+
+  assigneeId            String?            @map("assignee_id") @db.Uuid
+  assignee              Employee?          @relation("AssigneeOfTaskDelegation", fields: [assigneeId], references: [id], onDelete: Cascade)
+  targetSubDepartmentId String             @map("target_sub_department_id") @db.Uuid
+  targetSubDepartment   Department         @relation("TargetSubDepartmentOfTaskDelegation", fields: [targetSubDepartmentId], references: [id], onDelete: Cascade)
+  status                TaskStatus         @default(TODO) @map("status")
+  assignmentType        TaskAssignmentType @map("assignment_type")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+  completedAt           DateTime?          @map("completed_at")
+
+  delegatorId String     @map("delegator_id") @db.Uuid
+  delegator   Supervisor @relation("DelegatorOfTaskDelegation", fields: [delegatorId], references: [id], onDelete: Cascade)
+
+  submissions TaskDelegationSubmission[] @relation("TaskDelegationSubmission")
+
+  @@index([taskId])
+  @@index([assigneeId])
+  @@index([targetSubDepartmentId])
+  @@index([delegatorId])
+  @@index([status])
+  @@map("task_delegations")
+}
+
+model TaskDelegationSubmission {
+  id           String         @id @map("id") @db.Uuid
+  delegationId String         @map("delegation_id") @db.Uuid
+  delegation   TaskDelegation @relation("TaskDelegationSubmission", fields: [delegationId], references: [id], onDelete: Cascade)
+  taskId       String         @map("task_id") @db.Uuid
+  task         Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  performerAdminId      String?     @map("performer_admin_id") @db.Uuid
+  performerAdmin        Admin?      @relation("PerformerOfTaskDelegationSubmission", fields: [performerAdminId], references: [id], onDelete: Cascade)
+  performerSupervisorId String?     @map("performer_supervisor_id") @db.Uuid
+  performerSupervisor   Supervisor? @relation("PerformerOfTaskDelegationSubmission", fields: [performerSupervisorId], references: [id], onDelete: Cascade)
+  performerEmployeeId   String?     @map("performer_employee_id") @db.Uuid
+  performerEmployee     Employee?   @relation("PerformerOfTaskDelegationSubmission", fields: [performerEmployeeId], references: [id], onDelete: Cascade)
+
+  notes    String? @map("notes") @db.Text
+  feedback String? @map("feedback") @db.Text
+
+  status      TaskSubmissionStatus @default(SUBMITTED) @map("status")
+  submittedAt DateTime             @default(now()) @map("submitted_at")
+  reviewedAt  DateTime?            @map("reviewed_at")
+
+  reviewedByAdminId      String?          @map("reviewed_by_admin_id") @db.Uuid
+  reviewedByAdmin        Admin?           @relation("ReviewerOfTaskDelegationSubmission", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+  reviewedBySupervisorId String?          @map("reviewed_by_supervisor_id") @db.Uuid
+  reviewedBySupervisor   Supervisor?      @relation("ReviewerOfTaskDelegationSubmission", fields: [reviewedBySupervisorId], references: [id], onDelete: SetNull)
+  taskSubmissions        TaskSubmission[] @relation("TaskDelegationSubmission")
+  forwarded              Boolean          @default(false) @map("forwarded")
+
+  @@index([delegationId])
+  @@index([performerAdminId])
+  @@index([performerSupervisorId])
+  @@index([performerEmployeeId])
+  @@index([status])
+  @@index([reviewedByAdminId, reviewedBySupervisorId])
+  @@map("task_delegation_submissions")
 }
