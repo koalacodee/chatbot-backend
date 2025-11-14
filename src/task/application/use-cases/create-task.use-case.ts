@@ -209,7 +209,7 @@ export class CreateTaskUseCase {
           task.id.toString(),
           task.title,
           dto.assignmentType,
-          dto.assigneeId,
+          assignee?.userId?.toString() ?? undefined,
           dto.targetDepartmentId,
           dto.targetSubDepartmentId,
           task.createdAt,

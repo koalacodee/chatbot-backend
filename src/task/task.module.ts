@@ -25,6 +25,8 @@ import { TaskPresetCreatedListener } from './application/listeners/task-preset-c
 import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 import { ReminderQueueService } from './infrastructure/queues/reminder.queue';
 import { ReminderProcessor } from './infrastructure/queues/reminder.processor';
+import { DelegationReminderQueueService } from './infrastructure/queues/delegation-reminder.queue';
+import { DelegationReminderProcessor } from './infrastructure/queues/delegation-reminder.processor';
 import { ExportModule } from 'src/export/export.module';
 
 @Module({
@@ -36,6 +38,13 @@ import { ExportModule } from 'src/export/export.module';
     ExportModule,
     BullModule.registerQueue({
       name: 'task-reminders',
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    }),
+    BullModule.registerQueue({
+      name: 'task-delegation-reminders',
       defaultJobOptions: {
         removeOnComplete: true,
         removeOnFail: false,
@@ -76,6 +85,8 @@ import { ExportModule } from 'src/export/export.module';
     TaskPresetCreatedListener,
     ReminderQueueService,
     ReminderProcessor,
+    DelegationReminderQueueService,
+    DelegationReminderProcessor,
   ],
   exports: [
     TaskRepository,
@@ -84,6 +95,7 @@ import { ExportModule } from 'src/export/export.module';
     TaskDelegationSubmissionRepository,
     'TaskPresetRepository',
     ReminderQueueService,
+    DelegationReminderQueueService,
   ],
 })
 export class TaskModule { }

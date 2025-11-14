@@ -29,3 +29,4 @@ export * from './reject-task-delegation.use-case';
 export * from './forward-task-delegation-submission.use-case';
 export * from './get-delegables.use-case';
 export * from './get-my-delegations.use-case';
+export * from './mark-delegation-seen.use-case';

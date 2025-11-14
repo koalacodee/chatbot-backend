@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TaskDelegationRepository } from '../../domain/repositories/task-delegation.repository';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
@@ -16,6 +17,8 @@ import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
+import { TaskDelegationCreatedEvent } from '../../domain/events/task-delegation-created.event';
+import { DelegationReminderQueueService } from '../../infrastructure/queues/delegation-reminder.queue';
 
 interface DelegateTaskInput {
   taskId: string;
@@ -32,6 +35,8 @@ export class DelegateTaskUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly departmentRepository: DepartmentRepository,
     private readonly userRepository: UserRepository,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly delegationReminderQueueService: DelegationReminderQueueService,
   ) { }
 
   async execute(
@@ -248,6 +253,29 @@ export class DelegateTaskUseCase {
     const savedDelegation = await this.taskDelegationRepository.save(
       taskDelegation,
     );
+
+    // Emit the TaskDelegationCreatedEvent
+    await this.eventEmitter.emitAsync(
+      TaskDelegationCreatedEvent.name,
+      new TaskDelegationCreatedEvent(
+        savedDelegation.id.toString(),
+        task.id.toString(),
+        task.title,
+        assignmentType,
+        supervisor.id.toString(),
+        assignee?.userId?.toString() ?? undefined,
+        targetSubDepartmentId,
+        savedDelegation.createdAt,
+      ),
+    );
+
+    // Schedule reminder if task has reminderInterval
+    if (task.reminderInterval) {
+      await this.delegationReminderQueueService.scheduleReminder(
+        savedDelegation.id.toString(),
+        task.reminderInterval,
+      );
+    }
 
     return savedDelegation;
   }

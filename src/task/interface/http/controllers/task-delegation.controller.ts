@@ -18,13 +18,13 @@ import {
   ForwardTaskDelegationSubmissionUseCase,
   GetDelegablesUseCase,
   GetMyDelegationsUseCase,
+  MarkDelegationSeenUseCase,
 } from '../../../application/use-cases';
 import {
   DelegateTaskDto,
   SubmitTaskDelegationForReviewDto,
   ApproveTaskDelegationDto,
   RejectTaskDelegationDto,
-  ForwardTaskDelegationSubmissionDto,
   DelegationIdDto,
   SubmissionIdDto,
   GetDelegablesQueryDto,
@@ -47,6 +47,7 @@ export class TaskDelegationController {
     private readonly forwardTaskDelegationSubmissionUseCase: ForwardTaskDelegationSubmissionUseCase,
     private readonly getDelegablesUseCase: GetDelegablesUseCase,
     private readonly getMyDelegationsUseCase: GetMyDelegationsUseCase,
+    private readonly markDelegationSeenUseCase: MarkDelegationSeenUseCase,
   ) { }
 
   @Get('delegables')
@@ -224,6 +225,27 @@ export class TaskDelegationController {
     });
     return {
       submission: result.toJSON(),
+    };
+  }
+
+  @Post(':delegationId/seen')
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TASKS)
+  @ApiOperation({ summary: 'Mark a task delegation as seen' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Task delegation marked as seen successfully',
+  })
+  @HttpCode(HttpStatus.OK)
+  async markSeen(
+    @Param() { delegationId }: DelegationIdDto,
+    @Request() req: any,
+  ) {
+    const result = await this.markDelegationSeenUseCase.execute(
+      { delegationId },
+      req.user.id,
+    );
+    return {
+      delegation: result.toJSON(),
     };
   }
 }

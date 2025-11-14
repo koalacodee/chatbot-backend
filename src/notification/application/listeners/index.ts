@@ -8,6 +8,7 @@ export { TaskCreatedListener } from './task-created.listener';
 export { TaskSubmittedListener } from './task-submitted.listener';
 export { TaskApprovedListener } from './task-approved.listener';
 export { TaskRejectedListener } from './task-rejected.listener';
+export { TaskDelegationCreatedListener } from './task-delegation-created.listener';
 
 // Staff request listeners
 export { StaffRequestCreatedListener } from './staff-request-created.listener';
