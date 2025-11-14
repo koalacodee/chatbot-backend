@@ -270,9 +270,13 @@ export class TaskController {
         ...task.toJSON(),
         canSubmitWork: result.canSubmitWork[result.tasks.indexOf(task)],
       })),
+      delegations: result.delegations?.map((delegation) =>
+        delegation.toJSON(),
+      ),
       total: result.total,
       metrics: result.metrics,
       attachments: result.attachments,
+      delegationAttachments: result?.delegationAttachments,
     };
   }
 

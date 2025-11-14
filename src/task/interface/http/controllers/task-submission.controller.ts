@@ -20,7 +20,7 @@ export class TaskSubmissionController {
     private readonly approveTaskSubmissionUseCase: ApproveTaskSubmissionUseCase,
     private readonly rejectTaskSubmissionUseCase: RejectTaskSubmissionUseCase,
     private readonly getTaskSubmissionUseCase: GetTaskSubmissionUseCase,
-  ) {}
+  ) { }
 
   @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TASKS)
   @Post(':taskId')
@@ -89,6 +89,9 @@ export class TaskSubmissionController {
     const result = await this.getTaskSubmissionUseCase.executeByTaskId(taskId);
     return {
       taskSubmissions: result.taskSubmissions.map((submission) =>
+        submission.toJSON(),
+      ),
+      delegationSubmissions: result.delegationSubmissions.map((submission) =>
         submission.toJSON(),
       ),
       attachments: result.attachments,
