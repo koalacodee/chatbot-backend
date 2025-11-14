@@ -17,6 +17,8 @@ import { SupportTicketAnswerRepository } from 'src/support-tickets/domain/reposi
 import { SupportTicketRepository } from 'src/support-tickets/domain/repositories/support-ticket.repository';
 import { FilesService } from 'src/files/domain/services/files.service';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
+import { ResendEmailService } from 'src/shared/infrastructure/email/resend-email.service';
+import { TicketAnsweredEmail } from 'src/shared/infrastructure/email/TicketAnsweredEmail';
 
 interface ReplyToTicketInput {
   ticketId: string;
@@ -41,7 +43,8 @@ export class ReplyToTicketUseCase {
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
-  ) {}
+    private readonly emailService: ResendEmailService,
+  ) { }
 
   async execute({
     ticketId,
@@ -104,11 +107,11 @@ export class ReplyToTicketUseCase {
       this.ticketAnswerRepo.save(answer),
       newFawDepartment
         ? this.eventEmitter.emitAsync('faq.promote', {
-            question: ticket.subject,
-            answer: answer.content,
-            departmentId: newFawDepartment.id.toString(),
-            userId,
-          })
+          question: ticket.subject,
+          answer: answer.content,
+          departmentId: newFawDepartment.id.toString(),
+          userId,
+        })
         : undefined,
     ]);
 
@@ -118,6 +121,51 @@ export class ReplyToTicketUseCase {
         attachmentIds: chooseAttachments,
         targetId: answer.id.toString(),
       });
+    }
+
+    // Send email notification to the guest
+    console.log(ticket);
+
+    if (ticket.guestEmail) {
+      // Get department with parent information to determine if it's a sub-department
+      const subDepartment = await this.departmentRepo.findSubDepartmentById(
+        ticket.departmentId.toString(),
+        { includeParent: true },
+      );
+
+      let departmentName: string;
+      let subDepartmentName: string | undefined;
+
+      if (subDepartment && subDepartment.parent) {
+        // It's a sub-department - parent is the main department, subDepartment is the sub-department
+        departmentName = subDepartment.parent.name;
+        subDepartmentName = subDepartment.name;
+      } else {
+        // It's a main department - use the department from ticket or fetch it
+        const department =
+          ticket.department ||
+          (await this.departmentRepo.findById(ticket.departmentId.toString()));
+        departmentName = department?.name || 'Unknown Department';
+        subDepartmentName = undefined;
+      }
+
+      console.log("Sending Email to" + ticket.guestEmail);
+
+
+      await this.emailService.sendReactEmail(
+        ticket.guestEmail,
+        `Your Support Ticket ${ticket.code} Has Been Answered`,
+        TicketAnsweredEmail,
+        {
+          name: ticket.guestName || 'Guest',
+          code: ticket.code,
+          subject: ticket.subject,
+          description: ticket.description,
+          answerContent: answer.content,
+          departmentName,
+          subDepartmentName,
+        },
+      );
     }
 
     return { uploadKey };

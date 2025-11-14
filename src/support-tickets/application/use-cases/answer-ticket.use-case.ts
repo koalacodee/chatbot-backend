@@ -18,6 +18,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TicketAnsweredEvent } from 'src/support-tickets/domain/events/ticket-answered.event';
 import { FilesService } from 'src/files/domain/services/files.service';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
+import { ResendEmailService } from 'src/shared/infrastructure/email/resend-email.service';
+import { TicketAnsweredEmail } from 'src/shared/infrastructure/email/TicketAnsweredEmail';
 
 interface AnswerTicketInput {
   ticketId: string;
@@ -40,7 +42,8 @@ export class AnswerTicketUseCase {
     private readonly eventEmitter: EventEmitter2,
     private readonly fileService: FilesService,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
-  ) {}
+    private readonly emailService: ResendEmailService,
+  ) { }
 
   async execute({
     ticketId,
@@ -152,6 +155,48 @@ export class AnswerTicketUseCase {
         ),
       ),
     );
+
+    // Send email notification to the guest
+    if (ticket.guestEmail) {
+      // Get department with parent information to determine if it's a sub-department
+      const subDepartment = await this.departmentRepository.findSubDepartmentById(
+        ticket.departmentId.toString(),
+        { includeParent: true },
+      );
+
+      let departmentName: string;
+      let subDepartmentName: string | undefined;
+
+      if (subDepartment && subDepartment.parent) {
+        // It's a sub-department - parent is the main department, subDepartment is the sub-department
+        departmentName = subDepartment.parent.name;
+        subDepartmentName = subDepartment.name;
+      } else {
+        // It's a main department - use the department from ticket or fetch it
+        const department =
+          ticket.department ||
+          (await this.departmentRepository.findById(
+            ticket.departmentId.toString(),
+          ));
+        departmentName = department?.name || 'Unknown Department';
+        subDepartmentName = undefined;
+      }
+
+      await this.emailService.sendReactEmail(
+        ticket.guestEmail,
+        `Your Support Ticket ${ticket.code} Has Been Answered`,
+        TicketAnsweredEmail,
+        {
+          name: ticket.guestName || 'Guest',
+          code: ticket.code,
+          subject: ticket.subject,
+          description: ticket.description,
+          answerContent: savedAnswer.content,
+          departmentName,
+          subDepartmentName,
+        },
+      );
+    }
 
     return { answer: savedAnswer.toJSON(), uploadKey };
   }

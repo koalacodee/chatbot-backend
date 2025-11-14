@@ -51,7 +51,6 @@ export class SupportTicket {
   get id(): UUID {
     return this._id;
   }
-
   set id(value: UUID) {
     this._id = value;
   }
@@ -59,7 +58,6 @@ export class SupportTicket {
   get subject(): string {
     return this._subject;
   }
-
   set subject(value: string) {
     this._subject = value;
   }
@@ -67,7 +65,6 @@ export class SupportTicket {
   get description(): string {
     return this._description;
   }
-
   set description(value: string) {
     this._description = value;
   }
@@ -75,7 +72,6 @@ export class SupportTicket {
   get departmentId(): UUID {
     return this._departmentId;
   }
-
   set departmentId(value: UUID) {
     this._departmentId = value;
   }
@@ -83,39 +79,13 @@ export class SupportTicket {
   get department(): Department | undefined {
     return this._department;
   }
-
   set department(value: Department | undefined) {
     this._department = value;
-  }
-
-  get status(): SupportTicketStatus {
-    return this._status;
-  }
-
-  set status(value: SupportTicketStatus) {
-    this._status = value;
-  }
-
-  get createdAt(): Date {
-    return this._createdAt;
-  }
-
-  set createdAt(value: Date) {
-    this._createdAt = value;
-  }
-
-  get updatedAt(): Date {
-    return this._updatedAt;
-  }
-
-  set updatedAt(value: Date) {
-    this._updatedAt = value;
   }
 
   get answer(): SupportTicketAnswer | undefined {
     return this._answer;
   }
-
   set answer(value: SupportTicketAnswer | undefined) {
     this._answer = value;
   }
@@ -123,15 +93,34 @@ export class SupportTicket {
   get assignee(): Employee | undefined {
     return this._assignee;
   }
-
   set assignee(newAssignee: Employee | undefined) {
     this._assignee = newAssignee;
+  }
+
+  get status(): SupportTicketStatus {
+    return this._status;
+  }
+  set status(value: SupportTicketStatus) {
+    this._status = value;
+  }
+
+  get createdAt(): Date {
+    return this._createdAt;
+  }
+  set createdAt(value: Date) {
+    this._createdAt = value;
+  }
+
+  get updatedAt(): Date {
+    return this._updatedAt;
+  }
+  set updatedAt(value: Date) {
+    this._updatedAt = value;
   }
 
   get code(): string {
     return this._code.toString();
   }
-
   set code(value: string) {
     this._code = TicketCode.create(value);
   }
@@ -139,9 +128,29 @@ export class SupportTicket {
   get interaction(): SupportTicketInteraction | undefined {
     return this._interaction;
   }
-
   set interaction(value: SupportTicketInteraction | undefined) {
     this._interaction = value;
+  }
+
+  get guestName(): string | undefined {
+    return this._guestName;
+  }
+  set guestName(value: string | undefined) {
+    this._guestName = value;
+  }
+
+  get guestPhone(): string | undefined {
+    return this._guestPhone;
+  }
+  set guestPhone(value: string | undefined) {
+    this._guestPhone = value;
+  }
+
+  get guestEmail(): string | undefined {
+    return this._guestEmail;
+  }
+  set guestEmail(value: string | undefined) {
+    this._guestEmail = value;
   }
 
   toJSON(): Record<string, any> {
@@ -150,14 +159,14 @@ export class SupportTicket {
       subject: this._subject,
       description: this._description,
       departmentId: this._departmentId.toString(),
-      department: this._department?.toJSON(),
+      department: this._department?.toJSON?.(),
       answer: this._answer,
-      assignee: this._assignee?.toJSON(),
+      assignee: this._assignee?.toJSON?.(),
       status: this._status,
       createdAt: this._createdAt.toISOString(),
       updatedAt: this._updatedAt.toISOString(),
       code: this._code.toString(),
-      interaction: this._interaction?.toJSON(),
+      interaction: this._interaction?.toJSON?.(),
       guestName: this._guestName,
       guestPhone: this._guestPhone,
       guestEmail: this._guestEmail,
