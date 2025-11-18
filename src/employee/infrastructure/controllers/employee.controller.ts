@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Put,
@@ -27,6 +29,7 @@ import { RequestEmployeeInvitationUseCase } from 'src/employee/application/use-c
 import { AcceptEmployeeInvitationRequestUseCase } from 'src/employee/application/use-cases/accept-employee-invitation-request.use-case';
 import { GetAllEmployeeInvitationRequestsUseCase } from 'src/employee/application/use-cases/get-all-employee-invitation-requests.use-case';
 import { GetMyEmployeeInvitationRequestsUseCase } from 'src/employee/application/use-cases/get-my-employee-invitation-requests.use-case';
+import { DeleteEmployeeInvitationUseCase } from 'src/employee/application/use-cases/delete-employee-invitation.use-case';
 import { SupervisorPermissions } from 'src/rbac/decorators';
 import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
@@ -50,7 +53,8 @@ export class EmployeeController {
     private readonly acceptEmployeeInvitationRequestUseCase: AcceptEmployeeInvitationRequestUseCase,
     private readonly getAllEmployeeInvitationRequestsUseCase: GetAllEmployeeInvitationRequestsUseCase,
     private readonly getMyEmployeeInvitationRequestsUseCase: GetMyEmployeeInvitationRequestsUseCase,
-  ) {}
+    private readonly deleteEmployeeInvitationUseCase: DeleteEmployeeInvitationUseCase,
+  ) { }
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_STAFF_DIRECTLY)
   @Post()
@@ -139,6 +143,19 @@ export class EmployeeController {
   ): Promise<any> {
     return this.getMyEmployeeInvitationRequestsUseCase.execute(
       { status: status as any },
+      req.user.id,
+    );
+  }
+
+  @SupervisorPermissions()
+  @Delete('invitation/:token')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteInvitation(
+    @Param('token') token: string,
+    @Req() req: any,
+  ): Promise<void> {
+    await this.deleteEmployeeInvitationUseCase.execute(
+      { token },
       req.user.id,
     );
   }

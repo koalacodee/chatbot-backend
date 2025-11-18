@@ -12,7 +12,6 @@ import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support
 import { SupportTicketStatus } from 'src/support-tickets/domain/entities/support-ticket.entity';
 import { SupportTicketAnswerRepository } from 'src/support-tickets/domain/repositories/support-ticket-answer.repository';
 import { SupportTicketRepository } from 'src/support-tickets/domain/repositories/support-ticket.repository';
-import { UserRepository } from 'src/shared/repositories/user.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TicketAnsweredEvent } from 'src/support-tickets/domain/events/ticket-answered.event';

@@ -205,4 +205,9 @@ export abstract class DepartmentRepository {
     queryDto?: Omit<DepartmentQueryDto, 'includeSubDepartments'>,
     searchQuery?: string,
   ): Promise<Department[]>;
+
+  abstract validateSubDepartments(
+    parentDepartmentIds: string[],
+    subDepartmentIds: string[],
+  ): Promise<Array<{ id: string; name: string }>>;
 }

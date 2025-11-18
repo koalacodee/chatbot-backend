@@ -18,6 +18,7 @@ import { ProfileModule } from 'src/profile/profile.module';
 import { UserAuthModule } from 'src/auth/user/user.module';
 import { GetSupervisorsSummaryUseCase } from './application/use-cases/get-supervisors-summary.use-case';
 import { DelegateSupervisorUseCase } from './application/use-cases/delegate-supervisor.use-case';
+import { DeleteSupervisorInvitationUseCase } from './application/use-cases/delete-supervisor-invitation.use-case';
 
 @Global()
 @Module({
@@ -39,8 +40,9 @@ import { DelegateSupervisorUseCase } from './application/use-cases/delegate-supe
     SupervisorInvitationService,
     GetSupervisorsSummaryUseCase,
     DelegateSupervisorUseCase,
+    DeleteSupervisorInvitationUseCase,
   ],
   exports: [SupervisorRepository],
   imports: [DepartmentModule, ProfileModule, UserAuthModule],
 })
-export class SupervisorModule {}
+export class SupervisorModule { }

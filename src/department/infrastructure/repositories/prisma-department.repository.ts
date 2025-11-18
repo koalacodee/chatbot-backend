@@ -572,4 +572,38 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
     });
     return depts.map(this.toDomain);
   }
+
+  async validateSubDepartments(
+    parentDepartmentIds: string[],
+    subDepartmentIds: string[]
+  ) {
+    const query = `
+      WITH sub_department_validation AS (
+        SELECT 
+          sd.id,
+          sd.name,
+          sd.parent_id,
+          CASE 
+            WHEN sd.parent_id = ANY($1::uuid[]) THEN TRUE
+            ELSE FALSE
+          END AS belongs_to_parent
+        FROM departments sd
+        WHERE sd.id = ANY($2::uuid[])
+      )
+      SELECT 
+        id,
+        name
+      FROM sub_department_validation
+      WHERE belongs_to_parent = FALSE;
+    `;
+
+    const invalidSubDepartments = await this.prisma.$queryRawUnsafe
+      <Array<{ id: string; name: string }>>(
+        query,
+        `{${parentDepartmentIds.join(',')}}`,
+        `{${subDepartmentIds.join(',')}}`
+      );
+
+    return invalidSubDepartments;
+  }
 }
