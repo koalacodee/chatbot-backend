@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { GoneException, Injectable } from '@nestjs/common';
 import { AttachmentGroupRepository } from '../../domain/repositories/attachment-group.repository';
 import { AttachmentRepository } from 'src/files/domain/repositories/attachment.repository';
 import { Attachment } from 'src/files/domain/entities/attachment.entity';
@@ -18,7 +18,7 @@ export class GetAttachmentGroupByKeyUseCase {
   constructor(
     private readonly attachmentGroupRepository: AttachmentGroupRepository,
     private readonly attachmentRepository: AttachmentRepository,
-  ) {}
+  ) { }
 
   async execute(
     request: GetAttachmentGroupByKeyUseCaseRequest,
@@ -32,6 +32,10 @@ export class GetAttachmentGroupByKeyUseCase {
       throw new Error('Attachment group not found');
     }
 
+    if (attachmentGroup.isExpired()) {
+      throw new GoneException("Attachment group has expired");
+    }
+
     // Add the IP to the list if it doesn't exist
     const updatedAttachmentGroup = AttachmentGroup.create({
       id: attachmentGroup.id,
@@ -41,6 +45,7 @@ export class GetAttachmentGroupByKeyUseCase {
       attachmentIds: attachmentGroup.attachmentIds,
       createdAt: attachmentGroup.createdAt,
       updatedAt: attachmentGroup.updatedAt,
+      expiresAt: attachmentGroup.expiresAt,
     });
 
     updatedAttachmentGroup.addIp(ip);

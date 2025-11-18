@@ -8,6 +8,7 @@ export interface AttachmentGroupOptions {
   attachmentIds?: string[];
   createdAt?: Date;
   updatedAt?: Date;
+  expiresAt?: Date;
 }
 
 export class AttachmentGroup {
@@ -18,6 +19,7 @@ export class AttachmentGroup {
   private _attachmentIds: UUID[];
   private _createdAt: Date;
   private _updatedAt: Date;
+  private _expiresAt: Date;
 
   private constructor(options: AttachmentGroupOptions) {
     this._id = UUID.create(options.id);
@@ -29,6 +31,7 @@ export class AttachmentGroup {
     );
     this._createdAt = options.createdAt || new Date();
     this._updatedAt = options.updatedAt || new Date();
+    this._expiresAt = options.expiresAt;
   }
 
   static create(options: AttachmentGroupOptions): AttachmentGroup {
@@ -83,6 +86,21 @@ export class AttachmentGroup {
     this._updatedAt = value;
   }
 
+  isExpired(referenceDate: Date = new Date()): boolean {
+    return (
+      this._expiresAt &&
+      this._expiresAt.getTime() <= referenceDate.getTime()
+    );
+  }
+
+  get expiresAt(): Date {
+    return this._expiresAt;
+  }
+
+  set expiresAt(value: Date) {
+    this._expiresAt = value;
+  }
+
   toJSON() {
     return {
       id: this._id.value,
@@ -92,6 +110,7 @@ export class AttachmentGroup {
       attachmentIds: this._attachmentIds.map((id) => id.value),
       createdAt: this._createdAt,
       updatedAt: this._updatedAt,
+      expiresAt: this._expiresAt,
     };
   }
 }

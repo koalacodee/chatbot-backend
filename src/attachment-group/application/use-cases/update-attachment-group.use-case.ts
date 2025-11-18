@@ -7,6 +7,7 @@ interface UpdateAttachmentGroupUseCaseRequest {
   groupId: string;
   userId: string;
   attachmentIds: string[];
+  expiresAt?: Date;
 }
 
 interface UpdateAttachmentGroupUseCaseResponse {
@@ -19,12 +20,12 @@ export class UpdateAttachmentGroupUseCase {
     private readonly attachmentGroupRepository: AttachmentGroupRepository,
     private readonly attachmentRepository: AttachmentRepository,
     private readonly notificationService: AttachmentGroupNotificationService,
-  ) {}
+  ) { }
 
   async execute(
     request: UpdateAttachmentGroupUseCaseRequest,
   ): Promise<UpdateAttachmentGroupUseCaseResponse> {
-    const { groupId, userId, attachmentIds } = request;
+    const { groupId, userId, attachmentIds, expiresAt } = request;
 
     // Find the attachment group
     const attachmentGroup =
@@ -63,6 +64,7 @@ export class UpdateAttachmentGroupUseCase {
     // Update the attachment group
     await this.attachmentGroupRepository.update(groupId, {
       attachmentIds,
+      expiresAt,
     });
 
     // Notify subscribers about the update

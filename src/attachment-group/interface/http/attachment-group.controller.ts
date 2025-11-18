@@ -56,6 +56,7 @@ export class AttachmentGroupController {
       const result = await this.createAttachmentGroupUseCase.execute({
         userId,
         attachmentIds: createDto.attachmentIds,
+        expiresAt: createDto.expiresAt,
       });
 
       return {
@@ -137,6 +138,7 @@ export class AttachmentGroupController {
         attachments: attachmentsWithMetadata,
         createdAt: result.createdAt,
         updatedAt: result.updatedAt,
+        expiresAt: result.expiresAt,
       };
     } catch (error) {
       throw new HttpException(
@@ -185,6 +187,7 @@ export class AttachmentGroupController {
         return {
           ...group,
           attachments: attachmentsWithMetadata,
+          expiresAt: group.expiresAt,
         };
       });
 
@@ -222,6 +225,7 @@ export class AttachmentGroupController {
         groupId: id,
         userId,
         attachmentIds: updateDto.attachmentIds,
+        expiresAt: updateDto.expiresAt,
       });
 
       return {

@@ -18,6 +18,7 @@ export class PrismaAttachmentGroupRepository extends AttachmentGroupRepository {
       attachmentIds: record.attachments?.map((a: any) => a.id) || [],
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
+      expiresAt: record.expiresAt
     });
   }
 
@@ -29,6 +30,7 @@ export class PrismaAttachmentGroupRepository extends AttachmentGroupRepository {
       ips: attachmentGroup.ips,
       createdAt: attachmentGroup.createdAt,
       updatedAt: attachmentGroup.updatedAt,
+      expiresAt: attachmentGroup.expiresAt
     };
 
     const attachmentIds = attachmentGroup.attachmentIds;
@@ -42,12 +44,14 @@ export class PrismaAttachmentGroupRepository extends AttachmentGroupRepository {
         attachments: {
           set: attachmentIds.map((id) => ({ id })),
         },
+        expiresAt: data.expiresAt
       },
       create: {
         ...data,
         attachments: {
           connect: attachmentIds.map((id) => ({ id })),
         },
+        expiresAt: data.expiresAt
       },
       include: {
         attachments: true,
@@ -108,13 +112,13 @@ export class PrismaAttachmentGroupRepository extends AttachmentGroupRepository {
 
   async update(
     id: string,
-    update: Partial<Pick<AttachmentGroup, 'key' | 'ips' | 'attachmentIds'>>,
+    update: Partial<Pick<AttachmentGroup, 'key' | 'ips' | 'attachmentIds' | 'expiresAt'>>,
   ): Promise<AttachmentGroup> {
     const data: Record<string, any> = {};
 
     if (update.key !== undefined) data.key = update.key;
     if (update.ips !== undefined) data.ips = update.ips;
-
+    if (update.expiresAt !== undefined) data.expiresAt = update.expiresAt;
     const updateData: any = {
       ...data,
       updatedAt: new Date(),

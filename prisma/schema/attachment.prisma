@@ -32,6 +32,7 @@ model AttachmentGroup {
   ips         String[]     @map("ips") @db.VarChar(255)
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
+  expiresAt   DateTime?    @map("expires_at")
 
   @@index([key])
   @@index([createdById])

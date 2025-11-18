@@ -15,6 +15,7 @@ interface GetAttachmentGroupDetailsUseCaseResponse {
   attachments: Attachment[];
   createdAt: Date;
   updatedAt: Date;
+  expiresAt?: Date;
 }
 
 @Injectable()
@@ -22,7 +23,7 @@ export class GetAttachmentGroupDetailsUseCase {
   constructor(
     private readonly attachmentGroupRepository: AttachmentGroupRepository,
     private readonly attachmentRepository: AttachmentRepository,
-  ) {}
+  ) { }
 
   async execute(
     request: GetAttachmentGroupDetailsUseCaseRequest,
@@ -56,6 +57,7 @@ export class GetAttachmentGroupDetailsUseCase {
       attachments,
       createdAt: attachmentGroup.createdAt,
       updatedAt: attachmentGroup.updatedAt,
+      expiresAt: attachmentGroup.expiresAt,
     };
   }
 }

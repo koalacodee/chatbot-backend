@@ -8,6 +8,7 @@ export class AttachmentGroupResponseDto {
   attachments: Attachment[];
   createdAt: Date;
   updatedAt: Date;
+  expiresAt?: Date;
 }
 
 export class ClientAttachmentGroupResponseDto {
@@ -21,6 +22,7 @@ export class CreatorAttachmentGroupResponseDto {
   attachments: Attachment[];
   createdAt: Date;
   updatedAt: Date;
+  expiresAt?: Date;
 }
 
 export class CreateAttachmentGroupResponseDto {

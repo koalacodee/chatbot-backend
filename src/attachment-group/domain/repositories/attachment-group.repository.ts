@@ -13,6 +13,6 @@ export abstract class AttachmentGroupRepository {
   abstract removeById(id: string): Promise<AttachmentGroup | null>;
   abstract update(
     id: string,
-    update: Partial<Pick<AttachmentGroup, 'key' | 'ips' | 'attachmentIds'>>,
+    update: Partial<Pick<AttachmentGroup, 'key' | 'ips' | 'attachmentIds' | "expiresAt">>,
   ): Promise<AttachmentGroup>;
 }

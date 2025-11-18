@@ -2,11 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { AttachmentGroupRepository } from '../../domain/repositories/attachment-group.repository';
 import { AttachmentGroup } from '../../domain/entities/attachment-group.entity';
 import { AttachmentRepository } from 'src/files/domain/repositories/attachment.repository';
-import { randomBytes, randomInt } from 'crypto';
+import { randomInt } from 'crypto';
 
 interface CreateAttachmentGroupUseCaseRequest {
   userId: string;
   attachmentIds: string[];
+  expiresAt?: Date;
 }
 
 interface CreateAttachmentGroupUseCaseResponse {
@@ -18,12 +19,12 @@ export class CreateAttachmentGroupUseCase {
   constructor(
     private readonly attachmentGroupRepository: AttachmentGroupRepository,
     private readonly attachmentRepository: AttachmentRepository,
-  ) {}
+  ) { }
 
   async execute(
     request: CreateAttachmentGroupUseCaseRequest,
   ): Promise<CreateAttachmentGroupUseCaseResponse> {
-    const { userId, attachmentIds } = request;
+    const { userId, attachmentIds, expiresAt } = request;
 
     // Verify that all attachments exist and belong to the user
     const attachments =
@@ -52,6 +53,7 @@ export class CreateAttachmentGroupUseCase {
       createdById: userId,
       key,
       attachmentIds,
+      expiresAt,
     });
 
     // Save the attachment group

@@ -16,6 +16,7 @@ interface AttachmentGroupWithAttachments {
   attachments: Attachment[];
   createdAt: Date;
   updatedAt: Date;
+  expiresAt?: Date;
 }
 
 interface GetMyAttachmentGroupsUseCaseResponse {
@@ -29,7 +30,7 @@ export class GetMyAttachmentGroupsUseCase {
   constructor(
     private readonly attachmentGroupRepository: AttachmentGroupRepository,
     private readonly attachmentRepository: AttachmentRepository,
-  ) {}
+  ) { }
 
   async execute(
     request: GetMyAttachmentGroupsUseCaseRequest,
@@ -62,6 +63,7 @@ export class GetMyAttachmentGroupsUseCase {
           attachments,
           createdAt: group.createdAt,
           updatedAt: group.updatedAt,
+          expiresAt: group.expiresAt,
         };
       }),
     );
