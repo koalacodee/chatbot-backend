@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import {
   DashboardRepository,
   PerformanceSeriesPoint,
@@ -26,25 +26,34 @@ export class GetWeeklyPerformanceUseCase {
   async execute(
     range: string = '7d',
     userId?: string,
+    departmentId?: string,
   ): Promise<GetWeeklyPerformanceResponseDto> {
     const match = /^([0-9]+)d$/.exec(range);
     const days = match ? parseInt(match[1], 10) : 7;
 
     // Get department IDs for filtering if user is supervisor or employee
-    const departmentIds = userId
-      ? await this.getUserDepartmentIds(userId)
-      : undefined;
+    const departmentIds = await this.getUserDepartmentIds(
+      userId,
+      departmentId,
+    );
 
     const series = await this.repo.getWeeklyPerformance(days, departmentIds);
     return { series };
   }
 
-  private async getUserDepartmentIds(userId: string): Promise<string[] | undefined> {
+  private async getUserDepartmentIds(
+    userId?: string,
+    requestedDepartmentId?: string,
+  ): Promise<string[] | undefined> {
+    if (!userId) {
+      return requestedDepartmentId ? [requestedDepartmentId] : undefined;
+    }
+
     const user = await this.userRepository.findById(userId);
     const role = user.role.getRole();
 
     if (role === Roles.ADMIN) {
-      return undefined; // Admins see all data
+      return requestedDepartmentId ? [requestedDepartmentId] : undefined;
     } else if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
       const mainDepartmentIds = supervisor.departments.map((d) =>
@@ -61,14 +70,35 @@ export class GetWeeklyPerformanceUseCase {
         );
       }
 
-      return allDepartmentIds;
+      if (!requestedDepartmentId) {
+        return allDepartmentIds;
+      }
+
+      if (!allDepartmentIds.includes(requestedDepartmentId)) {
+        throw new ForbiddenException(
+          'You do not have access to the requested department.',
+        );
+      }
+
+      return [requestedDepartmentId];
     } else if (role === Roles.EMPLOYEE) {
       const employee = await this.employeeRepository.findByUserId(userId);
-      return (
+      const accessibleDepartments =
         employee?.subDepartments.map((dep) => dep.id.toString()) ??
         employee?.supervisor?.departments.map((d) => d.id.toString()) ??
-        []
-      );
+        [];
+
+      if (!requestedDepartmentId) {
+        return accessibleDepartments;
+      }
+
+      if (!accessibleDepartments.includes(requestedDepartmentId)) {
+        throw new ForbiddenException(
+          'You do not have access to the requested department.',
+        );
+      }
+
+      return [requestedDepartmentId];
     }
     return [];
   }

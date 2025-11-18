@@ -29,15 +29,19 @@ export class DashboardController {
 
   @Get('summary')
   @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_ANALYTICS)
-  async summary(@Req() req: FastifyRequest & { user?: { id: string } }): Promise<DashboardSummaryResponseDto> {
+  async summary(
+    @Req() req: FastifyRequest & { user?: { id: string } },
+    @Query('departmentId') departmentId?: string,
+  ): Promise<DashboardSummaryResponseDto> {
     const userId = req.user?.id;
-    return this.getSummary.execute(userId);
+    return this.getSummary.execute(userId, departmentId);
   }
 
   @Get('performance')
   @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_ANALYTICS)
   async performance(
     @Query('range') range?: string,
+    @Query('departmentId') departmentId?: string,
     @Req() req?: FastifyRequest & { user?: { id: string } },
   ): Promise<{
     series: Array<{
@@ -48,20 +52,29 @@ export class DashboardController {
     }>;
   }> {
     const userId = req?.user?.id;
-    return this.getWeeklyPerformance.execute(range ?? '7d', userId);
+    return this.getWeeklyPerformance.execute(
+      range ?? '7d',
+      userId,
+      departmentId,
+    );
   }
 
   @Get('analytics-summary')
   @SupervisorPermissions(SupervisorPermissionsEnum.VIEW_ANALYTICS)
   async analyticsSummary(
     @Query('range') range?: string,
+    @Query('departmentId') departmentId?: string,
     @Req() req?: FastifyRequest & { user?: { id: string } },
   ): Promise<{
     kpis: { label: string; value: string }[];
     departmentPerformance: { name: string; score: number }[];
   }> {
     const userId = req?.user?.id;
-    return this.getAnalyticsSummary.execute(range ?? '7d', userId);
+    return this.getAnalyticsSummary.execute(
+      range ?? '7d',
+      userId,
+      departmentId,
+    );
   }
 
   @Get('overview')
@@ -69,6 +82,7 @@ export class DashboardController {
   async overview(
     @Query('range') range?: string,
     @Query('limit') limit?: string,
+    @Query('departmentId') departmentId?: string,
     @Req() req?: FastifyRequest & { user?: { id: string } },
   ): Promise<any> {
     const userId = req?.user?.id;
@@ -76,6 +90,7 @@ export class DashboardController {
       range ?? '7d',
       limit ? parseInt(limit, 10) : 10,
       userId,
+      departmentId,
     );
   }
 

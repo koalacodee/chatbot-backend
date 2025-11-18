@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DashboardRepository } from '../../domain/repositories/dashboard.repository';
 import { ActivityLogRepository } from 'src/activity-log/domain/repositories/activity-log.repository';
 import { EmployeeRequestRepository } from 'src/employee-request/domain/repositories/employee-request.repository';
@@ -18,16 +18,19 @@ export class GetDashboardOverviewUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
     private readonly departmentRepository: DepartmentRepository,
-  ) {}
+  ) { }
 
-  async execute(range: string = '7d', limit: number = 10, userId?: string) {
+  async execute(
+    range: string = '7d',
+    limit: number = 10,
+    userId?: string,
+    departmentId?: string,
+  ) {
     const match = /^([0-9]+)d$/.exec(range);
     const days = match ? parseInt(match[1], 10) : 7;
 
     // Get department IDs for filtering if user is supervisor or employee
-    const departmentIds = userId
-      ? await this.getUserDepartmentIds(userId)
-      : undefined;
+    const departmentIds = await this.getUserDepartmentIds(userId, departmentId);
 
     const [
       summary,
@@ -44,7 +47,7 @@ export class GetDashboardOverviewUseCase {
       this.activityRepo.getRecentActivity(limit),
       this.dashboardRepo.getWeeklyPerformance(days, departmentIds),
       this.dashboardRepo.getAnalyticsSummary(days, departmentIds),
-      this.dashboardRepo.getExpiredAttachments(departmentIds),
+      this.dashboardRepo.getExpiredAttachments(),
     ]);
 
     const pendingRequests = {
@@ -54,9 +57,9 @@ export class GetDashboardOverviewUseCase {
         candidateName: req.newEmployeeFullName ?? null,
         requestedBy: req.requestedBySupervisor?.user
           ? {
-              id: req.requestedBySupervisor.user.id,
-              name: req.requestedBySupervisor.user.name,
-            }
+            id: req.requestedBySupervisor.user.id,
+            name: req.requestedBySupervisor.user.name,
+          }
           : null,
         createdAt: req.createdAt.toISOString(),
       })),
@@ -77,12 +80,19 @@ export class GetDashboardOverviewUseCase {
     };
   }
 
-  private async getUserDepartmentIds(userId: string): Promise<string[] | undefined> {
+  private async getUserDepartmentIds(
+    userId?: string,
+    requestedDepartmentId?: string,
+  ): Promise<string[] | undefined> {
+    if (!userId) {
+      return requestedDepartmentId ? [requestedDepartmentId] : undefined;
+    }
+
     const user = await this.userRepository.findById(userId);
     const role = user.role.getRole();
 
     if (role === Roles.ADMIN) {
-      return undefined; // Admins see all data
+      return requestedDepartmentId ? [requestedDepartmentId] : undefined;
     } else if (role === Roles.SUPERVISOR) {
       const supervisor = await this.supervisorRepository.findByUserId(userId);
       const mainDepartmentIds = supervisor.departments.map((d) =>
@@ -99,14 +109,35 @@ export class GetDashboardOverviewUseCase {
         );
       }
 
-      return allDepartmentIds;
+      if (!requestedDepartmentId) {
+        return allDepartmentIds;
+      }
+
+      if (!allDepartmentIds.includes(requestedDepartmentId)) {
+        throw new ForbiddenException(
+          'You do not have access to the requested department.',
+        );
+      }
+
+      return [requestedDepartmentId];
     } else if (role === Roles.EMPLOYEE) {
       const employee = await this.employeeRepository.findByUserId(userId);
-      return (
+      const accessibleDepartments =
         employee?.subDepartments.map((dep) => dep.id.toString()) ??
         employee?.supervisor?.departments.map((d) => d.id.toString()) ??
-        []
-      );
+        [];
+
+      if (!requestedDepartmentId) {
+        return accessibleDepartments;
+      }
+
+      if (!accessibleDepartments.includes(requestedDepartmentId)) {
+        throw new ForbiddenException(
+          'You do not have access to the requested department.',
+        );
+      }
+
+      return [requestedDepartmentId];
     }
     return [];
   }

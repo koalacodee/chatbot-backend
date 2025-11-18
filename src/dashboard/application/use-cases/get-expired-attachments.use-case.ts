@@ -24,7 +24,7 @@ export class GetExpiredAttachmentsUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
     private readonly departmentRepository: DepartmentRepository,
-  ) {}
+  ) { }
 
   async execute(userId?: string): Promise<ExpiredAttachment[]> {
     // Get department IDs for filtering if user is supervisor or employee
