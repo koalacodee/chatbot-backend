@@ -10,11 +10,12 @@ import { SupervisorModule } from 'src/supervisor/supervisor.module';
 import { EmployeeModule } from 'src/employee/employee.module';
 import { SharedModule } from 'src/shared/shared.module';
 import { DepartmentModule } from 'src/department/department.module';
+import { DrizzleDashboardRepository } from './infrastructure/repositories/drizzle-dashboard.repository';
 
 @Module({
   controllers: [DashboardController],
   providers: [
-    { provide: DashboardRepository, useClass: PrismaDashboardRepository },
+    { provide: DashboardRepository, useClass: DrizzleDashboardRepository },
     ...Object.values(UseCases),
   ],
   exports: [DashboardRepository],
@@ -28,4 +29,4 @@ import { DepartmentModule } from 'src/department/department.module';
     DepartmentModule,
   ],
 })
-export class DashboardModule {}
+export class DashboardModule { }
