@@ -61,6 +61,24 @@ export class DrizzleDashboardRepository extends DashboardRepository {
       ? [...departmentIds, ...childDepartmentIds]
       : [];
 
+    type SummaryRow = {
+      adminCnt: number;
+      employeeCnt: number;
+      supervisorCnt: number;
+      activeTickets: number;
+      completedTickets: number;
+      completedTasksOverall: number;
+      completedTasksDept: number;
+      completedTasksSubDept: number;
+      completedTasksIndiv: number;
+      pendingTasksOverall: number;
+      pendingTasksDept: number;
+      pendingTasksSubDept: number;
+      pendingTasksIndiv: number;
+      faqSat: number;
+      faqDiss: number;
+    };
+
     // Count users by role with filtering rules
     const [adminCountCte, employeeCountCte, supervisorCountCte] =
       this.countFilteredUsers(hasFilter, { rootDepartmentIds: departmentIds, childDepartmentIds });
@@ -91,7 +109,8 @@ export class DrizzleDashboardRepository extends DashboardRepository {
     );
 
     // Combine all CTEs and execute single query
-    const result = await (this.db as any)
+    // Note: Using type assertion to work around TypeScript's complexity limit with multiple CTEs
+    const result = (await (this.db as any)
       .with(
         adminCountCte,
         employeeCountCte,
@@ -161,7 +180,7 @@ export class DrizzleDashboardRepository extends DashboardRepository {
       .fullJoin(pendingTasksCTEs[1], sql`true`)
       .fullJoin(pendingTasksCTEs[2], sql`true`)
       .fullJoin(pendingTasksCTEs[3], sql`true`)
-      .fullJoin(faqSatisfactionCTE, sql`true`) as any;
+      .fullJoin(faqSatisfactionCTE, sql`true`)) as SummaryRow[];
 
     const row = result[0];
 
