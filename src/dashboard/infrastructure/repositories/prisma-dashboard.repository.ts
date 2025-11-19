@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import {
@@ -20,74 +21,173 @@ export class PrismaDashboardRepository extends DashboardRepository {
   }
 
   async getSummary(departmentIds?: string[]): Promise<DashboardSummary> {
-    // Build department filter CTE
-    const deptFilterArray = departmentIds && departmentIds.length > 0
-      ? departmentIds.map(id => `'${id}'::uuid`).join(',')
-      : 'NULL::uuid';
-    const deptFilterCondition = departmentIds && departmentIds.length > 0 ? 'true' : 'false';
+    const departmentArray =
+      departmentIds && departmentIds.length > 0
+        ? Prisma.sql`ARRAY[${Prisma.join(
+          departmentIds.map((id) => Prisma.sql`${id}::uuid`),
+        )}]`
+        : Prisma.sql`ARRAY[]::uuid[]`;
 
-    const query = `WITH dept_filter AS (
-        SELECT unnest(ARRAY[${deptFilterArray}]) AS dept_id
-        WHERE ${deptFilterCondition}
+    const query = Prisma.sql`
+      WITH RECURSIVE requested_departments AS (
+        SELECT unnest(${departmentArray}) AS dept_id
       ),
-      users_cte AS (
-        SELECT COUNT(*)::int AS total_users
-        FROM "users"
+      root_departments AS (
+        SELECT dept_id
+        FROM requested_departments
+        WHERE dept_id IS NOT NULL
+      ),
+      dept_tree AS (
+        SELECT rd.dept_id
+        FROM root_departments rd
+        UNION ALL
+        SELECT d.id
+        FROM departments d
+        JOIN dept_tree dt ON d.parent_id = dt.dept_id
+      ),
+      all_scope AS (
+        SELECT DISTINCT dept_id FROM dept_tree
+        UNION
+        SELECT d.id
+        FROM departments d
+        WHERE NOT EXISTS (SELECT 1 FROM root_departments)
+      ),
+      child_scope AS (
+        SELECT DISTINCT dt.dept_id
+        FROM dept_tree dt
+        WHERE EXISTS (SELECT 1 FROM root_departments)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM root_departments rd
+            WHERE rd.dept_id = dt.dept_id
+          )
+      ),
+      has_filter AS (
+        SELECT EXISTS (SELECT 1 FROM root_departments) AS value
+      ),
+      total_users_cte AS (
+        SELECT
+          (
+            SELECT COUNT(*)::int
+            FROM users u
+            WHERE u.role = 'admin'
+              AND NOT (SELECT value FROM has_filter)
+          )
+          +
+          (
+            SELECT COUNT(DISTINCT u.id)::int
+            FROM users u
+            JOIN employees e ON e.user_id = u.id
+            WHERE u.role = 'employee'
+              AND (
+                NOT (SELECT value FROM has_filter)
+                OR EXISTS (
+                  SELECT 1
+                  FROM employee_sub_departments esd
+                  WHERE esd.employee_id = e.id
+                    AND esd.department_id IN (SELECT dept_id FROM child_scope)
+                )
+              )
+          )
+          +
+          (
+            SELECT COUNT(DISTINCT u.id)::int
+            FROM users u
+            JOIN supervisors s ON s.user_id = u.id
+            WHERE u.role = 'supervisor'
+              AND (
+                NOT (SELECT value FROM has_filter)
+                OR EXISTS (
+                  SELECT 1
+                  FROM "_DepartmentToSupervisor" dts
+                  WHERE dts."B" = s.id
+                    AND dts."A" IN (SELECT dept_id FROM root_departments)
+                )
+              )
+          ) AS total_users
       ),
       active_tickets_cte AS (
         SELECT COUNT(*)::int AS active_tickets
-        FROM "support_tickets" st
-        WHERE status <> 'closed'
-          AND (NOT EXISTS (SELECT 1 FROM dept_filter) OR st.department_id IN (SELECT dept_id FROM dept_filter))
+        FROM support_tickets st
+        WHERE st.status IN ('new', 'seen', 'answered')
+          AND (
+            NOT (SELECT value FROM has_filter)
+            OR st.department_id IN (SELECT dept_id FROM all_scope)
+          )
       ),
       completed_tickets_cte AS (
         SELECT COUNT(*)::int AS completed_tickets
-        FROM "support_tickets" st
-        WHERE status = 'closed'
-          AND (NOT EXISTS (SELECT 1 FROM dept_filter) OR st.department_id IN (SELECT dept_id FROM dept_filter))
+        FROM support_tickets st
+        WHERE st.status = 'closed'
+          AND (
+            NOT (SELECT value FROM has_filter)
+            OR st.department_id IN (SELECT dept_id FROM all_scope)
+          )
       ),
       completed_tasks_cte AS (
         SELECT COUNT(*)::int AS completed_tasks
-        FROM "tasks" t
-        WHERE status = 'completed'
-          AND (NOT EXISTS (SELECT 1 FROM dept_filter) 
-               OR t.target_department_id IN (SELECT dept_id FROM dept_filter)
-               OR t.target_sub_department_id IN (SELECT dept_id FROM dept_filter))
+        FROM tasks t
+        WHERE t.status = 'completed'
+          AND (
+            NOT (SELECT value FROM has_filter)
+            OR (
+              t.target_department_id IN (SELECT dept_id FROM all_scope)
+              OR t.target_sub_department_id IN (SELECT dept_id FROM all_scope)
+            )
+          )
       ),
       pending_tasks_cte AS (
         SELECT COUNT(*)::int AS pending_tasks
-        FROM "tasks" t
-        WHERE status <> 'completed'
-          AND (NOT EXISTS (SELECT 1 FROM dept_filter) 
-               OR t.target_department_id IN (SELECT dept_id FROM dept_filter)
-               OR t.target_sub_department_id IN (SELECT dept_id FROM dept_filter))
+        FROM tasks t
+        WHERE t.status <> 'completed'
+          AND (
+            NOT (SELECT value FROM has_filter)
+            OR (
+              (t.assignment_type = 'department' AND t.target_department_id IN (SELECT dept_id FROM root_departments))
+              OR (t.assignment_type = 'sub_department' AND t.target_sub_department_id IN (SELECT dept_id FROM child_scope))
+              OR (
+                t.assignment_type = 'individual'
+                AND t.assignee_id IS NOT NULL
+                AND EXISTS (
+                  SELECT 1
+                  FROM employee_sub_departments esd
+                  WHERE esd.employee_id = t.assignee_id
+                    AND esd.department_id IN (SELECT dept_id FROM child_scope)
+                )
+              )
+            )
+          )
       ),
       faq_satisfaction_cte AS (
         SELECT COALESCE(
                  ROUND(
-                   100.0 * COALESCE(SUM(satisfaction), 0) /
-                   NULLIF(COALESCE(SUM(satisfaction), 0) + COALESCE(SUM(dissatisfaction), 0), 0)
+                   100.0 * COALESCE(SUM(q.satisfaction), 0) /
+                   NULLIF(COALESCE(SUM(q.satisfaction), 0) + COALESCE(SUM(q.dissatisfaction), 0), 0)
                  ),
                  0
                )::int AS faq_satisfaction
-        FROM "questions" q
-        WHERE (NOT EXISTS (SELECT 1 FROM dept_filter) OR q.department_id IN (SELECT dept_id FROM dept_filter))
+        FROM questions q
+        WHERE (
+          NOT (SELECT value FROM has_filter)
+          OR q.department_id IN (SELECT dept_id FROM all_scope)
+        )
       )
       SELECT
-        u.total_users      AS "totalUsers",
-        at.active_tickets  AS "activeTickets",
-        ct.completed_tasks AS "completedTasks",
+        tu.total_users      AS "totalUsers",
+        at.active_tickets   AS "activeTickets",
+        ct.completed_tasks  AS "completedTasks",
         ctc.completed_tickets AS "completedTickets",
-        pt.pending_tasks   AS "pendingTasks",
+        pt.pending_tasks    AS "pendingTasks",
         fs.faq_satisfaction AS "faqSatisfaction"
-      FROM users_cte u,
+      FROM total_users_cte tu,
            active_tickets_cte at,
-           completed_tickets_cte ctc,
            completed_tasks_cte ct,
+           completed_tickets_cte ctc,
            pending_tasks_cte pt,
-           faq_satisfaction_cte fs;`;
+           faq_satisfaction_cte fs;
+    `;
 
-    const rows = await this.prisma.$queryRawUnsafe<
+    const rows = await this.prisma.$queryRaw<
       Array<{
         totalUsers: number;
         activeTickets: number;
