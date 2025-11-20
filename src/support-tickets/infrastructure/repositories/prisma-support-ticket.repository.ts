@@ -14,7 +14,10 @@ import { User } from 'src/shared/entities/user.entity';
 import { Guest } from 'src/guest/domain/entities/guest.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
 import { SupportTicketInteraction } from 'src/support-tickets/domain/entities/support-ticket-interaction.entity';
-import { SupportTicketStatus as PrismaSupportTicketStatus } from '@prisma/client';
+import {
+  Prisma,
+  SupportTicketStatus as PrismaSupportTicketStatus,
+} from '@prisma/client';
 @Injectable()
 export class PrismaSupportTicketRepository extends SupportTicketRepository {
   constructor(private readonly prisma: PrismaService) {
@@ -110,6 +113,8 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
     departmentIds?: string[],
     start?: Date,
     end?: Date,
+    status?: SupportTicketStatus,
+    search?: string,
   ): Promise<SupportTicket[]> {
     const where: any = {};
     if (departmentIds) {
@@ -120,6 +125,23 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
         ...(start ? { gte: start } : {}),
         ...(end ? { lte: end } : {}),
       };
+    }
+    if (status) {
+      where.status = status;
+    }
+    const normalizedSearch = search?.trim();
+    if (normalizedSearch) {
+      const containsQuery = {
+        contains: normalizedSearch,
+        mode: 'insensitive' as const,
+      };
+      where.OR = [
+        { subject: containsQuery },
+        { description: containsQuery },
+        { guestEmail: containsQuery },
+        { guestName: containsQuery },
+        { guestPhone: containsQuery },
+      ];
     }
 
     const rows = await this.prisma.supportTicket.findMany({
@@ -318,40 +340,77 @@ export class PrismaSupportTicketRepository extends SupportTicketRepository {
     `;
   }
 
-  async getMetrics(departmentIds?: string[]): Promise<SupportTicketMetrics> {
-    let whereClause = '';
+  async getMetrics(
+    departmentIds?: string[],
+    status?: SupportTicketStatus,
+    search?: string,
+  ): Promise<SupportTicketMetrics> {
+    const where: Prisma.SupportTicketWhereInput = {};
+
     if (departmentIds?.length) {
-      // Cast each id to uuid in the SQL query
-      const uuidArray = departmentIds.map((id) => `'${id}'::uuid`).join(',');
-      whereClause = `WHERE st.department_id = ANY(ARRAY[${uuidArray}])`;
+      where.departmentId = { in: departmentIds };
     }
 
-    const query = `
-      SELECT 
-        COUNT(*) as total_tickets,
-        COUNT(CASE WHEN st.status IN ('new', 'seen') THEN 1 END) as pending_tickets,
-        COUNT(CASE WHEN st.status = 'answered' THEN 1 END) as answered_tickets,
-        COUNT(CASE WHEN st.status = 'closed' THEN 1 END) as closed_tickets
-      FROM support_tickets st
-      ${whereClause}
-    `;
+    const normalizedSearch = search?.trim();
+    if (normalizedSearch) {
+      const containsQuery = {
+        contains: normalizedSearch,
+        mode: 'insensitive' as const,
+      };
+      where.OR = [
+        { subject: containsQuery },
+        { description: containsQuery },
+        { guestEmail: containsQuery },
+        { guestName: containsQuery },
+        { guestPhone: containsQuery },
+      ];
+    }
 
-    const result = await this.prisma.$queryRawUnsafe<
-      Array<{
-        total_tickets: bigint;
-        pending_tickets: bigint;
-        answered_tickets: bigint;
-        closed_tickets: bigint;
-      }>
-    >(query);
+    const statusFilter = status
+      ? [status]
+      : [
+        SupportTicketStatus.NEW,
+        SupportTicketStatus.SEEN,
+        SupportTicketStatus.ANSWERED,
+        SupportTicketStatus.CLOSED,
+      ];
 
-    const metrics = result[0];
+    const grouped = await this.prisma.supportTicket.groupBy({
+      by: ['status'],
+      where: {
+        ...where,
+        status: { in: statusFilter },
+      },
+      _count: {
+        status: true,
+      },
+    });
 
-    return {
-      totalTickets: Number(metrics.total_tickets),
-      pendingTickets: Number(metrics.pending_tickets),
-      answeredTickets: Number(metrics.answered_tickets),
-      closedTickets: Number(metrics.closed_tickets),
+    const metrics = {
+      totalTickets: 0,
+      pendingTickets: 0,
+      answeredTickets: 0,
+      closedTickets: 0,
     };
+
+    const pendingStatuses = [
+      SupportTicketStatus.NEW,
+      SupportTicketStatus.SEEN,
+    ];
+
+    for (const row of grouped) {
+      const currentStatus = row.status as SupportTicketStatus;
+      const count = row._count.status;
+      metrics.totalTickets += count;
+      if (pendingStatuses.includes(currentStatus)) {
+        metrics.pendingTickets += count;
+      } else if (currentStatus === SupportTicketStatus.ANSWERED) {
+        metrics.answeredTickets += count;
+      } else if (currentStatus === SupportTicketStatus.CLOSED) {
+        metrics.closedTickets += count;
+      }
+    }
+
+    return metrics;
   }
 }

@@ -32,7 +32,10 @@ import {
 import { CreateSupportTicketWithVerificationUseCase } from '../../application/use-cases/create-support-ticket-with-verification.use-case';
 import { VerifySupportTicketUseCase } from '../../application/use-cases/verify-support-ticket.use-case';
 import { GetEmployeesWithTicketHandlingPermissionsUseCase } from '../../application/use-cases/get-employees-with-ticket-handling-permissions.use-case';
-import { SupportTicket } from '../../domain/entities/support-ticket.entity';
+import {
+  SupportTicket,
+  SupportTicketStatus,
+} from '../../domain/entities/support-ticket.entity';
 import { AnswerSupportTicketDto } from './dto/answer-ticket.use-case';
 import { AnswerTicketUseCase } from 'src/support-tickets/application/use-cases/answer-ticket.use-case';
 import { TrackTicketDto } from './dto/track-ticket.dto';
@@ -176,12 +179,26 @@ export class SupportTicketController {
     @Req() req: any,
     @Query('offset') offset?: string,
     @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('departmentId') departmentId?: string,
+    @Query('search') search?: string,
   ): Promise<{ tickets: SupportTicket[]; metrics: SupportTicketMetrics }> {
-    return this.getAllUseCase.execute(
-      offset ? parseInt(offset, 10) : undefined,
-      limit ? parseInt(limit, 10) : undefined,
-      req.user.id,
-    );
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const normalizedStatus = status
+      ? (SupportTicketStatus[
+        status.toUpperCase() as keyof typeof SupportTicketStatus
+      ] as SupportTicketStatus | undefined)
+      : undefined;
+
+    return this.getAllUseCase.execute({
+      offset: parsedOffset,
+      limit: parsedLimit,
+      userId: req.user.id,
+      status: normalizedStatus,
+      departmentId: departmentId || undefined,
+      search,
+    });
   }
 
   @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)

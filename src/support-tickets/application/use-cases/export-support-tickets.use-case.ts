@@ -51,6 +51,8 @@ export class ExportSupportTicketsUseCase {
           departmentIds,
           startDate,
           endDate,
+          undefined,
+          undefined,
         );
         if (!tickets.length) break;
 

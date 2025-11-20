@@ -1,4 +1,7 @@
-import { SupportTicket } from '../entities/support-ticket.entity';
+import {
+  SupportTicket,
+  SupportTicketStatus,
+} from '../entities/support-ticket.entity';
 
 export interface FrequentTicketSubject {
   subject_original: string; // The exact subject text as written by the user
@@ -23,6 +26,8 @@ export abstract class SupportTicketRepository {
     departmentIds?: string[],
     start?: Date,
     end?: Date,
+    status?: SupportTicketStatus,
+    search?: string,
   ): Promise<SupportTicket[]>;
   abstract removeById(id: string): Promise<SupportTicket | null>;
   abstract exists(id: string): Promise<boolean>;
@@ -57,5 +62,9 @@ export abstract class SupportTicketRepository {
     }[]
   >;
 
-  abstract getMetrics(departmentIds?: string[]): Promise<SupportTicketMetrics>;
+  abstract getMetrics(
+    departmentIds?: string[],
+    status?: SupportTicketStatus,
+    search?: string,
+  ): Promise<SupportTicketMetrics>;
 }
