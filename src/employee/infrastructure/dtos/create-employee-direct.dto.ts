@@ -30,7 +30,7 @@ export class CreateEmployeeDirectDto {
 
   @IsNotEmpty()
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsUUID(undefined, { each: true })
   subDepartmentIds: string[];
 
   @IsOptional()
