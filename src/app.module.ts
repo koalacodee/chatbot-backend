@@ -31,6 +31,7 @@ import { NotificationModule } from './notification/notification.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AttachmentGroupModule } from './attachment-group/attachment-group.module';
 import { TranslationModule } from './translation/translation.module';
+import { DrizzleModule } from './common/drizzle/drizzle.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -52,6 +53,7 @@ import { TranslationModule } from './translation/translation.module';
     SharedModule,
     AuthModule,
     PrismaModule,
+    DrizzleModule,
     RbacModule,
     DepartmentModule,
     QdrantModule,
@@ -80,4 +82,4 @@ import { TranslationModule } from './translation/translation.module';
     TranslationModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }
