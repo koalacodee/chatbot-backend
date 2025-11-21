@@ -1,4 +1,19 @@
-import { Task } from '../entities/task.entity';
+import {
+  Task,
+  TaskPriority,
+  TaskStatus,
+} from '../entities/task.entity';
+
+export interface DepartmentTaskFilters {
+  status?: TaskStatus[];
+  priority?: TaskPriority[];
+  search?: string;
+}
+
+export interface IndividualTaskFilters extends DepartmentTaskFilters {
+  assigneeId?: string;
+  departmentIds?: string[];
+}
 
 export abstract class TaskRepository {
   abstract save(task: Task): Promise<Task>;
@@ -21,12 +36,16 @@ export abstract class TaskRepository {
     assignmentType: string,
     targetId?: string,
   ): Promise<Task[]>;
-  abstract findDepartmentLevelTasks(departmentId?: string): Promise<Task[]>;
+  abstract findDepartmentLevelTasks(
+    departmentId?: string,
+    filters?: DepartmentTaskFilters,
+  ): Promise<Task[]>;
   abstract findSubDepartmentLevelTasks(
     subDepartmentId?: string,
+    filters?: DepartmentTaskFilters,
   ): Promise<Task[]>;
   abstract findSubIndividualsLevelTasks(
-    subDepartmentId?: string,
+    filters?: IndividualTaskFilters,
   ): Promise<Task[]>;
   abstract findTeamTasks(options: {
     employeeId?: string;
@@ -71,19 +90,27 @@ export abstract class TaskRepository {
     completionPercentage: number;
   }>;
 
-  abstract getTaskMetricsForDepartment(departmentId?: string): Promise<{
+  abstract getTaskMetricsForDepartment(
+    departmentId?: string,
+    filters?: DepartmentTaskFilters,
+  ): Promise<{
     pendingCount: number;
     completedCount: number;
     completionPercentage: number;
   }>;
 
-  abstract getTaskMetricsForSubDepartment(subDepartmentId?: string): Promise<{
+  abstract getTaskMetricsForSubDepartment(
+    subDepartmentId?: string,
+    filters?: DepartmentTaskFilters,
+  ): Promise<{
     pendingCount: number;
     completedCount: number;
     completionPercentage: number;
   }>;
 
-  abstract getTaskMetricsForIndividual(assigneeId?: string): Promise<{
+  abstract getTaskMetricsForIndividual(
+    filters?: IndividualTaskFilters,
+  ): Promise<{
     pendingCount: number;
     completedCount: number;
     completionPercentage: number;

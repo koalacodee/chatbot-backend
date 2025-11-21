@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma, TaskStatus as PrismaTaskStatus } from '@prisma/client';
 import { PrismaService } from 'src/common/prisma/prisma.service';
-import { TaskRepository } from '../../domain/repositories/task.repository';
+import {
+  DepartmentTaskFilters,
+  IndividualTaskFilters,
+  TaskRepository,
+} from '../../domain/repositories/task.repository';
 import {
   Task,
   TaskAssignmentType,
   TaskPriority,
+  TaskStatus,
 } from '../../domain/entities/task.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
@@ -302,12 +308,11 @@ export class PrismaTaskRepository extends TaskRepository {
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
 
-  async findDepartmentLevelTasks(departmentId?: string): Promise<Task[]> {
-    const whereClause: any = { assignmentType: 'DEPARTMENT' };
-
-    if (departmentId) {
-      whereClause.targetDepartmentId = departmentId;
-    }
+  async findDepartmentLevelTasks(
+    departmentId?: string,
+    filters?: DepartmentTaskFilters,
+  ): Promise<Task[]> {
+    const whereClause = this.buildDepartmentTaskWhere(departmentId, filters);
 
     const rows = await this.prisma.task.findMany({
       where: whereClause,
@@ -321,12 +326,14 @@ export class PrismaTaskRepository extends TaskRepository {
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
 
-  async findSubDepartmentLevelTasks(subDepartmentId?: string): Promise<Task[]> {
-    const whereClause: any = { assignmentType: 'SUB_DEPARTMENT' };
-
-    if (subDepartmentId) {
-      whereClause.targetSubDepartmentId = subDepartmentId;
-    }
+  async findSubDepartmentLevelTasks(
+    subDepartmentId?: string,
+    filters?: DepartmentTaskFilters,
+  ): Promise<Task[]> {
+    const whereClause = this.buildSubDepartmentTaskWhere(
+      subDepartmentId,
+      filters,
+    );
 
     const rows = await this.prisma.task.findMany({
       where: whereClause,
@@ -340,17 +347,15 @@ export class PrismaTaskRepository extends TaskRepository {
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
 
-  async findSubIndividualsLevelTasks(individualId?: string): Promise<Task[]> {
-    const whereClause: any = { assignmentType: 'INDIVIDUAL' };
-
-    if (individualId) {
-      whereClause.assigneeId = individualId;
-    }
+  async findSubIndividualsLevelTasks(
+    filters?: IndividualTaskFilters,
+  ): Promise<Task[]> {
+    const whereClause = this.buildIndividualTaskWhere(filters);
 
     const rows = await this.prisma.task.findMany({
       where: whereClause,
       include: {
-        assignee: { include: { user: true } },
+        assignee: { include: { user: true, subDepartments: true } },
         assignerAdmin: true,
         assignerSupervisor: true,
       },
@@ -564,61 +569,69 @@ export class PrismaTaskRepository extends TaskRepository {
     );
   }
 
-  async getTaskMetricsForDepartment(departmentId?: string): Promise<{
+  async getTaskMetricsForDepartment(
+    departmentId?: string,
+    filters?: DepartmentTaskFilters,
+  ): Promise<{
     pendingCount: number;
     completedCount: number;
     completionPercentage: number;
   }> {
-    if (!departmentId) {
-      return this.executeMetricsQueryWithoutParameters(
-        `t.assignment_type = 'department'`,
-      );
-    }
+    const whereClause = this.buildDepartmentTaskWhere(departmentId, filters);
 
-    return this.executeMetricsQuery(
-      `t.assignment_type = 'department' AND t.target_department_id = '${departmentId}'::uuid`,
-      [departmentId],
-      'department_tasks',
-      'department_id',
-    );
+    const grouped = await this.prisma.task.groupBy({
+      by: ['status'],
+      where: whereClause,
+      _count: {
+        status: true,
+      },
+    });
+
+    return this.computeTaskMetrics(grouped);
   }
 
-  async getTaskMetricsForSubDepartment(subDepartmentId?: string): Promise<{
+  async getTaskMetricsForSubDepartment(
+    subDepartmentId?: string,
+    filters?: DepartmentTaskFilters,
+  ): Promise<{
     pendingCount: number;
     completedCount: number;
     completionPercentage: number;
   }> {
-    if (!subDepartmentId) {
-      return this.executeMetricsQueryWithoutParameters(
-        `t.assignment_type = 'sub_department'`,
-      );
-    }
-
-    return this.executeMetricsQuery(
-      `t.assignment_type = 'sub_department' AND t.target_sub_department_id = '${subDepartmentId}'::uuid`,
-      [subDepartmentId],
-      'sub_department_tasks',
-      'sub_department_id',
+    const whereClause = this.buildSubDepartmentTaskWhere(
+      subDepartmentId,
+      filters,
     );
+
+    const grouped = await this.prisma.task.groupBy({
+      by: ['status'],
+      where: whereClause,
+      _count: {
+        status: true,
+      },
+    });
+
+    return this.computeTaskMetrics(grouped);
   }
 
-  async getTaskMetricsForIndividual(assigneeId?: string): Promise<{
+  async getTaskMetricsForIndividual(
+    filters?: IndividualTaskFilters,
+  ): Promise<{
     pendingCount: number;
     completedCount: number;
     completionPercentage: number;
   }> {
-    if (!assigneeId) {
-      return this.executeMetricsQueryWithoutParameters(
-        `t.assignment_type = 'individual'`,
-      );
-    }
+    const whereClause = this.buildIndividualTaskWhere(filters);
 
-    return this.executeMetricsQuery(
-      `t.assignment_type = 'individual' AND t.assignee_id = '${assigneeId}'::uuid`,
-      [assigneeId],
-      'individual_tasks',
-      'assignee_id',
-    );
+    const grouped = await this.prisma.task.groupBy({
+      by: ['status'],
+      where: whereClause,
+      _count: {
+        status: true,
+      },
+    });
+
+    return this.computeTaskMetrics(grouped);
   }
 
   private async executeMetricsQueryWithoutParameters(
@@ -746,5 +759,147 @@ export class PrismaTaskRepository extends TaskRepository {
     if (!row) return null;
 
     return this.toDomain(row);
+  }
+
+  private buildDepartmentTaskWhere(
+    departmentId?: string,
+    filters?: DepartmentTaskFilters,
+  ): Prisma.TaskWhereInput {
+    const baseWhere: Prisma.TaskWhereInput = {
+      assignmentType: TaskAssignmentType.DEPARTMENT,
+    };
+
+    if (departmentId) {
+      baseWhere.targetDepartmentId = departmentId;
+    }
+
+    return this.applyTaskFilters(baseWhere, filters);
+  }
+
+  private buildSubDepartmentTaskWhere(
+    subDepartmentId?: string,
+    filters?: DepartmentTaskFilters,
+  ): Prisma.TaskWhereInput {
+    const baseWhere: Prisma.TaskWhereInput = {
+      assignmentType: TaskAssignmentType.SUB_DEPARTMENT,
+    };
+
+    if (subDepartmentId) {
+      baseWhere.targetSubDepartmentId = subDepartmentId;
+    }
+
+    return this.applyTaskFilters(baseWhere, filters);
+  }
+
+  private buildIndividualTaskWhere(
+    filters?: IndividualTaskFilters,
+  ): Prisma.TaskWhereInput {
+    const baseWhere: Prisma.TaskWhereInput = {
+      assignmentType: TaskAssignmentType.INDIVIDUAL,
+    };
+
+    if (filters?.assigneeId) {
+      baseWhere.assigneeId = filters.assigneeId;
+    }
+
+    const whereClause = this.applyTaskFilters(baseWhere, filters);
+
+    if (filters?.departmentIds?.length) {
+      const existingAssigneeFilter =
+        (whereClause.assignee as Record<string, any>) ?? {};
+      whereClause.assignee = {
+        ...existingAssigneeFilter,
+        is: {
+          ...(existingAssigneeFilter.is ?? {}),
+          subDepartments: {
+            some: {
+              departmentId: { in: filters.departmentIds },
+            },
+          },
+        },
+      };
+    }
+
+    return whereClause;
+  }
+
+  private applyTaskFilters(
+    baseWhere: Prisma.TaskWhereInput,
+    filters?: DepartmentTaskFilters,
+  ): Prisma.TaskWhereInput {
+    const whereClause: Prisma.TaskWhereInput = { ...baseWhere };
+
+    if (filters?.status?.length) {
+      whereClause.status = { in: filters.status };
+    }
+
+    if (filters?.priority?.length) {
+      whereClause.priority = { in: filters.priority };
+    }
+
+    const search = filters?.search?.trim();
+    if (search) {
+      const existingAnd = Array.isArray(whereClause.AND)
+        ? whereClause.AND
+        : whereClause.AND
+          ? [whereClause.AND]
+          : [];
+      whereClause.AND = [
+        ...existingAnd,
+        {
+          OR: [
+            { title: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
+
+    return whereClause;
+  }
+
+  private computeTaskMetrics(
+    grouped: Array<{
+      status: TaskStatus | PrismaTaskStatus;
+      _count: { status: number };
+    }>,
+  ): {
+    pendingCount: number;
+    completedCount: number;
+    completionPercentage: number;
+  } {
+    const pendingStatuses = new Set<TaskStatus>([
+      TaskStatus.TODO,
+      TaskStatus.SEEN,
+      TaskStatus.PENDING_REVIEW,
+    ]);
+
+    let pendingCount = 0;
+    let completedCount = 0;
+
+    for (const row of grouped) {
+      const count = row._count.status;
+      const normalizedStatus =
+        typeof row.status === 'string'
+          ? (TaskStatus[row.status as keyof typeof TaskStatus] ??
+            (row.status as TaskStatus))
+          : (row.status as TaskStatus);
+
+      if (pendingStatuses.has(normalizedStatus)) {
+        pendingCount += count;
+      } else if (normalizedStatus === TaskStatus.COMPLETED) {
+        completedCount += count;
+      }
+    }
+
+    const total = pendingCount + completedCount;
+    const completionPercentage =
+      total > 0 ? Math.round((completedCount / total) * 100) : 0;
+
+    return {
+      pendingCount,
+      completedCount,
+      completionPercentage,
+    };
   }
 }

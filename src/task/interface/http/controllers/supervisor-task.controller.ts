@@ -15,6 +15,10 @@ import {
 import { GetSubDepartmentTasksUseCase } from '../../../application/use-cases/get-sub-department-tasks.use-case';
 import { GetIndividualLevelTasksUseCase } from '../../../application/use-cases/get-individual-level-tasks.use-case';
 import { GetTasksByRoleDto } from '../dto/get-tasks-by-role.dto';
+import {
+  TaskPriority,
+  TaskStatus,
+} from '../../../domain/entities/task.entity';
 import { SupervisorPermissions } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 
@@ -25,7 +29,7 @@ export class SupervisorTaskController {
   constructor(
     private readonly getSubDepartmentTasksUseCase: GetSubDepartmentTasksUseCase,
     private readonly getIndividualLevelTasksUseCase: GetIndividualLevelTasksUseCase,
-  ) {}
+  ) { }
 
   @Get('sub-department')
   @HttpCode(HttpStatus.OK)
@@ -42,6 +46,9 @@ export class SupervisorTaskController {
   async getSubDepartmentTasks(@Query() query: GetTasksByRoleDto) {
     const result = await this.getSubDepartmentTasksUseCase.execute({
       subDepartmentId: query.subDepartmentId,
+      status: this.normalizeStatusQuery(query.status),
+      priority: this.normalizePriorityQuery(query.priority),
+      search: query.search,
     });
 
     return {
@@ -69,6 +76,10 @@ export class SupervisorTaskController {
   async getEmployeeLevelTasks(@Query() query: GetTasksByRoleDto) {
     const result = await this.getIndividualLevelTasksUseCase.execute({
       assigneeId: query.assigneeId,
+      departmentId: query.departmentId,
+      status: this.normalizeStatusQuery(query.status),
+      priority: this.normalizePriorityQuery(query.priority),
+      search: query.search,
     });
 
     return {
@@ -77,5 +88,40 @@ export class SupervisorTaskController {
       metrics: result.metrics,
       attachments: result.attachments,
     };
+  }
+
+  private toArray<T>(value?: T | T[]): T[] | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+    return Array.isArray(value) ? value : [value];
+  }
+
+  private normalizeStatusQuery(
+    value?: TaskStatus | TaskStatus[] | string | string[],
+  ): TaskStatus[] | undefined {
+    const arr = this.toArray(value as any);
+    if (!arr?.length) return undefined;
+    return arr
+      .map((entry) => {
+        if (!entry) return undefined;
+        const key = entry.toString().toUpperCase() as keyof typeof TaskStatus;
+        return TaskStatus[key];
+      })
+      .filter((entry): entry is TaskStatus => Boolean(entry));
+  }
+
+  private normalizePriorityQuery(
+    value?: TaskPriority | TaskPriority[] | string | string[],
+  ): TaskPriority[] | undefined {
+    const arr = this.toArray(value as any);
+    if (!arr?.length) return undefined;
+    return arr
+      .map((entry) => {
+        if (!entry) return undefined;
+        const key = entry.toString().toUpperCase() as keyof typeof TaskPriority;
+        return TaskPriority[key];
+      })
+      .filter((entry): entry is TaskPriority => Boolean(entry));
   }
 }
