@@ -9,6 +9,7 @@ import {
   HttpStatus,
   Query,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { createReadStream, existsSync } from 'fs';
@@ -16,6 +17,8 @@ import { UploadProfilePictureUseCase } from '../../application/use-cases/upload-
 import { GetProfilePictureByTokenUseCase } from '../../application/use-cases/get-profile-picture-by-token.use-case';
 
 import { ProfileUploadGuard } from 'src/profile/infrastructure/guards/profile-upload.guard';
+import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
+import { GenerateProfilePictureUploadKeyUseCase } from 'src/profile/application/use-cases/generate-profile-picture-upload-key.use-case';
 
 // Type for multipart parts
 type MultipartPart = {
@@ -26,14 +29,38 @@ type MultipartPart = {
   mimetype?: string;
 };
 
-interface UploadProfilePictureQuery {}
+interface UploadProfilePictureQuery { }
 
 @Controller('profile/pictures')
 export class ProfilePictureController {
   constructor(
     private readonly uploadProfilePictureUseCase: UploadProfilePictureUseCase,
     private readonly getProfilePictureByTokenUseCase: GetProfilePictureByTokenUseCase,
-  ) {}
+    private readonly generateProfilePictureUploadKeyUseCase: GenerateProfilePictureUploadKeyUseCase,
+  ) { }
+
+  @Post("generate-upload-key")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(UserJwtAuthGuard)
+  async generateUploadKey(@Req() req: any) {
+    const userId = req.user.id;
+    if (!userId) {
+      throw new BadRequestException({
+        details: [
+          { field: 'userId', message: 'User ID not found in request' },
+        ],
+      });
+    }
+
+    const result = await this.generateProfilePictureUploadKeyUseCase.execute({
+      userId,
+    });
+
+    return {
+      uploadKey: result.uploadKey,
+      expiresAt: result.expiresAt,
+    };
+  }
 
   @Post('upload')
   @HttpCode(HttpStatus.OK)
