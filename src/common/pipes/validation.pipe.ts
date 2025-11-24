@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Logger,
   ValidationPipe as NestValidationPipe,
 } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
@@ -34,6 +35,8 @@ export class ValidationPipe extends NestValidationPipe {
         };
 
         buildErrorTree(errors);
+
+        Logger.error('Validation errors', { details });
 
         return new BadRequestException({ details });
       },

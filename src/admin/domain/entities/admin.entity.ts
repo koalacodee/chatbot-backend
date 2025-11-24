@@ -6,7 +6,7 @@ import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
 import { Task } from 'src/task/domain/entities/task.entity';
 
-interface AdminProps {
+export interface AdminProps {
   id?: string;
   userId: string;
   user?: User;

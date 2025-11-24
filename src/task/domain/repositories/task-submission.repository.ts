@@ -1,4 +1,28 @@
-import { TaskSubmission } from '../entities/task-submission.entity';
+import { AdminProps } from 'src/admin/domain/entities/admin.entity';
+import {
+  TaskSubmission,
+  TaskSubmissionStatus,
+} from '../entities/task-submission.entity';
+import { SupervisorOptions } from 'src/supervisor/domain/entities/supervisor.entity';
+import { EmployeeProps } from 'src/employee/domain/entities/employee.entity';
+
+export interface ToDomainRow {
+  taskId: string;
+  performerAdminId?: string;
+  performerAdmin?: AdminProps;
+  performerSupervisorId?: string;
+  performerSupervisor?: SupervisorOptions;
+  performerEmployeeId?: string;
+  performerEmployee?: Omit<EmployeeProps, 'user'> & { user: any };
+  reviewedByAdmin?: AdminProps;
+  reviewedBySupervisor?: SupervisorOptions;
+  id: string;
+  notes?: string;
+  feedback?: string;
+  status: TaskSubmissionStatus;
+  submittedAt: Date;
+  reviewedAt?: Date;
+}
 
 export abstract class TaskSubmissionRepository {
   abstract save(taskSubmission: TaskSubmission): Promise<TaskSubmission>;
@@ -9,4 +33,5 @@ export abstract class TaskSubmissionRepository {
   abstract findAll(): Promise<TaskSubmission[]>;
   abstract delete(id: string): Promise<void>;
   abstract findByTaskIds(taskIds: string[]): Promise<TaskSubmission[]>;
+  abstract toDomain(row: ToDomainRow): Promise<TaskSubmission>;
 }

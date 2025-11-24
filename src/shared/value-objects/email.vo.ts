@@ -5,12 +5,6 @@ export class Email {
   private constructor(private readonly value: string) {}
 
   static create(value: string): Email {
-    if (!isEmail(value)) {
-      throw new BadRequestException({
-        details: [{ field: 'email', message: 'Email is invalid' }],
-      });
-    }
-
     return new Email(value);
   }
 

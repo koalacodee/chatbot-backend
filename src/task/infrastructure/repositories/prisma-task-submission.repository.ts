@@ -6,9 +6,9 @@ import {
 } from '../../domain/entities/task-submission.entity';
 import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
-import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { PrismaService } from 'src/common/prisma/prisma.service';
+import { ToDomainRow } from '../../domain/repositories/task-submission.repository';
 
 @Injectable()
 export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
@@ -19,9 +19,7 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
     super();
   }
 
-  private async toDomain(row: any): Promise<TaskSubmission> {
-    console.log(row);
-
+  async toDomain(row: ToDomainRow): Promise<TaskSubmission> {
     const task = await this.taskRepository.findById(row.taskId);
     if (!task) {
       throw new Error(`Task with id ${row.taskId} not found`);
@@ -30,24 +28,20 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
     // Determine performer type and ID
     let performerId: string;
     let performerType: 'admin' | 'supervisor' | 'employee';
-    let performer: Admin | Supervisor | Employee | undefined;
     let performerName: string | undefined;
 
     if (row.performerAdminId && row.performerAdmin) {
       performerId = row.performerAdminId;
       performerType = 'admin';
-      performer = Admin.create(row.performerAdmin);
-      performerName = row.performerAdmin.user.name;
+      performerName = row.performerAdmin?.user?.name;
     } else if (row.performerSupervisorId && row.performerSupervisor) {
       performerId = row.performerSupervisorId;
       performerType = 'supervisor';
-      // performer = Supervisor.create(row.performerSupervisor);
-      performerName = row.performerSupervisor.user.name;
+      performerName = row.performerSupervisor?.user?.name;
     } else if (row.performerEmployeeId && row.performerEmployee) {
       performerId = row.performerEmployeeId;
       performerType = 'employee';
-      performer = await Employee.create(row.performerEmployee);
-      performerName = row.performerEmployee.user.name;
+      performerName = row.performerEmployee?.user?.name;
     } else {
       // Fallback to ID only if relation is not loaded
       if (row.performerAdminId) {
@@ -77,7 +71,6 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
       task,
       performerId,
       performerType,
-      performer,
       performerName,
       notes: row.notes ?? undefined,
       feedback: row.feedback ?? undefined,
@@ -143,43 +136,98 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
       create: data,
     });
 
-    return this.toDomain(upsert);
+    return this.toDomain({
+      id: upsert.id,
+      taskId: upsert.taskId,
+      performerAdminId: upsert.performerAdminId,
+      performerSupervisorId: upsert.performerSupervisorId,
+      performerEmployeeId: upsert.performerEmployeeId,
+      notes: upsert.notes,
+      feedback: upsert.feedback,
+      status: upsert.status as TaskSubmissionStatus,
+      submittedAt: upsert.submittedAt,
+      reviewedAt: upsert.reviewedAt ?? undefined,
+    });
   }
 
   async findById(id: string): Promise<TaskSubmission | null> {
     const row = await this.prisma.taskSubmission.findUnique({
       where: { id },
       include: {
-        performerAdmin: true,
-        performerSupervisor: {
-          select: { user: { select: { name: true } } },
+        performerAdmin: {
+          select: { user: { select: { name: true } }, userId: true },
         },
-        performerEmployee: true,
+        performerSupervisor: {
+          select: { user: { select: { name: true } }, userId: true },
+        },
+        performerEmployee: {
+          select: { user: { select: { name: true } }, userId: true },
+        },
         reviewedByAdmin: true,
         reviewedBySupervisor: true,
       },
     });
 
     if (!row) return null;
-    return this.toDomain(row);
+    return this.toDomain({
+      id: row.id,
+      taskId: row.taskId,
+      performerAdminId: row.performerAdminId,
+      performerSupervisorId: row.performerSupervisorId,
+      performerEmployeeId: row.performerEmployeeId,
+      performerEmployee: row.performerEmployee as any,
+      performerAdmin: row.performerAdmin as any,
+      performerSupervisor: row.performerSupervisor as any,
+      notes: row.notes,
+      feedback: row.feedback,
+      status: row.status as TaskSubmissionStatus,
+      submittedAt: row.submittedAt,
+      reviewedAt: row.reviewedAt ?? undefined,
+      reviewedByAdmin: row.reviewedByAdmin,
+      reviewedBySupervisor: row.reviewedBySupervisor as any,
+    });
   }
 
   async findByTaskId(taskId: string): Promise<TaskSubmission[]> {
     const rows = await this.prisma.taskSubmission.findMany({
       where: { taskId },
       include: {
-        performerAdmin: true,
+        performerAdmin: {
+          select: { user: { select: { name: true } } },
+        },
         performerSupervisor: {
           select: { user: { select: { name: true } } },
         },
-        performerEmployee: true,
+        performerEmployee: {
+          select: { user: { select: { name: true } } },
+        },
         reviewedByAdmin: true,
         reviewedBySupervisor: true,
       },
       orderBy: { submittedAt: 'desc' },
     });
 
-    return Promise.all(rows.map((row) => this.toDomain(row)));
+    return Promise.all(
+      rows.map((row) =>
+        this.toDomain({
+          id: row.id,
+          taskId: row.taskId,
+          performerAdminId: row.performerAdminId,
+          performerSupervisorId: row.performerSupervisorId,
+          performerEmployeeId: row.performerEmployeeId,
+          performerEmployee: row.performerEmployee as any,
+          performerAdmin: row.performerAdmin as any,
+          performerSupervisor: row.performerSupervisor as any,
+          notes: row.notes,
+          feedback: row.feedback,
+          status: row.status as TaskSubmissionStatus,
+          submittedAt: row.submittedAt,
+          reviewedAt: row.reviewedAt ?? undefined,
+          reviewedByAdmin: row.reviewedByAdmin,
+          reviewedBySupervisor: row.reviewedBySupervisor as any,
+        }),
+      ),
+    );
   }
 
   async findByPerformerId(performerId: string): Promise<TaskSubmission[]> {
@@ -192,50 +240,122 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
         ],
       },
       include: {
-        performerAdmin: true,
+        performerAdmin: {
+          select: { user: { select: { name: true } } },
+        },
         performerSupervisor: {
           select: { user: { select: { name: true } } },
         },
-        performerEmployee: true,
+        performerEmployee: {
+          select: { user: { select: { name: true } } },
+        },
         reviewedByAdmin: true,
         reviewedBySupervisor: true,
       },
     });
 
-    return Promise.all(rows.map((row) => this.toDomain(row)));
+    return Promise.all(
+      rows.map((row) =>
+        this.toDomain({
+          id: row.id,
+          taskId: row.taskId,
+          performerAdminId: row.performerAdminId,
+          performerSupervisorId: row.performerSupervisorId,
+          performerEmployeeId: row.performerEmployeeId,
+          performerEmployee: row.performerEmployee as any,
+          performerAdmin: row.performerAdmin as any,
+          performerSupervisor: row.performerSupervisor as any,
+          notes: row.notes,
+          feedback: row.feedback,
+          status: row.status as TaskSubmissionStatus,
+          submittedAt: row.submittedAt,
+          reviewedAt: row.reviewedAt ?? undefined,
+          reviewedByAdmin: row.reviewedByAdmin,
+          reviewedBySupervisor: row.reviewedBySupervisor as any,
+        }),
+      ),
+    );
   }
 
   async findByStatus(status: string): Promise<TaskSubmission[]> {
     const rows = await this.prisma.taskSubmission.findMany({
       where: { status: status as TaskSubmissionStatus },
       include: {
-        performerAdmin: true,
+        performerAdmin: {
+          select: { user: { select: { name: true } } },
+        },
         performerSupervisor: {
           select: { user: { select: { name: true } } },
         },
-        performerEmployee: true,
+        performerEmployee: {
+          select: { user: { select: { name: true } } },
+        },
         reviewedByAdmin: true,
         reviewedBySupervisor: true,
       },
     });
 
-    return Promise.all(rows.map((row) => this.toDomain(row)));
+    return Promise.all(
+      rows.map((row) =>
+        this.toDomain({
+          id: row.id,
+          taskId: row.taskId,
+          performerAdminId: row.performerAdminId,
+          performerSupervisorId: row.performerSupervisorId,
+          performerEmployeeId: row.performerEmployeeId,
+          performerEmployee: row.performerEmployee as any,
+          performerAdmin: row.performerAdmin as any,
+          performerSupervisor: row.performerSupervisor as any,
+          notes: row.notes,
+          feedback: row.feedback,
+          status: row.status as TaskSubmissionStatus,
+          submittedAt: row.submittedAt,
+          reviewedAt: row.reviewedAt ?? undefined,
+          reviewedByAdmin: row.reviewedByAdmin,
+          reviewedBySupervisor: row.reviewedBySupervisor as any,
+        }),
+      ),
+    );
   }
 
   async findAll(): Promise<TaskSubmission[]> {
     const rows = await this.prisma.taskSubmission.findMany({
       include: {
-        performerAdmin: true,
+        performerAdmin: {
+          select: { user: { select: { name: true } } },
+        },
         performerSupervisor: {
           select: { user: { select: { name: true } } },
         },
-        performerEmployee: true,
+        performerEmployee: {
+          select: { user: { select: { name: true } } },
+        },
         reviewedByAdmin: true,
         reviewedBySupervisor: true,
       },
     });
 
-    return Promise.all(rows.map((row) => this.toDomain(row)));
+    return Promise.all(
+      rows.map((row) =>
+        this.toDomain({
+          id: row.id,
+          taskId: row.taskId,
+          performerAdminId: row.performerAdminId,
+          performerSupervisorId: row.performerSupervisorId,
+          performerEmployeeId: row.performerEmployeeId,
+          performerEmployee: row.performerEmployee as any,
+          performerAdmin: row.performerAdmin as any,
+          performerSupervisor: row.performerSupervisor as any,
+          notes: row.notes,
+          feedback: row.feedback,
+          status: row.status as TaskSubmissionStatus,
+          submittedAt: row.submittedAt,
+          reviewedAt: row.reviewedAt ?? undefined,
+          reviewedByAdmin: row.reviewedByAdmin,
+          reviewedBySupervisor: row.reviewedBySupervisor as any,
+        }),
+      ),
+    );
   }
 
   async delete(id: string): Promise<void> {
@@ -248,16 +368,40 @@ export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
     const rows = await this.prisma.taskSubmission.findMany({
       where: { taskId: { in: taskIds } },
       include: {
-        performerAdmin: true,
+        performerAdmin: {
+          select: { user: { select: { name: true } } },
+        },
         performerSupervisor: {
           select: { user: { select: { name: true } } },
         },
-        performerEmployee: true,
+        performerEmployee: {
+          select: { user: { select: { name: true } } },
+        },
         reviewedByAdmin: true,
         reviewedBySupervisor: true,
       },
     });
 
-    return Promise.all(rows.map((row) => this.toDomain(row)));
+    return Promise.all(
+      rows.map((row) =>
+        this.toDomain({
+          id: row.id,
+          taskId: row.taskId,
+          performerAdminId: row.performerAdminId,
+          performerSupervisorId: row.performerSupervisorId,
+          performerEmployeeId: row.performerEmployeeId,
+          performerEmployee: row.performerEmployee as any,
+          performerAdmin: row.performerAdmin as any,
+          performerSupervisor: row.performerSupervisor as any,
+          notes: row.notes,
+          feedback: row.feedback,
+          status: row.status as TaskSubmissionStatus,
+          submittedAt: row.submittedAt,
+          reviewedAt: row.reviewedAt ?? undefined,
+          reviewedByAdmin: row.reviewedByAdmin,
+          reviewedBySupervisor: row.reviewedBySupervisor as any,
+        }),
+      ),
+    );
   }
 }

@@ -38,18 +38,12 @@ export class GetIndividualLevelTasksUseCase {
     private readonly taskSubmissionRepo: TaskSubmissionRepository,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
     private readonly departmentRepository: DepartmentRepository,
-  ) { }
+  ) {}
 
   async execute(
     input: GetIndividualLevelTasksInput,
   ): Promise<IndividualLevelTasksResult> {
-    const {
-      assigneeId,
-      departmentId,
-      status,
-      priority,
-      search,
-    } = input;
+    const { assigneeId, departmentId, status, priority, search } = input;
 
     const normalizedSearch = search?.trim() || undefined;
 
@@ -72,19 +66,16 @@ export class GetIndividualLevelTasksUseCase {
     const tasks = await this.taskRepo.findSubIndividualsLevelTasks(filters);
 
     // Get attachments and submissions for all tasks
-    const [attachments, submissions] = await Promise.all([
+    const [attachments] = await Promise.all([
       this.getAttachmentsUseCase.execute({
         targetIds: tasks.map((task) => task.id.toString()),
       }),
-      this.taskSubmissionRepo.findByTaskIds(
-        tasks.map((task) => task.id.toString()),
-      ),
     ]);
 
     // Get metrics for individual-level tasks
     const metrics = await this.taskRepo.getTaskMetricsForIndividual(filters);
 
-    return { tasks, submissions, attachments, metrics };
+    return { tasks, attachments, metrics } as any;
   }
 
   private async getDepartmentWithChildren(

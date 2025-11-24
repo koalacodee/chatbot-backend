@@ -17,21 +17,21 @@ export enum SupervisorPermissionsEnum {
   MANAGE_ATTACHMENT_GROUPS = 'MANAGE_ATTACHMENT_GROUPS',
 }
 
-interface SupervisorOptions {
+export interface SupervisorOptions {
   id: string;
   userId: string;
   user?: User;
   permissions: SupervisorPermissionsEnum[];
-  departments: Department[];
-  assignedTasks: Task[];
-  employeeRequests: EmployeeRequest[];
-  promotions: Promotion[];
-  approvedTasks: Task[];
-  questions: Question[];
-  supportTicketAnswersAuthored: SupportTicketAnswer[];
-  performedTasks: Task[];
-  createdAt: Date;
-  updatedAt: Date;
+  departments?: Department[];
+  assignedTasks?: Task[];
+  employeeRequests?: EmployeeRequest[];
+  promotions?: Promotion[];
+  approvedTasks?: Task[];
+  questions?: Question[];
+  supportTicketAnswersAuthored?: SupportTicketAnswer[];
+  performedTasks?: Task[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export class Supervisor {
@@ -56,16 +56,17 @@ export class Supervisor {
     this._userId = UUID.create(options.userId);
     this._user = options.user;
     this._permissions = options.permissions;
-    this._departments = options.departments;
-    this._assignedTasks = options.assignedTasks;
-    this._employeeRequests = options.employeeRequests;
-    this._promotions = options.promotions;
-    this._approvedTasks = options.approvedTasks;
-    this._questions = options.questions;
-    this._supportTicketAnswersAuthored = options.supportTicketAnswersAuthored;
-    this._performedTasks = options.performedTasks;
-    this._createdAt = options.createdAt;
-    this._updatedAt = options.updatedAt;
+    this._departments = options.departments ?? [];
+    this._assignedTasks = options.assignedTasks ?? [];
+    this._employeeRequests = options.employeeRequests ?? [];
+    this._promotions = options.promotions ?? [];
+    this._approvedTasks = options.approvedTasks ?? [];
+    this._questions = options.questions ?? [];
+    this._supportTicketAnswersAuthored =
+      options.supportTicketAnswersAuthored ?? [];
+    this._performedTasks = options.performedTasks ?? [];
+    this._createdAt = options.createdAt ?? new Date();
+    this._updatedAt = options.updatedAt ?? new Date();
   }
 
   static create(options: SupervisorOptions): Supervisor {

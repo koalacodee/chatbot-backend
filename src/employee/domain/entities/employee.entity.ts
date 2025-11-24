@@ -24,7 +24,7 @@ export interface EmployeeProps {
   permissions: EmployeePermissionsEnum[];
   supervisorId: string;
   supervisor?: Supervisor;
-  subDepartments: Department[];
+  subDepartments?: Department[];
   supportTicketAnswersAssigned?: SupportTicket[];
   assigneeTasks?: Task[];
   questions?: Question[];
@@ -53,7 +53,7 @@ export class Employee {
     this._permissions = props.permissions;
     this._supervisorId = UUID.create(props.supervisorId);
     this._supervisor = props.supervisor;
-    this._subDepartments = props.subDepartments;
+    this._subDepartments = props.subDepartments ?? [];
     this._supportTicketAnswersAssigned = props.supportTicketAnswersAssigned;
     this._assigneeTasks = props.assigneeTasks;
     this._questions = props.questions;
