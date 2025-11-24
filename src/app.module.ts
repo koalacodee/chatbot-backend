@@ -32,6 +32,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AttachmentGroupModule } from './attachment-group/attachment-group.module';
 import { TranslationModule } from './translation/translation.module';
 import { DrizzleModule } from './common/drizzle/drizzle.module';
+import { FilehubModule } from './filehub/filehub.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -80,6 +81,7 @@ import { DrizzleModule } from './common/drizzle/drizzle.module';
     DashboardModule,
     AttachmentGroupModule,
     TranslationModule,
+    FilehubModule,
   ],
 })
 export class AppModule { }

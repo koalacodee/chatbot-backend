@@ -16,6 +16,7 @@ import {
   SupportedLanguageEnum,
 } from 'src/translation/domain/services/translation.service';
 import { TranslateEvent } from 'src/translation/domain/events/translate.event';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface CreateQuestionDto {
   text: string;
@@ -40,11 +41,14 @@ export class CreateQuestionUseCase {
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
+    private readonly fileHubService: FileHubService,
   ) {}
 
-  async execute(
-    dto: CreateQuestionDto,
-  ): Promise<{ question: Question; uploadKey: string }> {
+  async execute(dto: CreateQuestionDto): Promise<{
+    question: Question;
+    uploadKey: string;
+    fileHubUploadKey: string;
+  }> {
     const user = await this.userRepository.findById(dto.creatorId);
     const userRole = user.role.getRole();
     // Check department access based on user role
@@ -105,12 +109,21 @@ export class CreateQuestionUseCase {
           )
         : Promise.resolve(undefined);
 
-    const [uploadKey] = await Promise.all([
+    const [uploadKey, fileHubUploadKey] = await Promise.all([
       dto.attach
         ? this.filesService.genUploadKey(
             savedQuestion.id.toString(),
             dto.creatorId,
           )
+        : undefined,
+      dto.attach
+        ? this.fileHubService
+            .generateUploadToken({
+              expiresInMs: 1000 * 60 * 60 * 24,
+              targetId: savedQuestion.id.toString(),
+              userId: dto.creatorId,
+            })
+            .then((upload) => upload.upload_key)
         : undefined,
       this.eventEmitter.emitAsync(
         FaqCreatedEvent.name,
@@ -132,7 +145,7 @@ export class CreateQuestionUseCase {
       });
     }
 
-    return { question: savedQuestion, uploadKey };
+    return { question: savedQuestion, uploadKey, fileHubUploadKey };
   }
 
   private async checkDepartmentAccess(
