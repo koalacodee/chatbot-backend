@@ -24,6 +24,7 @@ import { TaskPresetCreatedEvent } from '../../domain/events/task-preset-created.
 import { FilesService } from 'src/files/domain/services/files.service';
 import { ReminderQueueService } from '../../infrastructure/queues/reminder.queue';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface CreateTaskInputDto {
   title: string;
@@ -59,12 +60,17 @@ export class CreateTaskUseCase {
     private readonly filesService: FilesService,
     private readonly reminderQueueService: ReminderQueueService,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
-  ) { }
+    private readonly fileHubService: FileHubService,
+  ) {}
 
   async execute(
     dto: CreateTaskInputDto,
     userId?: string,
-  ): Promise<{ task: Task; uploadKey?: string }> {
+  ): Promise<{
+    task: ReturnType<typeof Task.prototype.toJSON>;
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     // Validate required fields based on assignment type
     const validationErrors: any = {};
 
@@ -198,10 +204,19 @@ export class CreateTaskUseCase {
       reminderInterval: dto.reminderInterval ?? undefined,
     });
 
-    const [saved, uploadKey] = await Promise.all([
+    const [saved, uploadKey, fileHubUploadKey] = await Promise.all([
       this.taskRepo.save(task),
       dto.attach
         ? this.filesService.genUploadKey(task.id.toString(), userId)
+        : undefined,
+      dto.attach
+        ? this.fileHubService
+            .generateUploadToken({
+              expiresInMs: 1000 * 60 * 60 * 24,
+              targetId: task.id.toString(),
+              userId,
+            })
+            .then((upload) => upload.upload_key)
         : undefined,
       this.eventEmitter.emitAsync(
         TaskCreatedEvent.name,
@@ -246,7 +261,7 @@ export class CreateTaskUseCase {
       );
     }
 
-    return { task: saved, uploadKey };
+    return { task: saved, uploadKey, fileHubUploadKey };
   }
 
   private async checkDepartmentAccess(

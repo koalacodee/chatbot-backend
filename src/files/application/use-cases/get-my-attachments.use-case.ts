@@ -8,7 +8,7 @@ interface GetMyAttachmentsInput {
   offset?: number;
 }
 
-interface GetMyAttachmentsOutput {
+export interface GetMyAttachmentsOutput {
   attachments: Attachment[];
   totalCount: number;
   hasMore: boolean;

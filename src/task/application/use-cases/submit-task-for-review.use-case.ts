@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Task } from '../../domain/entities/task.entity';
 import { SubmitTaskSubmissionUseCase } from './submit-task-submission.use-case';
+import { TaskSubmission } from 'src/task/domain/entities/task-submission.entity';
 
 interface SubmitTaskForReviewInputDto {
   taskId: string;
@@ -15,13 +16,16 @@ export class SubmitTaskForReviewUseCase {
     private readonly submitTaskSubmissionUseCase: SubmitTaskSubmissionUseCase,
   ) {}
 
-  async execute(
-    dto: SubmitTaskForReviewInputDto,
-  ): Promise<{ task: Task; uploadKey?: string }> {
+  async execute(dto: SubmitTaskForReviewInputDto): Promise<{
+    submission: ReturnType<typeof TaskSubmission.prototype.toJSON>;
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     const result = await this.submitTaskSubmissionUseCase.execute(dto);
     return {
-      task: result.taskSubmission.task,
+      submission: result.taskSubmission.toJSON(),
       uploadKey: result.uploadKey,
+      fileHubUploadKey: result.fileHubUploadKey,
     };
   }
 }

@@ -11,6 +11,10 @@ import { SupervisorRepository } from 'src/supervisor/domain/repository/superviso
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
+import {
+  FilehubAttachmentMessage,
+  GetTargetAttachmentsWithSignedUrlsUseCase,
+} from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 
 interface GetMyDelegationsInputDto {
   userId: string;
@@ -23,8 +27,11 @@ interface GetMyDelegationsResult {
   delegations: TaskDelegation[];
   submissions: { [delegationId: string]: TaskDelegationSubmission[] };
   attachments: { [delegationId: string]: string[] };
-  delegationSubmissionAttachments: { [delegationSubmissionId: string]: string[] };
+  delegationSubmissionAttachments: {
+    [delegationSubmissionId: string]: string[];
+  };
   total: number;
+  fileHubAttachments: FilehubAttachmentMessage[];
 }
 
 @Injectable()
@@ -35,7 +42,8 @@ export class GetMyDelegationsUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly userRepository: UserRepository,
     private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
-  ) { }
+    private readonly getTargetAttachmentsWithSignedUrlsUseCase: GetTargetAttachmentsWithSignedUrlsUseCase,
+  ) {}
 
   async execute(
     dto: GetMyDelegationsInputDto,
@@ -59,9 +67,7 @@ export class GetMyDelegationsUseCase {
       });
     }
 
-    const supervisor = await this.supervisorRepository.findByUserId(
-      dto.userId,
-    );
+    const supervisor = await this.supervisorRepository.findByUserId(dto.userId);
 
     if (!supervisor) {
       throw new NotFoundException({
@@ -85,8 +91,8 @@ export class GetMyDelegationsUseCase {
     const allSubmissions =
       delegationIds.length > 0
         ? await this.taskDelegationSubmissionRepository.findByDelegationIds(
-          delegationIds,
-        )
+            delegationIds,
+          )
         : [];
 
     // Group submissions by delegation ID
@@ -106,17 +112,22 @@ export class GetMyDelegationsUseCase {
     // Get task IDs from delegations for attachments
     const delegationTaskIds = paginatedDelegations.map((d) => d.taskId);
 
+    const allTargetIds = [
+      ...delegationTaskIds,
+      ...allSubmissions.map((s) => s.id.toString()),
+    ];
     // Get attachments for delegation tasks
     const taskAttachments =
       delegationTaskIds.length > 0
         ? await this.getAttachmentsUseCase.execute({
-          targetIds: delegationTaskIds,
-        })
+            targetIds: delegationTaskIds,
+          })
         : {};
 
-    const delegationSubmissionAttachments = await this.getAttachmentsUseCase.execute({
-      targetIds: allSubmissions.map((s) => s.id.toString()),
-    });
+    const delegationSubmissionAttachments =
+      await this.getAttachmentsUseCase.execute({
+        targetIds: allSubmissions.map((s) => s.id.toString()),
+      });
 
     // Map delegation attachments: use task attachments for each delegation
     const delegationAttachments: { [delegationId: string]: string[] } = {};
@@ -125,13 +136,18 @@ export class GetMyDelegationsUseCase {
         taskAttachments[delegation.taskId] || [];
     });
 
+    const fileHubAttachments =
+      await this.getTargetAttachmentsWithSignedUrlsUseCase.execute({
+        targetIds: allTargetIds,
+      });
+
     return {
       delegations: paginatedDelegations,
       submissions: submissionsByDelegation,
       attachments: delegationAttachments,
       delegationSubmissionAttachments,
       total,
+      fileHubAttachments,
     };
   }
 }
-

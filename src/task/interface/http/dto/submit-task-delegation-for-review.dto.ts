@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsArray,
+  IsUUID,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SubmitTaskDelegationForReviewDto {
@@ -19,5 +25,10 @@ export class SubmitTaskDelegationForReviewDto {
   @IsOptional()
   @IsBoolean()
   attach?: boolean;
-}
 
+  @ApiProperty({ description: 'Attachment IDs to clone', required: false })
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  chooseAttachments?: string[];
+}

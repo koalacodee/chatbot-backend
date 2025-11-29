@@ -37,6 +37,7 @@ interface CreateTaskFromPresetRequest {
 interface CreateTaskFromPresetResponse {
   task: Task;
   uploadKey?: string;
+  fileHubUploadKey?: string;
 }
 
 @Injectable()

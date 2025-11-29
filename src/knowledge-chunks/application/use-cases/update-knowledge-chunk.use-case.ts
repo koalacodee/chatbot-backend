@@ -10,6 +10,7 @@ import { AccessControlService } from 'src/rbac/domain/services/access-control.se
 import { FilesService } from 'src/files/domain/services/files.service';
 import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/delete-attachments-by-ids.use-case';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface UpdateKnowledgeChunkDto {
   content?: string;
@@ -31,12 +32,17 @@ export class UpdateKnowledgeChunkUseCase {
     private readonly filesService: FilesService,
     private readonly deleteAttachmentsUseCase: DeleteAttachmentsByIdsUseCase,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
+    private readonly fileHubService: FileHubService,
   ) {}
 
   async execute(
     id: string,
     dto: UpdateKnowledgeChunkDto,
-  ): Promise<{ knowledgeChunk: KnowledgeChunk | null; uploadKey?: string }> {
+  ): Promise<{
+    knowledgeChunk: KnowledgeChunk | null;
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     const chunk = await this.chunkRepo.findById(id);
     await this.accessControl.canAccessDepartment(
       dto.userId,
@@ -89,9 +95,18 @@ export class UpdateKnowledgeChunkUseCase {
       });
     }
 
-    const [savedChunk, uploadKey] = await Promise.all([
+    const [savedChunk, uploadKey, fileHubUploadKey] = await Promise.all([
       this.chunkRepo.save(chunk),
       dto.attach ? this.filesService.genUploadKey(id, dto.userId) : undefined,
+      dto.attach
+        ? this.fileHubService
+            .generateUploadToken({
+              expiresInMs: 1000 * 60 * 60 * 24,
+              targetId: id,
+              userId: dto.userId,
+            })
+            .then((upload) => upload.upload_key)
+        : undefined,
     ]);
 
     // Clone attachments if provided
@@ -102,6 +117,6 @@ export class UpdateKnowledgeChunkUseCase {
       });
     }
 
-    return { knowledgeChunk: savedChunk, uploadKey };
+    return { knowledgeChunk: savedChunk, uploadKey, fileHubUploadKey };
   }
 }

@@ -4,11 +4,12 @@ import { RedisService } from 'src/shared/infrastructure/redis';
 import { AttachmentRepository } from 'src/filehub/domain/repositories/attachment.repository';
 import { FilehubUploadedEvent } from 'src/filehub/domain/events/filehub.uploaded.event';
 import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
+import { FilehubGateway } from 'src/filehub/interface/websocket/filehub.gateway';
 
 export interface FilehubUploadedTempData {
   userId?: string;
   guestId?: string;
-  targetId: string;
+  targetId?: string;
 }
 
 @Injectable()
@@ -16,6 +17,7 @@ export class FilehubUploadedListener {
   constructor(
     private readonly redis: RedisService,
     private readonly attachmentRepository: AttachmentRepository,
+    private readonly filehubGateway: FilehubGateway,
   ) {}
 
   @OnEvent(FilehubUploadedEvent.name)
@@ -43,6 +45,7 @@ export class FilehubUploadedListener {
       updatedAt: new Date(event.timestamp),
     });
 
-    await this.attachmentRepository.save(attachment);
+    const savedAttachment = await this.attachmentRepository.save(attachment);
+    await this.filehubGateway.broadcastAttachment(savedAttachment);
   }
 }

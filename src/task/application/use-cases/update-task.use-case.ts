@@ -21,6 +21,7 @@ import { FilesService } from 'src/files/domain/services/files.service';
 import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/delete-attachments-by-ids.use-case';
 import { ReminderQueueService } from '../../infrastructure/queues/reminder.queue';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface UpdateTaskInputDto {
   title?: string;
@@ -55,13 +56,18 @@ export class UpdateTaskUseCase {
     private readonly deleteAttachmentsUseCase: DeleteAttachmentsByIdsUseCase,
     private readonly reminderQueueService: ReminderQueueService,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
+    private readonly fileHubService: FileHubService,
   ) {}
 
   async execute(
     id: string,
     dto: UpdateTaskInputDto,
     userId?: string,
-  ): Promise<{ task: Task; uploadKey?: string }> {
+  ): Promise<{
+    task: ReturnType<typeof Task.prototype.toJSON>;
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     const existing = await this.taskRepo.findById(id);
     if (!existing) throw new NotFoundException({ id: 'task_not_found' });
 
@@ -156,9 +162,18 @@ export class UpdateTaskUseCase {
       });
     }
 
-    const [savedTask, uploadKey] = await Promise.all([
+    const [savedTask, uploadKey, fileHubUploadKey] = await Promise.all([
       this.taskRepo.save(existing),
       dto.attach ? this.filesService.genUploadKey(id, userId) : undefined,
+      dto.attach
+        ? this.fileHubService
+            .generateUploadToken({
+              expiresInMs: 1000 * 60 * 60 * 24,
+              targetId: id,
+              userId,
+            })
+            .then((upload) => upload.upload_key)
+        : undefined,
     ]);
 
     // Clone attachments if provided
@@ -169,7 +184,7 @@ export class UpdateTaskUseCase {
       });
     }
 
-    return { task: savedTask, uploadKey };
+    return { task: savedTask.toJSON(), uploadKey, fileHubUploadKey };
   }
 
   async getApproverByUser(user: User) {

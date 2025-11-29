@@ -12,6 +12,7 @@ import { NotificationRepository } from 'src/notification/domain/repositories/not
 import { Notification } from 'src/notification/domain/entities/notification.entity';
 import { TicketCreatedEvent } from '../../domain/events/ticket-created.event';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface CreateSupportTicketInputDto {
   subject: string;
@@ -35,11 +36,14 @@ export class CreateSupportTicketUseCase {
     private readonly notificationRepository: NotificationRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
+    private readonly fileHubService: FileHubService,
   ) {}
 
-  async execute(
-    dto: CreateSupportTicketInputDto,
-  ): Promise<{ ticket: SupportTicket; uploadKey?: string }> {
+  async execute(dto: CreateSupportTicketInputDto): Promise<{
+    ticket: SupportTicket;
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     // Validate foreign keys
     const [department] = await Promise.all([
       this.departmentRepo.findById(dto.departmentId),
@@ -61,10 +65,18 @@ export class CreateSupportTicketUseCase {
       guestEmail: dto.guestEmail,
     });
 
-    const [savedTicket, uploadKey] = await Promise.all([
+    const [savedTicket, uploadKey, fileHubUploadKey] = await Promise.all([
       this.supportTicketRepo.save(ticket),
       dto.attach
         ? this.fileService.genUploadKey(ticket.id.toString()).then((key) => key)
+        : undefined,
+      dto.attach
+        ? this.fileHubService
+            .generateUploadToken({
+              expiresInMs: 1000 * 60 * 60 * 24,
+              targetId: ticket.id.toString(),
+            })
+            .then((upload) => upload.upload_key)
         : undefined,
       this.notify(ticket),
     ]);
@@ -90,7 +102,7 @@ export class CreateSupportTicketUseCase {
       ),
     );
 
-    return { ticket: savedTicket, uploadKey };
+    return { ticket: savedTicket, uploadKey, fileHubUploadKey };
   }
 
   async notify(supportTicket: SupportTicket) {

@@ -9,6 +9,7 @@ import { Roles } from 'src/shared/value-objects/role.vo';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PromotionCreatedEvent } from 'src/promotion/domain/events/promotion-created.event';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface CreatePromotionInputDto {
   title: string;
@@ -30,11 +31,14 @@ export class CreatePromotionUseCase {
     private readonly fileService: FilesService,
     private readonly eventEmitter: EventEmitter2,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
+    private readonly fileHubService: FileHubService,
   ) {}
 
-  async execute(
-    dto: CreatePromotionInputDto,
-  ): Promise<{ saved: Promotion; uploadKey: string }> {
+  async execute(dto: CreatePromotionInputDto): Promise<{
+    promotion: ReturnType<Promotion['toJSON']>;
+    uploadKey: string;
+    fileHubUploadKey?: string;
+  }> {
     const creator = await this.userRepo.findById(dto.createdByUserId);
     if (!creator) throw new NotFoundException({ id: 'creator_not_found' });
 
@@ -54,13 +58,22 @@ export class CreatePromotionUseCase {
           : undefined,
     });
 
-    const [saved, uploadKey] = await Promise.all([
+    const [saved, uploadKey, fileHubUploadKey] = await Promise.all([
       this.promotionRepo.save(promotion),
       dto.attach
         ? this.fileService.genUploadKey(
             promotion.id.toString(),
             dto.createdByUserId,
           )
+        : undefined,
+      dto.attach
+        ? this.fileHubService
+            .generateUploadToken({
+              expiresInMs: 1000 * 60 * 60 * 24,
+              targetId: promotion.id.toString(),
+              userId: dto.createdByUserId,
+            })
+            .then((upload) => upload.upload_key)
         : undefined,
       this.eventEmitter.emitAsync(
         PromotionCreatedEvent.name,
@@ -82,6 +95,6 @@ export class CreatePromotionUseCase {
       });
     }
 
-    return { saved, uploadKey };
+    return { promotion: saved.toJSON(), uploadKey, fileHubUploadKey };
   }
 }

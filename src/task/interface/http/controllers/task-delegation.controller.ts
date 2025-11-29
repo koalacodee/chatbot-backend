@@ -48,11 +48,13 @@ export class TaskDelegationController {
     private readonly getDelegablesUseCase: GetDelegablesUseCase,
     private readonly getMyDelegationsUseCase: GetMyDelegationsUseCase,
     private readonly markDelegationSeenUseCase: MarkDelegationSeenUseCase,
-  ) { }
+  ) {}
 
   @Get('delegables')
   @SupervisorPermissions()
-  @ApiOperation({ summary: 'Get employees and sub-departments that can be delegated tasks' })
+  @ApiOperation({
+    summary: 'Get employees and sub-departments that can be delegated tasks',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Delegables retrieved successfully',
@@ -74,7 +76,10 @@ export class TaskDelegationController {
 
   @Get('my-delegations')
   @SupervisorPermissions()
-  @ApiOperation({ summary: 'Get all delegations created by the supervisor with their submissions' })
+  @ApiOperation({
+    summary:
+      'Get all delegations created by the supervisor with their submissions',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Delegations retrieved successfully',
@@ -105,6 +110,7 @@ export class TaskDelegationController {
       attachments: result.attachments,
       delegationSubmissionAttachments: result.delegationSubmissionAttachments,
       total: result.total,
+      fileHubAttachments: result.fileHubAttachments,
     };
   }
 
@@ -116,10 +122,7 @@ export class TaskDelegationController {
     description: 'Task delegation created successfully',
   })
   @HttpCode(HttpStatus.CREATED)
-  async delegateTask(
-    @Body() input: DelegateTaskDto,
-    @Request() req: any,
-  ) {
+  async delegateTask(@Body() input: DelegateTaskDto, @Request() req: any) {
     const result = await this.delegateTaskUseCase.execute(
       {
         taskId: input.taskId,
@@ -151,11 +154,13 @@ export class TaskDelegationController {
       submittedBy: req.user.id,
       notes: input.notes,
       attach: input.attach ?? false,
+      chooseAttachments: input.chooseAttachments,
     });
     return {
       delegation: result.delegation.toJSON(),
       submission: result.submission.toJSON(),
       uploadKey: result.uploadKey,
+      fileHubUploadKey: result.fileHubUploadKey,
     };
   }
 
@@ -249,4 +254,3 @@ export class TaskDelegationController {
     };
   }
 }
-

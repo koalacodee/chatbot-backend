@@ -19,6 +19,7 @@ import { FilesService } from 'src/files/domain/services/files.service';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 import { ResendEmailService } from 'src/shared/infrastructure/email/resend-email.service';
 import { TicketAnsweredEmail } from 'src/shared/infrastructure/email/TicketAnsweredEmail';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface AnswerTicketInput {
   ticketId: string;
@@ -42,7 +43,8 @@ export class AnswerTicketUseCase {
     private readonly fileService: FilesService,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
     private readonly emailService: ResendEmailService,
-  ) { }
+    private readonly fileHubService: FileHubService,
+  ) {}
 
   async execute({
     ticketId,
@@ -92,6 +94,7 @@ export class AnswerTicketUseCase {
 
     let savedAnswer: SupportTicketAnswer;
     let uploadKey: string | undefined;
+    let fileHubUploadKey: string | undefined;
 
     if (existingAnswer) {
       if (content) existingAnswer.content = content;
@@ -111,6 +114,13 @@ export class AnswerTicketUseCase {
           existingAnswer.id.toString(),
           userId,
         );
+        fileHubUploadKey = await this.fileHubService
+          .generateUploadToken({
+            expiresInMs: 1000 * 60 * 60 * 24,
+            targetId: existingAnswer.id.toString(),
+            userId,
+          })
+          .then((upload) => upload.upload_key);
       }
     } else {
       // Save the answer and ticket first
@@ -130,6 +140,13 @@ export class AnswerTicketUseCase {
           savedAnswer.id.toString(),
           userId,
         );
+        fileHubUploadKey = await this.fileHubService
+          .generateUploadToken({
+            expiresInMs: 1000 * 60 * 60 * 24,
+            targetId: savedAnswer.id.toString(),
+            userId,
+          })
+          .then((upload) => upload.upload_key);
       }
     }
     // Clone attachments if provided
@@ -158,10 +175,11 @@ export class AnswerTicketUseCase {
     // Send email notification to the guest
     if (ticket.guestEmail) {
       // Get department with parent information to determine if it's a sub-department
-      const subDepartment = await this.departmentRepository.findSubDepartmentById(
-        ticket.departmentId.toString(),
-        { includeParent: true },
-      );
+      const subDepartment =
+        await this.departmentRepository.findSubDepartmentById(
+          ticket.departmentId.toString(),
+          { includeParent: true },
+        );
 
       let departmentName: string;
       let subDepartmentName: string | undefined;
@@ -197,7 +215,7 @@ export class AnswerTicketUseCase {
       );
     }
 
-    return { answer: savedAnswer.toJSON(), uploadKey };
+    return { answer: savedAnswer.toJSON(), uploadKey, fileHubUploadKey };
   }
 
   async getAnswererByRole(role: Roles, id: string) {

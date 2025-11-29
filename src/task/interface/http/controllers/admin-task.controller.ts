@@ -15,10 +15,7 @@ import {
 import { GetDepartmentLevelTasksUseCase } from '../../../application/use-cases/get-department-level-tasks.use-case';
 import { GetTasksByRoleDto } from '../dto/get-tasks-by-role.dto';
 import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
-import {
-  TaskPriority,
-  TaskStatus,
-} from '../../../domain/entities/task.entity';
+import { TaskPriority, TaskStatus } from '../../../domain/entities/task.entity';
 
 @ApiTags('Admin Tasks')
 @ApiBearerAuth()
@@ -26,7 +23,7 @@ import {
 export class AdminTaskController {
   constructor(
     private readonly getDepartmentLevelTasksUseCase: GetDepartmentLevelTasksUseCase,
-  ) { }
+  ) {}
 
   @Get('department-level')
   @HttpCode(HttpStatus.OK)
@@ -66,8 +63,9 @@ export class AdminTaskController {
       return arr
         .map((entry) => {
           if (!entry) return undefined;
-          const key =
-            entry.toString().toUpperCase() as keyof typeof TaskPriority;
+          const key = entry
+            .toString()
+            .toUpperCase() as keyof typeof TaskPriority;
           return TaskPriority[key];
         })
         .filter((entry): entry is TaskPriority => Boolean(entry));
@@ -85,6 +83,7 @@ export class AdminTaskController {
       data: result.tasks,
       metrics: result.metrics,
       attachments: result.attachments,
+      fileHubAttachments: result.fileHubAttachments,
     };
   }
 }

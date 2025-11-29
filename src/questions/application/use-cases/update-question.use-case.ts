@@ -17,6 +17,7 @@ import {
   SupportedLanguageEnum,
 } from 'src/translation/domain/services/translation.service';
 import { TranslateEvent } from 'src/translation/domain/events/translate.event';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface UpdateQuestionDto {
   text?: string;
@@ -42,12 +43,17 @@ export class UpdateQuestionUseCase {
     private readonly filesService: FilesService,
     private readonly deleteAttachmentsUseCase: DeleteAttachmentsByIdsUseCase,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
+    private readonly fileHubService: FileHubService,
   ) {}
 
   async execute(
     id: string,
     dto: UpdateQuestionDto,
-  ): Promise<{ question: Question; uploadKey?: string }> {
+  ): Promise<{
+    question: Question;
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     // Fetch the question to get departmentId
     const question = await this.questionRepo.findById(id);
     const departmentId = dto.departmentId || question.departmentId.value;
@@ -80,18 +86,25 @@ export class UpdateQuestionUseCase {
       });
     }
 
-    const [updatedQuestion, uploadKey] = await Promise.all([
+    const [updatedQuestion, uploadKey, fileHubUploadKey] = await Promise.all([
       this.questionRepo.update(id, update),
       dto.attach ? this.filesService.genUploadKey(id, dto.userId) : undefined,
+      dto.attach
+        ? this.fileHubService
+            .generateUploadToken({
+              expiresInMs: 1000 * 60 * 60 * 24,
+              targetId: id,
+              userId: dto.userId,
+            })
+            .then((upload) => upload.upload_key)
+        : undefined,
+      dto.chooseAttachments && dto.chooseAttachments.length > 0
+        ? this.cloneAttachmentUseCase.execute({
+            attachmentIds: dto.chooseAttachments,
+            targetId: id,
+          })
+        : undefined,
     ]);
-
-    // Clone attachments if provided
-    if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
-      await this.cloneAttachmentUseCase.execute({
-        attachmentIds: dto.chooseAttachments,
-        targetId: id,
-      });
-    }
 
     this.eventEmitter.emit(
       FaqUpdatedEvent.name,
@@ -103,7 +116,7 @@ export class UpdateQuestionUseCase {
       ),
     );
 
-    return { question: updatedQuestion, uploadKey };
+    return { question: updatedQuestion, uploadKey, fileHubUploadKey };
   }
 
   private async checkDepartmentAccess(

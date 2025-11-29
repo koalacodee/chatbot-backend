@@ -21,7 +21,6 @@ import { GetMyAttachmentsUseCase } from './application/use-cases/get-my-attachme
 import { ShareAttachmentUseCase } from './application/use-cases/share-attachment.use-case';
 import { CloneAttachmentUseCase } from './application/use-cases/clone-attachment.use-case';
 import { SharedModule } from '../shared/shared.module';
-import { RedisService } from 'src/shared/infrastructure/redis/redis.service';
 
 @Global()
 @Module({

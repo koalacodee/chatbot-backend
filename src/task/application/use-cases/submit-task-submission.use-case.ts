@@ -31,6 +31,7 @@ import {
   TaskStatus,
 } from '../../domain/entities/task.entity';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface SubmitTaskSubmissionInputDto {
   taskId: string;
@@ -54,6 +55,7 @@ export class SubmitTaskSubmissionUseCase {
     private readonly filesService: FilesService,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
+    private readonly fileHubService: FileHubService,
   ) {}
 
   async getSubmitterByUser(
@@ -74,6 +76,7 @@ export class SubmitTaskSubmissionUseCase {
   async execute(dto: SubmitTaskSubmissionInputDto): Promise<{
     taskSubmission: TaskSubmission;
     uploadKey?: string;
+    fileHubUploadKey?: string;
     attachments: { [taskSubmissionId: string]: string[] };
   }> {
     const [existingTask, submitter] = await Promise.all([
@@ -131,7 +134,7 @@ export class SubmitTaskSubmissionUseCase {
     // Update task status to PENDING_REVIEW
     existingTask.status = TaskStatus.PENDING_REVIEW;
 
-    const [savedSubmission, _, uploadKey] = await Promise.all([
+    const [savedSubmission, _, uploadKey, fileHubUploadKey] = await Promise.all([
       this.taskSubmissionRepo.save(taskSubmission),
       this.taskRepo.save(existingTask),
       dto.attach
@@ -139,6 +142,15 @@ export class SubmitTaskSubmissionUseCase {
             taskSubmission.id.toString(),
             dto.submittedBy,
           )
+        : undefined,
+      dto.attach
+        ? this.fileHubService
+            .generateUploadToken({
+              expiresInMs: 1000 * 60 * 60 * 24,
+              targetId: taskSubmission.id.toString(),
+              userId: dto.submittedBy,
+            })
+            .then((upload) => upload.upload_key)
         : undefined,
       this.eventEmitter.emitAsync(
         TaskPerformedEvent.name,
@@ -201,7 +213,7 @@ export class SubmitTaskSubmissionUseCase {
       targetIds: [savedSubmission.id.toString()],
     });
 
-    return { taskSubmission: savedSubmission, uploadKey, attachments };
+    return { taskSubmission: savedSubmission, uploadKey, fileHubUploadKey, attachments };
   }
 
   private async checkTaskAccess(

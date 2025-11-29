@@ -112,8 +112,8 @@ export class SupportTicketAnswer {
 
   toJSON(): unknown {
     return {
-      id: this.id,
-      supportTicketId: this?.supportTicket?.id,
+      id: this.id.toString(),
+      supportTicketId: this?.supportTicket?.id?.toString(),
       content: this?.content,
       attachment: this?.attachment?.toJSON(),
       answerer: this.answerer,

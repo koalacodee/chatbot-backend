@@ -4,7 +4,10 @@ import { QuestionRepository } from 'src/questions/domain/repositories/question.r
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
-import { GetTargetAttachmentsSignedUrlsUseCase } from 'src/filehub/application/use-cases/get-target-attachments-signed-urls.use-case';
+import {
+  GetTargetAttachmentsWithSignedUrlsUseCase,
+  FilehubAttachmentMessage,
+} from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 
 interface GroupByDepartmentInput {
   userId: string;
@@ -18,15 +21,13 @@ export class GroupByDepartmentUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
-    private readonly getTargetAttachmentsSignedUrlsUseCase: GetTargetAttachmentsSignedUrlsUseCase,
+    private readonly getTargetAttachmentsWithSignedUrlsUseCase: GetTargetAttachmentsWithSignedUrlsUseCase,
   ) {}
 
   async execute({ userId, role }: GroupByDepartmentInput): Promise<{
     questions: any[];
     attachments: { [questionId: string]: string[] };
-    fileHubAttachments: {
-      [questionId: string]: { [attachmentId: string]: string };
-    };
+    fileHubAttachments: FilehubAttachmentMessage[];
   }> {
     let departmentIds: string[] | undefined = undefined;
     if (role === Roles.SUPERVISOR) {
@@ -59,7 +60,7 @@ export class GroupByDepartmentUseCase {
       this.getAttachmentsUseCase.execute({
         targetIds: allQuestionIds,
       }),
-      this.getTargetAttachmentsSignedUrlsUseCase.execute({
+      this.getTargetAttachmentsWithSignedUrlsUseCase.execute({
         targetIds: allQuestionIds,
       }),
     ]);

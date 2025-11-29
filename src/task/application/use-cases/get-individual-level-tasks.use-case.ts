@@ -9,6 +9,10 @@ import { TaskRepository } from '../../domain/repositories/task.repository';
 import { TaskSubmissionRepository } from '../../domain/repositories/task-submission.repository';
 import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
+import {
+  FilehubAttachmentMessage,
+  GetTargetAttachmentsWithSignedUrlsUseCase,
+} from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 
 interface GetIndividualLevelTasksInput {
   assigneeId?: string;
@@ -24,6 +28,7 @@ interface IndividualLevelTasksResult {
   tasks: Task[];
   submissions: TaskSubmission[];
   attachments: { [taskId: string]: string[] };
+  fileHubAttachments: FilehubAttachmentMessage[];
   metrics: {
     pendingCount: number;
     completedCount: number;
@@ -38,6 +43,7 @@ export class GetIndividualLevelTasksUseCase {
     private readonly taskSubmissionRepo: TaskSubmissionRepository,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
     private readonly departmentRepository: DepartmentRepository,
+    private readonly getTargetAttachmentsWithSignedUrlsUseCase: GetTargetAttachmentsWithSignedUrlsUseCase,
   ) {}
 
   async execute(
@@ -65,17 +71,23 @@ export class GetIndividualLevelTasksUseCase {
 
     const tasks = await this.taskRepo.findSubIndividualsLevelTasks(filters);
 
-    // Get attachments and submissions for all tasks
-    const [attachments] = await Promise.all([
+    const taskIds = tasks.map((task) => task.id.toString());
+
+    // Get attachments, submissions and filehub attachments for all tasks
+    const [attachments, submissions, fileHubAttachments] = await Promise.all([
       this.getAttachmentsUseCase.execute({
-        targetIds: tasks.map((task) => task.id.toString()),
+        targetIds: taskIds,
+      }),
+      this.taskSubmissionRepo.findByTaskIds(taskIds),
+      this.getTargetAttachmentsWithSignedUrlsUseCase.execute({
+        targetIds: taskIds,
       }),
     ]);
 
     // Get metrics for individual-level tasks
     const metrics = await this.taskRepo.getTaskMetricsForIndividual(filters);
 
-    return { tasks, attachments, metrics } as any;
+    return { tasks, submissions, attachments, fileHubAttachments, metrics };
   }
 
   private async getDepartmentWithChildren(

@@ -9,7 +9,6 @@ import { DepartmentModule } from './department/department.module';
 import { QdrantModule } from './common/qdrant/qdrant.module';
 import { KnowledgeChunkModule } from './knowledge-chunks/knowledge-chunk.module';
 import { ChatModule } from './chat/chat.module';
-import { TicketModule } from './tickets/ticket.module';
 import { PushManagerModule } from './common/push-manager/push-manager.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { QuestionModule } from './questions/question.module';
@@ -33,6 +32,7 @@ import { AttachmentGroupModule } from './attachment-group/attachment-group.modul
 import { TranslationModule } from './translation/translation.module';
 import { DrizzleModule } from './common/drizzle/drizzle.module';
 import { FilehubModule } from './filehub/filehub.module';
+import { FileHubAttachmentGroupModule } from './filehub/modules/attachment-groups/attachment-group.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -82,6 +82,7 @@ import { FilehubModule } from './filehub/filehub.module';
     AttachmentGroupModule,
     TranslationModule,
     FilehubModule,
+    FileHubAttachmentGroupModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

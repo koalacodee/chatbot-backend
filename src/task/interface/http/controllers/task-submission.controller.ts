@@ -20,7 +20,7 @@ export class TaskSubmissionController {
     private readonly approveTaskSubmissionUseCase: ApproveTaskSubmissionUseCase,
     private readonly rejectTaskSubmissionUseCase: RejectTaskSubmissionUseCase,
     private readonly getTaskSubmissionUseCase: GetTaskSubmissionUseCase,
-  ) { }
+  ) {}
 
   @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TASKS)
   @Post(':taskId')
@@ -95,6 +95,7 @@ export class TaskSubmissionController {
         submission.toJSON(),
       ),
       attachments: result.attachments,
+      fileHubAttachments: result.fileHubAttachments,
     };
   }
 }

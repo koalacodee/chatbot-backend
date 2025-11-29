@@ -53,6 +53,7 @@ import { EmployeePermissionsEnum as EmployeePermissionsEnum } from 'src/employee
 import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 import { TaskIdDto } from './dto/task-id.dto';
 import { ExportFileService } from 'src/export/domain/services/export-file.service';
+import { TaskSubmission } from 'src/task/domain/entities/task-submission.entity';
 @Controller('tasks')
 export class TaskController {
   constructor(
@@ -74,7 +75,7 @@ export class TaskController {
     private readonly createTaskFromPresetUseCase: CreateTaskFromPresetUseCase,
     private readonly exportTasksUseCase: ExportTasksUseCase,
     private readonly exportFileService: ExportFileService,
-  ) { }
+  ) {}
 
   @Post()
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
@@ -191,7 +192,11 @@ export class TaskController {
     @Param() { taskId }: TaskIdDto,
     @Body() input: SubmitTaskSubmissionInputDto,
     @Req() req: any,
-  ): Promise<{ task: Task; uploadKey?: string }> {
+  ): Promise<{
+    submission: ReturnType<typeof TaskSubmission.prototype.toJSON>;
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     return this.submitForReviewUseCase.execute({
       ...input,
       taskId,
@@ -247,6 +252,7 @@ export class TaskController {
         data: { type: 'array', items: { type: 'object' } },
         total: { type: 'number' },
         canSubmitWork: { type: 'array', items: { type: 'boolean' } },
+        fileHubAttachments: { type: 'array', items: { type: 'object' } },
       },
     },
   })
@@ -270,13 +276,12 @@ export class TaskController {
         ...task.toJSON(),
         canSubmitWork: result.canSubmitWork[result.tasks.indexOf(task)],
       })),
-      delegations: result.delegations?.map((delegation) =>
-        delegation.toJSON(),
-      ),
+      delegations: result.delegations?.map((delegation) => delegation.toJSON()),
       total: result.total,
       metrics: result.metrics,
       attachments: result.attachments,
       delegationAttachments: result?.delegationAttachments,
+      fileHubAttachments: result.fileHubAttachments,
     };
   }
 
@@ -340,7 +345,7 @@ export class TaskController {
   async createTaskFromPreset(
     @Body() input: CreateTaskFromPresetDto,
     @Req() req: any,
-  ): Promise<{ task: Task; uploadKey?: string }> {
+  ): Promise<{ task: Task; uploadKey?: string; fileHubUploadKey?: string }> {
     return this.createTaskFromPresetUseCase.execute({
       presetId: input.presetId,
       assignerId: req.user.id,
@@ -361,14 +366,14 @@ export class TaskController {
 
   @AdminAuth()
   @Post('export')
-  async exportTasks(
-    @Body() body: ExportTasksDto,
-  ) {
+  async exportTasks(@Body() body: ExportTasksDto) {
     const exportEntity = await this.exportTasksUseCase.execute({
       start: body.start,
       end: body.end,
     });
-    const { shareKey } = await this.exportFileService.genShareKey(exportEntity.id);
+    const { shareKey } = await this.exportFileService.genShareKey(
+      exportEntity.id,
+    );
     return { ...exportEntity.toJSON(), shareKey };
   }
 }

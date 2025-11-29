@@ -1,9 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { Task, TaskPriority, TaskStatus } from '../../domain/entities/task.entity';
+import {
+  Task,
+  TaskPriority,
+  TaskStatus,
+} from '../../domain/entities/task.entity';
 import { TaskSubmission } from '../../domain/entities/task-submission.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { TaskSubmissionRepository } from '../../domain/repositories/task-submission.repository';
 import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
+import {
+  FilehubAttachmentMessage,
+  GetTargetAttachmentsWithSignedUrlsUseCase,
+} from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 
 interface GetSubDepartmentTasksInput {
   subDepartmentId?: string;
@@ -18,6 +26,7 @@ interface SubDepartmentTasksResult {
   tasks: Task[];
   submissions: TaskSubmission[];
   attachments: { [taskId: string]: string[] };
+  fileHubAttachments: FilehubAttachmentMessage[];
   metrics: {
     pendingCount: number;
     completedCount: number;
@@ -31,7 +40,8 @@ export class GetSubDepartmentTasksUseCase {
     private readonly taskRepo: TaskRepository,
     private readonly taskSubmissionRepo: TaskSubmissionRepository,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
-  ) { }
+    private readonly getTargetAttachmentsWithSignedUrlsUseCase: GetTargetAttachmentsWithSignedUrlsUseCase,
+  ) {}
 
   async execute(
     input: GetSubDepartmentTasksInput,
@@ -50,14 +60,17 @@ export class GetSubDepartmentTasksUseCase {
       filters,
     );
 
-    // Get attachments and submissions for all tasks
-    const [attachments, submissions] = await Promise.all([
+    const taskIds = tasks.map((task) => task.id.toString());
+
+    // Get attachments, submissions and filehub attachments for all tasks
+    const [attachments, submissions, fileHubAttachments] = await Promise.all([
       this.getAttachmentsUseCase.execute({
-        targetIds: tasks.map((task) => task.id.toString()),
+        targetIds: taskIds,
       }),
-      this.taskSubmissionRepo.findByTaskIds(
-        tasks.map((task) => task.id.toString()),
-      ),
+      this.taskSubmissionRepo.findByTaskIds(taskIds),
+      this.getTargetAttachmentsWithSignedUrlsUseCase.execute({
+        targetIds: taskIds,
+      }),
     ]);
 
     // Get metrics for sub-department-level tasks
@@ -66,6 +79,6 @@ export class GetSubDepartmentTasksUseCase {
       filters,
     );
 
-    return { tasks, submissions, attachments, metrics };
+    return { tasks, submissions, attachments, fileHubAttachments, metrics };
   }
 }

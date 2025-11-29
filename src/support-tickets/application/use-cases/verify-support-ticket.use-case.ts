@@ -17,6 +17,7 @@ import { Notification } from 'src/notification/domain/entities/notification.enti
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TicketCreatedEvent } from 'src/support-tickets/domain/events/ticket-created.event';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface VerifySupportTicketInput {
   verificationCode: string;
@@ -26,6 +27,7 @@ interface VerifySupportTicketOutput {
   ticket: SupportTicket;
   message: string;
   uploadKey?: string;
+  fileHubUploadKey?: string;
 }
 
 @Injectable()
@@ -38,6 +40,7 @@ export class VerifySupportTicketUseCase {
     private readonly notificationRepository: NotificationRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly fileService: FilesService,
+    private readonly fileHubService: FileHubService,
   ) {}
 
   async execute(
@@ -91,10 +94,17 @@ export class VerifySupportTicketUseCase {
 
     // Generate upload key if attachments are requested
     let uploadKey: string | undefined;
+    let fileHubUploadKey: string | undefined;
     if (ticketData.attach) {
       uploadKey = await this.fileService.genUploadKey(
         savedTicket.id.toString(),
       );
+      fileHubUploadKey = await this.fileHubService
+        .generateUploadToken({
+          expiresInMs: 1000 * 60 * 60 * 24,
+          targetId: savedTicket.id.toString(),
+        })
+        .then((upload) => upload.upload_key);
     }
 
     // Clean up Redis storage
@@ -119,6 +129,7 @@ export class VerifySupportTicketUseCase {
       ticket: savedTicket,
       message: 'Support ticket verified and submitted successfully',
       uploadKey,
+      fileHubUploadKey,
     };
   }
 

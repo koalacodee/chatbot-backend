@@ -6,9 +6,7 @@ import {
 import { TaskDelegation } from '../../domain/entities/task-delegation.entity';
 import { TaskDelegationRepository } from '../../domain/repositories/task-delegation.repository';
 import { TaskDelegationSubmissionRepository } from '../../domain/repositories/task-delegation-submission.repository';
-import {
-  TaskDelegationSubmission as TaskDelegationSubmission,
-} from '../../domain/entities/task-delegation-submission.entity';
+import { TaskDelegationSubmission as TaskDelegationSubmission } from '../../domain/entities/task-delegation-submission.entity';
 import { TaskStatus } from '../../domain/entities/task.entity';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
@@ -20,12 +18,15 @@ import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { TaskSubmissionStatus } from 'src/task/domain/entities/task-submission.entity';
 import { FilesService } from 'src/files/domain/services/files.service';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
+import { CloneAttachmentUseCase } from 'src/files/application/use-cases';
 
 interface SubmitTaskDelegationForReviewInputDto {
   delegationId: string;
   submittedBy: string; // userId of the submitter
   notes?: string;
   attach?: boolean;
+  chooseAttachments?: string[];
 }
 
 @Injectable()
@@ -38,12 +39,16 @@ export class SubmitTaskDelegationForReviewUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly filesService: FilesService,
-  ) { }
+    private readonly fileHubService: FileHubService,
+    private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
+  ) {}
 
   async execute(dto: SubmitTaskDelegationForReviewInputDto): Promise<{
     delegation: TaskDelegation;
     submission: TaskDelegationSubmission;
     uploadKey?: string;
+    fileHubUploadKey?: string;
+    chooseAttachments?: string[];
   }> {
     const delegation = await this.taskDelegationRepository.findById(
       dto.delegationId,
@@ -72,13 +77,14 @@ export class SubmitTaskDelegationForReviewUseCase {
 
     if (!user) {
       throw new NotFoundException({
-        details: [
-          { field: 'submittedBy', message: 'User not found' },
-        ],
+        details: [{ field: 'submittedBy', message: 'User not found' }],
       });
     }
 
-    const performer = await this.resolvePerformer(user.role.getRole(), dto.submittedBy);
+    const performer = await this.resolvePerformer(
+      user.role.getRole(),
+      dto.submittedBy,
+    );
 
     const submission = TaskDelegationSubmission.create({
       delegationId: delegation.id.toString(),
@@ -93,21 +99,45 @@ export class SubmitTaskDelegationForReviewUseCase {
       status: TaskSubmissionStatus.SUBMITTED,
     });
 
-    const savedSubmission = await this.taskDelegationSubmissionRepository.save(
-      submission,
-    );
+    const savedSubmission =
+      await this.taskDelegationSubmissionRepository.save(submission);
 
     delegation.status = TaskStatus.PENDING_REVIEW;
     delegation.updatedAt = new Date();
 
-    const savedDelegation = await this.taskDelegationRepository.save(delegation);
+    const savedDelegation =
+      await this.taskDelegationRepository.save(delegation);
 
-    const uploadKey = dto.attach ? await this.filesService.genUploadKey(savedSubmission.id.toString(), dto.submittedBy) : undefined;
+    const uploadKey = dto.attach
+      ? await this.filesService.genUploadKey(
+          savedSubmission.id.toString(),
+          dto.submittedBy,
+        )
+      : undefined;
+
+    const fileHubUploadKey = dto.attach
+      ? await this.fileHubService
+          .generateUploadToken({
+            expiresInMs: 1000 * 60 * 60 * 24,
+            targetId: savedSubmission.id.toString(),
+            userId: dto.submittedBy,
+          })
+          .then((upload) => upload.upload_key)
+      : undefined;
+
+    // Clone attachments if provided
+    if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
+      await this.cloneAttachmentUseCase.execute({
+        attachmentIds: dto.chooseAttachments,
+        targetId: savedSubmission.id.toString(),
+      });
+    }
 
     return {
       delegation: savedDelegation,
       submission: savedSubmission,
       uploadKey,
+      fileHubUploadKey,
     };
   }
 

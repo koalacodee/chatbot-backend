@@ -14,6 +14,10 @@ import { SupervisorRepository } from 'src/supervisor/domain/repository/superviso
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
+import {
+  GetTargetAttachmentsWithSignedUrlsUseCase,
+  FilehubAttachmentMessage,
+} from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 import { TaskStatus } from '../../domain/entities/task.entity';
 
 interface GetMyTasksInputDto {
@@ -31,6 +35,7 @@ interface MyTasksResult {
   submissions: TaskSubmission[];
   attachments: { [taskId: string]: string[] };
   delegationAttachments?: { [delegationId: string]: string[] };
+  fileHubAttachments: FilehubAttachmentMessage[];
   metrics: {
     pendingCount: number;
     completedCount: number;
@@ -48,7 +53,8 @@ export class GetMyTasksUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
-  ) { }
+    private readonly getTargetAttachmentsWithSignedUrlsUseCase: GetTargetAttachmentsWithSignedUrlsUseCase,
+  ) {}
 
   async execute(dto: GetMyTasksInputDto): Promise<MyTasksResult> {
     const user = await this.userRepo.findById(dto.userId);
@@ -99,6 +105,7 @@ export class GetMyTasksUseCase {
         canSubmitWork: [],
         submissions: [],
         attachments: {},
+        fileHubAttachments: [],
         metrics: {
           pendingCount: 0,
           completedCount: 0,
@@ -118,13 +125,16 @@ export class GetMyTasksUseCase {
       supervisorDepartmentIds,
     );
 
-    const [attachments, submissions] = await Promise.all([
+    const taskIds = result.tasks.map((task) => task.id.toString());
+
+    const [attachments, submissions, fileHubAttachments] = await Promise.all([
       this.getAttachmentsUseCase.execute({
-        targetIds: result.tasks.map((task) => task.id.toString()),
+        targetIds: taskIds,
       }),
-      this.taskSubmissionRepo.findByTaskIds(
-        result.tasks.map((task) => task.id.toString()),
-      ),
+      this.taskSubmissionRepo.findByTaskIds(taskIds),
+      this.getTargetAttachmentsWithSignedUrlsUseCase.execute({
+        targetIds: taskIds,
+      }),
     ]);
 
     return {
@@ -133,6 +143,7 @@ export class GetMyTasksUseCase {
       canSubmitWork: result.tasks.map(() => true),
       submissions,
       attachments,
+      fileHubAttachments,
       metrics,
     };
   }
@@ -168,8 +179,8 @@ export class GetMyTasksUseCase {
         this.taskDelegationRepository.findByAssigneeId(employee.id.toString()),
         employeeSubDepartmentIdsForDelegations.length > 0
           ? this.taskDelegationRepository.findByTargetSubDepartmentIds(
-            employeeSubDepartmentIdsForDelegations,
-          )
+              employeeSubDepartmentIdsForDelegations,
+            )
           : Promise.resolve<TaskDelegation[]>([]),
       ]);
 
@@ -179,9 +190,7 @@ export class GetMyTasksUseCase {
       ...delegationsBySubDepartment,
     ];
     const uniqueDelegations = Array.from(
-      new Map(
-        allDelegations.map((d) => [d.id.toString(), d]),
-      ).values(),
+      new Map(allDelegations.map((d) => [d.id.toString(), d])).values(),
     );
 
     // Filter delegations by status if provided
@@ -197,9 +206,9 @@ export class GetMyTasksUseCase {
     const delegationsLimit = dto.limit;
     const paginatedDelegations = delegationsLimit
       ? filteredDelegations.slice(
-        delegationsOffset,
-        delegationsOffset + delegationsLimit,
-      )
+          delegationsOffset,
+          delegationsOffset + delegationsLimit,
+        )
       : filteredDelegations.slice(delegationsOffset);
 
     const metrics = await this.taskRepo.getTaskMetricsForEmployee(
@@ -210,19 +219,27 @@ export class GetMyTasksUseCase {
 
     // Get task IDs from delegations for attachments
     const delegationTaskIds = paginatedDelegations.map((d) => d.taskId);
+    const taskIds = result.tasks.map((task) => task.id.toString());
+    const allTargetIds = [...taskIds, ...delegationTaskIds];
 
-    const [attachments, delegationAttachments, submissions] = await Promise.all([
+    const [
+      attachments,
+      delegationAttachments,
+      submissions,
+      fileHubAttachments,
+    ] = await Promise.all([
       this.getAttachmentsUseCase.execute({
-        targetIds: result.tasks.map((task) => task.id.toString()),
+        targetIds: taskIds,
       }),
       delegationTaskIds.length > 0
         ? this.getAttachmentsUseCase.execute({
-          targetIds: delegationTaskIds,
-        })
+            targetIds: delegationTaskIds,
+          })
         : Promise.resolve({}),
-      this.taskSubmissionRepo.findByTaskIds(
-        result.tasks.map((task) => task.id.toString()),
-      ),
+      this.taskSubmissionRepo.findByTaskIds(taskIds),
+      this.getTargetAttachmentsWithSignedUrlsUseCase.execute({
+        targetIds: allTargetIds,
+      }),
     ]);
 
     // Map delegation attachments: use task attachments for each delegation
@@ -249,6 +266,7 @@ export class GetMyTasksUseCase {
       submissions,
       attachments,
       delegationAttachments: delegationAttachmentsMap,
+      fileHubAttachments,
       metrics,
     };
   }

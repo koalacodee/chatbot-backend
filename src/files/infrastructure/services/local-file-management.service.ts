@@ -17,7 +17,10 @@ import {
 import { join, extname } from 'path';
 import { randomBytes, randomInt } from 'crypto';
 import { pipeline } from 'stream/promises';
-import { FileManagementClass, UploadFromAsyncGeneratorOutput } from '../../domain/services/file-mangement.service';
+import {
+  FileManagementClass,
+  UploadFromAsyncGeneratorOutput,
+} from '../../domain/services/file-mangement.service';
 import { RedisService } from '../../../shared/infrastructure/redis';
 import { UploadFileUseCase } from '../../application/use-cases/upload-file.use-case';
 import { UUID } from '../../../shared/value-objects/uuid.vo';
@@ -416,6 +419,9 @@ export class LocalFileManagementService implements FileManagementClass {
 
     const attachment = await this.attachmentRepository.findById(attachmentId);
     if (attachment) {
+      if (!existsSync(join(this.uploadsDir, attachment.filename))) {
+        throw new BadRequestException('File not found');
+      }
       return createReadStream(join(this.uploadsDir, attachment.filename));
     }
 
@@ -496,7 +502,10 @@ export class LocalFileManagementService implements FileManagementClass {
     }
   }
 
-  async uploadFromAsyncGenerator(objectName: string, generator: AsyncGenerator<Buffer>): Promise<UploadFromAsyncGeneratorOutput> {
+  async uploadFromAsyncGenerator(
+    objectName: string,
+    generator: AsyncGenerator<Buffer>,
+  ): Promise<UploadFromAsyncGeneratorOutput> {
     const filepath = join(this.uploadsDir, objectName);
     const writeStream = createWriteStream(filepath);
     for await (const chunk of generator) {

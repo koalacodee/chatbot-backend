@@ -19,6 +19,7 @@ import { FilesService } from 'src/files/domain/services/files.service';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 import { ResendEmailService } from 'src/shared/infrastructure/email/resend-email.service';
 import { TicketAnsweredEmail } from 'src/shared/infrastructure/email/TicketAnsweredEmail';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface ReplyToTicketInput {
   ticketId: string;
@@ -44,6 +45,7 @@ export class ReplyToTicketUseCase {
     private readonly filesService: FilesService,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
     private readonly emailService: ResendEmailService,
+    private readonly fileHubService: FileHubService,
   ) { }
 
   async execute({
@@ -54,7 +56,10 @@ export class ReplyToTicketUseCase {
     userId,
     attach,
     chooseAttachments,
-  }: ReplyToTicketInput): Promise<{ uploadKey?: string }> {
+  }: ReplyToTicketInput): Promise<{
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     if (promoteToFaq && !newFawDepartmentId) {
       throw new BadRequestException({
         details: [
@@ -99,9 +104,18 @@ export class ReplyToTicketUseCase {
 
     ticket.status = SupportTicketStatus.ANSWERED;
 
-    const [uploadKey] = await Promise.all([
+    const [uploadKey, fileHubUploadKey] = await Promise.all([
       attach
         ? this.filesService.genUploadKey(answer.id.toString(), userId)
+        : undefined,
+      attach
+        ? this.fileHubService
+            .generateUploadToken({
+              expiresInMs: 1000 * 60 * 60 * 24,
+              targetId: answer.id.toString(),
+              userId,
+            })
+            .then((upload) => upload.upload_key)
         : undefined,
       this.ticketRepository.save(ticket),
       this.ticketAnswerRepo.save(answer),

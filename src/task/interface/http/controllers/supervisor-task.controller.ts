@@ -15,10 +15,7 @@ import {
 import { GetSubDepartmentTasksUseCase } from '../../../application/use-cases/get-sub-department-tasks.use-case';
 import { GetIndividualLevelTasksUseCase } from '../../../application/use-cases/get-individual-level-tasks.use-case';
 import { GetTasksByRoleDto } from '../dto/get-tasks-by-role.dto';
-import {
-  TaskPriority,
-  TaskStatus,
-} from '../../../domain/entities/task.entity';
+import { TaskPriority, TaskStatus } from '../../../domain/entities/task.entity';
 import { SupervisorPermissions } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 
@@ -29,7 +26,7 @@ export class SupervisorTaskController {
   constructor(
     private readonly getSubDepartmentTasksUseCase: GetSubDepartmentTasksUseCase,
     private readonly getIndividualLevelTasksUseCase: GetIndividualLevelTasksUseCase,
-  ) { }
+  ) {}
 
   @Get('sub-department')
   @HttpCode(HttpStatus.OK)
@@ -56,6 +53,7 @@ export class SupervisorTaskController {
       data: result.tasks,
       metrics: result.metrics,
       attachments: result.attachments,
+      fileHubAttachments: result.fileHubAttachments,
     };
   }
 
@@ -87,6 +85,7 @@ export class SupervisorTaskController {
       data: result.tasks,
       metrics: result.metrics,
       attachments: result.attachments,
+      fileHubAttachments: result.fileHubAttachments,
     };
   }
 

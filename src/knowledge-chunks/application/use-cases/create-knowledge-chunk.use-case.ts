@@ -6,6 +6,7 @@ import { AccessControlService } from 'src/rbac/domain/services/access-control.se
 import { KnowledgeChunk } from 'src/knowledge-chunks/domain/entities/knowledge-chunk.entity';
 import { FilesService } from 'src/files/domain/services/files.service';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface CreateKnowledgeChunkDto {
   content: string;
@@ -24,11 +25,16 @@ export class CreateKnowledgeChunkUseCase {
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
     @InjectQueue('knowledge-chunks')
     private readonly knowledgeChunksQueue: Queue,
+    private readonly fileHubService: FileHubService,
   ) {}
 
   async execute(
     dto: CreateKnowledgeChunkDto,
-  ): Promise<{ knowledgeChunk: KnowledgeChunk; uploadKey?: string }> {
+  ): Promise<{
+    knowledgeChunk: KnowledgeChunk;
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     await this.accessControl.canAccessDepartment(dto.userId, dto.departmentId);
     const department = await this.departmentRepo.findById(dto.departmentId);
 
@@ -57,6 +63,16 @@ export class CreateKnowledgeChunkUseCase {
         )
       : undefined;
 
+    const fileHubUploadKey = dto.attach
+      ? await this.fileHubService
+          .generateUploadToken({
+            expiresInMs: 1000 * 60 * 60 * 24,
+            targetId: knowledgeChunk.id.toString(),
+            userId: dto.userId,
+          })
+          .then((upload) => upload.upload_key)
+      : undefined;
+
     // Clone attachments if provided
     if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
       await this.cloneAttachmentUseCase.execute({
@@ -65,6 +81,6 @@ export class CreateKnowledgeChunkUseCase {
       });
     }
 
-    return { knowledgeChunk, uploadKey };
+    return { knowledgeChunk, uploadKey, fileHubUploadKey };
   }
 }
