@@ -46,7 +46,7 @@ export class ReplyToTicketUseCase {
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
     private readonly emailService: ResendEmailService,
     private readonly fileHubService: FileHubService,
-  ) { }
+  ) {}
 
   async execute({
     ticketId,
@@ -115,17 +115,17 @@ export class ReplyToTicketUseCase {
               targetId: answer.id.toString(),
               userId,
             })
-            .then((upload) => upload.upload_key)
+            .then((upload) => upload.uploadKey)
         : undefined,
       this.ticketRepository.save(ticket),
       this.ticketAnswerRepo.save(answer),
       newFawDepartment
         ? this.eventEmitter.emitAsync('faq.promote', {
-          question: ticket.subject,
-          answer: answer.content,
-          departmentId: newFawDepartment.id.toString(),
-          userId,
-        })
+            question: ticket.subject,
+            answer: answer.content,
+            departmentId: newFawDepartment.id.toString(),
+            userId,
+          })
         : undefined,
     ]);
 
@@ -163,8 +163,7 @@ export class ReplyToTicketUseCase {
         subDepartmentName = undefined;
       }
 
-      console.log("Sending Email to" + ticket.guestEmail);
-
+      console.log('Sending Email to' + ticket.guestEmail);
 
       await this.emailService.sendReactEmail(
         ticket.guestEmail,

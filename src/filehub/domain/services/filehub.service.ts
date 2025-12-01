@@ -1,11 +1,11 @@
 export interface Upload {
-  upload_key: string;
-  upload_expiry: Date;
+  uploadKey: string;
+  uploadExpiry: Date;
 }
 
 export interface SignedUrl {
-  signed_url: string;
-  expiration_date: Date;
+  signedUrl: string;
+  expirationDate: Date;
 }
 
 export interface SignedUrlBatch {
@@ -14,15 +14,15 @@ export interface SignedUrlBatch {
   expirationDate: Date;
 }
 
-export interface WebhookData {
-  event: string;
+export interface WebhookDataFull {
+  event: 'tus_completed';
   upload: {
-    upload_id: string;
-    upload_expiry: string; // ISO 8601 format
-    file_path?: string;
-    original_filename?: string;
-    upload_length?: number;
-    upload_key: string;
+    uploadId: string;
+    uploadExpiry: string; // ISO 8601 format
+    filePath?: string;
+    originalFilename?: string;
+    uploadLength?: number;
+    uploadKey: string;
   };
   metadata?: {
     expiration?: string;
@@ -32,6 +32,21 @@ export interface WebhookData {
   };
   timestamp: string; // ISO 8601 format
 }
+
+export interface WebhookDataBasic {
+  event: 'upload_completed';
+  timestamp: string; // ISO 8601 format
+  objectPath: string;
+  size: number;
+}
+
+export interface SignedPutUrl {
+  filename: string;
+  signedUrl: string;
+  expirationDate: Date;
+}
+
+export type WebhookData = WebhookDataFull | WebhookDataBasic;
 
 export abstract class FileHubService {
   abstract generateUploadToken(options: {
@@ -48,4 +63,8 @@ export abstract class FileHubService {
     fileNames: string[],
     expiresInMs?: number,
   ): Promise<SignedUrlBatch[]>;
+  abstract getSignedPutUrl(
+    expiresInSeconds: number,
+    fileExtension: string,
+  ): Promise<SignedPutUrl>;
 }

@@ -73,7 +73,7 @@ export class CreatePromotionUseCase {
               targetId: promotion.id.toString(),
               userId: dto.createdByUserId,
             })
-            .then((upload) => upload.upload_key)
+            .then((upload) => upload.uploadKey)
         : undefined,
       this.eventEmitter.emitAsync(
         PromotionCreatedEvent.name,

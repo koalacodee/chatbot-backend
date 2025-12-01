@@ -96,7 +96,7 @@ export class UpdateQuestionUseCase {
               targetId: id,
               userId: dto.userId,
             })
-            .then((upload) => upload.upload_key)
+            .then((upload) => upload.uploadKey)
         : undefined,
       dto.chooseAttachments && dto.chooseAttachments.length > 0
         ? this.cloneAttachmentUseCase.execute({

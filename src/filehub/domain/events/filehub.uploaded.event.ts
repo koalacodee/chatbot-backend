@@ -1,12 +1,12 @@
 export class FilehubUploadedEvent {
   constructor(
     public readonly upload: {
-      upload_id: string;
-      upload_expiry: string; // ISO 8601 format
-      file_path?: string;
-      original_filename?: string;
-      upload_length?: number;
-      upload_key: string;
+      uploadId: string;
+      uploadExpiry: string; // ISO 8601 format
+      filePath?: string;
+      originalFilename?: string;
+      uploadLength?: number;
+      uploadKey: string;
     },
     public readonly metadata: {
       expiration?: string;

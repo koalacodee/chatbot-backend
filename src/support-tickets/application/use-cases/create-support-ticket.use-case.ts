@@ -76,7 +76,7 @@ export class CreateSupportTicketUseCase {
               expiresInMs: 1000 * 60 * 60 * 24,
               targetId: ticket.id.toString(),
             })
-            .then((upload) => upload.upload_key)
+            .then((upload) => upload.uploadKey)
         : undefined,
       this.notify(ticket),
     ]);

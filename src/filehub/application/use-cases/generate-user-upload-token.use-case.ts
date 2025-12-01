@@ -26,8 +26,8 @@ export class GenerateUserUploadTokenUseCase {
     });
 
     return {
-      uploadKey: upload.upload_key,
-      uploadExpiry: upload.upload_expiry,
+      uploadKey: upload.uploadKey,
+      uploadExpiry: upload.uploadExpiry,
     };
   }
 }

@@ -123,7 +123,7 @@ export class CreateQuestionUseCase {
               targetId: savedQuestion.id.toString(),
               userId: dto.creatorId,
             })
-            .then((upload) => upload.upload_key)
+            .then((upload) => upload.uploadKey)
         : undefined,
       this.eventEmitter.emitAsync(
         FaqCreatedEvent.name,

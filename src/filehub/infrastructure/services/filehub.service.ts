@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   FileHubService,
+  SignedPutUrl,
   SignedUrl,
   SignedUrlBatch,
   Upload,
@@ -40,8 +41,8 @@ export class FileHubServiceImpl implements FileHubService {
       guestId: options.guestId,
     };
     const response = await ky.post<{
-      upload_key: string;
-      upload_expiry: string /* ISO 8601 */;
+      uploadKey: string;
+      uploadExpiry: string /* ISO 8601 */;
     }>(`${this.fileHubBaseUrl}/api/uploads`, {
       headers: {
         Authorization: `Bearer ${this.fileHubApiKey}`,
@@ -51,12 +52,12 @@ export class FileHubServiceImpl implements FileHubService {
     });
     const data = await response.json();
     await this.redis.set(
-      `filehub:upload:${data.upload_key}`,
+      `filehub:upload:${data.uploadKey}`,
       JSON.stringify(filehubUploadedTempData),
     );
     return {
-      upload_key: data.upload_key,
-      upload_expiry: new Date(data.upload_expiry),
+      uploadKey: data.uploadKey,
+      uploadExpiry: new Date(data.uploadExpiry),
     };
   }
 
@@ -71,8 +72,8 @@ export class FileHubServiceImpl implements FileHubService {
       throw new Error('FileHub base URL is not set');
     }
     const response = await ky.post<{
-      signed_url: string;
-      expiration_date: string /* ISO 8601 */;
+      signedUrl: string;
+      expirationDate: string /* ISO 8601 */;
     }>(`${this.fileHubBaseUrl}/api/uploads/signed-url`, {
       headers: {
         Authorization: `Bearer ${this.fileHubApiKey}`,
@@ -82,8 +83,8 @@ export class FileHubServiceImpl implements FileHubService {
     });
     const data = await response.json();
     return {
-      signed_url: data.signed_url,
-      expiration_date: new Date(data.expiration_date),
+      signedUrl: data.signedUrl,
+      expirationDate: new Date(data.expirationDate),
     };
   }
 
@@ -115,6 +116,30 @@ export class FileHubServiceImpl implements FileHubService {
         console.error(error);
         throw error;
       });
+    const data = await response.json();
+    return data;
+  }
+
+  async getSignedPutUrl(
+    expiresInSeconds: number,
+    fileExtension: string,
+  ): Promise<SignedPutUrl> {
+    if (!this.fileHubApiKey) {
+      throw new Error('FileHub API key is not set');
+    }
+    if (!this.fileHubBaseUrl) {
+      throw new Error('FileHub base URL is not set');
+    }
+    const response = await ky.post<SignedPutUrl>(
+      `${this.fileHubBaseUrl}/api/uploads/signed-upload-url`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.fileHubApiKey}`,
+          'Expires-In': expiresInSeconds.toString(),
+          'File-Extension': fileExtension,
+        },
+      },
+    );
     const data = await response.json();
     return data;
   }

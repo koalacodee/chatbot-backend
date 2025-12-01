@@ -120,7 +120,7 @@ export class AnswerTicketUseCase {
             targetId: existingAnswer.id.toString(),
             userId,
           })
-          .then((upload) => upload.upload_key);
+          .then((upload) => upload.uploadKey);
       }
     } else {
       // Save the answer and ticket first
@@ -146,7 +146,7 @@ export class AnswerTicketUseCase {
             targetId: savedAnswer.id.toString(),
             userId,
           })
-          .then((upload) => upload.upload_key);
+          .then((upload) => upload.uploadKey);
       }
     }
     // Clone attachments if provided

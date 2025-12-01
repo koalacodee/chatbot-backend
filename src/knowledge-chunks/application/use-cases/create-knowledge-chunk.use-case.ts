@@ -28,9 +28,7 @@ export class CreateKnowledgeChunkUseCase {
     private readonly fileHubService: FileHubService,
   ) {}
 
-  async execute(
-    dto: CreateKnowledgeChunkDto,
-  ): Promise<{
+  async execute(dto: CreateKnowledgeChunkDto): Promise<{
     knowledgeChunk: KnowledgeChunk;
     uploadKey?: string;
     fileHubUploadKey?: string;
@@ -70,7 +68,7 @@ export class CreateKnowledgeChunkUseCase {
             targetId: knowledgeChunk.id.toString(),
             userId: dto.userId,
           })
-          .then((upload) => upload.upload_key)
+          .then((upload) => upload.uploadKey)
       : undefined;
 
     // Clone attachments if provided

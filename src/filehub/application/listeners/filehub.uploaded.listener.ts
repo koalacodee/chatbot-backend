@@ -23,15 +23,15 @@ export class FilehubUploadedListener {
   @OnEvent(FilehubUploadedEvent.name)
   async handleFilehubUploadedEvent(event: FilehubUploadedEvent): Promise<void> {
     const data = await this.redis.get(
-      `filehub:upload:${event.upload.upload_key}`,
+      `filehub:upload:${event.upload.uploadKey}`,
     );
 
     const json: FilehubUploadedTempData = JSON.parse(data);
 
     const attachment = Attachment.create({
-      type: event.upload.file_path?.split('.').pop(),
-      filename: event.upload.file_path,
-      originalName: event.upload.original_filename,
+      type: event.upload.filePath?.split('.').pop(),
+      filename: event.upload.filePath,
+      originalName: event.upload.originalFilename,
       expirationDate: event.metadata.expiration
         ? new Date(event.metadata.expiration)
         : undefined,
@@ -40,7 +40,7 @@ export class FilehubUploadedListener {
       targetId: json.targetId,
       cloned: false,
       isGlobal: event?.metadata?.isGlobal === '1',
-      size: event.upload.upload_length,
+      size: event.upload.uploadLength,
       createdAt: new Date(event.timestamp),
       updatedAt: new Date(event.timestamp),
     });

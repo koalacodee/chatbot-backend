@@ -104,7 +104,7 @@ export class VerifySupportTicketUseCase {
           expiresInMs: 1000 * 60 * 60 * 24,
           targetId: savedTicket.id.toString(),
         })
-        .then((upload) => upload.upload_key);
+        .then((upload) => upload.uploadKey);
     }
 
     // Clean up Redis storage

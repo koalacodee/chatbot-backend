@@ -134,39 +134,41 @@ export class SubmitTaskSubmissionUseCase {
     // Update task status to PENDING_REVIEW
     existingTask.status = TaskStatus.PENDING_REVIEW;
 
-    const [savedSubmission, _, uploadKey, fileHubUploadKey] = await Promise.all([
-      this.taskSubmissionRepo.save(taskSubmission),
-      this.taskRepo.save(existingTask),
-      dto.attach
-        ? this.filesService.genUploadKey(
-            taskSubmission.id.toString(),
+    const [savedSubmission, _, uploadKey, fileHubUploadKey] = await Promise.all(
+      [
+        this.taskSubmissionRepo.save(taskSubmission),
+        this.taskRepo.save(existingTask),
+        dto.attach
+          ? this.filesService.genUploadKey(
+              taskSubmission.id.toString(),
+              dto.submittedBy,
+            )
+          : undefined,
+        dto.attach
+          ? this.fileHubService
+              .generateUploadToken({
+                expiresInMs: 1000 * 60 * 60 * 24,
+                targetId: taskSubmission.id.toString(),
+                userId: dto.submittedBy,
+              })
+              .then((upload) => upload.uploadKey)
+          : undefined,
+        this.eventEmitter.emitAsync(
+          TaskPerformedEvent.name,
+          new TaskPerformedEvent(
+            existingTask.title,
+            existingTask.id.toString(),
             dto.submittedBy,
-          )
-        : undefined,
-      dto.attach
-        ? this.fileHubService
-            .generateUploadToken({
-              expiresInMs: 1000 * 60 * 60 * 24,
-              targetId: taskSubmission.id.toString(),
-              userId: dto.submittedBy,
-            })
-            .then((upload) => upload.upload_key)
-        : undefined,
-      this.eventEmitter.emitAsync(
-        TaskPerformedEvent.name,
-        new TaskPerformedEvent(
-          existingTask.title,
-          existingTask.id.toString(),
-          dto.submittedBy,
-          new Date(),
-          existingTask?.targetDepartment?.id.toString() ??
-            existingTask?.targetSubDepartment?.id.toString() ??
-            undefined,
-          existingTask.status,
-          Math.round((Date.now() - existingTask.createdAt.getTime()) / 1000),
+            new Date(),
+            existingTask?.targetDepartment?.id.toString() ??
+              existingTask?.targetSubDepartment?.id.toString() ??
+              undefined,
+            existingTask.status,
+            Math.round((Date.now() - existingTask.createdAt.getTime()) / 1000),
+          ),
         ),
-      ),
-    ]);
+      ],
+    );
 
     // Clone attachments if provided
     if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
@@ -213,7 +215,12 @@ export class SubmitTaskSubmissionUseCase {
       targetIds: [savedSubmission.id.toString()],
     });
 
-    return { taskSubmission: savedSubmission, uploadKey, fileHubUploadKey, attachments };
+    return {
+      taskSubmission: savedSubmission,
+      uploadKey,
+      fileHubUploadKey,
+      attachments,
+    };
   }
 
   private async checkTaskAccess(

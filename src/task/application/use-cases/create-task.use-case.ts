@@ -216,7 +216,7 @@ export class CreateTaskUseCase {
               targetId: task.id.toString(),
               userId,
             })
-            .then((upload) => upload.upload_key)
+            .then((upload) => upload.uploadKey)
         : undefined,
       this.eventEmitter.emitAsync(
         TaskCreatedEvent.name,

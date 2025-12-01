@@ -122,7 +122,7 @@ export class SubmitTaskDelegationForReviewUseCase {
             targetId: savedSubmission.id.toString(),
             userId: dto.submittedBy,
           })
-          .then((upload) => upload.upload_key)
+          .then((upload) => upload.uploadKey)
       : undefined;
 
     // Clone attachments if provided

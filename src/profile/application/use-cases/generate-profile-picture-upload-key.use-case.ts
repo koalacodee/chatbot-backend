@@ -21,7 +21,7 @@ export class GenerateProfilePictureUploadKeyUseCase {
     request: GenerateProfilePictureUploadKeyRequest,
   ): Promise<GenerateProfilePictureUploadKeyResponse> {
     const uploadKey = randomBytes(32).toString('base64url');
-    const redisKey = `profile_picture:upload_key:${uploadKey}`;
+    const redisKey = `profile_picture:uploadKey:${uploadKey}`;
     const expiresAt = new Date(
       Date.now() + this.UPLOAD_KEY_EXPIRY_SECONDS * 1000,
     );

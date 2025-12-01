@@ -105,7 +105,7 @@ export class UpdateKnowledgeChunkUseCase {
               targetId: id,
               userId: dto.userId,
             })
-            .then((upload) => upload.upload_key)
+            .then((upload) => upload.uploadKey)
         : undefined,
     ]);
 

@@ -16,18 +16,12 @@ export class PrismaProfilePictureRepository extends ProfilePictureRepository {
       where: { id: data.id },
       update: {
         filename: data.filename,
-        originalName: data.originalName,
-        mimeType: data.mimeType,
-        size: data.size,
         updatedAt: data.updatedAt,
       },
       create: {
         id: data.id,
         userId: data.userId,
         filename: data.filename,
-        originalName: data.originalName,
-        mimeType: data.mimeType,
-        size: data.size,
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
       },
@@ -115,9 +109,6 @@ export class PrismaProfilePictureRepository extends ProfilePictureRepository {
       where: { id },
       data: {
         filename: update.filename,
-        originalName: update.originalName,
-        mimeType: update.mimeType,
-        size: update.size,
         updatedAt: new Date(),
       },
     });

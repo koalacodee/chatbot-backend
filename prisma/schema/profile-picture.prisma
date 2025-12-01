@@ -1,11 +1,8 @@
 model ProfilePicture {
-  id           String @id @map("id") @db.Uuid
-  userId       String @unique @map("user_id") @db.Uuid
-  filename     String @map("filename") @db.VarChar(255)
-  originalName String @map("original_name") @db.VarChar(255)
-  mimeType     String @map("mime_type") @db.VarChar(100)
-  size         Int    @map("size")
-  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String @id @map("id") @db.Uuid
+  userId   String @unique @map("user_id") @db.Uuid
+  filename String @map("filename") @db.VarChar(255)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -33,6 +33,7 @@ import { TranslationModule } from './translation/translation.module';
 import { DrizzleModule } from './common/drizzle/drizzle.module';
 import { FilehubModule } from './filehub/filehub.module';
 import { FileHubAttachmentGroupModule } from './filehub/modules/attachment-groups/attachment-group.module';
+import { ProfilePictureModule } from './filehub/modules/profile-pictures/profile.picture.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -83,6 +84,7 @@ import { FileHubAttachmentGroupModule } from './filehub/modules/attachment-group
     TranslationModule,
     FilehubModule,
     FileHubAttachmentGroupModule,
+    ProfilePictureModule,
   ],
 })
 export class AppModule {}

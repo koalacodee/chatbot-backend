@@ -16,7 +16,7 @@ export class ProfileUploadGuard implements CanActivate {
     const token = request.headers['x-upload-key'] as string;
     if (!token) return false;
 
-    const redisKey = `profile_picture:upload_key:${token}`;
+    const redisKey = `profile_picture:uploadKey:${token}`;
     const userId = await this.redis.get(redisKey);
 
     if (!userId) return false;

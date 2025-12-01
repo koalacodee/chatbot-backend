@@ -172,7 +172,7 @@ export class UpdateTaskUseCase {
               targetId: id,
               userId,
             })
-            .then((upload) => upload.upload_key)
+            .then((upload) => upload.uploadKey)
         : undefined,
     ]);
 
