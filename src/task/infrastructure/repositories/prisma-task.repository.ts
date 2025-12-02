@@ -435,21 +435,11 @@ export class PrismaTaskRepository extends TaskRepository {
   }): Promise<{ tasks: Task[]; total: number }> {
     const { supervisorDepartmentIds, status, offset, limit } = options;
 
-    // Get all sub-department IDs under supervisor's departments
-    const subDepartments = await this.prisma.department.findMany({
-      where: { parentId: { in: supervisorDepartmentIds } },
-      select: { id: true },
-    });
-    const subDepartmentIds = subDepartments.map((d) => d.id);
-
     // Combine all department IDs (main + sub-departments)
-    const allDepartmentIds = [...supervisorDepartmentIds, ...subDepartmentIds];
+    const allDepartmentIds = supervisorDepartmentIds;
 
     const whereClause: any = {
-      OR: [
-        { targetDepartmentId: { in: allDepartmentIds } },
-        { targetSubDepartmentId: { in: allDepartmentIds } },
-      ],
+      targetDepartmentId: { in: allDepartmentIds },
     };
 
     if (status && status.length > 0) {
@@ -538,11 +528,6 @@ export class PrismaTaskRepository extends TaskRepository {
     completionPercentage: number;
   }> {
     const departmentIds = [...supervisorDepartmentIds];
-    const subDepartments = await this.prisma.department.findMany({
-      where: { parentId: { in: supervisorDepartmentIds } },
-      select: { id: true },
-    });
-    departmentIds.push(...subDepartments.map((d) => d.id));
 
     return this.executeMetricsQuery(
       `t.target_department_id IN (SELECT department_id FROM department_hierarchy) OR t.target_sub_department_id IN (SELECT department_id FROM department_hierarchy)`,
@@ -614,9 +599,7 @@ export class PrismaTaskRepository extends TaskRepository {
     return this.computeTaskMetrics(grouped);
   }
 
-  async getTaskMetricsForIndividual(
-    filters?: IndividualTaskFilters,
-  ): Promise<{
+  async getTaskMetricsForIndividual(filters?: IndividualTaskFilters): Promise<{
     pendingCount: number;
     completedCount: number;
     completionPercentage: number;
