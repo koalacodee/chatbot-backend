@@ -83,16 +83,6 @@ export class UpdateTaskUseCase {
     if (dto.dueDate !== undefined) existing.dueDate = dto.dueDate;
     if (dto.priority !== undefined) existing.priority = dto.priority;
 
-    if (dto.assigneeId !== undefined) {
-      if (dto.assigneeId === null) {
-        existing.assignee = undefined;
-      } else {
-        const user = await this.employeeRepository.findByUserId(dto.assigneeId);
-        if (!user) throw new NotFoundException({ assigneeId: 'not_found' });
-        existing.assignee = user;
-      }
-    }
-
     if (dto.assignerId !== undefined) {
       const user = await this.supervisorRepository.findByUserId(dto.assignerId);
       if (!user) throw new NotFoundException({ assignerId: 'not_found' });
@@ -107,6 +97,8 @@ export class UpdateTaskUseCase {
         if (!dept)
           throw new NotFoundException({ targetDepartmentId: 'not_found' });
         existing.targetDepartment = dept;
+        existing.targetSubDepartment = undefined;
+        existing.assignee = undefined;
       }
     }
 
@@ -120,6 +112,20 @@ export class UpdateTaskUseCase {
         if (!dept)
           throw new NotFoundException({ targetSubDepartmentId: 'not_found' });
         existing.targetSubDepartment = dept;
+        existing.assignee = undefined;
+        existing.targetDepartment = undefined;
+      }
+    }
+
+    if (dto.assigneeId !== undefined) {
+      if (dto.assigneeId === null) {
+        existing.assignee = undefined;
+      } else {
+        const user = await this.employeeRepository.findById(dto.assigneeId);
+        if (!user) throw new NotFoundException({ assigneeId: 'not_found' });
+        existing.assignee = user;
+        existing.targetDepartment = undefined;
+        existing.targetSubDepartment = undefined;
       }
     }
 
@@ -133,8 +139,11 @@ export class UpdateTaskUseCase {
       }
     }
 
-    if (dto.assignmentType !== undefined)
-      existing.assignmentType = dto.assignmentType;
+    existing.assignmentType = existing.assignee
+      ? TaskAssignmentType.INDIVIDUAL
+      : existing.targetDepartment
+        ? TaskAssignmentType.DEPARTMENT
+        : TaskAssignmentType.SUB_DEPARTMENT;
     if (dto.status !== undefined) existing.status = dto.status;
     if (dto.completedAt !== undefined)
       existing.completedAt = dto.completedAt ?? null;

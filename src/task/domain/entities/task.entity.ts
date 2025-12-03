@@ -265,15 +265,15 @@ export class Task {
   }
 
   get approvalLevel(): TaskApprovalLevel {
-    if (this.targetDepartment) {
+    if (this.targetDepartmentId) {
       return TaskApprovalLevel.DEPARTMENT_LEVEL;
     }
 
-    if (this.targetSubDepartment) {
+    if (this.targetSubDepartmentId) {
       return TaskApprovalLevel.SUB_DEPARTMENT_LEVEL;
     }
 
-    if (this.assignee) {
+    if (this.assigneeId) {
       return TaskApprovalLevel.EMPLOYEE_LEVEL;
     }
 
