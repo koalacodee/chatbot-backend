@@ -17,6 +17,11 @@ import { SupervisorRepository } from 'src/supervisor/domain/repository/superviso
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 
+/**
+ * @deprecated This repository has been replaced by DrizzleTaskRepository.
+ * Use DrizzleTaskRepository from './drizzle/drizzle-task.repository' instead.
+ * This class will be removed in a future version.
+ */
 @Injectable()
 export class PrismaTaskRepository extends TaskRepository {
   constructor(

@@ -4,6 +4,11 @@ import { TaskPresetRepository } from '../../domain/repositories/task-preset.repo
 import { TaskPreset } from '../../domain/entities/task-preset.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 
+/**
+ * @deprecated This repository has been replaced by DrizzleTaskPresetRepository.
+ * Use DrizzleTaskPresetRepository from './drizzle/drizzle-task-preset.repository' instead.
+ * This class will be removed in a future version.
+ */
 @Injectable()
 export class PrismaTaskPresetRepository implements TaskPresetRepository {
   constructor(private readonly prisma: PrismaService) {}

@@ -62,7 +62,7 @@ export class Employee {
   }
 
   static async create(
-    props: Omit<EmployeeProps, 'user'> & { user: any },
+    props: Omit<EmployeeProps, 'user'> & { user?: any },
   ): Promise<Employee> {
     props.user = props.user
       ? props.user instanceof User

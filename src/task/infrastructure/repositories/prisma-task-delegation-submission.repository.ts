@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { TaskDelegationSubmissionRepository } from '../../domain/repositories/task-delegation-submission.repository';
-import {
-  TaskDelegationSubmission as TaskDelegationSubmission,
-} from '../../domain/entities/task-delegation-submission.entity';
+import { TaskDelegationSubmission as TaskDelegationSubmission } from '../../domain/entities/task-delegation-submission.entity';
 import { TaskDelegationRepository } from '../../domain/repositories/task-delegation.repository';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
@@ -13,6 +11,11 @@ import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 
+/**
+ * @deprecated This repository has been replaced by DrizzleTaskDelegationSubmissionRepository.
+ * Use DrizzleTaskDelegationSubmissionRepository from './drizzle/drizzle-task-delegation-submission.repository' instead.
+ * This class will be removed in a future version.
+ */
 @Injectable()
 export class PrismaTaskDelegationSubmissionRepository extends TaskDelegationSubmissionRepository {
   constructor(
@@ -25,8 +28,11 @@ export class PrismaTaskDelegationSubmissionRepository extends TaskDelegationSubm
     super();
   }
 
-  private async resolveDelegation(delegationId: string): Promise<TaskDelegation> {
-    const delegation = await this.taskDelegationRepository.findById(delegationId);
+  private async resolveDelegation(
+    delegationId: string,
+  ): Promise<TaskDelegation> {
+    const delegation =
+      await this.taskDelegationRepository.findById(delegationId);
     if (!delegation) {
       throw new Error(`Task delegation with id ${delegationId} not found`);
     }
@@ -79,7 +85,9 @@ export class PrismaTaskDelegationSubmissionRepository extends TaskDelegationSubm
     throw new Error('Task delegation submission must have a performer');
   }
 
-  private async resolveReviewer(row: any): Promise<Admin | Supervisor | undefined> {
+  private async resolveReviewer(
+    row: any,
+  ): Promise<Admin | Supervisor | undefined> {
     if (row.reviewedByAdminId) {
       if (row.reviewedByAdmin) {
         return Admin.create(row.reviewedByAdmin);
@@ -298,7 +306,10 @@ export class PrismaTaskDelegationSubmissionRepository extends TaskDelegationSubm
     await this.prisma.taskDelegationSubmission.delete({ where: { id } });
   }
 
-  async findByTaskId(taskId: string, forwardedOnly: boolean = true): Promise<TaskDelegationSubmission[]> {
+  async findByTaskId(
+    taskId: string,
+    forwardedOnly: boolean = true,
+  ): Promise<TaskDelegationSubmission[]> {
     const rows = await this.prisma.taskDelegationSubmission.findMany({
       where: { taskId, forwarded: forwardedOnly },
       orderBy: { submittedAt: 'desc' },

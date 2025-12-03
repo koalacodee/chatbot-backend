@@ -10,6 +10,11 @@ import { TaskRepository } from '../../domain/repositories/task.repository';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { ToDomainRow } from '../../domain/repositories/task-submission.repository';
 
+/**
+ * @deprecated This repository has been replaced by DrizzleTaskSubmissionRepository.
+ * Use DrizzleTaskSubmissionRepository from './drizzle/drizzle-task-submission.repository' instead.
+ * This class will be removed in a future version.
+ */
 @Injectable()
 export class PrismaTaskSubmissionRepository extends TaskSubmissionRepository {
   constructor(

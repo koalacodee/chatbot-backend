@@ -9,6 +9,11 @@ import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 
+/**
+ * @deprecated This repository has been replaced by DrizzleTaskDelegationRepository.
+ * Use DrizzleTaskDelegationRepository from './drizzle/drizzle-task-delegation.repository' instead.
+ * This class will be removed in a future version.
+ */
 @Injectable()
 export class PrismaTaskDelegationRepository extends TaskDelegationRepository {
   constructor(
@@ -331,4 +336,3 @@ export class PrismaTaskDelegationRepository extends TaskDelegationRepository {
     return { delegations, total };
   }
 }
-

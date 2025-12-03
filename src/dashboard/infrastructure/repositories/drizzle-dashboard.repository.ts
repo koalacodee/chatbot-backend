@@ -25,8 +25,24 @@ import {
   attachments,
   supportTicketAnswers,
   activityLogs,
+  taskDelegations,
 } from 'src/common/drizzle/schema';
-import { and, eq, sql, inArray, or, isNotNull, lt, ne, count, avg, sum, desc, asc, countDistinct } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  sql,
+  inArray,
+  or,
+  isNotNull,
+  lt,
+  ne,
+  count,
+  avg,
+  sum,
+  desc,
+  asc,
+  countDistinct,
+} from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 @Injectable()
@@ -39,7 +55,9 @@ export class DrizzleDashboardRepository extends DashboardRepository {
     return this.drizzleService.client;
   }
 
-  private async getDepartmentChildren(departmentIds: string[]): Promise<string[]> {
+  private async getDepartmentChildren(
+    departmentIds: string[],
+  ): Promise<string[]> {
     if (!departmentIds || departmentIds.length === 0) {
       return [];
     }
@@ -81,7 +99,10 @@ export class DrizzleDashboardRepository extends DashboardRepository {
 
     // Count users by role with filtering rules
     const [adminCountCte, employeeCountCte, supervisorCountCte] =
-      this.countFilteredUsers(hasFilter, { rootDepartmentIds: departmentIds, childDepartmentIds });
+      this.countFilteredUsers(hasFilter, {
+        rootDepartmentIds: departmentIds,
+        childDepartmentIds,
+      });
 
     // Count tickets (active and completed)
     const activeTicketsCTE = this.getCountActiveTicketsCTE(
@@ -100,7 +121,11 @@ export class DrizzleDashboardRepository extends DashboardRepository {
       { rootDepartmentIds: departmentIds, childDepartmentIds },
       'completed',
     );
-    const pendingTasksCTEs = this.getCountTasksCTE(hasFilter, { rootDepartmentIds: departmentIds, childDepartmentIds }, 'pending');
+    const pendingTasksCTEs = this.getCountTasksCTE(
+      hasFilter,
+      { rootDepartmentIds: departmentIds, childDepartmentIds },
+      'pending',
+    );
 
     // Calculate FAQ satisfaction
     const faqSatisfactionCTE = this.getCalculateFaqSatisfactionCTE(
@@ -131,9 +156,13 @@ export class DrizzleDashboardRepository extends DashboardRepository {
         // User counts
         adminCnt: sql<number>`${adminCountCte}.cnt`.as('adminCnt'),
         employeeCnt: sql<number>`${employeeCountCte}.cnt`.as('employeeCnt'),
-        supervisorCnt: sql<number>`${supervisorCountCte}.cnt`.as('supervisorCnt'),
+        supervisorCnt: sql<number>`${supervisorCountCte}.cnt`.as(
+          'supervisorCnt',
+        ),
         // Ticket counts
-        activeTickets: sql<number>`${activeTicketsCTE}.count`.as('activeTickets'),
+        activeTickets: sql<number>`${activeTicketsCTE}.count`.as(
+          'activeTickets',
+        ),
         completedTickets: sql<number>`${completedTicketsCTE}.count`.as(
           'completedTickets',
         ),
@@ -193,15 +222,15 @@ export class DrizzleDashboardRepository extends DashboardRepository {
     // For tasks: if no filter, use overall count; otherwise sum the specific CTEs
     const completedTasks = hasFilter
       ? (Number(row?.completedTasksDept) || 0) +
-      (Number(row?.completedTasksSubDept) || 0) +
-      (Number(row?.completedTasksIndiv) || 0)
-      : (Number(row?.completedTasksOverall) || 0);
+        (Number(row?.completedTasksSubDept) || 0) +
+        (Number(row?.completedTasksIndiv) || 0)
+      : Number(row?.completedTasksOverall) || 0;
 
     const pendingTasks = hasFilter
       ? (Number(row?.pendingTasksDept) || 0) +
-      (Number(row?.pendingTasksSubDept) || 0) +
-      (Number(row?.pendingTasksIndiv) || 0)
-      : (Number(row?.pendingTasksOverall) || 0);
+        (Number(row?.pendingTasksSubDept) || 0) +
+        (Number(row?.pendingTasksIndiv) || 0)
+      : Number(row?.pendingTasksOverall) || 0;
 
     // Calculate FAQ satisfaction percentage
     const faqSat = Number(row?.faqSat) || 0;
@@ -225,88 +254,86 @@ export class DrizzleDashboardRepository extends DashboardRepository {
     deptTree: { rootDepartmentIds: string[]; childDepartmentIds: string[] },
   ) {
     // Admin count CTE (only when no filter)
-    const adminCountCte = this.db
-      .$with('admin_count')
-      .as(
-        this.db
-          .select({ cnt: count().as('cnt') })
-          .from(users)
-          .where(hasFilter ? sql`false` : eq(users.role, 'admin')),
-      );
+    const adminCountCte = this.db.$with('admin_count').as(
+      this.db
+        .select({ cnt: count().as('cnt') })
+        .from(users)
+        .where(hasFilter ? sql`false` : eq(users.role, 'admin')),
+    );
 
     // Employee count CTE
     const employeeCountCte = this.db.$with('employee_count').as(
       hasFilter && deptTree.childDepartmentIds.length > 0
         ? this.db
-          .select({
-            cnt: countDistinct(users.id).as('cnt'),
-          })
-          .from(users)
-          .innerJoin(employees, eq(employees.userId, users.id))
-          .innerJoin(
-            employeeSubDepartments,
-            eq(employeeSubDepartments.employeeId, employees.id),
-          )
-          .where(
-            and(
-              eq(users.role, 'employee'),
-              inArray(
-                employeeSubDepartments.departmentId,
-                deptTree.childDepartmentIds,
+            .select({
+              cnt: countDistinct(users.id).as('cnt'),
+            })
+            .from(users)
+            .innerJoin(employees, eq(employees.userId, users.id))
+            .innerJoin(
+              employeeSubDepartments,
+              eq(employeeSubDepartments.employeeId, employees.id),
+            )
+            .where(
+              and(
+                eq(users.role, 'employee'),
+                inArray(
+                  employeeSubDepartments.departmentId,
+                  deptTree.childDepartmentIds,
+                ),
               ),
-            ),
-          )
+            )
         : hasFilter
           ? this.db
-            .select({
-              cnt: countDistinct(users.id).as('cnt'),
-            })
-            .from(users)
-            .innerJoin(employees, eq(employees.userId, users.id))
-            .where(sql`false`)
+              .select({
+                cnt: countDistinct(users.id).as('cnt'),
+              })
+              .from(users)
+              .innerJoin(employees, eq(employees.userId, users.id))
+              .where(sql`false`)
           : this.db
-            .select({
-              cnt: countDistinct(users.id).as('cnt'),
-            })
-            .from(users)
-            .innerJoin(employees, eq(employees.userId, users.id))
-            .where(eq(users.role, 'employee')),
+              .select({
+                cnt: countDistinct(users.id).as('cnt'),
+              })
+              .from(users)
+              .innerJoin(employees, eq(employees.userId, users.id))
+              .where(eq(users.role, 'employee')),
     );
 
     // Supervisor count CTE
     const supervisorCountCte = this.db.$with('supervisor_count').as(
       hasFilter && deptTree.rootDepartmentIds.length > 0
         ? this.db
-          .select({
-            cnt: countDistinct(users.id).as('cnt'),
-          })
-          .from(users)
-          .innerJoin(supervisors, eq(supervisors.userId, users.id))
-          .innerJoin(
-            departmentToSupervisor,
-            eq(departmentToSupervisor.b, supervisors.id),
-          )
-          .where(
-            and(
-              eq(users.role, 'supervisor'),
-              inArray(departmentToSupervisor.a, deptTree.rootDepartmentIds),
-            ),
-          )
+            .select({
+              cnt: countDistinct(users.id).as('cnt'),
+            })
+            .from(users)
+            .innerJoin(supervisors, eq(supervisors.userId, users.id))
+            .innerJoin(
+              departmentToSupervisor,
+              eq(departmentToSupervisor.b, supervisors.id),
+            )
+            .where(
+              and(
+                eq(users.role, 'supervisor'),
+                inArray(departmentToSupervisor.a, deptTree.rootDepartmentIds),
+              ),
+            )
         : hasFilter
           ? this.db
-            .select({
-              cnt: countDistinct(users.id).as('cnt'),
-            })
-            .from(users)
-            .innerJoin(supervisors, eq(supervisors.userId, users.id))
-            .where(sql`false`)
+              .select({
+                cnt: countDistinct(users.id).as('cnt'),
+              })
+              .from(users)
+              .innerJoin(supervisors, eq(supervisors.userId, users.id))
+              .where(sql`false`)
           : this.db
-            .select({
-              cnt: countDistinct(users.id).as('cnt'),
-            })
-            .from(users)
-            .innerJoin(supervisors, eq(supervisors.userId, users.id))
-            .where(eq(users.role, 'supervisor')),
+              .select({
+                cnt: countDistinct(users.id).as('cnt'),
+              })
+              .from(users)
+              .innerJoin(supervisors, eq(supervisors.userId, users.id))
+              .where(eq(users.role, 'supervisor')),
     );
 
     return [adminCountCte, employeeCountCte, supervisorCountCte];
@@ -348,11 +375,14 @@ export class DrizzleDashboardRepository extends DashboardRepository {
       );
     }
 
-    const countCompletedTicketsCte = this.db.$with('count_completed_tickets').as(
-      this.db.select({ count: count().as('count') })
-        .from(supportTickets)
-        .where(and(...whereConditions)),
-    );
+    const countCompletedTicketsCte = this.db
+      .$with('count_completed_tickets')
+      .as(
+        this.db
+          .select({ count: count().as('count') })
+          .from(supportTickets)
+          .where(and(...whereConditions)),
+      );
 
     return countCompletedTicketsCte;
   }
@@ -360,64 +390,103 @@ export class DrizzleDashboardRepository extends DashboardRepository {
   private getCountTasksCTE(
     hasFilter: boolean,
     deptTree: { rootDepartmentIds: string[]; childDepartmentIds: string[] },
-    status: "completed" | "pending"
+    status: 'completed' | 'pending',
   ) {
-
-    const statusWhereCondition = status === "completed" ? eq(tasks.status, "completed") : inArray(tasks.status, ["to_do", "seen", "pending_review"]);
+    const statusWhereCondition =
+      status === 'completed'
+        ? eq(tasks.status, 'completed')
+        : inArray(tasks.status, ['to_do', 'seen', 'pending_review']);
 
     const countTasksCte = this.db.$with(`count_${status}_tasks`).as(
-      this.db.select({ count: count().as("count") })
+      this.db
+        .select({ count: count().as('count') })
         .from(tasks)
         .where(statusWhereCondition),
     );
-
 
     // Department-level tasks
     const departmentTasksCte =
       hasFilter && deptTree.rootDepartmentIds.length > 0
         ? this.db.$with(`count_${status}_tasks_department`).as(
-          this.db.select({ count: count().as("count") })
-            .from(tasks)
-            .where(
-              and(
-                statusWhereCondition,
-                eq(tasks.assignmentType, 'department'),
-                inArray(tasks.targetDepartmentId, deptTree.rootDepartmentIds),
+            this.db
+              .select({ count: count().as('count') })
+              .from(tasks)
+              .where(
+                and(
+                  statusWhereCondition,
+                  eq(tasks.assignmentType, 'department'),
+                  inArray(tasks.targetDepartmentId, deptTree.rootDepartmentIds),
+                ),
               ),
-            ),
-        )
-        : this.db.$with(`count_${status}_tasks_department`).as(
-          this.db.select({ count: sql<number>`0`.as("count") }).from(sql`(SELECT 1) as dummy`)
-        );
+          )
+        : this.db
+            .$with(`count_${status}_tasks_department`)
+            .as(
+              this.db
+                .select({ count: sql<number>`0`.as('count') })
+                .from(sql`(SELECT 1) as dummy`),
+            );
     const subDepartmentTasksCte =
       hasFilter && deptTree.childDepartmentIds.length > 0
         ? this.db.$with(`count_${status}_tasks_sub_department`).as(
-          this.db.select({ count: count().as("count") })
-            .from(tasks)
-            .where(
-              and(
-                statusWhereCondition,
-                eq(tasks.assignmentType, 'sub_department'),
-                inArray(tasks.targetSubDepartmentId, deptTree.childDepartmentIds),
+            this.db
+              .select({ count: count().as('count') })
+              .from(tasks)
+              .where(
+                and(
+                  statusWhereCondition,
+                  eq(tasks.assignmentType, 'sub_department'),
+                  inArray(
+                    tasks.targetSubDepartmentId,
+                    deptTree.childDepartmentIds,
+                  ),
+                ),
               ),
-            )
-        )
-        : this.db.$with(`count_${status}_tasks_sub_department`).as(
-          this.db.select({ count: sql<number>`0`.as("count") }).from(sql`(SELECT 1) as dummy`)
-        );
-    const individualTasksCte = hasFilter && deptTree.childDepartmentIds.length > 0
-      ? this.db.$with(`count_${status}_tasks_individual`).as(
-        this.db.select({ count: countDistinct(tasks.id).as("count") })
-          .from(tasks)
-          .innerJoin(employees, eq(employees.id, tasks.assigneeId))
-          .innerJoin(employeeSubDepartments, eq(employeeSubDepartments.employeeId, employees.id))
-          .where(and(statusWhereCondition, eq(tasks.assignmentType, 'individual'), isNotNull(tasks.assigneeId), inArray(employeeSubDepartments.departmentId, deptTree.childDepartmentIds))),
-      )
-      : this.db.$with(`count_${status}_tasks_individual`).as(
-        this.db.select({ count: sql<number>`0`.as("count") }).from(sql`(SELECT 1) as dummy`)
-      );
+          )
+        : this.db
+            .$with(`count_${status}_tasks_sub_department`)
+            .as(
+              this.db
+                .select({ count: sql<number>`0`.as('count') })
+                .from(sql`(SELECT 1) as dummy`),
+            );
+    const individualTasksCte =
+      hasFilter && deptTree.childDepartmentIds.length > 0
+        ? this.db.$with(`count_${status}_tasks_individual`).as(
+            this.db
+              .select({ count: countDistinct(tasks.id).as('count') })
+              .from(tasks)
+              .innerJoin(employees, eq(employees.id, tasks.assigneeId))
+              .innerJoin(
+                employeeSubDepartments,
+                eq(employeeSubDepartments.employeeId, employees.id),
+              )
+              .where(
+                and(
+                  statusWhereCondition,
+                  eq(tasks.assignmentType, 'individual'),
+                  isNotNull(tasks.assigneeId),
+                  inArray(
+                    employeeSubDepartments.departmentId,
+                    deptTree.childDepartmentIds,
+                  ),
+                ),
+              ),
+          )
+        : this.db
+            .$with(`count_${status}_tasks_individual`)
+            .as(
+              this.db
+                .select({ count: sql<number>`0`.as('count') })
+                .from(sql`(SELECT 1) as dummy`),
+            );
 
-    return [countTasksCte, departmentTasksCte, subDepartmentTasksCte, individualTasksCte];
+    return [
+      countTasksCte,
+      departmentTasksCte,
+      subDepartmentTasksCte,
+      individualTasksCte,
+    ];
   }
 
   private getCalculateFaqSatisfactionCTE(
@@ -425,21 +494,20 @@ export class DrizzleDashboardRepository extends DashboardRepository {
     allDepartmentIds: string[],
   ) {
     return this.db.$with('faq_satisfaction').as(
-      hasFilter && allDepartmentIds.length > 0 ?
-        this.db
-          .select({
-            totalSat: sum(questions.satisfaction).as('totalSat'),
-            totalDiss: sum(questions.dissatisfaction).as('totalDiss'),
-          })
-          .from(questions)
-          .where(inArray(questions.departmentId, allDepartmentIds)) :
-
-        this.db
-          .select({
-            totalSat: sum(questions.satisfaction).as('totalSat'),
-            totalDiss: sum(questions.dissatisfaction).as('totalDiss'),
-          })
-          .from(questions),
+      hasFilter && allDepartmentIds.length > 0
+        ? this.db
+            .select({
+              totalSat: sum(questions.satisfaction).as('totalSat'),
+              totalDiss: sum(questions.dissatisfaction).as('totalDiss'),
+            })
+            .from(questions)
+            .where(inArray(questions.departmentId, allDepartmentIds))
+        : this.db
+            .select({
+              totalSat: sum(questions.satisfaction).as('totalSat'),
+              totalDiss: sum(questions.dissatisfaction).as('totalDiss'),
+            })
+            .from(questions),
     );
   }
 
@@ -637,9 +705,7 @@ export class DrizzleDashboardRepository extends DashboardRepository {
     ];
 
     if (hasFilter && allDepartmentIds.length > 0) {
-      whereConditions.push(
-        inArray(ticketAlias.departmentId, allDepartmentIds),
-      );
+      whereConditions.push(inArray(ticketAlias.departmentId, allDepartmentIds));
     }
 
     const result = await this.db
@@ -921,7 +987,6 @@ export class DrizzleDashboardRepository extends DashboardRepository {
       guestId: r.guestId ?? null,
       targetId: r.targetId ?? '',
     }));
-
   }
 
   async getEmployeeDashboardSummary(
@@ -929,20 +994,42 @@ export class DrizzleDashboardRepository extends DashboardRepository {
   ): Promise<EmployeeDashboardSummary> {
     const now = new Date();
 
+    const employeeDepartmentIds = await this.db
+      .select({
+        id: employeeSubDepartments.departmentId,
+        parentId: departments.parentId,
+      })
+      .from(employeeSubDepartments)
+      .leftJoin(
+        departments,
+        eq(employeeSubDepartments.departmentId, departments.id),
+      )
+      .where(eq(employeeSubDepartments.employeeId, employeeId))
+      .then((res) => res.map((r) => [r.id, r.parentId]).flat());
+
     const [completedTasksResult, closedTicketsResult, expiredFilesResult] =
       await Promise.all([
         this.db
           .select({ count: count() })
           .from(tasks)
           .where(
-            and(eq(tasks.assigneeId, employeeId), eq(tasks.status, 'completed')),
+            and(
+              or(
+                eq(tasks.assigneeId, employeeId),
+                inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
+              ),
+              eq(tasks.status, 'completed'),
+            ),
           ),
         this.db
           .select({ count: count() })
           .from(supportTickets)
           .where(
             and(
-              eq(supportTickets.assigneeId, employeeId),
+              or(
+                eq(supportTickets.assigneeId, employeeId),
+                inArray(supportTickets.departmentId, employeeDepartmentIds),
+              ),
               eq(supportTickets.status, 'closed'),
             ),
           ),
@@ -973,6 +1060,19 @@ export class DrizzleDashboardRepository extends DashboardRepository {
   ): Promise<EmployeeDashboardData> {
     const now = new Date();
 
+    const employeeDepartmentIds = await this.db
+      .select({
+        id: employeeSubDepartments.departmentId,
+        parentId: departments.parentId,
+      })
+      .from(employeeSubDepartments)
+      .leftJoin(
+        departments,
+        eq(employeeSubDepartments.departmentId, departments.id),
+      )
+      .where(eq(employeeSubDepartments.employeeId, employeeId))
+      .then((res) => res.map((r) => [r.id, r.parentId]).flat());
+
     // Get summary
     const summary = await this.getEmployeeDashboardSummary(employeeId);
 
@@ -991,7 +1091,10 @@ export class DrizzleDashboardRepository extends DashboardRepository {
       .from(tasks)
       .where(
         and(
-          eq(tasks.assigneeId, employeeId),
+          or(
+            eq(tasks.assigneeId, employeeId),
+            inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
+          ),
           inArray(tasks.status, ['to_do', 'seen', 'pending_review']),
         ),
       )
@@ -1023,7 +1126,10 @@ export class DrizzleDashboardRepository extends DashboardRepository {
       .from(supportTickets)
       .where(
         and(
-          eq(supportTickets.assigneeId, employeeId),
+          or(
+            eq(supportTickets.assigneeId, employeeId),
+            inArray(supportTickets.departmentId, employeeDepartmentIds),
+          ),
           inArray(supportTickets.status, ['new', 'seen']),
         ),
       )
@@ -1074,9 +1180,50 @@ export class DrizzleDashboardRepository extends DashboardRepository {
       createdAt: new Date(r.createdAt),
     }));
 
+    const pendingDelegationsResults = await this.db
+      .select({
+        id: taskDelegations.id,
+        title: tasks.title,
+        description: tasks.description,
+        priority: tasks.priority,
+        dueDate: tasks.dueDate,
+        status: taskDelegations.status,
+        createdAt: taskDelegations.createdAt,
+        updatedAt: taskDelegations.updatedAt,
+      })
+      .from(taskDelegations)
+      .leftJoin(tasks, eq(taskDelegations.taskId, tasks.id))
+      .where(
+        and(
+          or(
+            eq(taskDelegations.assigneeId, employeeId),
+            inArray(
+              taskDelegations.targetSubDepartmentId,
+              employeeDepartmentIds,
+            ),
+          ),
+          inArray(taskDelegations.status, ['to_do', 'seen', 'pending_review']),
+        ),
+      )
+      .orderBy(asc(tasks.dueDate), desc(taskDelegations.createdAt))
+      .limit(taskLimit);
+
+    const pendingDelegations: PendingTask[] = pendingDelegationsResults.map(
+      (r) => ({
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        priority: r.priority,
+        dueDate: r.dueDate ? new Date(r.dueDate) : null,
+        status: r.status,
+        createdAt: new Date(r.createdAt),
+        updatedAt: new Date(r.updatedAt),
+      }),
+    );
+
     return {
       summary,
-      pendingTasks,
+      pendingTasks: pendingTasks.concat(pendingDelegations),
       pendingTickets,
       expiredFiles,
     };

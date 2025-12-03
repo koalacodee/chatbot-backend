@@ -2,14 +2,8 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { TaskRepository } from './domain/repositories/task.repository';
 import { TaskSubmissionRepository } from './domain/repositories/task-submission.repository';
-import { TaskPresetRepository } from './domain/repositories/task-preset.repository';
 import { TaskDelegationRepository } from './domain/repositories/task-delegation.repository';
 import { TaskDelegationSubmissionRepository } from './domain/repositories/task-delegation-submission.repository';
-import { PrismaTaskRepository } from './infrastructure/repositories/prisma-task.repository';
-import { PrismaTaskSubmissionRepository } from './infrastructure/repositories/prisma-task-submission.repository';
-import { PrismaTaskPresetRepository } from './infrastructure/repositories/prisma-task-preset.repository';
-import { PrismaTaskDelegationRepository } from './infrastructure/repositories/prisma-task-delegation.repository';
-import { PrismaTaskDelegationSubmissionRepository } from './infrastructure/repositories/prisma-task-delegation-submission.repository';
 import { PrismaModule } from 'src/common/prisma/prisma.module';
 import { DepartmentModule } from 'src/department/department.module';
 import { SharedModule } from 'src/shared/shared.module';
@@ -28,6 +22,11 @@ import { ReminderProcessor } from './infrastructure/queues/reminder.processor';
 import { DelegationReminderQueueService } from './infrastructure/queues/delegation-reminder.queue';
 import { DelegationReminderProcessor } from './infrastructure/queues/delegation-reminder.processor';
 import { ExportModule } from 'src/export/export.module';
+import { DrizzleTaskRepository } from './infrastructure/repositories/drizzle/drizzle-task.repository';
+import { DrizzleTaskSubmissionRepository } from './infrastructure/repositories/drizzle/drizzle-task-submission.repository';
+import { DrizzleTaskDelegationRepository } from './infrastructure/repositories/drizzle/drizzle-task-delegation.repository';
+import { DrizzleTaskDelegationSubmissionRepository } from './infrastructure/repositories/drizzle/drizzle-task-delegation-submission.repository';
+import { DrizzleTaskPresetRepository } from './infrastructure/repositories/drizzle/drizzle-task-preset.repository';
 
 @Module({
   imports: [
@@ -61,23 +60,23 @@ import { ExportModule } from 'src/export/export.module';
   providers: [
     {
       provide: TaskRepository,
-      useClass: PrismaTaskRepository,
+      useClass: DrizzleTaskRepository,
     },
     {
       provide: TaskSubmissionRepository,
-      useClass: PrismaTaskSubmissionRepository,
+      useClass: DrizzleTaskSubmissionRepository,
     },
     {
       provide: TaskDelegationRepository,
-      useClass: PrismaTaskDelegationRepository,
+      useClass: DrizzleTaskDelegationRepository,
     },
     {
       provide: TaskDelegationSubmissionRepository,
-      useClass: PrismaTaskDelegationSubmissionRepository,
+      useClass: DrizzleTaskDelegationSubmissionRepository,
     },
     {
       provide: 'TaskPresetRepository',
-      useClass: PrismaTaskPresetRepository,
+      useClass: DrizzleTaskPresetRepository,
     },
     ...Object.values(UseCases),
     TaskApprovedListener,
@@ -98,4 +97,4 @@ import { ExportModule } from 'src/export/export.module';
     DelegationReminderQueueService,
   ],
 })
-export class TaskModule { }
+export class TaskModule {}
