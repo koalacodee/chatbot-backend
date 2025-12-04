@@ -14,3 +14,4 @@ export * from './forward-task-delegation-submission.dto';
 export * from './delegation-id.dto';
 export * from './submission-id.dto';
 export * from './get-delegables.dto';
+export * from './get-my-tasks.dto';

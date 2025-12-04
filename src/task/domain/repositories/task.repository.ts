@@ -1,8 +1,6 @@
-import {
-  Task,
-  TaskPriority,
-  TaskStatus,
-} from '../entities/task.entity';
+import { TaskDelegation } from '../entities/task-delegation.entity';
+import { Task, TaskPriority, TaskStatus } from '../entities/task.entity';
+import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 
 export interface DepartmentTaskFilters {
   status?: TaskStatus[];
@@ -10,9 +8,37 @@ export interface DepartmentTaskFilters {
   search?: string;
 }
 
+export interface EmployeeTasksResult {
+  tasks: Task[];
+  delegations: TaskDelegation[];
+  total: number;
+  fileHubAttachments: Attachment[];
+  metrics: {
+    pendingTasks: number;
+    completedTasks: number;
+    pendingDelegations: number;
+    completedDelegations: number;
+    taskCompletionPercentage: number;
+    delegationCompletionPercentage: number;
+    totalPercentage: number;
+  };
+}
+
 export interface IndividualTaskFilters extends DepartmentTaskFilters {
   assigneeId?: string;
   departmentIds?: string[];
+}
+
+export interface MyTasksResult {
+  tasks: Task[];
+  delegations?: TaskDelegation[];
+  total: number;
+  fileHubAttachments: Attachment[];
+  metrics: {
+    pendingTasks: number;
+    completedTasks: number;
+    taskCompletionPercentage: number;
+  };
 }
 
 export abstract class TaskRepository {
@@ -80,6 +106,14 @@ export abstract class TaskRepository {
     completionPercentage: number;
   }>;
 
+  abstract getTasksForSupervisor(options: {
+    supervisorUserId: string;
+    status?: TaskStatus[];
+    priority?: TaskPriority[];
+    offset: number;
+    limit: number;
+  }): Promise<MyTasksResult>;
+
   abstract getTaskMetricsForEmployee(
     employeeId: string,
     supervisorId: string,
@@ -115,6 +149,13 @@ export abstract class TaskRepository {
     completedCount: number;
     completionPercentage: number;
   }>;
+  abstract getTasksAndDelegationsForEmployee(options: {
+    employeeUserId: string;
+    status?: TaskStatus[];
+    priority?: TaskPriority[];
+    offset: number;
+    limit: number;
+  }): Promise<EmployeeTasksResult>;
 
   // Database-level filtering for reminder processing
   abstract findTaskForReminder(taskId: string): Promise<Task | null>;

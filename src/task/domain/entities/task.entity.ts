@@ -31,7 +31,7 @@ export interface TaskOptions {
   description: string;
   dueDate?: Date;
   assignee?: Employee;
-  assigner: Admin | Supervisor;
+  assigner?: Admin | Supervisor;
   approver?: Admin | Supervisor;
   creatorId: string;
   creator?: User;

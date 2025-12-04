@@ -39,6 +39,7 @@ import {
   RejectTaskSubmissionInputDto,
   SaveTaskPresetDto,
   CreateTaskFromPresetDto,
+  GetMyTasksDto,
 } from './dto';
 import { ExportTasksDto } from './dto/export-tasks.dto';
 import { GetTeamTasksDto } from './dto/get-team-tasks.dto';
@@ -257,32 +258,13 @@ export class TaskController {
     },
   })
   @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TASKS)
-  async getMyTasks(
-    @Req() req: any,
-    @Query('offset') offset?: string,
-    @Query('limit') limit?: string,
-    @Query('status') status?: string,
-  ) {
-    const result = await this.getMyTasksUseCase.execute({
+  async getMyTasks(@Req() req: any, @Query() query: GetMyTasksDto) {
+    return this.getMyTasksUseCase.execute({
       userId: req.user.id,
-      offset: offset ? parseInt(offset, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
-      status,
+      offset: query.offset,
+      limit: query.limit,
+      status: query.status,
     });
-
-    return {
-      success: true,
-      data: result.tasks.map((task) => ({
-        ...task.toJSON(),
-        canSubmitWork: result.canSubmitWork[result.tasks.indexOf(task)],
-      })),
-      delegations: result.delegations?.map((delegation) => delegation.toJSON()),
-      total: result.total,
-      metrics: result.metrics,
-      attachments: result.attachments,
-      delegationAttachments: result?.delegationAttachments,
-      fileHubAttachments: result.fileHubAttachments,
-    };
   }
 
   // Task Preset endpoints

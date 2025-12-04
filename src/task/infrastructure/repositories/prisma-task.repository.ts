@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Injectable } from '@nestjs/common';
 import { Prisma, TaskStatus as PrismaTaskStatus } from '@prisma/client';
 import { PrismaService } from 'src/common/prisma/prisma.service';

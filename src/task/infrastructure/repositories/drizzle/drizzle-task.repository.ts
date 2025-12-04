@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { DrizzleService } from 'src/common/drizzle/drizzle.service';
 import {
   DepartmentTaskFilters,
+  EmployeeTasksResult,
   IndividualTaskFilters,
+  MyTasksResult,
   TaskRepository,
 } from '../../../domain/repositories/task.repository';
 import {
@@ -18,7 +20,16 @@ import {
   Employee,
   EmployeePermissionsEnum,
 } from 'src/employee/domain/entities/employee.entity';
-import { tasks, employees, departments } from 'src/common/drizzle/schema';
+import {
+  tasks,
+  employees,
+  departments,
+  employeeSubDepartments,
+  taskDelegations,
+  attachments,
+  supervisors,
+  departmentToSupervisor,
+} from 'src/common/drizzle/schema';
 import { eq, inArray, or, and, desc, count, sql, ilike } from 'drizzle-orm';
 import {
   TaskAssignmentTypeMapping,
@@ -26,6 +37,8 @@ import {
 } from './drizzle-task-delegation.repository';
 import { TaskPriorityMapping } from './drizzle-task-preset.repository';
 import { DepartmentVisibility } from '@prisma/client';
+import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
+import { TaskDelegation } from 'src/task/domain/entities/task-delegation.entity';
 
 export enum EmployeePermissionsMapping {
   handle_tickets = 'HANDLE_TICKETS',
@@ -789,6 +802,348 @@ export class DrizzleTaskRepository extends TaskRepository {
       pendingCount,
       completedCount,
       completionPercentage,
+    };
+  }
+
+  async getTasksAndDelegationsForEmployee(options: {
+    employeeUserId: string;
+    status?: TaskStatus[];
+    priority?: TaskPriority[];
+    offset: number;
+    limit: number;
+  }): Promise<EmployeeTasksResult> {
+    const {
+      employeeUserId,
+      status,
+      priority,
+      offset = 0,
+      limit = 20,
+    } = options;
+    /* ---------- 1.  employee meta (unchanged) ---------- */
+    const [emp] = await this.db
+      .select({ id: employees.id })
+      .from(employees)
+      .where(eq(employees.userId, employeeUserId))
+      .limit(1);
+    if (!emp) throw new Error('employee not found');
+    const empId = emp.id;
+
+    const employeeDepartmentIds = await this.db
+      .select({ id: employeeSubDepartments.departmentId })
+      .from(employeeSubDepartments)
+      .where(eq(employeeSubDepartments.employeeId, empId))
+      .then((r) => r.map((i) => i.id));
+
+    /* ---------- 2.  reusable filter fragments ---------- */
+    const taskWhere =
+      status?.length || priority?.length
+        ? and(
+            or(
+              eq(tasks.assigneeId, empId),
+              inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
+            ),
+            status.length
+              ? inArray(
+                  tasks.status,
+                  status.map((s) => TaskStatusMapping[s]),
+                )
+              : undefined,
+            priority.length
+              ? inArray(
+                  tasks.priority,
+                  priority.map((p) => TaskPriorityMapping[p]),
+                )
+              : undefined,
+          )
+        : or(
+            eq(tasks.assigneeId, empId),
+            inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
+          );
+
+    const delWhere = status?.length
+      ? and(
+          or(
+            eq(taskDelegations.assigneeId, empId),
+            inArray(
+              taskDelegations.targetSubDepartmentId,
+              employeeDepartmentIds,
+            ),
+          ),
+          inArray(
+            taskDelegations.status,
+            status.map((s) => TaskStatusMapping[s]),
+          ),
+        )
+      : or(
+          eq(taskDelegations.assigneeId, empId),
+          inArray(taskDelegations.targetSubDepartmentId, employeeDepartmentIds),
+        );
+
+    const stmt = this.db.$with('g').as(
+      this.db
+        .select({
+          tc: sql<number>`count(*) filter (where status = 'completed')`
+            .mapWith(Number)
+            .as('tc'),
+          tp: sql<number>`count(*) filter (where status <> 'completed')`
+            .mapWith(Number)
+            .as('tp'),
+        })
+        .from(tasks)
+        .where(taskWhere) // filter tasks once
+        .unionAll(
+          this.db
+            .select({
+              tc: sql<number>`count(*) filter (where status = 'completed')`
+                .mapWith(Number)
+                .as('tc'),
+              tp: sql<number>`count(*) filter (where status <> 'completed')`
+                .mapWith(Number)
+                .as('tp'),
+            })
+            .from(taskDelegations)
+            .where(delWhere), // filter delegations once
+        ),
+    );
+
+    /* ---------- 4.  paginated rows (same filter) ---------- */
+    const [tasksPage, delegationsPage, [taskAgg, delAgg]] = await Promise.all([
+      this.db.select().from(tasks).where(taskWhere).limit(limit).offset(offset),
+      this.db
+        .select({
+          task: {
+            ...tasks,
+          },
+          delegation: {
+            ...taskDelegations,
+          },
+        })
+        .from(taskDelegations)
+        .innerJoin(tasks, eq(taskDelegations.taskId, tasks.id))
+        .where(delWhere)
+        .limit(limit)
+        .offset(offset),
+      this.db.with(stmt).select({ tc: stmt.tc, tp: stmt.tp }).from(stmt),
+    ]);
+
+    const metrics = {
+      completedTasks: taskAgg.tc,
+      pendingTasks: taskAgg.tp,
+      completedDelegations: delAgg.tc,
+      pendingDelegations: delAgg.tp,
+    };
+    /* ---------- 5.  attachments for this page only ---------- */
+    const targetIds = [
+      ...tasksPage.map((t) => t.id),
+      ...delegationsPage.map((d) => d.delegation.taskId),
+    ];
+    const attachmentResults = targetIds.length
+      ? await this.db
+          .select()
+          .from(attachments)
+          .where(inArray(attachments.targetId, targetIds))
+      : [];
+
+    const tasksTotal = metrics.completedTasks + metrics.pendingTasks;
+    const delegationsTotal =
+      metrics.completedDelegations + metrics.pendingDelegations;
+
+    const combinedCompleted =
+      metrics.completedTasks + metrics.completedDelegations;
+    const combinedTotal = tasksTotal + delegationsTotal;
+
+    const combinedCompletionPercentage =
+      combinedTotal === 0 ? 0 : combinedCompleted / combinedTotal;
+
+    /* ---------- 6.  return ---------- */
+    return {
+      tasks: tasksPage.map((task) =>
+        Task.create({
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          status: TaskStatusMapping[task.status.toUpperCase()],
+          priority: TaskPriority[task.priority.toUpperCase()],
+          assigneeId: task.assigneeId,
+          targetSubDepartmentId: task.targetSubDepartmentId,
+          createdAt: new Date(task.createdAt),
+          updatedAt: new Date(task.updatedAt),
+          creatorId: task.creatorId,
+          assignmentType: TaskAssignmentType[task.assignmentType],
+        }),
+      ),
+      delegations: delegationsPage.map((delegation) =>
+        TaskDelegation.create({
+          id: delegation.delegation.id,
+          taskId: delegation.delegation.taskId,
+          assigneeId: delegation.delegation.assigneeId,
+          targetSubDepartmentId: delegation.delegation.targetSubDepartmentId,
+          status: TaskStatusMapping[delegation.delegation.status.toUpperCase()],
+          createdAt: new Date(delegation.delegation.createdAt),
+          updatedAt: new Date(delegation.delegation.updatedAt),
+          assignmentType:
+            TaskAssignmentType[delegation.delegation.assignmentType],
+          delegatorId: delegation.delegation.delegatorId,
+          task: Task.create({
+            id: delegation.task.id,
+            title: delegation.task.title,
+            description: delegation.task.description,
+            status: TaskStatusMapping[delegation.task.status.toUpperCase()],
+            priority: TaskPriority[delegation.task.priority.toUpperCase()],
+            assigneeId: delegation.task.assigneeId,
+            targetSubDepartmentId: delegation.task.targetSubDepartmentId,
+            targetDepartmentId: delegation.task.targetDepartmentId,
+            createdAt: new Date(delegation.task.createdAt),
+            updatedAt: new Date(delegation.task.updatedAt),
+            creatorId: delegation.task.creatorId,
+            assignmentType: TaskAssignmentType[delegation.task.assignmentType],
+          }),
+        }),
+      ),
+      total: taskAgg.tp + delAgg.tp + taskAgg.tc + delAgg.tc,
+      fileHubAttachments: attachmentResults.map((attachment) =>
+        Attachment.create({
+          id: attachment.id,
+          targetId: attachment.targetId,
+          type: attachment.type,
+          filename: attachment.filename,
+          createdAt: new Date(attachment.createdAt),
+          updatedAt: new Date(attachment.updatedAt),
+          originalName: attachment.originalName,
+          size: attachment.size,
+        }),
+      ),
+      metrics: {
+        ...metrics,
+        taskCompletionPercentage:
+          metrics.completedTasks + metrics.pendingTasks === 0
+            ? 0
+            : metrics.completedTasks /
+              (metrics.completedTasks + metrics.pendingTasks),
+        delegationCompletionPercentage:
+          metrics.completedDelegations + metrics.pendingDelegations === 0
+            ? 0
+            : metrics.completedDelegations /
+              (metrics.completedDelegations + metrics.pendingDelegations),
+        totalPercentage: combinedCompletionPercentage,
+      },
+    };
+  }
+
+  async getTasksForSupervisor(options: {
+    supervisorUserId: string;
+    status?: TaskStatus[];
+    priority?: TaskPriority[];
+    offset: number;
+    limit: number;
+  }): Promise<MyTasksResult> {
+    const { supervisorUserId, status, priority, offset, limit } = options;
+
+    const [supervisor] = await this.db
+      .select()
+      .from(supervisors)
+      .where(eq(supervisors.userId, supervisorUserId))
+      .limit(1);
+
+    if (!supervisor) {
+      throw new Error('Supervisor not found');
+    }
+
+    const supervisorDepartmentIds = await this.db
+      .select()
+      .from(departmentToSupervisor)
+      .where(eq(departmentToSupervisor.b, supervisor.id))
+      .then((res) => res.map((r) => r.a));
+
+    const tasksWhere =
+      status?.length > 0 || priority?.length > 0
+        ? and(
+            inArray(tasks.targetDepartmentId, supervisorDepartmentIds),
+            status?.length > 0
+              ? inArray(
+                  tasks.status,
+                  status.map((s) => TaskStatusMapping[s]),
+                )
+              : undefined,
+            priority?.length > 0
+              ? inArray(
+                  tasks.priority,
+                  priority.map((p) => TaskPriorityMapping[p]),
+                )
+              : undefined,
+          )
+        : inArray(tasks.targetDepartmentId, supervisorDepartmentIds);
+
+    const [tasksPage, [taskAgg]] = await Promise.all([
+      this.db
+        .select()
+        .from(tasks)
+        .where(tasksWhere)
+        .limit(limit)
+        .offset(offset),
+      this.db
+        .select({
+          tc: sql<number>`count(*) filter (where status = 'completed')`
+            .mapWith(Number)
+            .as('tc'),
+          tp: sql<number>`count(*) filter (where status <> 'completed')`
+            .mapWith(Number)
+            .as('tp'),
+        })
+        .from(tasks)
+        .where(tasksWhere),
+    ]);
+
+    const metrics = {
+      completedTasks: taskAgg.tc,
+      pendingTasks: taskAgg.tp,
+    };
+    /* ---------- 5.  attachments for this page only ---------- */
+    const targetIds = tasksPage.map((t) => t.id);
+    const attachmentResults = targetIds.length
+      ? await this.db
+          .select()
+          .from(attachments)
+          .where(inArray(attachments.targetId, targetIds))
+      : [];
+
+    return {
+      tasks: tasksPage.map((task) =>
+        Task.create({
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          status: TaskStatusMapping[task.status.toUpperCase()],
+          priority: TaskPriority[task.priority.toUpperCase()],
+          assigneeId: task.assigneeId,
+          targetSubDepartmentId: task.targetSubDepartmentId,
+          createdAt: new Date(task.createdAt),
+          updatedAt: new Date(task.updatedAt),
+          creatorId: task.creatorId,
+          assignmentType: TaskAssignmentType[task.assignmentType],
+          targetDepartmentId: task.targetDepartmentId,
+        }),
+      ),
+      total: taskAgg.tp + taskAgg.tc,
+      fileHubAttachments: attachmentResults.map((attachment) =>
+        Attachment.create({
+          id: attachment.id,
+          targetId: attachment.targetId,
+          type: attachment.type,
+          filename: attachment.filename,
+          createdAt: new Date(attachment.createdAt),
+          updatedAt: new Date(attachment.updatedAt),
+          originalName: attachment.originalName,
+          size: attachment.size,
+        }),
+      ),
+      metrics: {
+        completedTasks: metrics.completedTasks,
+        pendingTasks: metrics.pendingTasks,
+        taskCompletionPercentage:
+          metrics.completedTasks /
+          (metrics.completedTasks + metrics.pendingTasks),
+      },
     };
   }
 }
