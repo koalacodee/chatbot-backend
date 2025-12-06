@@ -8,6 +8,7 @@ export interface FrequentTicketSubject {
   count: number; // How many times this subject appeared
   category_id: string | number; // The category ID linked to the subject
   category_name: string; // The human-readable name of the category (or "Unknown")
+  [key: string]: unknown; // Index signature to satisfy Record<string, unknown> constraint
 }
 
 export interface SupportTicketMetrics {
