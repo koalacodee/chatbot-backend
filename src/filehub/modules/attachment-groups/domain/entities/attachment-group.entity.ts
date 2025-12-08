@@ -1,3 +1,4 @@
+import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 
 export interface AttachmentGroupOptions {
@@ -6,6 +7,7 @@ export interface AttachmentGroupOptions {
   key: string;
   clientIds?: string[];
   attachmentIds?: string[];
+  attachments?: Attachment[];
   createdAt?: Date;
   updatedAt?: Date;
   expiresAt?: Date;
@@ -17,6 +19,7 @@ export class AttachmentGroup {
   private _key: string;
   private _clientIds: string[];
   private _attachmentIds: UUID[];
+  private _attachments: Attachment[];
   private _createdAt: Date;
   private _updatedAt: Date;
   private _expiresAt: Date;
@@ -29,6 +32,7 @@ export class AttachmentGroup {
     this._attachmentIds = (options.attachmentIds || []).map((id) =>
       UUID.create(id),
     );
+    this._attachments = options.attachments || [];
     this._createdAt = options.createdAt || new Date();
     this._updatedAt = options.updatedAt || new Date();
     this._expiresAt = options.expiresAt;
@@ -88,8 +92,7 @@ export class AttachmentGroup {
 
   isExpired(referenceDate: Date = new Date()): boolean {
     return (
-      this._expiresAt &&
-      this._expiresAt.getTime() <= referenceDate.getTime()
+      this._expiresAt && this._expiresAt.getTime() <= referenceDate.getTime()
     );
   }
 
@@ -101,6 +104,14 @@ export class AttachmentGroup {
     this._expiresAt = value;
   }
 
+  get attachments(): Attachment[] {
+    return [...this._attachments];
+  }
+
+  set attachments(value: Attachment[]) {
+    this._attachments = value;
+  }
+
   toJSON() {
     return {
       id: this._id.value,
@@ -108,6 +119,7 @@ export class AttachmentGroup {
       key: this._key,
       ips: this._clientIds,
       attachmentIds: this._attachmentIds.map((id) => id.value),
+      attachments: this._attachments.map((attachment) => attachment.toJSON()),
       createdAt: this._createdAt,
       updatedAt: this._updatedAt,
       expiresAt: this._expiresAt,

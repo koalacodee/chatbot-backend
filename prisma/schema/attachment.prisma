@@ -24,17 +24,32 @@ model Attachment {
 }
 
 model AttachmentGroup {
-  id          String       @id @map("id") @db.Uuid
-  createdById String       @map("created_by_id") @db.Uuid
-  createdBy   User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  attachments Attachment[]
-  key         String       @map("key") @db.VarChar(255)
-  ips         String[]     @map("ips") @db.VarChar(255)
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  expiresAt   DateTime?    @map("expires_at")
+  id                     String                  @id @map("id") @db.Uuid
+  createdById            String                  @map("created_by_id") @db.Uuid
+  createdBy              User                    @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  attachments            Attachment[]
+  key                    String                  @map("key") @db.VarChar(255)
+  ips                    String[]                @map("ips") @db.VarChar(255)
+  createdAt              DateTime                @default(now()) @map("created_at")
+  updatedAt              DateTime                @updatedAt @map("updated_at")
+  expiresAt              DateTime?               @map("expires_at")
+  attachmentGroupMembers AttachmentGroupMember[]
 
   @@index([key])
   @@index([createdById])
   @@map("attachment_groups")
+}
+
+model AttachmentGroupMember {
+  id                String          @id @map("id") @db.Uuid
+  attachmentGroupId String          @map("attachment_group_id") @db.Uuid
+  attachmentGroup   AttachmentGroup @relation(fields: [attachmentGroupId], references: [id], onDelete: Cascade)
+  memberId          String          @map("member_id") @db.VarChar(255)
+  name              String          @map("name") @db.VarChar(255)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  @@index([attachmentGroupId])
+  @@index([memberId])
+  @@map("attachment_group_members")
 }

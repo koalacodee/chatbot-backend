@@ -19,13 +19,18 @@ import { GetMyAttachmentGroupsUseCase } from '../../application/use-cases/get-my
 import { UpdateAttachmentGroupUseCase } from '../../application/use-cases/update-attachment-group.use-case';
 import { DeleteAttachmentGroupUseCase } from '../../application/use-cases/delete-attachment-group.use-case';
 import { CloseAttachmentGroupUseCase } from '../../application/use-cases/close-attachment-group.use-case';
+import { RequestMembershipUseCase } from '../../application/use-cases/request-membership.use-case';
+import { VerifyMemberOtpUseCase } from '../../application/use-cases/verify-member-otp.use-case';
+import { GetAttachmentGroupByMemberIdUseCase } from '../../application/use-cases/get-attachment-group-by-member-id.use-case';
 import { CreateAttachmentGroupDto } from './dto/create-attachment-group.dto';
 import { UpdateAttachmentGroupDto } from './dto/update-attachment-group.dto';
+import { VerifyMemberOtpDto } from './dto/verify-member-otp.dto';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { SupervisorOrEmployeePermissions } from 'src/rbac/decorators';
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 import { randomBytes } from 'crypto';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('filehub/attachment-groups')
 export class AttachmentGroupController {
@@ -37,6 +42,10 @@ export class AttachmentGroupController {
     private readonly updateAttachmentGroupUseCase: UpdateAttachmentGroupUseCase,
     private readonly deleteAttachmentGroupUseCase: DeleteAttachmentGroupUseCase,
     private readonly closeAttachmentGroupUseCase: CloseAttachmentGroupUseCase,
+    private readonly requestMembershipUseCase: RequestMembershipUseCase,
+    private readonly verifyMemberOtpUseCase: VerifyMemberOtpUseCase,
+    private readonly getAttachmentGroupByMemberIdUseCase: GetAttachmentGroupByMemberIdUseCase,
+    private readonly configService: ConfigService,
   ) {}
 
   // Create a new attachment group
@@ -318,6 +327,79 @@ export class AttachmentGroupController {
     }
   }
 
+  // Request membership OTP
+  @Post('membership/request')
+  async requestMembership() {
+    try {
+      const otp = await this.requestMembershipUseCase.execute();
+
+      return {
+        otp,
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to request membership',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // Verify member OTP and set access token cookie
+  @Post('membership/verify')
+  async verifyMemberOtp(
+    @Body() dto: VerifyMemberOtpDto,
+    @Res({ passthrough: true }) res: FastifyReply,
+  ) {
+    try {
+      const result = await this.verifyMemberOtpUseCase.execute({
+        authorizeOtp: dto.authorizeOtp,
+      });
+
+      // Set the access token as a cookie
+      this.setMemberAccessTokenCookie(res, result.accessToken);
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to verify member OTP',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // Get attachment group by member ID
+  @Get('membership/:memberId')
+  async getAttachmentGroupByMemberId(@Param('memberId') memberId: string) {
+    try {
+      const result = await this.getAttachmentGroupByMemberIdUseCase.execute({
+        memberId,
+      });
+
+      // Add file type and content type to each attachment
+      const attachmentsWithMetadata = result.fileHubAttachments.map(
+        (attachment) => {
+          return {
+            ...attachment,
+            fileType: this.getFileType(attachment.originalName),
+            contentType: this.getContentType(attachment.originalName),
+          };
+        },
+      );
+
+      return {
+        attachmentGroup: result.attachmentGroup.toJSON(),
+        attachments: attachmentsWithMetadata,
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to get attachment group by member ID',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
   // Helper methods for file type and content type
   private getFileType(filename: string): string {
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -439,5 +521,25 @@ export class AttachmentGroupController {
     };
 
     return mimeTypes[ext || ''] || mimeTypes.default;
+  }
+
+  // Helper method to set member access token cookie
+  private setMemberAccessTokenCookie(res: FastifyReply, token: string) {
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 15); // 15 days
+
+    const COOKIE_SAMESITE = this.configService.get(
+      'COOKIES_SAMESITE',
+      'strict',
+    );
+    const COOKIE_SECURE = this.configService.get('COOKIES_SECURE', true);
+
+    res.setCookie('attachment_group_member_token', token, {
+      httpOnly: true,
+      secure: COOKIE_SECURE,
+      sameSite: COOKIE_SAMESITE,
+      expires: expiryDate,
+      path: '/',
+    });
   }
 }

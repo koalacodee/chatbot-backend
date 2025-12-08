@@ -10,6 +10,15 @@ import { GetAttachmentGroupByKeyUseCase } from './application/use-cases/get-atta
 import { GetAttachmentGroupDetailsUseCase } from './application/use-cases/get-attachment-group-details.use-case';
 import { GetMyAttachmentGroupsUseCase } from './application/use-cases/get-my-attachment-groups.use-case';
 import { UpdateAttachmentGroupUseCase } from './application/use-cases/update-attachment-group.use-case';
+import { MemberRepository } from './domain/repositories/member.repository';
+import { DrizzleMemberRepository } from './infrastructure/repositories/drizzle-member.repository';
+import { AttachmentGroupMemberGateway } from './interface/websocket/member.gateway';
+import { GetAttachmentGroupByMemberIdUseCase } from './application/use-cases/get-attachment-group-by-member-id.use-case';
+import { RequestMembershipUseCase } from './application/use-cases/request-membership.use-case';
+import { VerifyMemberOtpUseCase } from './application/use-cases/verify-member-otp.use-case';
+import { MemberJwtStrategy } from './interface/http/strategies/jwt.strategy';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Global()
 @Module({
@@ -26,6 +35,25 @@ import { UpdateAttachmentGroupUseCase } from './application/use-cases/update-att
     GetAttachmentGroupDetailsUseCase,
     GetMyAttachmentGroupsUseCase,
     UpdateAttachmentGroupUseCase,
+    {
+      provide: MemberRepository,
+      useClass: DrizzleMemberRepository,
+    },
+    AttachmentGroupMemberGateway,
+    GetAttachmentGroupByMemberIdUseCase,
+    RequestMembershipUseCase,
+    VerifyMemberOtpUseCase,
+    GetAttachmentGroupByMemberIdUseCase,
+    MemberJwtStrategy,
+  ],
+  imports: [
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get('ATTACHMENT_GROUP_MEMBER_ACCESS_TOKEN_SECRET'),
+        signOptions: { expiresIn: '15d' },
+      }),
+    }),
   ],
   exports: [AttachmentGroupRepository],
   controllers: [AttachmentGroupController],

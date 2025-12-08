@@ -17,4 +17,5 @@ export abstract class AttachmentGroupRepository {
       Pick<AttachmentGroup, 'key' | 'clientIds' | 'attachmentIds' | 'expiresAt'>
     >,
   ): Promise<AttachmentGroup>;
+  abstract getByMemberId(memberId: string): Promise<AttachmentGroup | null>;
 }

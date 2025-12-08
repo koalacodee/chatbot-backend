@@ -3,6 +3,7 @@ import { AttachmentGroupRepository } from '../../domain/repositories/attachment-
 import { AttachmentRepository } from 'src/filehub/domain/repositories/attachment.repository';
 import { AttachmentGroupGateway } from '../../interface/websocket/attachment-group.gateway';
 import { FileHubService } from 'src/filehub/domain/services/filehub.service';
+import { AttachmentGroupMemberGateway } from '../../interface/websocket/member.gateway';
 
 interface UpdateAttachmentGroupUseCaseRequest {
   groupId: string;
@@ -21,6 +22,8 @@ export class UpdateAttachmentGroupUseCase {
     private readonly attachmentGroupRepository: AttachmentGroupRepository,
     private readonly attachmentRepository: AttachmentRepository,
     private readonly attachmentGroupGateway: AttachmentGroupGateway,
+    private readonly attachmentGroupMemberGateway: AttachmentGroupMemberGateway,
+
     private readonly fileHubService: FileHubService,
   ) {}
 
@@ -88,6 +91,19 @@ export class UpdateAttachmentGroupUseCase {
         }),
         updatedAt: new Date(),
       });
+
+      this.attachmentGroupMemberGateway.notifyAttachmentsChange(
+        attachmentGroup.id.toString(),
+        attachments.map((attachment) => {
+          const signedUrl = signedUrls.find(
+            (url) => url.filename === attachment.filename,
+          );
+          return {
+            ...attachment.toJSON(),
+            signedUrl: signedUrl?.signedUrl,
+          };
+        }),
+      );
     } catch (error) {
       // Log the error but don't fail the update operation
       console.error('Failed to notify subscribers:', error);

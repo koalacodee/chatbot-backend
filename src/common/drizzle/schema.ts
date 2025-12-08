@@ -2011,3 +2011,36 @@ export const attachmentToAttachmentGroup = pgTable(
     }),
   ],
 );
+
+export const attachmentGroupMembers = pgTable(
+  'attachment_group_members',
+  {
+    id: uuid().primaryKey().notNull(),
+    attachmentGroupId: uuid('attachment_group_id').notNull(),
+    memberId: varchar('member_id', { length: 255 }).notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp('updated_at', { precision: 3, mode: 'string' })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index('attachment_group_members_attachment_group_id_idx').using(
+      'btree',
+      table.attachmentGroupId.asc().nullsLast().op('uuid_ops'),
+    ),
+    index('attachment_group_members_member_id_idx').using(
+      'btree',
+      table.memberId.asc().nullsLast().op('uuid_ops'),
+    ),
+    foreignKey({
+      columns: [table.attachmentGroupId],
+      foreignColumns: [attachmentGroups.id],
+      name: 'attachment_group_members_attachment_group_id_fkey',
+    })
+      .onUpdate('cascade')
+      .onDelete('cascade'),
+  ],
+);

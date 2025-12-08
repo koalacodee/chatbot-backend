@@ -3,10 +3,13 @@ import { DrizzleService } from 'src/common/drizzle/drizzle.service';
 import { AttachmentGroupRepository } from '../../domain/repositories/attachment-group.repository';
 import { AttachmentGroup } from '../../domain/entities/attachment-group.entity';
 import {
+  attachmentGroupMembers,
   attachmentGroups,
+  attachments,
   attachmentToAttachmentGroup,
 } from 'src/common/drizzle/schema';
 import { eq, count, desc } from 'drizzle-orm';
+import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 
 @Injectable()
 export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository {
@@ -205,5 +208,50 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     }
 
     return this.findById(id);
+  }
+
+  async getByMemberId(memberId: string): Promise<AttachmentGroup | null> {
+    return await this.db
+      .select()
+      .from(attachmentGroups)
+      .innerJoin(
+        attachmentGroupMembers,
+        eq(attachmentGroups.id, attachmentGroupMembers.attachmentGroupId),
+      )
+      .innerJoin(
+        attachmentToAttachmentGroup,
+        eq(attachmentGroups.id, attachmentToAttachmentGroup.b),
+      )
+      .innerJoin(attachments, eq(attachmentToAttachmentGroup.a, attachments.id))
+      .where(eq(attachmentGroupMembers.id, memberId))
+      .then((result) => {
+        if (result.length === 0) {
+          return null;
+        }
+
+        const attachmentGroupRaw = result[0].attachment_groups;
+
+        const attachmentGroup = AttachmentGroup.create({
+          id: attachmentGroupRaw.id,
+          createdById: attachmentGroupRaw.createdById,
+          key: attachmentGroupRaw.key,
+          clientIds: attachmentGroupRaw.ips,
+          attachments: result.map((attachment) =>
+            Attachment.create({
+              ...attachment.attachments,
+              expirationDate: new Date(attachment.attachments.expirationDate),
+              createdAt: new Date(attachment.attachments.createdAt),
+              updatedAt: new Date(attachment.attachments.updatedAt),
+            }),
+          ),
+          createdAt: new Date(attachmentGroupRaw.createdAt),
+          updatedAt: new Date(attachmentGroupRaw.updatedAt),
+          expiresAt: attachmentGroupRaw.expiresAt
+            ? new Date(attachmentGroupRaw.expiresAt)
+            : undefined,
+        });
+
+        return attachmentGroup;
+      });
   }
 }
