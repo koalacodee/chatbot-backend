@@ -90,7 +90,7 @@ export class FileHubServiceImpl implements FileHubService {
 
   async getSignedUrlBatch(
     fileNames: string[],
-    expiresInMs: number = 3600,
+    expiresInMs: number = 3600000,
   ): Promise<SignedUrlBatch[]> {
     if (!this.fileHubApiKey) {
       throw new Error('FileHub API key is not set');
@@ -108,7 +108,7 @@ export class FileHubServiceImpl implements FileHubService {
           },
           json: {
             filenames: fileNames,
-            expiresIn: expiresInMs,
+            expiresIn: expiresInMs / 1000,
           },
         },
       )

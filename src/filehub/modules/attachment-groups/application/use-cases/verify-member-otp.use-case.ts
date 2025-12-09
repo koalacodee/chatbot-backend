@@ -48,7 +48,7 @@ export class VerifyMemberOtpUseCase {
     );
 
     const accessToken = await this.jwtService.signAsync(
-      { sub: member.id },
+      { sub: member.id.toString() },
       {
         secret,
         expiresIn: '15d',

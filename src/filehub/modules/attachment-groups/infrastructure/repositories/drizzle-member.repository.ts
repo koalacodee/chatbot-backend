@@ -5,8 +5,12 @@ import {
   AttachmentGroupMember,
   AttachmentGroupMemberProps,
 } from '../../domain/entities/member.entity';
-import { attachmentGroupMembers } from 'src/common/drizzle/schema';
+import {
+  attachmentGroupMembers,
+  attachmentGroups,
+} from 'src/common/drizzle/schema';
 import { eq, count, desc } from 'drizzle-orm';
+import { AttachmentGroup } from '../../domain/entities/attachment-group.entity';
 
 @Injectable()
 export class DrizzleMemberRepository extends MemberRepository {
@@ -139,5 +143,41 @@ export class DrizzleMemberRepository extends MemberRepository {
       .where(eq(attachmentGroupMembers.id, id));
 
     return this.findById(id);
+  }
+
+  async findAll({
+    limit = 10,
+    offset = 0,
+  }: {
+    limit?: number;
+    offset?: number;
+  }): Promise<AttachmentGroupMember[]> {
+    const members = await this.db
+      .select()
+      .from(attachmentGroupMembers)
+      .innerJoin(
+        attachmentGroups,
+        eq(attachmentGroupMembers.attachmentGroupId, attachmentGroups.id),
+      )
+      .limit(limit)
+      .offset(offset);
+
+    return members.map((member) =>
+      AttachmentGroupMember.create({
+        id: member.attachment_group_members.id,
+        attachmentGroupId: member.attachment_group_members.attachmentGroupId,
+        memberId: member.attachment_group_members.memberId,
+        name: member.attachment_group_members.name,
+        createdAt: new Date(member.attachment_group_members.createdAt),
+        updatedAt: new Date(member.attachment_group_members.updatedAt),
+        attachmentGroup: AttachmentGroup.create({
+          id: member.attachment_groups.id,
+          key: member.attachment_groups.key,
+          createdAt: new Date(member.attachment_groups.createdAt),
+          updatedAt: new Date(member.attachment_groups.updatedAt),
+          createdById: member.attachment_groups.createdById,
+        }),
+      }),
+    );
   }
 }

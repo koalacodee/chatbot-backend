@@ -11,6 +11,10 @@ import {
 import { Server, Socket } from 'socket.io';
 import { FilehubAttachmentMessage } from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 import { MemberRepository } from '../../domain/repositories/member.repository';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
+import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 
 @WebSocketGateway({
   namespace: '/filehub/members',
@@ -22,14 +26,18 @@ import { MemberRepository } from '../../domain/repositories/member.repository';
 export class AttachmentGroupMemberGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
-  constructor(private readonly attachmentGroupMembersRepo: MemberRepository) {}
+  constructor(
+    private readonly attachmentGroupMembersRepo: MemberRepository,
+    private readonly config: ConfigService,
+    private readonly jwtService: JwtService,
+  ) {}
   @WebSocketServer()
   server: Server;
 
   private readonly logger = new Logger(AttachmentGroupMemberGateway.name);
 
-  // OTP -> socketIds
-  private readonly otp_subscriptions: Map<string, string> = new Map();
+  // socketId -> memberId
+  private members = new Map<string, string>();
 
   handleConnection(client: Socket): void {
     this.logger.log(`Client connected: ${client.id}`);
@@ -37,6 +45,11 @@ export class AttachmentGroupMemberGateway
 
   handleDisconnect(client: Socket): void {
     this.logger.log(`Client disconnected: ${client.id}`);
+    // console.log(client);
+    if (this.members.has(client.id)) {
+      this.members.delete(client.id);
+      this.emitActiveMembers();
+    }
   }
 
   @SubscribeMessage('otp_subscribe')
@@ -45,7 +58,8 @@ export class AttachmentGroupMemberGateway
     @MessageBody() data: { otp: string },
   ) {
     this.logger.log(`Client ${client.id} subscribed to OTP: ${data.otp}`);
-    this.otp_subscriptions.set(data.otp, client.id);
+    // this.otp_subscriptions.set(data.otp, client);
+    client.join(String(data.otp));
   }
 
   @SubscribeMessage('otp_unsubscribe')
@@ -54,7 +68,7 @@ export class AttachmentGroupMemberGateway
     @MessageBody() data: { otp: string },
   ) {
     this.logger.log(`Client ${client.id} unsubscribed from OTP: ${data.otp}`);
-    this.otp_subscriptions.delete(data.otp);
+    client.leave(String(data.otp));
   }
 
   @SubscribeMessage('member_subscribe')
@@ -69,7 +83,56 @@ export class AttachmentGroupMemberGateway
       data.memberId,
     );
     if (member.attachmentGroupId.toString()) {
-      client.join(member.attachmentGroupId.toString());
+      client.join(`attachment-group::${member.attachmentGroupId.toString()}`);
+      this.members.set(client.id, data.memberId);
+      this.emitActiveMembers();
+    }
+  }
+
+  @SubscribeMessage('active_members_sub')
+  async handleActiveMembers(@ConnectedSocket() client: Socket) {
+    const accessToken = client.handshake.auth.token;
+    console.log(client.handshake);
+
+    if (accessToken) {
+      try {
+        const payload = await this.jwtService
+          .verifyAsync(accessToken, {
+            secret: this.config.get('USER_ACCESS_TOKEN_SECRET'),
+          })
+          .catch((error) => {
+            this.logger.error(error);
+            client.emit('error', { message: 'Invalid access token' });
+            return;
+          });
+
+        console.log(payload);
+
+        if (payload.permissions) {
+          if (
+            payload.permissions.includes(
+              SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS,
+            ) ||
+            payload.permissions.includes(
+              EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS,
+            ) ||
+            payload.role == 'ADMIN'
+          ) {
+            client.join('active_members_sub');
+            client.emit('active_members_update', {
+              members: Array.from(this.members.values()),
+            });
+          } else {
+            client.emit('error', { message: 'Unauthorized' });
+            return;
+          }
+        }
+      } catch (error) {
+        client.emit('error', { message: 'Invalid access token' });
+        return;
+      }
+    } else {
+      client.emit('error', { message: 'Unauthorized' });
     }
   }
 
@@ -82,14 +145,19 @@ export class AttachmentGroupMemberGateway
       `Client ${client.id} unsubscribed from Member: ${data.memberId}`,
     );
     client.leave(data.memberId);
+    this.members.delete(client.id);
+    this.emitActiveMembers();
   }
 
   emitMemberAuthorize(otp: string, authOtp: string) {
-    const socketId = this.otp_subscriptions.get(otp);
-    const socket = this.server.sockets.sockets.get(socketId);
-    if (socket) {
-      socket.emit('member_authorize', { otp: authOtp });
-    }
+    this.server.to(otp).emit('member_authorize', { otp: authOtp });
+    this.logger.log(`Client ${otp} authorized with OTP: ${otp}`);
+  }
+
+  private emitActiveMembers() {
+    this.server.to('active_members_sub').emit('active_members_update', {
+      members: Array.from(this.members.values()),
+    });
   }
 
   async notifyAttachmentsChange(
@@ -98,7 +166,7 @@ export class AttachmentGroupMemberGateway
   ) {
     return new Promise<void>(async (resolve) => {
       this.server
-        .to(attachmentGroupId)
+        .to(`attachment-group::${attachmentGroupId}`)
         .emit('attachments_change', { attachments });
       resolve();
     });

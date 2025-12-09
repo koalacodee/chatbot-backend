@@ -17,4 +17,8 @@ export abstract class MemberRepository {
     id: string,
     update: Partial<AttachmentGroupMemberProps>,
   ): Promise<AttachmentGroupMember>;
+  abstract findAll(options: {
+    limit?: number;
+    offset?: number;
+  }): Promise<AttachmentGroupMember[]>;
 }

@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { MemberRepository } from '../../domain/repositories/member.repository';
 import { AttachmentGroupMemberGateway } from '../../interface/websocket/member.gateway';
-import { AttachmentGroupRepository } from 'src/attachment-group/domain/repositories/attachment-group.repository';
 import { RedisService } from 'src/shared/infrastructure/redis';
 import { AttachmentGroupMember } from '../../domain/entities/member.entity';
 import { randomBytes, randomInt } from 'crypto';
+import { AttachmentGroupRepository } from '../../domain/repositories/attachment-group.repository';
 export interface AddMemberUseCaseInput {
   otp: string;
   name: string;
@@ -52,7 +52,10 @@ export class AddMemberUseCase {
       member.id.toString(),
       1500,
     );
-    this.attachmentGroupMemberGateway.emitMemberAuthorize(otp, authorizeOtp);
+    this.attachmentGroupMemberGateway.emitMemberAuthorize(
+      String(otp),
+      authorizeOtp,
+    );
     await this.redisService.del(`attachment-group:membership:${otp}`);
 
     return member;

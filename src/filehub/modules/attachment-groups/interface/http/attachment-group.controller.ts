@@ -11,6 +11,7 @@ import {
   HttpException,
   HttpStatus,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateAttachmentGroupUseCase } from '../../application/use-cases/create-attachment-group.use-case';
 import { GetAttachmentGroupByKeyUseCase } from '../../application/use-cases/get-attachment-group-by-key.use-case';
@@ -22,15 +23,23 @@ import { CloseAttachmentGroupUseCase } from '../../application/use-cases/close-a
 import { RequestMembershipUseCase } from '../../application/use-cases/request-membership.use-case';
 import { VerifyMemberOtpUseCase } from '../../application/use-cases/verify-member-otp.use-case';
 import { GetAttachmentGroupByMemberIdUseCase } from '../../application/use-cases/get-attachment-group-by-member-id.use-case';
+import { GetAllMembersWithGroupsUseCase } from '../../application/use-cases/get-all-members-with-groups.use-case';
+import { UpdateMemberUseCase } from '../../application/use-cases/update-member.use-case';
+import { DeleteMemberUseCase } from '../../application/use-cases/delete-member.use-case';
+import { AddMemberUseCase } from '../../application/use-cases/add-member.use-case';
 import { CreateAttachmentGroupDto } from './dto/create-attachment-group.dto';
 import { UpdateAttachmentGroupDto } from './dto/update-attachment-group.dto';
 import { VerifyMemberOtpDto } from './dto/verify-member-otp.dto';
+import { GetAllMembersDto } from './dto/get-all-members.dto';
+import { UpdateMemberDto } from './dto/update-member.dto';
+import { AddMemberDto } from './dto/add-member.dto';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { SupervisorOrEmployeePermissions } from 'src/rbac/decorators';
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 import { randomBytes } from 'crypto';
 import { ConfigService } from '@nestjs/config';
+import { MemberJwtGuard } from './guards/member.guard';
 
 @Controller('filehub/attachment-groups')
 export class AttachmentGroupController {
@@ -45,6 +54,10 @@ export class AttachmentGroupController {
     private readonly requestMembershipUseCase: RequestMembershipUseCase,
     private readonly verifyMemberOtpUseCase: VerifyMemberOtpUseCase,
     private readonly getAttachmentGroupByMemberIdUseCase: GetAttachmentGroupByMemberIdUseCase,
+    private readonly getAllMembersWithGroupsUseCase: GetAllMembersWithGroupsUseCase,
+    private readonly updateMemberUseCase: UpdateMemberUseCase,
+    private readonly deleteMemberUseCase: DeleteMemberUseCase,
+    private readonly addMemberUseCase: AddMemberUseCase,
     private readonly configService: ConfigService,
   ) {}
 
@@ -58,30 +71,23 @@ export class AttachmentGroupController {
     @Req() req: any,
     @Body() createDto: CreateAttachmentGroupDto,
   ) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new HttpException(
-          'User not authenticated',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      const result = await this.createAttachmentGroupUseCase.execute({
-        userId,
-        attachmentIds: createDto.attachmentIds,
-        expiresAt: createDto.expiresAt,
-      });
-
-      return {
-        key: result.key,
-      };
-    } catch (error) {
+    const userId = req.user?.id;
+    if (!userId) {
       throw new HttpException(
-        error.message || 'Failed to create attachment group',
-        HttpStatus.BAD_REQUEST,
+        'User not authenticated',
+        HttpStatus.UNAUTHORIZED,
       );
     }
+
+    const result = await this.createAttachmentGroupUseCase.execute({
+      userId,
+      attachmentIds: createDto.attachmentIds,
+      expiresAt: createDto.expiresAt,
+    });
+
+    return {
+      key: result.key,
+    };
   }
 
   // Get attachment group by key (for clients)
@@ -91,35 +97,28 @@ export class AttachmentGroupController {
     @Req() req: FastifyRequest,
     @Res({ passthrough: true }) res: FastifyReply,
   ) {
-    try {
-      // const ip = req.ip || '0.0.0.0';
+    // const ip = req.ip || '0.0.0.0';
 
-      let clientId = req.cookies['clientId'];
+    let clientId = req.cookies['clientId'];
 
-      if (!clientId) {
-        clientId = randomBytes(16).toString('hex');
-        res.cookie('clientId', clientId, {
-          httpOnly: true,
-          sameSite: 'strict',
-          maxAge: 60 * 60 * 24 * 365, // 1 year
-          path: '/',
-        });
-      }
-
-      const result = await this.getAttachmentGroupByKeyUseCase.execute({
-        key,
-        clientId,
+    if (!clientId) {
+      clientId = randomBytes(16).toString('hex');
+      res.cookie('clientId', clientId, {
+        httpOnly: true,
+        sameSite: 'strict',
+        maxAge: 60 * 60 * 24 * 365, // 1 year
+        path: '/',
       });
-
-      return {
-        attachments: result.attachments,
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to get attachment group',
-        HttpStatus.NOT_FOUND,
-      );
     }
+
+    const result = await this.getAttachmentGroupByKeyUseCase.execute({
+      key,
+      clientId,
+    });
+
+    return {
+      attachments: result.attachments,
+    };
   }
 
   // Get attachment group details (for creators)
@@ -129,44 +128,37 @@ export class AttachmentGroupController {
     supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
   })
   async getAttachmentGroupDetails(@Param('id') id: string, @Req() req: any) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new HttpException(
-          'User not authenticated',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      const result = await this.getAttachmentGroupDetailsUseCase.execute({
-        groupId: id,
-        userId,
-      });
-
-      // Add file type and content type to each attachment
-      const attachmentsWithMetadata = result.attachments.map((attachment) => {
-        return {
-          ...attachment.toJSON(),
-          fileType: this.getFileType(attachment.originalName),
-          contentType: this.getContentType(attachment.originalName),
-        };
-      });
-
-      return {
-        id: result.id,
-        key: result.key,
-        ips: result.ips,
-        attachments: attachmentsWithMetadata,
-        createdAt: result.createdAt,
-        updatedAt: result.updatedAt,
-        expiresAt: result.expiresAt,
-      };
-    } catch (error) {
+    const userId = req.user?.id;
+    if (!userId) {
       throw new HttpException(
-        error.message || 'Failed to get attachment group details',
-        HttpStatus.NOT_FOUND,
+        'User not authenticated',
+        HttpStatus.UNAUTHORIZED,
       );
     }
+
+    const result = await this.getAttachmentGroupDetailsUseCase.execute({
+      groupId: id,
+      userId,
+    });
+
+    // Add file type and content type to each attachment
+    const attachmentsWithMetadata = result.attachments.map((attachment) => {
+      return {
+        ...attachment.toJSON(),
+        fileType: this.getFileType(attachment.originalName),
+        contentType: this.getContentType(attachment.originalName),
+      };
+    });
+
+    return {
+      id: result.id,
+      key: result.key,
+      ips: result.ips,
+      attachments: attachmentsWithMetadata,
+      createdAt: result.createdAt,
+      updatedAt: result.updatedAt,
+      expiresAt: result.expiresAt,
+    };
   }
 
   // Get all attachment groups for a user
@@ -180,52 +172,45 @@ export class AttachmentGroupController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new HttpException(
-          'User not authenticated',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new HttpException(
+        'User not authenticated',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
 
-      const limitNum = limit ? parseInt(limit, 10) : 50;
-      const offsetNum = offset ? parseInt(offset, 10) : 0;
+    const limitNum = limit ? parseInt(limit, 10) : 50;
+    const offsetNum = offset ? parseInt(offset, 10) : 0;
 
-      const result = await this.getMyAttachmentGroupsUseCase.execute({
-        userId,
-        limit: limitNum,
-        offset: offsetNum,
-      });
+    const result = await this.getMyAttachmentGroupsUseCase.execute({
+      userId,
+      limit: limitNum,
+      offset: offsetNum,
+    });
 
-      // Add file type and content type to each attachment in each group
-      const groupsWithMetadata = result.attachmentGroups.map((group) => {
-        const attachmentsWithMetadata = group.attachments.map((attachment) => {
-          return {
-            ...attachment.toJSON(),
-            fileType: this.getFileType(attachment.originalName),
-            contentType: this.getContentType(attachment.originalName),
-          };
-        });
-
+    // Add file type and content type to each attachment in each group
+    const groupsWithMetadata = result.attachmentGroups.map((group) => {
+      const attachmentsWithMetadata = group.attachments.map((attachment) => {
         return {
-          ...group,
-          attachments: attachmentsWithMetadata,
-          expiresAt: group.expiresAt,
+          ...attachment.toJSON(),
+          fileType: this.getFileType(attachment.originalName),
+          contentType: this.getContentType(attachment.originalName),
         };
       });
 
       return {
-        attachmentGroups: groupsWithMetadata,
-        totalCount: result.totalCount,
-        hasMore: result.hasMore,
+        ...group,
+        attachments: attachmentsWithMetadata,
+        expiresAt: group.expiresAt,
       };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to get attachment groups',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    });
+
+    return {
+      attachmentGroups: groupsWithMetadata,
+      totalCount: result.totalCount,
+      hasMore: result.hasMore,
+    };
   }
 
   // Update an attachment group
@@ -239,31 +224,24 @@ export class AttachmentGroupController {
     @Req() req: any,
     @Body() updateDto: UpdateAttachmentGroupDto,
   ) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new HttpException(
-          'User not authenticated',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      const result = await this.updateAttachmentGroupUseCase.execute({
-        groupId: id,
-        userId,
-        attachmentIds: updateDto.attachmentIds,
-        expiresAt: updateDto.expiresAt,
-      });
-
-      return {
-        success: result.success,
-      };
-    } catch (error) {
+    const userId = req.user?.id;
+    if (!userId) {
       throw new HttpException(
-        error.message || 'Failed to update attachment group',
-        HttpStatus.BAD_REQUEST,
+        'User not authenticated',
+        HttpStatus.UNAUTHORIZED,
       );
     }
+
+    const result = await this.updateAttachmentGroupUseCase.execute({
+      groupId: id,
+      userId,
+      attachmentIds: updateDto.attachmentIds,
+      expiresAt: updateDto.expiresAt,
+    });
+
+    return {
+      success: result.success,
+    };
   }
 
   // Delete an attachment group
@@ -273,29 +251,22 @@ export class AttachmentGroupController {
     supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
   })
   async deleteAttachmentGroup(@Param('id') id: string, @Req() req: any) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        throw new HttpException(
-          'User not authenticated',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      const result = await this.deleteAttachmentGroupUseCase.execute({
-        groupId: id,
-        userId,
-      });
-
-      return {
-        success: result.success,
-      };
-    } catch (error) {
+    const userId = req.user?.id;
+    if (!userId) {
       throw new HttpException(
-        error.message || 'Failed to delete attachment group',
-        HttpStatus.BAD_REQUEST,
+        'User not authenticated',
+        HttpStatus.UNAUTHORIZED,
       );
     }
+
+    const result = await this.deleteAttachmentGroupUseCase.execute({
+      groupId: id,
+      userId,
+    });
+
+    return {
+      success: result.success,
+    };
   }
 
   // Close an attachment group (remove IP from watchers)
@@ -304,44 +275,30 @@ export class AttachmentGroupController {
     @Param('key') key: string,
     @Req() req: FastifyRequest,
   ) {
-    try {
-      const clientId = req.cookies['clientId'];
+    const clientId = req.cookies['clientId'];
 
-      if (!clientId) {
-        return { success: false };
-      }
-
-      const result = await this.closeAttachmentGroupUseCase.execute({
-        key,
-        clientId,
-      });
-
-      return {
-        success: result.success,
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to close attachment group',
-        HttpStatus.BAD_REQUEST,
-      );
+    if (!clientId) {
+      return { success: false };
     }
+
+    const result = await this.closeAttachmentGroupUseCase.execute({
+      key,
+      clientId,
+    });
+
+    return {
+      success: result.success,
+    };
   }
 
   // Request membership OTP
   @Post('membership/request')
   async requestMembership() {
-    try {
-      const otp = await this.requestMembershipUseCase.execute();
+    const otp = await this.requestMembershipUseCase.execute();
 
-      return {
-        otp,
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to request membership',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    return {
+      otp,
+    };
   }
 
   // Verify member OTP and set access token cookie
@@ -350,52 +307,136 @@ export class AttachmentGroupController {
     @Body() dto: VerifyMemberOtpDto,
     @Res({ passthrough: true }) res: FastifyReply,
   ) {
-    try {
-      const result = await this.verifyMemberOtpUseCase.execute({
-        authorizeOtp: dto.authorizeOtp,
-      });
+    const result = await this.verifyMemberOtpUseCase.execute({
+      authorizeOtp: dto.authorizeOtp,
+    });
 
-      // Set the access token as a cookie
-      this.setMemberAccessTokenCookie(res, result.accessToken);
+    // Set the access token as a cookie
+    this.setMemberAccessTokenCookie(res, result.accessToken);
 
-      return {
-        success: true,
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to verify member OTP',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    return {
+      success: true,
+    };
   }
 
   // Get attachment group by member ID
-  @Get('membership/:memberId')
-  async getAttachmentGroupByMemberId(@Param('memberId') memberId: string) {
+  @Get('membership')
+  @UseGuards(MemberJwtGuard)
+  async getAttachmentGroupByMemberId(@Req() req: any) {
+    const memberId = req.user?.id;
+    if (!memberId) {
+      throw new HttpException(
+        'User not authenticated',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+    const result = await this.getAttachmentGroupByMemberIdUseCase.execute({
+      memberId,
+    });
+
+    // Add file type and content type to each attachment
+    const attachmentsWithMetadata = result.fileHubAttachments.map(
+      (attachment) => {
+        return {
+          ...attachment,
+          fileType: this.getFileType(attachment.originalName),
+          contentType: this.getContentType(attachment.originalName),
+        };
+      },
+    );
+
+    return {
+      attachmentGroup: result.attachmentGroup.toJSON(),
+      attachments: attachmentsWithMetadata,
+      memberId,
+    };
+  }
+
+  // Add a new member to an attachment group
+  @Post('members')
+  @SupervisorOrEmployeePermissions({
+    employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+    supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+  })
+  async addMember(@Body() addMemberDto: AddMemberDto) {
+    const member = await this.addMemberUseCase.execute({
+      otp: addMemberDto.otp,
+      name: addMemberDto.name,
+      attachmentGroupId: addMemberDto.attachmentGroupId,
+    });
+
+    return {
+      success: true,
+      member: {
+        id: member.id.value,
+        name: member.name,
+        memberId: member.memberId.value,
+        attachmentGroupId: member.attachmentGroupId.value,
+        createdAt: member.createdAt,
+        updatedAt: member.updatedAt,
+      },
+    };
+  }
+
+  // Get all members with their attachment group details
+  @Get('members/all')
+  @SupervisorOrEmployeePermissions({
+    employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+    supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+  })
+  async getAllMembersWithGroups(@Query() query: GetAllMembersDto) {
+    const result = await this.getAllMembersWithGroupsUseCase.execute({
+      limit: query.limit,
+      offset: query.offset,
+    });
+
+    return {
+      members: result.members,
+      pagination: result.pagination,
+    };
+  }
+
+  // Update a member's details
+  @Put('members/:memberId')
+  @SupervisorOrEmployeePermissions({
+    employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+    supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+  })
+  async updateMember(
+    @Param('memberId') memberId: string,
+    @Body() updateDto: UpdateMemberDto,
+  ) {
+    const result = await this.updateMemberUseCase.execute({
+      memberId,
+      name: updateDto.name,
+      attachmentGroupId: updateDto.attachmentGroupId,
+    });
+
+    return {
+      member: result,
+    };
+  }
+
+  // Delete a member
+  @Delete('members/:memberId')
+  @SupervisorOrEmployeePermissions({
+    employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+    supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+  })
+  async deleteMember(@Param('memberId') memberId: string) {
     try {
-      const result = await this.getAttachmentGroupByMemberIdUseCase.execute({
+      const result = await this.deleteMemberUseCase.execute({
         memberId,
       });
 
-      // Add file type and content type to each attachment
-      const attachmentsWithMetadata = result.fileHubAttachments.map(
-        (attachment) => {
-          return {
-            ...attachment,
-            fileType: this.getFileType(attachment.originalName),
-            contentType: this.getContentType(attachment.originalName),
-          };
-        },
-      );
-
       return {
-        attachmentGroup: result.attachmentGroup.toJSON(),
-        attachments: attachmentsWithMetadata,
+        success: result.success,
+        deletedMember: result.deletedMember,
       };
     } catch (error) {
       throw new HttpException(
-        error.message || 'Failed to get attachment group by member ID',
-        HttpStatus.NOT_FOUND,
+        error.message || 'Failed to delete member',
+        HttpStatus.BAD_REQUEST,
       );
     }
   }

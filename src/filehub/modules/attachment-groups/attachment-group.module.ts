@@ -19,6 +19,10 @@ import { VerifyMemberOtpUseCase } from './application/use-cases/verify-member-ot
 import { MemberJwtStrategy } from './interface/http/strategies/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { AddMemberUseCase } from './application/use-cases/add-member.use-case';
+import { UpdateMemberUseCase } from './application/use-cases/update-member.use-case';
+import { DeleteMemberUseCase } from './application/use-cases/delete-member.use-case';
+import { GetAllMembersWithGroupsUseCase } from './application/use-cases/get-all-members-with-groups.use-case';
 
 @Global()
 @Module({
@@ -45,6 +49,10 @@ import { ConfigService } from '@nestjs/config';
     VerifyMemberOtpUseCase,
     GetAttachmentGroupByMemberIdUseCase,
     MemberJwtStrategy,
+    AddMemberUseCase,
+    UpdateMemberUseCase,
+    DeleteMemberUseCase,
+    GetAllMembersWithGroupsUseCase,
   ],
   imports: [
     JwtModule.registerAsync({

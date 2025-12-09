@@ -25,6 +25,7 @@ export class MemberJwtStrategy extends PassportStrategy(
   }
 
   async validate(payload: any) {
+    console.log(payload);
     // Only handle authenticated users (not guests)
     const member = await this.memberRepo.findById(payload.sub);
 
