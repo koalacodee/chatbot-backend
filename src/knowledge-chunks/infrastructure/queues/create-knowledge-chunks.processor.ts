@@ -1,6 +1,6 @@
-import { Processor, WorkerHost } from "@nestjs/bullmq";
-import { Job } from "bullmq";
-import { KnowledgeChunkProcessingService } from "../../domain/services/knowledge-chunk-processing.service";
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Job } from 'bullmq';
+import { KnowledgeChunkProcessingService } from '../../domain/services/knowledge-chunk-processing.service';
 
 interface CreateKnowledgeChunkJobData {
   content: string;
@@ -8,24 +8,28 @@ interface CreateKnowledgeChunkJobData {
   userId: string;
 }
 
-@Processor("knowledge-chunks")
+@Processor('knowledge-chunks')
 export class CreateKnowledgeChunksProcessor extends WorkerHost {
   constructor(
-    private readonly knowledgeChunkProcessingService: KnowledgeChunkProcessingService
+    private readonly knowledgeChunkProcessingService: KnowledgeChunkProcessingService,
   ) {
     super();
   }
 
-  async process(job: Job<CreateKnowledgeChunkJobData>, token?: string): Promise<any> {
+  async process(
+    job: Job<CreateKnowledgeChunkJobData>,
+    token?: string,
+  ): Promise<any> {
     switch (job.name) {
       case 'create':
-        const { content, departmentId, userId } = job.data;
-        return await this.knowledgeChunkProcessingService.processKnowledgeChunk({
-          content,
-          departmentId,
-          userId,
-        });
-    
+        const { content, departmentId } = job.data;
+        return await this.knowledgeChunkProcessingService.processKnowledgeChunk(
+          {
+            content,
+            departmentId,
+          },
+        );
+
       default:
         throw new Error(`Unknown job type: ${job.name}`);
     }

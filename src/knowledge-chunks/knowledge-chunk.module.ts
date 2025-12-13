@@ -22,6 +22,7 @@ import { EmbeddingService } from './domain/services/embedding.service';
 import { QwenEmbeddingService } from './infrastructure/services/qwen-embedding.service';
 import { PointRepository } from './domain/repositories/point.repository';
 import { QdrantPointRepository } from './infrastructure/repositories/qdrant-point.repository';
+import { DepartmentKnowledgeEventListener } from './application/listeners/department-knowledge.listener';
 @Module({
   providers: [
     {
@@ -50,6 +51,7 @@ import { QdrantPointRepository } from './infrastructure/repositories/qdrant-poin
       provide: PointRepository,
       useClass: QdrantPointRepository,
     },
+    DepartmentKnowledgeEventListener,
   ],
   controllers: [KnowledgeChunkController],
   imports: [
