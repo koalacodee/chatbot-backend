@@ -4,6 +4,8 @@ import {
   FrequentTicketSubject,
   SupportTicketRepository,
   SupportTicketMetrics,
+  GetAllTicketsAndMetricsOutput,
+  GetAllTicketsOptions,
 } from '../../../domain/repositories/support-ticket.repository';
 import {
   SupportTicket,
@@ -11,7 +13,10 @@ import {
 } from '../../../domain/entities/support-ticket.entity';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { User } from 'src/shared/entities/user.entity';
-import { Department } from 'src/department/domain/entities/department.entity';
+import {
+  Department,
+  DepartmentVisibility,
+} from 'src/department/domain/entities/department.entity';
 import { SupportTicketInteraction } from 'src/support-tickets/domain/entities/support-ticket-interaction.entity';
 import {
   supportTickets,
@@ -20,6 +25,10 @@ import {
   departments,
   supportTicketInteractions,
   supportTicketAnswers,
+  supervisors,
+  departmentToSupervisor,
+  attachments,
+  employeeSubDepartments,
 } from 'src/common/drizzle/schema';
 import {
   eq,
@@ -32,7 +41,11 @@ import {
   desc,
   sql,
   count,
+  SQL,
 } from 'drizzle-orm';
+import { TicketCode } from 'src/tickets/domain/value-objects/ticket-code.vo';
+import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
+import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 
 export enum SupportTicketStatusMapping {
   NEW = 'new',
@@ -516,7 +529,7 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
 
     // whereConditions.push(inArray(supportTickets.status, statusFilter));
 
-    if (status.length > 0) {
+    if (status) {
       whereConditions.push(
         eq(supportTickets.status, SupportTicketStatusMapping[status]),
       );
@@ -558,5 +571,225 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
     }
 
     return metrics;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* public façade – keep the original signatures                         */
+  /* ------------------------------------------------------------------ */
+  async getAllTicketsAndMetricsForSupervisor(
+    options: GetAllTicketsOptions & { supervisorUserId: string },
+  ): Promise<GetAllTicketsAndMetricsOutput> {
+    const departmentIds = await this._departmentIdsForSupervisor(
+      options.supervisorUserId,
+    );
+    return this._getAllTicketsAndMetrics(departmentIds, options);
+  }
+
+  async getAllTicketsAndMetricsForEmployee(
+    options: GetAllTicketsOptions & { employeeUserId: string },
+  ): Promise<GetAllTicketsAndMetricsOutput> {
+    const departmentIds = await this._departmentIdsForEmployee(
+      options.employeeUserId,
+    );
+    return this._getAllTicketsAndMetrics(departmentIds, options);
+  }
+
+  async getAllTicketsAndMetricsForAdmin(
+    options: GetAllTicketsOptions,
+  ): Promise<GetAllTicketsAndMetricsOutput> {
+    // Admin may see every department – pass undefined so no filter is injected
+    return this._getAllTicketsAndMetrics(undefined, options);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* private helpers                                                    */
+  /* ------------------------------------------------------------------ */
+
+  /** Returns the list of departments the supervisor is responsible for. */
+  private async _departmentIdsForSupervisor(userId: string): Promise<string[]> {
+    const [supervisor] = await this.db
+      .select()
+      .from(supervisors)
+      .where(eq(supervisors.userId, userId))
+      .limit(1);
+
+    if (!supervisor) throw new Error('Supervisor not found');
+
+    const rows = await this.db
+      .select()
+      .from(departmentToSupervisor)
+      .innerJoin(
+        departments,
+        or(
+          eq(departmentToSupervisor.a, departments.id),
+          eq(departmentToSupervisor.a, departments.parentId),
+        ),
+      )
+      .where(eq(departmentToSupervisor.b, supervisor.id));
+
+    return rows.map((r) => r.departments.id);
+  }
+
+  /** Returns the list of departments the employee belongs to. */
+  private async _departmentIdsForEmployee(userId: string): Promise<string[]> {
+    const [employee] = await this.db
+      .select()
+      .from(employees)
+      .where(eq(employees.userId, userId))
+      .limit(1);
+
+    if (!employee) throw new Error('Employee not found');
+
+    const rows = await this.db
+      .select()
+      .from(employeeSubDepartments)
+      .innerJoin(
+        departments,
+        eq(employeeSubDepartments.departmentId, departments.id),
+      )
+      .where(eq(employeeSubDepartments.employeeId, employee.id));
+
+    const set = new Set<string>();
+    rows.forEach((r) => {
+      set.add(r.departments.id);
+      if (r.departments.parentId) set.add(r.departments.parentId);
+    });
+    return Array.from(set);
+  }
+
+  /**
+   * Shared implementation.
+   * @param allowedDepartmentIds  Departments the caller may see.
+   *                               undefined → admin, no extra filter.
+   * @param options               Original options (may contain departmentIds override)
+   */
+  private async _getAllTicketsAndMetrics(
+    allowedDepartmentIds: string[] | undefined,
+    options: GetAllTicketsOptions,
+  ): Promise<GetAllTicketsAndMetricsOutput> {
+    /* ---------- department filter ----------------------------------- */
+    let departmentIds = allowedDepartmentIds;
+
+    if (options.departmentIds?.length) {
+      if (
+        allowedDepartmentIds &&
+        !options.departmentIds.every((id) => allowedDepartmentIds.includes(id))
+      ) {
+        throw new Error('department_ids_inaccessible');
+      }
+      await this.db
+        .select()
+        .from(departments)
+        .where(inArray(departments.parentId, options.departmentIds))
+        .then((rows) => {
+          departmentIds = [...options.departmentIds, ...rows.map((r) => r.id)];
+        });
+    }
+
+    /* ---------- dynamic WHERE --------------------------------------- */
+    const whereConditions: SQL[] = [];
+
+    if (departmentIds) {
+      whereConditions.push(inArray(supportTickets.departmentId, departmentIds));
+    }
+
+    if (options.status) {
+      whereConditions.push(
+        eq(supportTickets.status, SupportTicketStatusMapping[options.status]),
+      );
+    }
+
+    if (options.search) {
+      whereConditions.push(
+        or(
+          ilike(supportTickets.subject, `%${options.search}%`),
+          ilike(supportTickets.description, `%${options.search}%`),
+          ilike(supportTickets.guestEmail, `%${options.search}%`),
+          ilike(supportTickets.guestName, `%${options.search}%`),
+          ilike(supportTickets.guestPhone, `%${options.search}%`),
+        ),
+      );
+    }
+
+    const whereClause =
+      whereConditions.length === 0
+        ? undefined
+        : whereConditions.length === 1
+          ? whereConditions[0]
+          : and(...whereConditions);
+
+    /* ---------- queries --------------------------------------------- */
+    const [tickets, metrics] = await Promise.all([
+      this.db
+        .select()
+        .from(supportTickets)
+        .leftJoin(
+          supportTicketAnswers,
+          eq(supportTickets.id, supportTicketAnswers.supportTicketId),
+        )
+        .innerJoin(departments, eq(supportTickets.departmentId, departments.id))
+        .where(whereClause)
+        .limit(options.limit || 10)
+        .offset(options.offset || 0),
+      this.getMetrics(departmentIds, options.status, options.search),
+    ]);
+
+    /* ---------- attachments ----------------------------------------- */
+    const targetIds = new Set<string>();
+    tickets.forEach((t) => {
+      targetIds.add(t.support_tickets.id);
+      if (t.support_ticket_answers) {
+        targetIds.add(t.support_ticket_answers.id);
+      }
+    });
+
+    const attachmentRows = await this.db
+      .select()
+      .from(attachments)
+      .where(inArray(attachments.targetId, Array.from(targetIds)));
+
+    /* ---------- mapping --------------------------------------------- */
+    return {
+      metrics,
+      tickets: tickets.map((t) =>
+        SupportTicket.create({
+          id: t.support_tickets.id,
+          subject: t.support_tickets.subject,
+          description: t.support_tickets.description,
+          departmentId: t.support_tickets.departmentId,
+          createdAt: new Date(t.support_tickets.createdAt),
+          updatedAt: new Date(t.support_tickets.updatedAt),
+          status: SupportTicketStatus[t.support_tickets.status.toUpperCase()],
+          code: TicketCode.create(t.support_tickets.code),
+          guestName: t.support_tickets.guestName,
+          guestEmail: t.support_tickets.guestEmail,
+          guestPhone: t.support_tickets.guestPhone,
+          answer: t.support_ticket_answers
+            ? SupportTicketAnswer.create({
+                id: t.support_ticket_answers.id,
+                content: t.support_ticket_answers.content,
+                createdAt: new Date(t.support_ticket_answers.createdAt),
+                updatedAt: new Date(t.support_ticket_answers.updatedAt),
+                supportTicketId: t.support_tickets.id,
+              })
+            : undefined,
+          department: Department.create({
+            id: t.departments.id,
+            name: t.departments.name,
+            parentId: t.departments.parentId,
+            visibility:
+              DepartmentVisibility[t.departments.visibility.toUpperCase()],
+          }),
+        }),
+      ),
+      attachments: attachmentRows.map((a) =>
+        Attachment.create({
+          ...a,
+          createdAt: new Date(a.createdAt),
+          updatedAt: new Date(a.updatedAt),
+          expirationDate: new Date(a.expirationDate),
+        }),
+      ),
+    };
   }
 }

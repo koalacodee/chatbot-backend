@@ -2,183 +2,107 @@ import { Injectable } from '@nestjs/common';
 import {
   SupportTicketRepository,
   SupportTicketMetrics,
+  GetAllTicketsAndMetricsOutput,
 } from '../../domain/repositories/support-ticket.repository';
-import { SupportTicketAnswerRepository } from '../../domain/repositories/support-ticket-answer.repository';
-import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
-import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
-import { UserRepository } from 'src/shared/repositories/user.repository';
-import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
-import { SupportTicketStatus } from '../../domain/entities/support-ticket.entity';
-import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
+import {
+  SupportTicket,
+  SupportTicketStatus,
+} from '../../domain/entities/support-ticket.entity';
+import { FilehubAttachmentMessage } from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
+
+export interface GetAllSupportTicketsUseCaseInput {
+  offset?: number;
+  limit?: number;
+  userId: string;
+  userRole: string;
+  status?: SupportTicketStatus;
+  departmentId?: string;
+  search?: string;
+}
 
 @Injectable()
 export class GetAllSupportTicketsUseCase {
   constructor(
     private readonly supportTicketRepo: SupportTicketRepository,
-    private readonly supportTicketAnswerRepo: SupportTicketAnswerRepository,
-    private readonly supervisorRepository: SupervisorRepository,
-    private readonly employeeRepository: EmployeeRepository,
-    private readonly userRepository: UserRepository,
-    private readonly departmentRepository: DepartmentRepository,
-    private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
-  ) { }
+    private readonly fileHubService: FileHubService,
+  ) {}
 
   async execute({
     offset,
     limit,
     userId,
+    userRole,
     status,
     departmentId,
     search,
-  }: {
-    offset?: number;
-    limit?: number;
-    userId?: string;
-    status?: SupportTicketStatus;
-    departmentId?: string;
-    search?: string;
-  } = {}): Promise<{
-    tickets: any[];
+  }: GetAllSupportTicketsUseCaseInput): Promise<{
+    tickets: Array<ReturnType<SupportTicket['toJSON']>>;
     metrics: SupportTicketMetrics;
-    attachments: { [ticketId: string]: string[] };
+    attachments: FilehubAttachmentMessage[];
   }> {
-    let departmentIds: string[] | undefined;
+    let result: GetAllTicketsAndMetricsOutput;
+    console.log(userRole);
 
-    const normalizedSearch = search?.trim() || undefined;
-
-    // Get department access for the user if provided
-    if (userId) {
-      const user = await this.userRepository.findById(userId);
-      const userRole = user.role.getRole();
-      departmentIds = await this.getUserDepartmentIds(userId, userRole);
+    switch (userRole) {
+      case Roles.ADMIN:
+        result = await this.supportTicketRepo.getAllTicketsAndMetricsForAdmin({
+          offset,
+          limit,
+          status,
+          departmentIds: departmentId ? [departmentId] : undefined,
+          search,
+        });
+        break;
+      case Roles.SUPERVISOR:
+        result =
+          await this.supportTicketRepo.getAllTicketsAndMetricsForSupervisor({
+            offset,
+            limit,
+            supervisorUserId: userId,
+            status,
+            departmentIds: departmentId ? [departmentId] : undefined,
+            search,
+          });
+        break;
+      case Roles.EMPLOYEE:
+        result =
+          await this.supportTicketRepo.getAllTicketsAndMetricsForEmployee({
+            offset,
+            limit,
+            employeeUserId: userId,
+            status,
+            departmentIds: departmentId ? [departmentId] : undefined,
+            search,
+          });
+        break;
     }
 
-    if (departmentId) {
-      const departmentScopeIds =
-        await this.getDepartmentWithChildren(departmentId);
+    if (result.attachments.length > 0) {
+      const signedUrls = await this.fileHubService.getSignedUrlBatch(
+        result.attachments.map((a) => a.filename),
+      );
 
-      departmentIds = departmentIds
-        ? departmentScopeIds.filter((id) => departmentIds!.includes(id))
-        : departmentScopeIds;
-    }
+      const fileHubAttachments = result.attachments.map((a) => {
+        const signedUrl = signedUrls.find((s) => s.filename === a.filename);
+        return {
+          ...a.toJSON(),
+          signedUrl: signedUrl?.signedUrl,
+        };
+      });
 
-    if (departmentIds && departmentIds.length === 0) {
       return {
-        tickets: [],
-        metrics: {
-          totalTickets: 0,
-          pendingTickets: 0,
-          answeredTickets: 0,
-          closedTickets: 0,
-        },
-        attachments: {},
+        tickets: result.tickets.map((t) => t.toJSON()),
+        metrics: result.metrics,
+        attachments: fileHubAttachments,
+      };
+    } else {
+      return {
+        tickets: result.tickets.map((t) => t.toJSON()),
+        metrics: result.metrics,
+        attachments: [],
       };
     }
-
-    // Get tickets and metrics in parallel
-    const [toReturn, metrics] = await Promise.all([
-      this.supportTicketRepo.findAll(
-        offset,
-        limit,
-        departmentIds,
-        undefined,
-        undefined,
-        status,
-        normalizedSearch,
-      ),
-      this.supportTicketRepo.getMetrics(
-        departmentIds,
-        status,
-        normalizedSearch,
-      ),
-    ]);
-
-    const answers = await this.supportTicketAnswerRepo.findBySupportTicketIds(
-      toReturn.map((t) => t.id.toString()),
-    );
-
-    const tickets = toReturn.map((ticket) => {
-      const answer = answers.find(
-        (a) => a.supportTicket.id.toString() === ticket.id.toString(),
-      );
-      return {
-        ...ticket.toJSON(),
-        answer: answer?.content,
-      };
-    });
-
-    // Get attachments for tickets and their answers
-    const ticketIds = toReturn.map((t) => t.id.toString());
-    const answerIds = answers.map((a) => a.id.toString());
-    const attachments = await this.getAttachmentsUseCase.execute({
-      targetIds: [...ticketIds, ...answerIds],
-    });
-
-    return {
-      tickets,
-      metrics,
-      attachments,
-    };
-  }
-
-  private async getUserDepartmentIds(
-    userId: string,
-    role: Roles,
-  ): Promise<string[] | undefined> {
-    if (role === Roles.ADMIN) {
-      return undefined; // Admins see all tickets
-    } else if (role === Roles.SUPERVISOR) {
-      const supervisor = await this.supervisorRepository.findByUserId(userId);
-      const mainDepartmentIds = supervisor.departments.map((d) =>
-        d.id.toString(),
-      );
-
-      // Get all sub-departments for supervisor's main departments
-      const allDepartmentIds = [...mainDepartmentIds];
-      for (const deptId of mainDepartmentIds) {
-        const subDepartments =
-          await this.departmentRepository.findSubDepartmentByParentId(deptId);
-        allDepartmentIds.push(
-          ...subDepartments.map((sub) => sub.id.toString()),
-        );
-      }
-
-      return allDepartmentIds;
-    } else if (role === Roles.EMPLOYEE) {
-      const employee = await this.employeeRepository.findByUserId(userId);
-      return (
-        employee?.subDepartments.map((dep) => dep.id.toString()) ??
-        employee?.supervisor?.departments.map((d) => d.id.toString()) ??
-        []
-      );
-    }
-    return [];
-  }
-
-  private async getDepartmentWithChildren(
-    departmentId: string,
-  ): Promise<string[]> {
-    const toVisit = [departmentId];
-    const visited = new Set<string>();
-
-    while (toVisit.length > 0) {
-      const current = toVisit.shift();
-      if (!current || visited.has(current)) {
-        continue;
-      }
-      visited.add(current);
-
-      const children =
-        await this.departmentRepository.findSubDepartmentByParentId(current);
-      for (const child of children) {
-        const childId = child.id.toString();
-        if (!visited.has(childId)) {
-          toVisit.push(childId);
-        }
-      }
-    }
-
-    return Array.from(visited);
   }
 }

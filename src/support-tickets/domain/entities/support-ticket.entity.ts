@@ -1,10 +1,10 @@
-import { SupportTicketAnswer } from '@prisma/client';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Guest } from 'src/guest/domain/entities/guest.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { TicketCode } from 'src/tickets/domain/value-objects/ticket-code.vo';
 import { SupportTicketInteraction } from './support-ticket-interaction.entity';
+import { SupportTicketAnswer } from './support-ticket-answer.entity';
 
 export enum SupportTicketStatus {
   NEW = 'NEW',
@@ -153,7 +153,7 @@ export class SupportTicket {
     this._guestEmail = value;
   }
 
-  toJSON(): Record<string, any> {
+  toJSON() {
     return {
       id: this._id.toString(),
       subject: this._subject,

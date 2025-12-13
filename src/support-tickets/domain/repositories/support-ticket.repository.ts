@@ -1,3 +1,4 @@
+import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 import {
   SupportTicket,
   SupportTicketStatus,
@@ -16,6 +17,20 @@ export interface SupportTicketMetrics {
   pendingTickets: number; // NEW + SEEN statuses
   answeredTickets: number; // ANSWERED status
   closedTickets: number; // CLOSED status
+}
+
+export interface GetAllTicketsOptions {
+  limit?: number;
+  offset?: number;
+  status?: SupportTicketStatus;
+  search?: string;
+  departmentIds?: string[];
+}
+
+export interface GetAllTicketsAndMetricsOutput {
+  metrics: SupportTicketMetrics;
+  tickets: SupportTicket[];
+  attachments: Attachment[];
 }
 
 export abstract class SupportTicketRepository {
@@ -68,4 +83,14 @@ export abstract class SupportTicketRepository {
     status?: SupportTicketStatus,
     search?: string,
   ): Promise<SupportTicketMetrics>;
+
+  abstract getAllTicketsAndMetricsForSupervisor(
+    options: GetAllTicketsOptions & { supervisorUserId: string },
+  ): Promise<GetAllTicketsAndMetricsOutput>;
+  abstract getAllTicketsAndMetricsForEmployee(
+    options: GetAllTicketsOptions & { employeeUserId: string },
+  ): Promise<GetAllTicketsAndMetricsOutput>;
+  abstract getAllTicketsAndMetricsForAdmin(
+    options: GetAllTicketsOptions,
+  ): Promise<GetAllTicketsAndMetricsOutput>;
 }

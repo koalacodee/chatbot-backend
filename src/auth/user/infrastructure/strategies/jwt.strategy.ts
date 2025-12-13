@@ -28,6 +28,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // Only handle authenticated users (not guests)
     const user = await this.userRepository.findById(payload.sub);
 
+    console.log(user);
+
     if (!user) {
       throw new UnauthorizedException({
         details: [{ field: 'userId', message: 'User not found' }],

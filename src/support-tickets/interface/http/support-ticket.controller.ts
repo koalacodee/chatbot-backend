@@ -55,6 +55,7 @@ import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 
 import { ExportFileService } from 'src/export/domain/services/export-file.service';
 import { ExportTicketsDto } from './dto/export-tickets.dto';
+import { GetAllSupportTicketsDto } from './dto/get-all-support-tickets.dto';
 
 interface AssignTicketDto {
   userId: string;
@@ -99,7 +100,7 @@ export class SupportTicketController {
     private readonly getEmployeesWithTicketHandlingPermissionsUseCase: GetEmployeesWithTicketHandlingPermissionsUseCase,
     private readonly exportSupportTicketsUseCase: ExportSupportTicketsUseCase,
     private readonly exportFileService: ExportFileService,
-  ) { }
+  ) {}
 
   @UseInterceptors(GuestIdInterceptor)
   @Post(':type/:ticketId')
@@ -175,29 +176,15 @@ export class SupportTicketController {
 
   @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TICKETS)
   @Get()
-  async getAll(
-    @Req() req: any,
-    @Query('offset') offset?: string,
-    @Query('limit') limit?: string,
-    @Query('status') status?: string,
-    @Query('departmentId') departmentId?: string,
-    @Query('search') search?: string,
-  ): Promise<{ tickets: SupportTicket[]; metrics: SupportTicketMetrics }> {
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const normalizedStatus = status
-      ? (SupportTicketStatus[
-        status.toUpperCase() as keyof typeof SupportTicketStatus
-      ] as SupportTicketStatus | undefined)
-      : undefined;
-
+  async getAll(@Req() req: any, @Query() query: GetAllSupportTicketsDto) {
     return this.getAllUseCase.execute({
-      offset: parsedOffset,
-      limit: parsedLimit,
+      offset: query.offset,
+      limit: query.limit,
       userId: req.user.id,
-      status: normalizedStatus,
-      departmentId: departmentId || undefined,
-      search,
+      userRole: req.user.role,
+      status: query.status,
+      departmentId: query.departmentId,
+      search: query.search,
     });
   }
 
@@ -307,14 +294,14 @@ export class SupportTicketController {
 
   @AdminAuth()
   @Post('export')
-  async exportTickets(
-    @Body() body: ExportTicketsDto,
-  ) {
+  async exportTickets(@Body() body: ExportTicketsDto) {
     const exportEntity = await this.exportSupportTicketsUseCase.execute({
       start: body.start,
       end: body.end,
     });
-    const { shareKey } = await this.exportFileService.genShareKey(exportEntity.id);
+    const { shareKey } = await this.exportFileService.genShareKey(
+      exportEntity.id,
+    );
     return { ...exportEntity.toJSON(), shareKey };
   }
 

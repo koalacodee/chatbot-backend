@@ -12,10 +12,14 @@ enum Rating {
 
 export interface SupportTicketAnswerOptions {
   id?: string;
-  supportTicket: SupportTicket;
+  supportTicket?: SupportTicket;
+  supportTicketId?: string;
   content: string;
   attachment?: Attachment;
-  answerer: Employee | Supervisor | Admin;
+  answerer?: Employee | Supervisor | Admin;
+  answererAdminId?: UUID;
+  answererEmployeeId?: UUID;
+  answererSupervisorId?: UUID;
   createdAt?: Date;
   updatedAt?: Date;
   rating?: Rating;
@@ -27,15 +31,23 @@ export class SupportTicketAnswer {
   private _content: string;
   private _attachment?: Attachment;
   private _answerer: Employee | Supervisor | Admin;
+  private _answererAdminId?: UUID;
+  private _answererEmployeeId?: UUID;
+  private _answererSupervisorId?: UUID;
   private _createdAt: Date;
   private _updatedAt: Date;
   private _rating: Rating;
+  private _supportTicketId: UUID;
 
   private constructor(options: SupportTicketAnswerOptions) {
     this._id = UUID.create(options.id);
     this._supportTicket = options.supportTicket;
+    this._supportTicketId = UUID.create(options.supportTicketId);
     this._content = options.content;
     this._attachment = options.attachment;
+    this._answererAdminId = options.answererAdminId;
+    this._answererEmployeeId = options.answererEmployeeId;
+    this._answererSupervisorId = options.answererSupervisorId;
     this._answerer = options.answerer;
     this._createdAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
@@ -60,6 +72,38 @@ export class SupportTicketAnswer {
 
   get content(): string {
     return this._content;
+  }
+
+  get supportTicketId(): UUID {
+    return this._supportTicketId;
+  }
+
+  set supportTicketId(supportTicketId: string) {
+    this._supportTicketId = UUID.create(supportTicketId);
+  }
+
+  get answererAdminId(): UUID | undefined {
+    return this._answererAdminId;
+  }
+
+  get answererEmployeeId(): UUID | undefined {
+    return this._answererEmployeeId;
+  }
+
+  get answererSupervisorId(): UUID | undefined {
+    return this._answererSupervisorId;
+  }
+
+  set answererAdminId(newAnswererAdminId: string) {
+    this._answererAdminId = UUID.create(newAnswererAdminId);
+  }
+
+  set answererEmployeeId(newAnswererEmployeeId: string) {
+    this._answererEmployeeId = UUID.create(newAnswererEmployeeId);
+  }
+
+  set answererSupervisorId(newAnswererSupervisorId: string) {
+    this._answererSupervisorId = UUID.create(newAnswererSupervisorId);
   }
 
   set content(content: string) {
@@ -116,7 +160,7 @@ export class SupportTicketAnswer {
       supportTicketId: this?.supportTicket?.id?.toString(),
       content: this?.content,
       attachment: this?.attachment?.toJSON(),
-      answerer: this.answerer,
+      answerer: this?.answerer,
       createdAt: this?.createdAt?.toISOString(),
       updatedAt: this?.updatedAt?.toISOString(),
       rating: this?._rating,

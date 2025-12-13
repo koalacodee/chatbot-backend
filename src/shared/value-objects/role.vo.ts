@@ -12,6 +12,7 @@ export class Role {
   private constructor(private role: Roles) {}
 
   static create(role: string): Role {
+    role = role.toUpperCase();
     if (!Object.values(Roles).includes(role as Roles)) {
       throw new BadRequestException({
         details: [{ field: 'role', message: 'Role is invalid' }],
