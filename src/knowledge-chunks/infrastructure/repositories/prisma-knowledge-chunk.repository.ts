@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-chunk.repository';
@@ -5,6 +6,7 @@ import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
 
 @Injectable()
+/** @deprecated */
 export class PrismaKnowledgeChunkRepository extends KnowledgeChunkRepository {
   constructor(private readonly prisma: PrismaService) {
     super();

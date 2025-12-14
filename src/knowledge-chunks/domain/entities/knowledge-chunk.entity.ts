@@ -7,7 +7,7 @@ interface CreateKnowledgeChunkOptions {
   content: string;
   point?: Point; // Made optional since point will be created after chunk
   pointId?: string; // Add pointId to track the relation
-  department: Department;
+  department?: Department;
 }
 
 export class KnowledgeChunk {
@@ -15,20 +15,20 @@ export class KnowledgeChunk {
   private _content: string;
   private _point: Point | null;
   private _pointId: string | null;
-  private _department: Department;
+  private _department: Department | null;
 
   private constructor(
     id: UUID,
     content: string,
     point: Point | null,
     pointId: string | null,
-    department: Department,
+    department?: Department,
   ) {
     this._id = id;
     this._content = content;
     this._point = point;
     this._pointId = pointId;
-    this._department = department;
+    this._department = department ?? null;
   }
 
   static create({
@@ -36,7 +36,7 @@ export class KnowledgeChunk {
     content,
     point = null,
     pointId = null,
-    department,
+    department = null,
   }: CreateKnowledgeChunkOptions): KnowledgeChunk {
     return new KnowledgeChunk(
       UUID.create(id),
@@ -64,7 +64,7 @@ export class KnowledgeChunk {
     return this._pointId;
   }
 
-  get department(): Department {
+  get department(): Department | null {
     return this._department;
   }
 
@@ -93,7 +93,7 @@ export class KnowledgeChunk {
     this._point = null; // Clear the point object since we only have the ID
   }
 
-  public updateDepartment(newDepartment: Department): void {
+  public updateDepartment(newDepartment: Department | null): void {
     this._department = newDepartment;
   }
 
@@ -117,7 +117,7 @@ export class KnowledgeChunk {
       content: this._content,
       point: this.point ? this._point.toJSON() : null,
       pointId: this._pointId,
-      department: this._department.toJSON(),
+      department: this._department ? this._department.toJSON() : null,
     };
   }
 }

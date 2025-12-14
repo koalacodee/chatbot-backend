@@ -18,6 +18,7 @@ import {
   DeleteManyKnowledgeChunksUseCase,
   CountKnowledgeChunksUseCase,
   FindKnowledgeChunksByDepartmentUseCase,
+  GetKnowledgeChunksGroupedByDepartmentUseCase,
 } from '../../application/use-cases';
 import { CreateKnowledgeChunkInputDto } from './dto/create-knowledge-chunk.dto';
 import { UpdateKnowledgeChunkInputDto } from './dto/update-knowledge-chunk.dto';
@@ -42,6 +43,7 @@ export class KnowledgeChunkController {
     private readonly deleteManyUseCase: DeleteManyKnowledgeChunksUseCase,
     private readonly countUseCase: CountKnowledgeChunksUseCase,
     private readonly findByDepartmentUseCase: FindKnowledgeChunksByDepartmentUseCase,
+    private readonly getGroupedUseCase: GetKnowledgeChunksGroupedByDepartmentUseCase,
   ) {}
 
   @Post()
@@ -74,11 +76,14 @@ export class KnowledgeChunkController {
 
   @EmployeePermissions(EmployeePermissionsEnum.MANAGE_KNOWLEDGE_CHUNKS)
   @Get()
-  async getAll(@Req() req: any): Promise<{
-    knowledgeChunks: KnowledgeChunk[];
-    attachments: { [chunkId: string]: string[] };
-  }> {
+  async getAll(@Req() req: any) {
     return this.getAllUseCase.execute(req.user.id);
+  }
+
+  @EmployeePermissions(EmployeePermissionsEnum.MANAGE_KNOWLEDGE_CHUNKS)
+  @Get('grouped')
+  async getGrouped(@Req() req: any) {
+    return this.getGroupedUseCase.execute(req.user.id);
   }
 
   @SupervisorPermissions()

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { KnowledgeChunkRepository } from './domain/repositories/knowledge-chunk.repository';
-import { PrismaKnowledgeChunkRepository } from './infrastructure/repositories/prisma-knowledge-chunk.repository';
+import { DrizzleKnowledgeChunkRepository } from './infrastructure/repositories/drizzle-knowledge-chunk.repository';
 import { KnowledgeChunkController } from './interface/http/knowledge-chunk.controller';
 import {
   CountKnowledgeChunksUseCase,
@@ -13,6 +13,7 @@ import {
   GetKnowledgeChunkUseCase,
   SearchKnowledgeChunksUseCase,
   UpdateKnowledgeChunkUseCase,
+  GetKnowledgeChunksGroupedByDepartmentUseCase,
 } from './application/use-cases';
 import { DepartmentModule } from 'src/department/department.module';
 import { CreateKnowledgeChunksProcessor } from './infrastructure/queues/create-knowledge-chunks.processor';
@@ -27,7 +28,7 @@ import { DepartmentKnowledgeEventListener } from './application/listeners/depart
   providers: [
     {
       provide: KnowledgeChunkRepository,
-      useClass: PrismaKnowledgeChunkRepository,
+      useClass: DrizzleKnowledgeChunkRepository,
     },
     {
       provide: KnowledgeChunkProcessingService,
@@ -46,7 +47,9 @@ import { DepartmentKnowledgeEventListener } from './application/listeners/depart
     GetKnowledgeChunkUseCase,
     UpdateKnowledgeChunkUseCase,
     CreateKnowledgeChunksProcessor,
+    CreateKnowledgeChunksProcessor,
     SearchKnowledgeChunksUseCase,
+    GetKnowledgeChunksGroupedByDepartmentUseCase,
     {
       provide: PointRepository,
       useClass: QdrantPointRepository,

@@ -14,4 +14,7 @@ export abstract class KnowledgeChunkRepository {
   abstract count(): Promise<number>;
   abstract findByDepartmentId(departmentId: string): Promise<KnowledgeChunk[]>;
   abstract findByPointIds(pointIds: string[]): Promise<KnowledgeChunk[]>;
+  abstract findAllGroupedByDepartment(): Promise<
+    { departmentId: string; knowledgeChunks: KnowledgeChunk[] }[]
+  >;
 }
