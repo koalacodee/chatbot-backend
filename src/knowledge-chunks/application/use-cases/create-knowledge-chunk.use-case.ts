@@ -44,7 +44,7 @@ export class CreateKnowledgeChunkUseCase {
 
     const knowledgeChunk = KnowledgeChunk.create({
       content: dto.content,
-      department,
+      departmentId: dto.departmentId,
     });
 
     // Add the processing job to the queue

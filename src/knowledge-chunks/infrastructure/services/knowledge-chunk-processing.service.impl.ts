@@ -58,6 +58,7 @@ export class KnowledgeChunkProcessingServiceImpl extends KnowledgeChunkProcessin
         content: data.content,
         pointId: savedPoint.id.value,
         department,
+        departmentId: data.departmentId,
       });
 
       const savedChunk = await this.chunkRepo.save(chunk);

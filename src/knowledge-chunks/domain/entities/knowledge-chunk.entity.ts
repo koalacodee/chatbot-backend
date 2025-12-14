@@ -8,6 +8,7 @@ interface CreateKnowledgeChunkOptions {
   point?: Point; // Made optional since point will be created after chunk
   pointId?: string; // Add pointId to track the relation
   department?: Department;
+  departmentId: string;
 }
 
 export class KnowledgeChunk {
@@ -16,35 +17,19 @@ export class KnowledgeChunk {
   private _point: Point | null;
   private _pointId: string | null;
   private _department: Department | null;
+  private _departmentId: string;
 
-  private constructor(
-    id: UUID,
-    content: string,
-    point: Point | null,
-    pointId: string | null,
-    department?: Department,
-  ) {
-    this._id = id;
-    this._content = content;
-    this._point = point;
-    this._pointId = pointId;
-    this._department = department ?? null;
+  private constructor(options: CreateKnowledgeChunkOptions) {
+    this._id = UUID.create(options.id);
+    this._content = options.content;
+    this._point = options.point;
+    this._pointId = options.pointId;
+    this._department = options.department ?? null;
+    this._departmentId = options.departmentId;
   }
 
-  static create({
-    id,
-    content,
-    point = null,
-    pointId = null,
-    department = null,
-  }: CreateKnowledgeChunkOptions): KnowledgeChunk {
-    return new KnowledgeChunk(
-      UUID.create(id),
-      content,
-      point,
-      pointId,
-      department,
-    );
+  static create(options: CreateKnowledgeChunkOptions): KnowledgeChunk {
+    return new KnowledgeChunk(options);
   }
 
   // Getters
@@ -60,6 +45,10 @@ export class KnowledgeChunk {
     return this._point;
   }
 
+  get departmentId(): string {
+    return this._departmentId;
+  }
+
   get pointId(): string | null {
     return this._pointId;
   }
@@ -71,6 +60,10 @@ export class KnowledgeChunk {
   // Setters
   set content(newContent: string) {
     this._content = newContent;
+  }
+
+  set departmentId(newDepartmentId: string) {
+    this._departmentId = newDepartmentId;
   }
 
   set point(newPoint: Point) {
@@ -102,13 +95,14 @@ export class KnowledgeChunk {
   }
 
   public clone(): KnowledgeChunk {
-    return new KnowledgeChunk(
-      this._id,
-      this._content,
-      this._point,
-      this._pointId,
-      this._department,
-    );
+    return new KnowledgeChunk({
+      id: this._id.value,
+      content: this._content,
+      point: this._point,
+      pointId: this._pointId,
+      department: this._department,
+      departmentId: this._departmentId,
+    });
   }
 
   public toJSON(): object {
@@ -118,6 +112,7 @@ export class KnowledgeChunk {
       point: this.point ? this._point.toJSON() : null,
       pointId: this._pointId,
       department: this._department ? this._department.toJSON() : null,
+      departmentId: this._departmentId,
     };
   }
 }

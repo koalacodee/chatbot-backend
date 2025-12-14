@@ -26,6 +26,7 @@ export class DrizzleKnowledgeChunkRepository extends KnowledgeChunkRepository {
       id: rec.id,
       content: rec.content,
       pointId: rec.pointId,
+      departmentId: rec.departmentId,
     });
   }
 

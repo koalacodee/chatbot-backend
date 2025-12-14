@@ -3,7 +3,6 @@ import { KnowledgeChunkRepository } from '../../domain/repositories/knowledge-ch
 import { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity';
 import { AccessControlService } from 'src/rbac/domain/services/access-control.service';
 import { PointRepository } from 'src/knowledge-chunks/domain/repositories/point.repository';
-import { FilesService } from 'src/files/domain/services/files.service';
 
 @Injectable()
 export class DeleteManyKnowledgeChunksUseCase {
@@ -11,7 +10,6 @@ export class DeleteManyKnowledgeChunksUseCase {
     private readonly chunkRepo: KnowledgeChunkRepository,
     private readonly pointRepo: PointRepository,
     private readonly accessControl: AccessControlService,
-    private readonly filesService: FilesService,
   ) {}
 
   async execute(ids: string[], userId: string): Promise<KnowledgeChunk[]> {
@@ -19,16 +17,8 @@ export class DeleteManyKnowledgeChunksUseCase {
     // Check access for each chunk
     await Promise.all(
       found.map((chunk) =>
-        this.accessControl.canAccessDepartment(
-          userId,
-          chunk.department.id.value,
-        ),
+        this.accessControl.canAccessDepartment(userId, chunk.departmentId),
       ),
-    );
-
-    // Delete associated files first
-    await Promise.all(
-      ids.map((id) => this.filesService.deleteFilesByTargetId(id)),
     );
 
     // Delete associated points

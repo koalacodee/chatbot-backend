@@ -9,7 +9,6 @@ import {
   DepartmentVisibility,
 } from '../../domain/entities/department.entity';
 import { Question } from '../../../questions/domain/entities/question.entity';
-import { KnowledgeChunk } from '../../../knowledge-chunks/domain/entities/knowledge-chunk.entity';
 
 @Injectable()
 export class PrismaDepartmentRepository extends DepartmentRepository {
@@ -25,40 +24,30 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
       parent: dept.parent ? Department.create(dept.parent) : undefined,
       questions: dept.questions
         ? dept.questions?.map((q: any) =>
-          Question.create({
-            id: q.id,
-            text: q.text,
-            departmentId: q.departmentId,
-            knowledgeChunkId: q.knowledgeChunkId,
-            creatorEmployeeId: q.creatorEmployeeId,
-            creatorAdminId: q.creatorAdminId,
-            creatorSupervisorId: q.creatorSupervisorId,
-            satisfaction: q.satisfaction,
-            dissatisfaction: q.dissatisfaction,
-            views: q.views,
-          }),
-        ) || []
-        : [],
-      knowledgeChunks: dept.knowledgeChunks
-        ? dept.knowledgeChunks?.map((kc: any) =>
-          KnowledgeChunk.create({
-            id: kc.id,
-            content: kc.content,
-            point: undefined,
-            department: undefined as unknown as Department,
-          }),
-        ) || []
+            Question.create({
+              id: q.id,
+              text: q.text,
+              departmentId: q.departmentId,
+              knowledgeChunkId: q.knowledgeChunkId,
+              creatorEmployeeId: q.creatorEmployeeId,
+              creatorAdminId: q.creatorAdminId,
+              creatorSupervisorId: q.creatorSupervisorId,
+              satisfaction: q.satisfaction,
+              dissatisfaction: q.dissatisfaction,
+              views: q.views,
+            }),
+          ) || []
         : [],
       subDepartments: dept.subDepartments
         ? dept.subDepartments?.map((sd: any) =>
-          Department.create({
-            id: sd.id,
-            name: sd.name,
-            visibility: sd.visibility as DepartmentVisibility,
-            questions: sd.questions,
-            knowledgeChunks: sd.knowledgeChunks,
-          }),
-        ) || []
+            Department.create({
+              id: sd.id,
+              name: sd.name,
+              visibility: sd.visibility as DepartmentVisibility,
+              questions: sd.questions,
+              knowledgeChunks: sd.knowledgeChunks,
+            }),
+          ) || []
         : [],
     });
   }
@@ -575,7 +564,7 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
 
   async validateSubDepartments(
     parentDepartmentIds: string[],
-    subDepartmentIds: string[]
+    subDepartmentIds: string[],
   ) {
     const query = `
       WITH sub_department_validation AS (
@@ -597,12 +586,13 @@ export class PrismaDepartmentRepository extends DepartmentRepository {
       WHERE belongs_to_parent = FALSE;
     `;
 
-    const invalidSubDepartments = await this.prisma.$queryRawUnsafe
-      <Array<{ id: string; name: string }>>(
-        query,
-        `{${parentDepartmentIds.join(',')}}`,
-        `{${subDepartmentIds.join(',')}}`
-      );
+    const invalidSubDepartments = await this.prisma.$queryRawUnsafe<
+      Array<{ id: string; name: string }>
+    >(
+      query,
+      `{${parentDepartmentIds.join(',')}}`,
+      `{${subDepartmentIds.join(',')}}`,
+    );
 
     return invalidSubDepartments;
   }
