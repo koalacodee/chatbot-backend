@@ -53,9 +53,9 @@ export class GetSharedDepartmentFAQsUseCase {
     });
 
     const attachments = await this.getAttachmentsUseCase.execute({
-      targetIds: faqs.map((faq) => faq.id),
+      targetIds: faqs.faqs.map((faq) => faq.id),
     });
 
-    return { faqs, attachments };
+    return { faqs: faqs.faqs, attachments };
   }
 }

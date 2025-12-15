@@ -1,4 +1,7 @@
+import { FilehubAttachmentMessage } from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 import { Question } from '../entities/question.entity';
+import { SupportedLanguage } from 'src/translation/domain/services/translation.service';
+import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 
 export interface QuestionQueryDto {
   includeDepartment?: boolean;
@@ -28,6 +31,18 @@ export interface ViewdFaqDto {
   department_id: string;
   isRated: boolean;
   isViewed: boolean;
+}
+
+export type FAqTranslation = {
+  lang: SupportedLanguage;
+  content: string;
+  type: 'question' | 'answer';
+};
+
+export interface ViewedFaqsResponse {
+  faqs: Array<ViewdFaqDto>;
+  fileHubAttachments: Attachment[];
+  translations: Record<string, FAqTranslation[]>;
 }
 
 export abstract class QuestionRepository {
@@ -74,7 +89,7 @@ export abstract class QuestionRepository {
     page?: number;
     departmentId?: string;
     viewPrivate?: boolean;
-  }): Promise<ViewdFaqDto[]>;
+  }): Promise<ViewedFaqsResponse>;
 
   abstract recordRating(options: {
     guestId: string;

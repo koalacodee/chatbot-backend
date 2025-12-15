@@ -2,9 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { DrizzleService } from '../../../common/drizzle/drizzle.service';
 import {
   FaqStats,
+  FAqTranslation,
   QuestionQueryDto,
   QuestionRepository,
   ViewdFaqDto,
+  ViewedFaqsResponse,
 } from '../../domain/repositories/question.repository';
 import { Question } from '../../domain/entities/question.entity';
 import {
@@ -16,6 +18,8 @@ import {
   departments,
   questionInteractions,
   questionViews,
+  attachments,
+  translations,
 } from '../../../common/drizzle/schema';
 import {
   eq,
@@ -30,6 +34,7 @@ import {
   isNotNull,
 } from 'drizzle-orm';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
+import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 
 @Injectable()
 export class DrizzleQuestionRepository extends QuestionRepository {
@@ -490,67 +495,111 @@ export class DrizzleQuestionRepository extends QuestionRepository {
     }
   }
 
-  async viewFaqs(options?: {
+  async viewFaqs(opts: {
     limit?: number;
     page?: number;
     departmentId?: string;
-    guestId: string;
+    guestId?: string;
     viewPrivate?: boolean;
-  }): Promise<ViewdFaqDto[]> {
-    if (!options?.guestId) {
-      throw new Error('guestId is required');
+  }): Promise<ViewedFaqsResponse> {
+    const { limit = 10, page = 1, departmentId, guestId, viewPrivate } = opts;
+    const offset = (page - 1) * limit;
+
+    /* ---------- 1.  main query ---------- */
+    const preds = [];
+    if (departmentId) preds.push(eq(questions.departmentId, departmentId));
+
+    const qb = this.db
+      .select({
+        id: questions.id,
+        text: questions.text,
+        answer: questions.answer,
+        departmentId: questions.departmentId,
+        createdAt: questions.createdAt,
+        isRated: sql<boolean>`EXISTS (
+          SELECT 1 FROM ${questionInteractions} qi
+          WHERE qi.question_id = ${questions.id}
+            AND qi.guest_id = ${guestId ?? sql`NULL`}::uuid
+        )`.as('isRated'),
+        isViewed: sql<boolean>`EXISTS (
+          SELECT 1 FROM ${questionViews} qv
+          WHERE qv.question_id = ${questions.id}
+            AND qv.guest_id = ${guestId ?? sql`NULL`}::uuid
+        )`.as('isViewed'),
+      })
+      .from(questions);
+
+    if (!viewPrivate) {
+      preds.push(eq(departments.visibility, 'public'));
+      qb.leftJoin(departments, eq(departments.id, questions.departmentId));
     }
+    const questionResult = await qb
+      .$dynamic() // allow conditional where
+      .where(preds.length ? and(...preds) : undefined)
+      .orderBy(desc(questions.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    const {
-      limit = 10,
-      page = 1,
-      departmentId,
-      guestId,
-      viewPrivate,
-    } = options;
+    if (!questionResult.length)
+      return { faqs: [], fileHubAttachments: [], translations: {} };
 
-    const pgClient = this.drizzleService.getPgClient();
-    const result = await pgClient.query<ViewdFaqDto>(
-      `
-      WITH faqs_cte AS (
-        SELECT 
-          q.id,
-          q.text,
-          q.answer,
-          q.department_id,
-          q.created_at,
-          CASE 
-            WHEN qi.id IS NOT NULL THEN TRUE 
-            ELSE FALSE 
-          END AS "isRated",
-          CASE 
-            WHEN qv.id IS NOT NULL THEN TRUE
-            ELSE FALSE
-          END AS "isViewed"
-        FROM questions q
-        LEFT JOIN question_interactions qi
-          ON qi.question_id = q.id AND qi.guest_id = $1::uuid
-        LEFT JOIN question_views qv
-          ON qv.question_id = q.id AND qv.guest_id = $1::uuid
-        JOIN departments d ON q.department_id = d.id
-        WHERE ($2::uuid IS NULL OR q.department_id = $2::uuid)
-        AND ($5::boolean = TRUE OR d.visibility = 'public')
-      )
-      SELECT *
-      FROM faqs_cte
-      ORDER BY created_at DESC
-      LIMIT $3 OFFSET $4;
-      `,
-      [
-        guestId,
-        departmentId || null,
-        limit,
-        (page - 1) * limit,
-        viewPrivate || false,
-      ],
-    );
+    const ids = questionResult.map((q) => q.id);
 
-    return result.rows;
+    /* ---------- 2.  attachments ---------- */
+    const attachmentResult = await this.db
+      .select()
+      .from(attachments)
+      .where(inArray(attachments.targetId, ids));
+
+    /* ---------- 3.  translations ---------- */
+    const translationResult = await this.db
+      .select()
+      .from(translations)
+      .where(inArray(translations.targetId, ids));
+
+    /* ---------- 4.  shape response ---------- */
+    const transById = translationResult.reduce<
+      Record<string, FAqTranslation[]>
+    >((acc, t) => {
+      (acc[t.targetId] ||= []).push({
+        lang: t.lang,
+        content: t.content,
+        type: t.subTarget === 'question' ? 'question' : 'answer',
+      });
+      return acc;
+    }, {});
+
+    return {
+      faqs: questionResult.map((q) => ({
+        id: q.id,
+        text: q.text,
+        answer: q.answer,
+        department_id: q.departmentId,
+        createdAt: new Date(q.createdAt),
+        isRated: q.isRated,
+        isViewed: q.isViewed,
+      })),
+      fileHubAttachments: attachmentResult.map((a) =>
+        Attachment.create({
+          id: a.id,
+          type: a.type,
+          createdAt: new Date(a.createdAt),
+          updatedAt: new Date(a.updatedAt),
+          targetId: a.targetId,
+          expirationDate: a.expirationDate
+            ? new Date(a.expirationDate)
+            : undefined,
+          filename: a.filename,
+          originalName: a.originalName,
+          guestId: a.guestId,
+          userId: a.userId,
+          isGlobal: a.isGlobal,
+          size: a.size,
+          cloned: a.cloned,
+        }),
+      ),
+      translations: transById,
+    };
   }
 
   async recordRating({

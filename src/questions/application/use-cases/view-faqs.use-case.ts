@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { QuestionRepository } from 'src/questions/domain/repositories/question.repository';
-import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
-import { SupportedLanguage } from 'src/translation/domain/services/translation.service';
-import { GetTranslationsByTargetIdsUseCase } from 'src/translation/application/use-cases/get-translations-by-target-ids.use-case';
+import {
+  FAqTranslation,
+  QuestionRepository,
+  ViewdFaqDto,
+} from 'src/questions/domain/repositories/question.repository';
+import { FilehubAttachmentMessage } from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface ViewQuestionsInput {
   limit?: number;
@@ -11,48 +14,46 @@ interface ViewQuestionsInput {
   guestId?: string;
 }
 
-type FAqTranslation = {
-  lang: SupportedLanguage;
-  content: string;
-  type: 'question' | 'answer';
-};
-
 @Injectable()
 export class ViewFaqsUseCase {
   constructor(
     private readonly questionRepo: QuestionRepository,
-    private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
-    private readonly getTranslationsUseCase: GetTranslationsByTargetIdsUseCase,
+    private readonly fileHubService: FileHubService,
   ) {}
 
-  async execute(
-    options?: ViewQuestionsInput,
-  ): Promise<{
-    faqs: any[];
+  async execute(options?: ViewQuestionsInput): Promise<{
+    faqs: Array<ViewdFaqDto>;
     attachments: { [faqId: string]: string[] };
+    fileHubAttachments: FilehubAttachmentMessage[];
     translations: Record<string, FAqTranslation[]>;
   }> {
     const faqs = await this.questionRepo.viewFaqs(options);
 
-    const attachments = await this.getAttachmentsUseCase.execute({
-      targetIds: faqs.map((faq) => faq.id),
-    });
-    const translations = await this.getTranslationsUseCase.execute(
-      faqs.map((faq) => faq.id),
+    const uniqueFileNames = Array.from(
+      new Set(faqs.fileHubAttachments.map((a) => a.filename)),
     );
 
-    const mappedTranslations: Record<string, FAqTranslation[]> = {};
-    translations.forEach((translation) => {
-      if (!mappedTranslations[translation.targetId.toString()]) {
-        mappedTranslations[translation.targetId.toString()] = [];
-      }
-      mappedTranslations[translation.targetId.toString()].push({
-        lang: translation.lang,
-        content: translation.content,
-        type: translation.subTarget === 'question' ? 'question' : 'answer',
-      });
-    });
+    const fileHubAttachments: FilehubAttachmentMessage[] =
+      uniqueFileNames.length > 0
+        ? await this.fileHubService
+            .getSignedUrlBatch(uniqueFileNames, 7 * 24 * 60 * 60 * 1000)
+            .then((batch) => {
+              return batch.map((b) => {
+                return {
+                  ...faqs.fileHubAttachments
+                    .find((a) => a.filename === b.filename)
+                    ?.toJSON(),
+                  signedUrl: b.signedUrl,
+                };
+              });
+            })
+        : [];
 
-    return { faqs, attachments, translations: mappedTranslations };
+    return {
+      faqs: faqs.faqs,
+      attachments: {},
+      translations: faqs.translations,
+      fileHubAttachments,
+    };
   }
 }
