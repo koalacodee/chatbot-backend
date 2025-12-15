@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Department } from 'src/department/domain/entities/department.entity';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { RedisService } from 'src/shared/infrastructure/redis';
 
@@ -10,16 +10,13 @@ interface GetSharedDepartmentDataDto {
 @Injectable()
 export class GetSharedDepartmentDataUseCase {
   constructor(
-    private readonly config: ConfigService,
     private readonly redis: RedisService,
     private readonly departmentRepository: DepartmentRepository,
   ) {}
 
-  async execute({ key }: GetSharedDepartmentDataDto) {
-    if (key.length !== this.config.get('SHARE_LINK_KEY_LENGTH', 64)) {
-      throw new Error('Invalid key');
-    }
-
+  async execute({
+    key,
+  }: GetSharedDepartmentDataDto): Promise<ReturnType<Department['toJSON']>> {
     const departmentId = await this.redis.get(key);
 
     if (!departmentId) {
@@ -41,6 +38,6 @@ export class GetSharedDepartmentDataUseCase {
       });
     }
 
-    return department;
+    return department.toJSON();
   }
 }

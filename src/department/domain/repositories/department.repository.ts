@@ -66,25 +66,25 @@ export abstract class DepartmentRepository {
    * Remove a department by its id.
    * Returns the removed department if it existed, otherwise null.
    */
-  abstract removeById(id: string): Promise<Department | null>;
+  abstract removeById(id: string): void | Promise<void>;
 
   /**
    * Remove a main department by its id (ensures it's not a sub-department).
    * Returns the removed department if it existed and was a main department, otherwise null.
    */
-  abstract removeMainDepartmentById(id: string): Promise<Department | null>;
+  abstract removeMainDepartmentById(id: string): void | Promise<void>;
 
   /**
    * Remove a sub-department by its id (ensures it is a sub-department).
    * Returns the removed department if it existed and was a sub-department, otherwise null.
    */
-  abstract removeSubDepartmentById(id: string): Promise<Department | null>;
+  abstract removeSubDepartmentById(id: string): void | Promise<void>;
 
   /**
    * Remove multiple departments by their ids.
    * Returns the list of removed departments.
    */
-  abstract removeByIds(ids: string[]): Promise<Department[]>;
+  abstract removeByIds(ids: string[]): void | Promise<void>;
 
   /**
    * Update a department by its id with partial data.

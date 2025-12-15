@@ -25,6 +25,7 @@ import {
   DeleteMainDepartmentUseCase,
   DeleteSubDepartmentUseCase,
 } from '../../application/use-cases';
+import { GetSharedDepartmentDataUseCase } from '../../application/use-cases/get-shared-department-data.use-case';
 import { GetSharedDepartmentSubDepartmentsUseCase } from '../../application/use-cases/get-shared-department-sub-departments.use-case';
 import { GetSharedDepartmentFaqsUseCase } from '../../application/use-cases/get-shared-department-faqs.use-case';
 import { GetSharedSubDepartmentFaqsUseCase } from '../../application/use-cases/get-shared-sub-department-faqs.use-case';
@@ -67,6 +68,7 @@ export class DepartmentController {
     private readonly viewMainDepartmentsUseCase: ViewMainDepartmentsUseCase,
     private readonly viewSubDepartmentsUseCase: ViewSubDepartmentsUseCase,
     private readonly generateShareKeyUseCase: GenerateShareKeyUseCase,
+    private readonly getSharedDepartmentDataUseCase: GetSharedDepartmentDataUseCase,
     private readonly getSharedDepartmentSubDepartmentsUseCase: GetSharedDepartmentSubDepartmentsUseCase,
     private readonly getSharedDepartmentFaqsUseCase: GetSharedDepartmentFaqsUseCase,
     private readonly getSharedSubDepartmentFaqsUseCase: GetSharedSubDepartmentFaqsUseCase,
@@ -93,6 +95,12 @@ export class DepartmentController {
       ...queryDto,
       guestId: userId,
     });
+  }
+
+  @Get('shared/data')
+  @UseInterceptors(GuestIdInterceptor)
+  async getSharedDepartmentData(@Query() query: GetSharedDepartmentDataDto) {
+    return this.getSharedDepartmentDataUseCase.execute({ ...query });
   }
 
   @Get('shared/sub-departments')
@@ -192,7 +200,7 @@ export class DepartmentController {
   async deleteMainDepartment(
     @Param('id') id: string,
     @Req() req: any,
-  ): Promise<GetDepartmentOutputDto | null> {
+  ): Promise<void> {
     return this.deleteMainDepartmentUseCase.execute(id, req.user.id);
   }
 
@@ -200,7 +208,7 @@ export class DepartmentController {
   @Delete('main/multiple')
   async deleteMultipleMainDepartments(
     @Body() input: DeleteManyDepartmentsInputDto,
-  ): Promise<Department[]> {
+  ): Promise<void> {
     return this.deleteManyDepartmentsUseCase.execute(input.ids);
   }
 
@@ -209,7 +217,7 @@ export class DepartmentController {
   async deleteSubDepartment(
     @Param('id') id: string,
     @Req() req: any,
-  ): Promise<GetDepartmentOutputDto | null> {
+  ): Promise<void> {
     return this.deleteSubDepartmentUseCase.execute(id, req.user.id);
   }
 
@@ -217,7 +225,7 @@ export class DepartmentController {
   @Delete('sub/multiple')
   async deleteMultipleSubDepartments(
     @Body() input: DeleteManyDepartmentsInputDto,
-  ): Promise<Department[]> {
+  ): Promise<void> {
     return this.deleteManyDepartmentsUseCase.execute(input.ids);
   }
 

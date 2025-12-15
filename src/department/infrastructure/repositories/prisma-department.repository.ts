@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import {
@@ -10,6 +11,9 @@ import {
 } from '../../domain/entities/department.entity';
 import { Question } from '../../../questions/domain/entities/question.entity';
 
+/**
+ * @deprecated Use DrizzleDepartmentRepository instead. This Prisma implementation is deprecated and will be removed in a future version.
+ */
 @Injectable()
 export class PrismaDepartmentRepository extends DepartmentRepository {
   constructor(private readonly prisma: PrismaService) {

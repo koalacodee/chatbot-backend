@@ -1,6 +1,5 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { DepartmentRepository } from '../../domain/repositories/department.repository';
-import { Department } from '../../domain/entities/department.entity';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
@@ -13,7 +12,7 @@ export class DeleteSubDepartmentUseCase {
     private readonly userRepository: UserRepository,
   ) {}
 
-  async execute(id: string, userId?: string): Promise<Department | null> {
+  async execute(id: string, userId?: string): Promise<void> {
     // Apply department access control for supervisors
     if (userId) {
       const user = await this.userRepository.findById(userId);
