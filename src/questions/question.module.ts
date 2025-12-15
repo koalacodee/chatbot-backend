@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { QuestionRepository } from './domain/repositories/question.repository';
-import { PrismaQuestionRepository } from './infrastructure/repositories/prisma-question.repository';
+import { DrizzleQuestionRepository } from './infrastructure/repositories/drizzle-question.repository';
 import { QuestionController } from './interface/http/question.controller';
 import * as UseCases from './application/use-cases';
 import { KnowledgeChunkModule } from '../knowledge-chunks/knowledge-chunk.module';
@@ -14,7 +14,7 @@ import { TranslationModule } from 'src/translation/translation.module';
   providers: [
     {
       provide: QuestionRepository,
-      useClass: PrismaQuestionRepository,
+      useClass: DrizzleQuestionRepository,
     },
     ...Object.values(UseCases),
     FaqCreatedListener,

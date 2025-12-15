@@ -8,6 +8,10 @@ import {
 } from '../../domain/repositories/question.repository';
 import { Question } from '../../domain/entities/question.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
+
+/**
+ * @deprecated Use DrizzleQuestionRepository instead. This Prisma implementation is deprecated and will be removed in a future version.
+ */
 @Injectable()
 export class PrismaQuestionRepository extends QuestionRepository {
   constructor(private readonly prisma: PrismaService) {
