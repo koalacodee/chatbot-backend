@@ -19,7 +19,7 @@ import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.e
 @WebSocketGateway({
   namespace: '/filehub/members',
   cors: {
-    origin: '*', // عدلها حسب الحاجة
+    origin: '*',
   },
 })
 @Injectable()
@@ -31,13 +31,11 @@ export class AttachmentGroupMemberGateway
     private readonly config: ConfigService,
     private readonly jwtService: JwtService,
   ) {}
+
   @WebSocketServer()
   server: Server;
 
   private readonly logger = new Logger(AttachmentGroupMemberGateway.name);
-
-  // socketId -> memberId
-  private members = new Map<string, string>();
 
   handleConnection(client: Socket): void {
     this.logger.log(`Client connected: ${client.id}`);
@@ -45,11 +43,7 @@ export class AttachmentGroupMemberGateway
 
   handleDisconnect(client: Socket): void {
     this.logger.log(`Client disconnected: ${client.id}`);
-    // console.log(client);
-    if (this.members.has(client.id)) {
-      this.members.delete(client.id);
-      this.emitActiveMembers();
-    }
+    this.emitActiveMembers();
   }
 
   @SubscribeMessage('otp_subscribe')
@@ -58,7 +52,6 @@ export class AttachmentGroupMemberGateway
     @MessageBody() data: { otp: string },
   ) {
     this.logger.log(`Client ${client.id} subscribed to OTP: ${data.otp}`);
-    // this.otp_subscriptions.set(data.otp, client);
     client.join(String(data.otp));
   }
 
@@ -82,9 +75,9 @@ export class AttachmentGroupMemberGateway
     const member = await this.attachmentGroupMembersRepo.findById(
       data.memberId,
     );
-    if (member.attachmentGroupId.toString()) {
+    if (member?.attachmentGroupId) {
       client.join(`attachment-group::${member.attachmentGroupId.toString()}`);
-      this.members.set(client.id, data.memberId);
+      client.join(`member::${data.memberId}`);
       this.emitActiveMembers();
     }
   }
@@ -92,47 +85,48 @@ export class AttachmentGroupMemberGateway
   @SubscribeMessage('active_members_sub')
   async handleActiveMembers(@ConnectedSocket() client: Socket) {
     const accessToken = client.handshake.auth.token;
-    console.log(client.handshake);
 
-    if (accessToken) {
-      try {
-        const payload = await this.jwtService
-          .verifyAsync(accessToken, {
-            secret: this.config.get('USER_ACCESS_TOKEN_SECRET'),
-          })
-          .catch((error) => {
-            this.logger.error(error);
-            client.emit('error', { message: 'Invalid access token' });
-            return;
-          });
+    if (!accessToken) {
+      client.emit('error', { message: 'Unauthorized' });
+      return;
+    }
 
-        console.log(payload);
+    try {
+      const payload = await this.jwtService.verifyAsync(accessToken, {
+        secret: this.config.get('USER_ACCESS_TOKEN_SECRET'),
+      });
 
-        if (payload.permissions) {
-          if (
-            payload.permissions.includes(
-              SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS,
-            ) ||
-            payload.permissions.includes(
-              EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS,
-            ) ||
-            payload.role == 'ADMIN'
-          ) {
-            client.join('active_members_sub');
-            client.emit('active_members_update', {
-              members: Array.from(this.members.values()),
-            });
-          } else {
-            client.emit('error', { message: 'Unauthorized' });
-            return;
-          }
-        }
-      } catch (error) {
-        client.emit('error', { message: 'Invalid access token' });
+      // Check token expiration
+      if (payload.exp && Date.now() >= payload.exp * 1000) {
+        client.emit('error', { message: 'Token expired' });
+        client.disconnect();
         return;
       }
-    } else {
-      client.emit('error', { message: 'Unauthorized' });
+
+      if (payload.permissions) {
+        if (
+          payload.permissions.includes(
+            SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS,
+          ) ||
+          payload.permissions.includes(
+            EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS,
+          ) ||
+          payload.role === 'ADMIN'
+        ) {
+          client.join('active_members_sub');
+          // Use the new room-based approach
+          const memberIds = await this.getActiveMemberIds();
+          client.emit('active_members_update', {
+            members: memberIds,
+          });
+        } else {
+          client.emit('error', { message: 'Unauthorized' });
+        }
+      }
+    } catch (error) {
+      this.logger.error(error);
+      client.emit('error', { message: 'Invalid access token' });
+      client.disconnect();
     }
   }
 
@@ -144,8 +138,7 @@ export class AttachmentGroupMemberGateway
     this.logger.log(
       `Client ${client.id} unsubscribed from Member: ${data.memberId}`,
     );
-    client.leave(data.memberId);
-    this.members.delete(client.id);
+    client.leave(`member::${data.memberId}`);
     this.emitActiveMembers();
   }
 
@@ -154,9 +147,17 @@ export class AttachmentGroupMemberGateway
     this.logger.log(`Client ${otp} authorized with OTP: ${otp}`);
   }
 
-  private emitActiveMembers() {
+  private async getActiveMemberIds(): Promise<string[]> {
+    const rooms = Array.from(this.server.sockets.adapter.rooms.keys());
+    const memberRooms = rooms.filter((room) => room.startsWith('member::'));
+    const memberIds = memberRooms.map((room) => room.replace('member::', ''));
+    return [...new Set(memberIds)];
+  }
+
+  private async emitActiveMembers() {
+    const uniqueMembers = await this.getActiveMemberIds();
     this.server.to('active_members_sub').emit('active_members_update', {
-      members: Array.from(this.members.values()),
+      members: uniqueMembers,
     });
   }
 
@@ -164,11 +165,8 @@ export class AttachmentGroupMemberGateway
     attachmentGroupId: string,
     attachments: FilehubAttachmentMessage[],
   ) {
-    return new Promise<void>(async (resolve) => {
-      this.server
-        .to(`attachment-group::${attachmentGroupId}`)
-        .emit('attachments_change', { attachments });
-      resolve();
-    });
+    this.server
+      .to(`attachment-group::${attachmentGroupId}`)
+      .emit('attachments_change', { attachments });
   }
 }
