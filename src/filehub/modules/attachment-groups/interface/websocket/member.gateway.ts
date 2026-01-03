@@ -35,15 +35,35 @@ export class AttachmentGroupMemberGateway
   @WebSocketServer()
   server: Server;
 
+  private connectedMemberIds = new Set<string>();
+
   private readonly logger = new Logger(AttachmentGroupMemberGateway.name);
 
   handleConnection(client: Socket): void {
     this.logger.log(`Client connected: ${client.id}`);
+
+    // Listen to 'disconnecting' event to access rooms before they're cleared
+    client.on('disconnecting', () => {
+      this.logger.log(`Client ${client.id} disconnecting`);
+
+      // Find member room while rooms are still accessible
+      for (const room of client.rooms) {
+        if (room.startsWith('member::')) {
+          const memberId = room.replace('member::', '');
+          this.connectedMemberIds.delete(memberId);
+          this.logger.log(`Removed member ${memberId} from active members`);
+
+          // Emit update after member is removed
+          this.emitActiveMembers();
+          break; // Each client should only be in one member room
+        }
+      }
+    });
   }
 
   handleDisconnect(client: Socket): void {
     this.logger.log(`Client disconnected: ${client.id}`);
-    this.emitActiveMembers();
+    // Note: socket.rooms is empty here, cleanup happens in 'disconnecting' event
   }
 
   @SubscribeMessage('otp_subscribe')
@@ -78,6 +98,7 @@ export class AttachmentGroupMemberGateway
     if (member?.attachmentGroupId) {
       client.join(`attachment-group::${member.attachmentGroupId.toString()}`);
       client.join(`member::${data.memberId}`);
+      this.connectedMemberIds.add(data.memberId);
       this.emitActiveMembers();
     }
   }
@@ -114,8 +135,7 @@ export class AttachmentGroupMemberGateway
           payload.role === 'ADMIN'
         ) {
           client.join('active_members_sub');
-          // Use the new room-based approach
-          const memberIds = await this.getActiveMemberIds();
+          const memberIds = this.getActiveMemberIds();
           client.emit('active_members_update', {
             members: memberIds,
           });
@@ -139,6 +159,7 @@ export class AttachmentGroupMemberGateway
       `Client ${client.id} unsubscribed from Member: ${data.memberId}`,
     );
     client.leave(`member::${data.memberId}`);
+    this.connectedMemberIds.delete(data.memberId);
     this.emitActiveMembers();
   }
 
@@ -147,15 +168,12 @@ export class AttachmentGroupMemberGateway
     this.logger.log(`Client ${otp} authorized with OTP: ${otp}`);
   }
 
-  private async getActiveMemberIds(): Promise<string[]> {
-    const rooms = Array.from(this.server.sockets.adapter.rooms.keys());
-    const memberRooms = rooms.filter((room) => room.startsWith('member::'));
-    const memberIds = memberRooms.map((room) => room.replace('member::', ''));
-    return [...new Set(memberIds)];
+  private getActiveMemberIds(): string[] {
+    return Array.from(this.connectedMemberIds);
   }
 
-  private async emitActiveMembers() {
-    const uniqueMembers = await this.getActiveMemberIds();
+  private emitActiveMembers() {
+    const uniqueMembers = this.getActiveMemberIds();
     this.server.to('active_members_sub').emit('active_members_update', {
       members: uniqueMembers,
     });
