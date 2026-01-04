@@ -4,11 +4,11 @@ import {
   SupportTicketStatus,
 } from '../../domain/entities/support-ticket.entity';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
-import { FilesService } from 'src/files/domain/services/files.service';
+
 import { RedisTicketStorageService } from '../../infrastructure/services/redis-ticket-storage.service';
 import { ResendEmailService } from 'src/shared/infrastructure/email/resend-email.service';
 import { SupportTicketVerificationEmail } from 'src/shared/infrastructure/email/templates/support-ticket-verification.template';
-import { ConfigService } from '@nestjs/config';
+
 import { randomInt } from 'crypto';
 
 interface CreateSupportTicketWithVerificationInputDto {
@@ -31,10 +31,8 @@ interface CreateSupportTicketWithVerificationOutput {
 export class CreateSupportTicketWithVerificationUseCase {
   constructor(
     private readonly departmentRepo: DepartmentRepository,
-    private readonly fileService: FilesService,
     private readonly redisTicketStorage: RedisTicketStorageService,
     private readonly emailService: ResendEmailService,
-    private readonly configService: ConfigService,
   ) {}
 
   async execute(

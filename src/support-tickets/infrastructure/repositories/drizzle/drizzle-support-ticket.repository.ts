@@ -6,6 +6,7 @@ import {
   SupportTicketMetrics,
   GetAllTicketsAndMetricsOutput,
   GetAllTicketsOptions,
+  GetByCodeResponse,
 } from '../../../domain/repositories/support-ticket.repository';
 import {
   SupportTicket,
@@ -17,7 +18,10 @@ import {
   Department,
   DepartmentVisibility,
 } from 'src/department/domain/entities/department.entity';
-import { SupportTicketInteraction } from 'src/support-tickets/domain/entities/support-ticket-interaction.entity';
+import {
+  InteractionType,
+  SupportTicketInteraction,
+} from 'src/support-tickets/domain/entities/support-ticket-interaction.entity';
 import {
   supportTickets,
   employees,
@@ -64,19 +68,24 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
     return this.drizzle.client;
   }
 
-  private async toDomain(rec: any): Promise<SupportTicket> {
+  private async toDomain(rec: {
+    ticket: typeof supportTickets.$inferSelect;
+    department: typeof departments.$inferSelect;
+    interaction?: typeof supportTicketInteractions.$inferSelect;
+    answer: typeof supportTicketAnswers.$inferSelect;
+  }): Promise<SupportTicket> {
     return SupportTicket.fromPersistence({
       id: rec.ticket.id,
       subject: rec.ticket.subject,
       description: rec.ticket.description,
       departmentId: rec.ticket.departmentId,
       department: rec.department
-        ? Department.create(rec.department)
-        : undefined,
-      assignee: rec.assignee
-        ? await Employee.create({
-            ...rec.assignee,
-            user: await User.create(rec.user),
+        ? Department.create({
+            id: rec.department.id,
+            name: rec.department.name,
+            parentId: rec.department.parentId,
+            visibility:
+              DepartmentVisibility[rec.department.visibility.toUpperCase()],
           })
         : undefined,
       status: SupportTicketStatus[rec.ticket.status.toUpperCase()],
@@ -84,12 +93,25 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       updatedAt: new Date(rec.ticket.updatedAt),
       code: rec.ticket.code,
       interaction: rec.interaction
-        ? SupportTicketInteraction.create(rec.interaction)
+        ? SupportTicketInteraction.create({
+            id: rec.interaction.id,
+            supportTicketId: rec.ticket.id,
+            type: InteractionType[rec.interaction.type.toUpperCase()],
+            guestId: rec.interaction.guestId,
+          })
         : undefined,
       guestName: rec.ticket.guestName,
       guestPhone: rec.ticket.guestPhone,
       guestEmail: rec.ticket.guestEmail,
-      answer: rec?.answer?.content || undefined,
+      answer: rec?.answer
+        ? SupportTicketAnswer.create({
+            id: rec.answer.id,
+            supportTicketId: rec.ticket.id,
+            content: rec.answer.content,
+            createdAt: new Date(rec.answer.createdAt),
+            updatedAt: new Date(rec.answer.updatedAt),
+          })
+        : undefined,
     });
   }
 
@@ -401,24 +423,20 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       .then((result: any) => result.rows || result);
   }
 
-  async findByCode(code: string): Promise<SupportTicket | null> {
+  async findByCode(code: string): Promise<GetByCodeResponse | null> {
     const results = await this.db
       .select({
         ticket: supportTickets,
-        assignee: employees,
-        user: users,
         department: departments,
-        interaction: supportTicketInteractions,
+        // interaction: supportTicketInteractions,
         answer: supportTicketAnswers,
+        isRated: sql<boolean>`EXISTS (
+          SELECT 1 FROM ${supportTicketInteractions} sti
+          WHERE sti.support_ticket_id = ${supportTickets.id}::uuid
+        )`.as('isRated'),
       })
       .from(supportTickets)
-      .leftJoin(employees, eq(supportTickets.assigneeId, employees.id))
-      .leftJoin(users, eq(employees.userId, users.id))
       .leftJoin(departments, eq(supportTickets.departmentId, departments.id))
-      .leftJoin(
-        supportTicketInteractions,
-        eq(supportTickets.id, supportTicketInteractions.supportTicketId),
-      )
       .leftJoin(
         supportTicketAnswers,
         eq(supportTickets.id, supportTicketAnswers.supportTicketId),
@@ -426,7 +444,60 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       .where(eq(supportTickets.code, code))
       .limit(1);
 
-    return results.length > 0 ? this.toDomain(results[0]) : null;
+    console.log(results);
+
+    if (results.length === 0) return null;
+
+    const attachmentRows = await this.db
+      .select()
+      .from(attachments)
+      .where(
+        inArray(attachments.targetId, [
+          results[0].ticket.id,
+          ...results.map((r) => r.answer?.id),
+        ]),
+      );
+
+    return results.length > 0
+      ? {
+          ticket: await this.toDomain({
+            ticket: results[0].ticket,
+            department: results[0].department,
+            answer: results[0].answer,
+          }),
+          answers: results
+            .filter((r) => r.answer !== null)
+            .map((r) =>
+              SupportTicketAnswer.create({
+                id: r.answer.id,
+                supportTicketId: r.ticket.id,
+                content: r.answer.content,
+                createdAt: new Date(r.answer.createdAt),
+                updatedAt: new Date(r.answer.updatedAt),
+              }),
+            ),
+          fileHubAttachments: attachmentRows.map((r) =>
+            Attachment.create({
+              id: r.id,
+              type: r.type,
+              createdAt: new Date(r.createdAt),
+              updatedAt: new Date(r.updatedAt),
+              targetId: r.targetId,
+              expirationDate: r.expirationDate
+                ? new Date(r.expirationDate)
+                : undefined,
+              filename: r.filename,
+              originalName: r.originalName,
+              userId: r.userId,
+              guestId: r.guestId,
+              isGlobal: r.isGlobal,
+              size: r.size,
+              cloned: r.cloned,
+            }),
+          ),
+          isRated: results[0].isRated,
+        }
+      : null;
   }
 
   async findByPhoneNumber(

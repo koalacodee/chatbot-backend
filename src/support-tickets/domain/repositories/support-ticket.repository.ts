@@ -3,6 +3,7 @@ import {
   SupportTicket,
   SupportTicketStatus,
 } from '../entities/support-ticket.entity';
+import { SupportTicketAnswer } from '../entities/support-ticket-answer.entity';
 
 export interface FrequentTicketSubject {
   subject_original: string; // The exact subject text as written by the user
@@ -33,6 +34,13 @@ export interface GetAllTicketsAndMetricsOutput {
   attachments: Attachment[];
 }
 
+export interface GetByCodeResponse {
+  ticket: SupportTicket;
+  answers: SupportTicketAnswer[];
+  fileHubAttachments: Attachment[];
+  isRated: boolean;
+}
+
 export abstract class SupportTicketRepository {
   abstract save(ticket: SupportTicket): Promise<SupportTicket>;
   abstract findById(id: string): Promise<SupportTicket | null>;
@@ -59,7 +67,7 @@ export abstract class SupportTicketRepository {
   abstract getFrequentTicketSubjects(
     limit?: number,
   ): Promise<FrequentTicketSubject[]>;
-  abstract findByCode(code: string): Promise<SupportTicket | null>;
+  abstract findByCode(code: string): Promise<GetByCodeResponse | null>;
 
   abstract findByPhoneNumber(
     phone: string,
