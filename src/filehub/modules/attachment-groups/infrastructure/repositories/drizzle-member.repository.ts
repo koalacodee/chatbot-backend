@@ -146,21 +146,24 @@ export class DrizzleMemberRepository extends MemberRepository {
   }
 
   async findAll({
-    limit = 10,
-    offset = 0,
+    limit,
+    offset,
   }: {
     limit?: number;
     offset?: number;
   }): Promise<AttachmentGroupMember[]> {
-    const members = await this.db
+    const query = this.db
       .select()
       .from(attachmentGroupMembers)
       .innerJoin(
         attachmentGroups,
         eq(attachmentGroupMembers.attachmentGroupId, attachmentGroups.id),
-      )
-      .limit(limit)
-      .offset(offset);
+      );
+
+    if (limit) query.limit(limit);
+    if (offset) query.offset(offset);
+
+    const members = await query;
 
     return members.map((member) =>
       AttachmentGroupMember.create({
