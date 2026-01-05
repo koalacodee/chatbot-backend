@@ -2044,3 +2044,8 @@ export const attachmentGroupMembers = pgTable(
       .onDelete('cascade'),
   ],
 );
+
+// In src/common/drizzle/schema.ts
+// At the end of the file, export all relations:
+
+export * from './relations';

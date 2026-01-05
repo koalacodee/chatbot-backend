@@ -261,7 +261,7 @@ export class CreateTaskUseCase {
       );
     }
 
-    return { task: saved, uploadKey, fileHubUploadKey };
+    return { task: saved.toJSON(), uploadKey, fileHubUploadKey };
   }
 
   private async checkDepartmentAccess(

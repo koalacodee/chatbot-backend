@@ -7,7 +7,6 @@ import { Task } from '../../domain/entities/task.entity';
 import { TaskDelegation } from '../../domain/entities/task-delegation.entity';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
-import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { FilehubAttachmentMessage } from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 import { TaskStatus } from '../../domain/entities/task.entity';
@@ -21,7 +20,12 @@ interface GetMyTasksInputDto {
 }
 
 export interface MyTasksResult {
-  tasks: Task[];
+  tasks: Array<
+    ReturnType<Task['toJSON']> & {
+      rejectionReason?: string;
+      approvalFeedback?: string;
+    }
+  >;
   delegations?: TaskDelegation[];
   total: number;
   fileHubAttachments: FilehubAttachmentMessage[];
@@ -89,8 +93,14 @@ export class GetMyTasksUseCase {
       )?.signedUrl,
     }));
 
+    console.log(result.tasks.map((t) => t.task.toJSON()));
+
     return {
-      tasks: result.tasks,
+      tasks: result.tasks.map((t) => ({
+        ...t.task.toJSON(),
+        rejectionReason: t.rejectionReason,
+        approvalFeedback: t.approvalFeedback,
+      })),
       total: result.total,
       fileHubAttachments,
       metrics: result.metrics,
@@ -119,7 +129,9 @@ export class GetMyTasksUseCase {
     }));
 
     return {
-      tasks: result.tasks,
+      tasks: result.tasks.map((t) => ({
+        ...t.toJSON(),
+      })),
       delegations: result.delegations,
       total: result.total,
       fileHubAttachments,

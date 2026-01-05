@@ -35,7 +35,7 @@ interface CreateTaskFromPresetRequest {
 }
 
 interface CreateTaskFromPresetResponse {
-  task: Task;
+  task: ReturnType<Task['toJSON']>;
   uploadKey?: string;
   fileHubUploadKey?: string;
 }

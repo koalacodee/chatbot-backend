@@ -282,7 +282,7 @@ export class Task {
     );
   }
 
-  toJSON(): any {
+  toJSON() {
     return {
       id: this.id.toString(),
       title: this.title,

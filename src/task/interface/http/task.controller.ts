@@ -83,7 +83,11 @@ export class TaskController {
   async create(
     @Body() input: CreateTaskInputDto,
     @Req() req: any,
-  ): Promise<{ task: Task; uploadKey?: string }> {
+  ): Promise<{
+    task: ReturnType<Task['toJSON']>;
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     return this.createUseCase.execute(
       {
         ...input,
@@ -103,7 +107,11 @@ export class TaskController {
     @Body() input: UpdateTaskInputDto,
     @Req() req: any,
     @Param('id') id: string,
-  ): Promise<{ task: Task; uploadKey?: string }> {
+  ): Promise<{
+    task: ReturnType<Task['toJSON']>;
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     const { completedAt, ...rest } = input;
     return this.updateUseCase.execute(
       id,
@@ -327,7 +335,11 @@ export class TaskController {
   async createTaskFromPreset(
     @Body() input: CreateTaskFromPresetDto,
     @Req() req: any,
-  ): Promise<{ task: Task; uploadKey?: string; fileHubUploadKey?: string }> {
+  ): Promise<{
+    task: ReturnType<Task['toJSON']>;
+    uploadKey?: string;
+    fileHubUploadKey?: string;
+  }> {
     return this.createTaskFromPresetUseCase.execute({
       presetId: input.presetId,
       assignerId: req.user.id,

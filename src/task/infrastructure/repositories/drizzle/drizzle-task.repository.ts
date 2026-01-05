@@ -29,8 +29,19 @@ import {
   attachments,
   supervisors,
   departmentToSupervisor,
+  taskSubmissions,
 } from 'src/common/drizzle/schema';
-import { eq, inArray, or, and, desc, count, sql, ilike } from 'drizzle-orm';
+import {
+  eq,
+  inArray,
+  or,
+  and,
+  desc,
+  count,
+  sql,
+  ilike,
+  SQL,
+} from 'drizzle-orm';
 import {
   TaskAssignmentTypeMapping,
   TaskStatusMapping,
@@ -48,6 +59,23 @@ export enum EmployeePermissionsMapping {
   close_tickets = 'CLOSE_TICKETS',
   manage_knowledge_chunks = 'MANAGE_KNOWLEDGE_CHUNKS',
   manage_attachment_groups = 'MANAGE_ATTACHMENT_GROUPS',
+}
+
+function drizzleToDomainStatus(
+  status: (typeof tasks.$inferSelect)['status'],
+): TaskStatus {
+  switch (status) {
+    case 'to_do':
+      return TaskStatus.TODO;
+    case 'seen':
+      return TaskStatus.SEEN;
+    case 'pending_review':
+      return TaskStatus.PENDING_REVIEW;
+    case 'completed':
+      return TaskStatus.COMPLETED;
+    default:
+      throw new Error(`Invalid status: ${status}`);
+  }
 }
 
 @Injectable()
@@ -492,7 +520,7 @@ export class DrizzleTaskRepository extends TaskRepository {
   }): Promise<{ tasks: Task[]; total: number }> {
     const { supervisorDepartmentIds, status, offset, limit } = options;
 
-    const whereConditions: any[] = [
+    const whereConditions: SQL[] = [
       inArray(tasks.targetDepartmentId, supervisorDepartmentIds),
     ];
 
@@ -1075,12 +1103,19 @@ export class DrizzleTaskRepository extends TaskRepository {
         : inArray(tasks.targetDepartmentId, supervisorDepartmentIds);
 
     const [tasksPage, [taskAgg]] = await Promise.all([
-      this.db
-        .select()
-        .from(tasks)
-        .where(tasksWhere)
-        .limit(limit)
-        .offset(offset),
+      this.db.query.tasks.findMany({
+        where: tasksWhere,
+        limit: limit,
+        offset: offset,
+        with: {
+          taskSubmissions: {
+            columns: {
+              feedback: true,
+              status: true,
+            },
+          },
+        },
+      }),
       this.db
         .select({
           tc: sql<number>`count(*) filter (where status = 'completed')`
@@ -1108,22 +1143,31 @@ export class DrizzleTaskRepository extends TaskRepository {
       : [];
 
     return {
-      tasks: tasksPage.map((task) =>
-        Task.create({
-          id: task.id,
-          title: task.title,
-          description: task.description,
-          status: TaskStatusMapping[task.status.toUpperCase()],
-          priority: TaskPriority[task.priority.toUpperCase()],
-          assigneeId: task.assigneeId,
-          targetSubDepartmentId: task.targetSubDepartmentId,
-          createdAt: new Date(task.createdAt),
-          updatedAt: new Date(task.updatedAt),
-          creatorId: task.creatorId,
-          assignmentType: TaskAssignmentType[task.assignmentType],
-          targetDepartmentId: task.targetDepartmentId,
-        }),
-      ),
+      tasks: tasksPage.map((task) => {
+        const { taskSubmissions } = task;
+        return {
+          task: Task.create({
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            status: drizzleToDomainStatus(task.status),
+            priority: TaskPriority[task.priority.toUpperCase()],
+            assigneeId: task.assigneeId,
+            targetSubDepartmentId: task.targetSubDepartmentId,
+            createdAt: new Date(task.createdAt),
+            updatedAt: new Date(task.updatedAt),
+            creatorId: task.creatorId,
+            assignmentType: TaskAssignmentType[task.assignmentType],
+            targetDepartmentId: task.targetDepartmentId,
+          }),
+          rejectionReason: taskSubmissions.find(
+            (submission) => submission.status === 'rejected',
+          )?.feedback,
+          approvalFeedback: taskSubmissions.find(
+            (submission) => submission.status === 'approved',
+          )?.feedback,
+        };
+      }),
       total: taskAgg.tp + taskAgg.tc,
       fileHubAttachments: attachmentResults.map((attachment) =>
         Attachment.create({

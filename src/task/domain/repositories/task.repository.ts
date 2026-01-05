@@ -30,7 +30,11 @@ export interface IndividualTaskFilters extends DepartmentTaskFilters {
 }
 
 export interface MyTasksResult {
-  tasks: Task[];
+  tasks: Array<{
+    task: Task;
+    rejectionReason?: string;
+    approvalFeedback?: string;
+  }>;
   delegations?: TaskDelegation[];
   total: number;
   fileHubAttachments: Attachment[];
