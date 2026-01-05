@@ -19,6 +19,18 @@ import {
 import { eq, inArray, or, desc } from 'drizzle-orm';
 import { TaskStatusMapping } from './drizzle-task-delegation.repository';
 
+export enum TaskSubmissionStatusDomainToDrizzleMapping {
+  SUBMITTED = 'submitted',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+}
+
+export enum TaskSubmissionStatusDrizzleToDomainMapping {
+  submitted = TaskSubmissionStatus.SUBMITTED,
+  approved = TaskSubmissionStatus.APPROVED,
+  rejected = TaskSubmissionStatus.REJECTED,
+}
+
 @Injectable()
 export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
   constructor(
@@ -90,7 +102,7 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
       performerName,
       notes: row.notes ?? undefined,
       feedback: row.feedback ?? undefined,
-      status: row.status as TaskSubmissionStatus,
+      status: row.status,
       submittedAt: row.submittedAt ? new Date(row.submittedAt) : new Date(),
       reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
       reviewedBy,
@@ -215,7 +227,10 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
       performerEmployeeName: row.performerEmployeeUser,
       notes: row.notes,
       feedback: row.feedback,
-      status: row.status as TaskSubmissionStatus,
+      status:
+        TaskSubmissionStatus[
+          TaskSubmissionStatusDrizzleToDomainMapping[row.status]
+        ],
       submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
       reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
     });
@@ -279,7 +294,10 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
           performerEmployeeName: row.performerEmployeeUser,
           notes: row.notes,
           feedback: row.feedback,
-          status: row.status as TaskSubmissionStatus,
+          status:
+            TaskSubmissionStatus[
+              TaskSubmissionStatusDrizzleToDomainMapping[row.status]
+            ],
           submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
           reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
         }),
@@ -309,7 +327,10 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
           performerEmployeeId: row.performerEmployeeId,
           notes: row.notes,
           feedback: row.feedback,
-          status: row.status as TaskSubmissionStatus,
+          status:
+            TaskSubmissionStatus[
+              TaskSubmissionStatusDrizzleToDomainMapping[row.status]
+            ],
           submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
           reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
         }),
@@ -333,7 +354,10 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
           performerEmployeeId: row.performerEmployeeId,
           notes: row.notes,
           feedback: row.feedback,
-          status: row.status as TaskSubmissionStatus,
+          status:
+            TaskSubmissionStatus[
+              TaskSubmissionStatusDrizzleToDomainMapping[row.status]
+            ],
           submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
           reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
         }),
@@ -354,7 +378,10 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
           performerEmployeeId: row.performerEmployeeId,
           notes: row.notes,
           feedback: row.feedback,
-          status: row.status as TaskSubmissionStatus,
+          status:
+            TaskSubmissionStatus[
+              TaskSubmissionStatusDrizzleToDomainMapping[row.status]
+            ],
           submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
           reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
         }),
@@ -384,7 +411,10 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
           performerEmployeeId: row.performerEmployeeId,
           notes: row.notes,
           feedback: row.feedback,
-          status: row.status as TaskSubmissionStatus,
+          status:
+            TaskSubmissionStatus[
+              TaskSubmissionStatusDrizzleToDomainMapping[row.status]
+            ],
           submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
           reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
         }),

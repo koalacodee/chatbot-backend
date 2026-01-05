@@ -127,7 +127,7 @@ export class DrizzleTaskDelegationSubmissionRepository extends TaskDelegationSub
       performer: performerDetails.performer,
       notes: row.notes ?? undefined,
       feedback: row.feedback ?? undefined,
-      status: row.status as TaskDelegationSubmission['status'],
+      status: row.status,
       submittedAt: row.submittedAt ? new Date(row.submittedAt) : new Date(),
       reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
       reviewedBy: reviewer,
