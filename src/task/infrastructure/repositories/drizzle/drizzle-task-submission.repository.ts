@@ -31,6 +31,19 @@ export enum TaskSubmissionStatusDrizzleToDomainMapping {
   rejected = TaskSubmissionStatus.REJECTED,
 }
 
+function fromDomainStatusToDrizzleStatus(
+  status: TaskSubmissionStatus,
+): (typeof taskSubmissions.$inferInsert)['status'] {
+  switch (status) {
+    case TaskSubmissionStatus.SUBMITTED:
+      return 'submitted';
+    case TaskSubmissionStatus.APPROVED:
+      return 'approved';
+    case TaskSubmissionStatus.REJECTED:
+      return 'rejected';
+  }
+}
+
 @Injectable()
 export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
   constructor(
@@ -135,7 +148,7 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
       performerEmployeeId,
       notes: taskSubmission.notes ?? null,
       feedback: taskSubmission.feedback ?? null,
-      status: TaskStatusMapping[taskSubmission.status],
+      status: fromDomainStatusToDrizzleStatus(taskSubmission.status),
       submittedAt: taskSubmission.submittedAt.toISOString(),
       reviewedAt: taskSubmission.reviewedAt?.toISOString() ?? null,
       reviewedByAdminId:
