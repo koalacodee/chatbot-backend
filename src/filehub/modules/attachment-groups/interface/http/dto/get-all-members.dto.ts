@@ -6,11 +6,11 @@ export class GetAllMembersDto {
   @Min(1)
   @IsOptional()
   @Type(() => Number)
-  limit?: number = 10;
+  limit?: number;
 
   @IsInt()
   @Min(0)
   @IsOptional()
   @Type(() => Number)
-  offset?: number = 0;
+  offset?: number;
 }
