@@ -38,7 +38,7 @@ export class GetAllMembersWithGroupsUseCase {
   async execute(
     request: GetAllMembersWithGroupsUseCaseRequest,
   ): Promise<GetAllMembersWithGroupsUseCaseResponse> {
-    const { limit = 10, offset = 0 } = request;
+    const { limit, offset } = request;
 
     // Leverage the findAll method which includes attachment group details via inner join
     const members = await this.memberRepository.findAll({ limit, offset });
