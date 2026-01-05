@@ -1185,8 +1185,9 @@ export class DrizzleTaskRepository extends TaskRepository {
         completedTasks: metrics.completedTasks,
         pendingTasks: metrics.pendingTasks,
         taskCompletionPercentage:
-          metrics.completedTasks /
-          (metrics.completedTasks + metrics.pendingTasks),
+          (metrics.completedTasks /
+            (metrics.completedTasks + metrics.pendingTasks)) *
+          100,
       },
     };
   }
