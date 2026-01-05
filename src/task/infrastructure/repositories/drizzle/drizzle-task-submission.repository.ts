@@ -46,26 +46,29 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
     if (row.performerAdminId && row.performerAdmin) {
       performerId = row.performerAdminId;
       performerType = 'admin';
-      performerName = row.performerAdmin?.user?.name;
+      performerName = row.performerAdminName;
     } else if (row.performerSupervisorId && row.performerSupervisor) {
       performerId = row.performerSupervisorId;
       performerType = 'supervisor';
-      performerName = row.performerSupervisor?.user?.name;
+      performerName = row.performerSupervisorName;
     } else if (row.performerEmployeeId && row.performerEmployee) {
       performerId = row.performerEmployeeId;
       performerType = 'employee';
-      performerName = row.performerEmployee?.user?.name;
+      performerName = row.performerEmployeeName;
     } else {
       // Fallback to ID only if relation is not loaded
       if (row.performerAdminId) {
         performerId = row.performerAdminId;
         performerType = 'admin';
+        performerName = row.performerAdminName;
       } else if (row.performerSupervisorId) {
         performerId = row.performerSupervisorId;
         performerType = 'supervisor';
+        performerName = row.performerSupervisorName;
       } else if (row.performerEmployeeId) {
         performerId = row.performerEmployeeId;
         performerType = 'employee';
+        performerName = row.performerEmployeeName;
       } else {
         throw new Error('No performer found for task submission');
       }
@@ -207,6 +210,9 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
       performerAdminId: row.performerAdminId,
       performerSupervisorId: row.performerSupervisorId,
       performerEmployeeId: row.performerEmployeeId,
+      performerAdminName: row.performerAdminUser,
+      performerSupervisorName: row.performerSupervisorUser,
+      performerEmployeeName: row.performerEmployeeUser,
       notes: row.notes,
       feedback: row.feedback,
       status: row.status as TaskSubmissionStatus,
@@ -217,10 +223,48 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
 
   async findByTaskId(taskId: string): Promise<TaskSubmission[]> {
     const results = await this.db
-      .select()
+      .select({
+        id: taskSubmissions.id,
+        taskId: taskSubmissions.taskId,
+        performerAdminId: taskSubmissions.performerAdminId,
+        performerSupervisorId: taskSubmissions.performerSupervisorId,
+        performerEmployeeId: taskSubmissions.performerEmployeeId,
+        notes: taskSubmissions.notes,
+        feedback: taskSubmissions.feedback,
+        status: taskSubmissions.status,
+        submittedAt: taskSubmissions.submittedAt,
+        reviewedAt: taskSubmissions.reviewedAt,
+        reviewedByAdminId: taskSubmissions.reviewedByAdminId,
+        reviewedBySupervisorId: taskSubmissions.reviewedBySupervisorId,
+        performerAdminUser: users.name,
+        performerAdminUserId: users.id,
+        performerSupervisorUser: users.name,
+        performerSupervisorUserId: users.id,
+        performerEmployeeUser: users.name,
+        performerEmployeeUserId: users.id,
+      })
       .from(taskSubmissions)
+      .leftJoin(admins, eq(taskSubmissions.performerAdminId, admins.id))
+      .leftJoin(
+        supervisors,
+        eq(taskSubmissions.performerSupervisorId, supervisors.id),
+      )
+      .leftJoin(
+        employees,
+        eq(taskSubmissions.performerEmployeeId, employees.id),
+      )
+      .leftJoin(
+        users,
+        or(
+          eq(admins.userId, users.id),
+          eq(supervisors.userId, users.id),
+          eq(employees.userId, users.id),
+        ),
+      )
       .where(eq(taskSubmissions.taskId, taskId))
       .orderBy(desc(taskSubmissions.submittedAt));
+
+    console.log('results', results);
 
     return Promise.all(
       results.map((row) =>
@@ -230,6 +274,9 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
           performerAdminId: row.performerAdminId,
           performerSupervisorId: row.performerSupervisorId,
           performerEmployeeId: row.performerEmployeeId,
+          performerAdminName: row.performerAdminUser,
+          performerSupervisorName: row.performerSupervisorUser,
+          performerEmployeeName: row.performerEmployeeUser,
           notes: row.notes,
           feedback: row.feedback,
           status: row.status as TaskSubmissionStatus,

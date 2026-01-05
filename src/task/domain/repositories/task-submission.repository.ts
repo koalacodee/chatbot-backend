@@ -10,10 +10,13 @@ export interface ToDomainRow {
   taskId: string;
   performerAdminId?: string;
   performerAdmin?: AdminProps;
+  performerAdminName?: string;
   performerSupervisorId?: string;
   performerSupervisor?: SupervisorOptions;
+  performerSupervisorName?: string;
   performerEmployeeId?: string;
   performerEmployee?: Omit<EmployeeProps, 'user'> & { user: any };
+  performerEmployeeName?: string;
   reviewedByAdmin?: AdminProps;
   reviewedBySupervisor?: SupervisorOptions;
   id: string;

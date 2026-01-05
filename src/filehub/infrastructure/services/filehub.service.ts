@@ -98,6 +98,9 @@ export class FileHubServiceImpl implements FileHubService {
     if (!this.fileHubBaseUrl) {
       throw new Error('FileHub base URL is not set');
     }
+    if (fileNames.length === 0) {
+      return [];
+    }
     const response = await ky
       .post<SignedUrlBatch[]>(
         `${this.fileHubBaseUrl}/api/uploads/sign-url/batch`,
