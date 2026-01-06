@@ -140,7 +140,7 @@ export class GetMyTasksUseCase {
           result.metrics.pendingTasks + result.metrics.pendingDelegations,
         completedTasks:
           result.metrics.completedTasks + result.metrics.completedDelegations,
-        taskCompletionPercentage: result.metrics.totalPercentage,
+        taskCompletionPercentage: Math.floor(result.metrics.totalPercentage),
       },
     };
   }

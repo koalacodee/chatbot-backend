@@ -981,7 +981,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     const combinedTotal = tasksTotal + delegationsTotal;
 
     const combinedCompletionPercentage =
-      combinedTotal === 0 ? 0 : combinedCompleted / combinedTotal;
+      combinedTotal === 0 ? 0 : Math.floor(combinedCompleted / combinedTotal);
 
     /* ---------- 6.  return ---------- */
     return {
@@ -1046,14 +1046,18 @@ export class DrizzleTaskRepository extends TaskRepository {
         taskCompletionPercentage:
           metrics.completedTasks + metrics.pendingTasks === 0
             ? 0
-            : metrics.completedTasks /
-              (metrics.completedTasks + metrics.pendingTasks),
+            : Math.floor(
+                metrics.completedTasks /
+                  (metrics.completedTasks + metrics.pendingTasks),
+              ),
         delegationCompletionPercentage:
           metrics.completedDelegations + metrics.pendingDelegations === 0
             ? 0
-            : metrics.completedDelegations /
-              (metrics.completedDelegations + metrics.pendingDelegations),
-        totalPercentage: combinedCompletionPercentage,
+            : Math.floor(
+                metrics.completedDelegations /
+                  (metrics.completedDelegations + metrics.pendingDelegations),
+              ),
+        totalPercentage: Math.floor(combinedCompletionPercentage),
       },
     };
   }
@@ -1184,10 +1188,11 @@ export class DrizzleTaskRepository extends TaskRepository {
       metrics: {
         completedTasks: metrics.completedTasks,
         pendingTasks: metrics.pendingTasks,
-        taskCompletionPercentage:
+        taskCompletionPercentage: Math.floor(
           (metrics.completedTasks /
             (metrics.completedTasks + metrics.pendingTasks)) *
-          100,
+            100,
+        ),
       },
     };
   }
