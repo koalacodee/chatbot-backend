@@ -42,7 +42,7 @@ export class GetMyTasksUseCase {
     private readonly taskRepo: TaskRepository,
     private readonly userRepo: UserRepository,
     private readonly fileHubService: FileHubService,
-  ) {}
+  ) { }
 
   async execute(dto: GetMyTasksInputDto): Promise<MyTasksResult> {
     const user = await this.userRepo.findById(dto.userId);
@@ -130,7 +130,9 @@ export class GetMyTasksUseCase {
 
     return {
       tasks: result.tasks.map((t) => ({
-        ...t.toJSON(),
+        ...t.task.toJSON(),
+        rejectionReason: t.rejectionReason,
+        approvalFeedback: t.approvalFeedback,
       })),
       delegations: result.delegations,
       total: result.total,

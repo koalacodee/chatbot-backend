@@ -31,11 +31,12 @@ import {
   sql,
   ilike,
   count,
-  desc,
 } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 @Injectable()
 export class DrizzleDepartmentRepository extends DepartmentRepository {
+  private parentDepartments = alias(departments, 'parent_departments');
   constructor(private readonly drizzleService: DrizzleService) {
     super();
   }
@@ -123,7 +124,7 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
       id: department.id.toString(),
       name: department.name,
       visibility: this.fromDomainVisibility(department.visibility),
-      parentId: department.parentId.toString() || null,
+      parentId: department.parentId?.toString() || null,
       updatedAt: sql`CURRENT_TIMESTAMP` as any,
     };
 
@@ -165,12 +166,19 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
   ): Promise<Department[]> {
     if (ids.length === 0) return [];
 
-    const depts = await this.db
-      .select()
+    const query = this.db
+      .select({ department: departments, parent: this.parentDepartments })
       .from(departments)
-      .where(inArray(departments.id, ids));
 
-    return depts.map((dept) => this.toDomain(dept));
+    if (queryDto.includeParent) {
+      query
+        .leftJoin(this.parentDepartments, eq(departments.parentId, this.parentDepartments.id))
+    }
+
+    query.where(inArray(departments.id, ids));
+
+    const depts = await query;
+    return depts.map((dept) => this.toDomain(dept.department, { parent: dept.parent }));
   }
 
   async findAll(queryDto?: DepartmentQueryDto): Promise<Department[]> {

@@ -17,7 +17,6 @@ import {
   pgEnum,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-
 export const activityLogType = pgEnum('ActivityLogType', [
   'ticket_answered',
   'task_performed',
