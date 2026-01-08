@@ -70,47 +70,47 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
       parentId: dept.parentId || undefined,
       parent: relations?.parent
         ? Department.create({
-            id: relations.parent.id,
-            name: relations.parent.name,
-            visibility: this.toDomainVisibility(relations.parent.visibility),
-            parentId: relations.parent.parentId || undefined,
-          })
+          id: relations.parent.id,
+          name: relations.parent.name,
+          visibility: this.toDomainVisibility(relations.parent.visibility),
+          parentId: relations.parent.parentId || undefined,
+        })
         : undefined,
       questions: relations?.questions
         ? relations.questions.map((q) =>
-            Question.create({
-              id: q.id,
-              text: q.text,
-              departmentId: q.departmentId,
-              knowledgeChunkId: q.knowledgeChunkId || undefined,
-              creatorEmployeeId: q.creatorEmployeeId,
-              creatorAdminId: q.creatorAdminId || undefined,
-              creatorSupervisorId: q.creatorSupervisorId || undefined,
-              satisfaction: q.satisfaction,
-              dissatisfaction: q.dissatisfaction,
-              views: q.views,
-            }),
-          )
+          Question.create({
+            id: q.id,
+            text: q.text,
+            departmentId: q.departmentId,
+            knowledgeChunkId: q.knowledgeChunkId || undefined,
+            creatorEmployeeId: q.creatorEmployeeId,
+            creatorAdminId: q.creatorAdminId || undefined,
+            creatorSupervisorId: q.creatorSupervisorId || undefined,
+            satisfaction: q.satisfaction,
+            dissatisfaction: q.dissatisfaction,
+            views: q.views,
+          }),
+        )
         : [],
       knowledgeChunks: relations?.knowledgeChunks
         ? relations.knowledgeChunks.map((kc) =>
-            KnowledgeChunk.create({
-              id: kc.id,
-              content: kc.content,
-              departmentId: kc.departmentId,
-              pointId: kc.pointId || undefined,
-            }),
-          )
+          KnowledgeChunk.create({
+            id: kc.id,
+            content: kc.content,
+            departmentId: kc.departmentId,
+            pointId: kc.pointId || undefined,
+          }),
+        )
         : [],
       subDepartments: relations?.subDepartments
         ? relations.subDepartments.map((sd) =>
-            Department.create({
-              id: sd.id,
-              name: sd.name,
-              visibility: this.toDomainVisibility(sd.visibility),
-              parentId: sd.parentId || undefined,
-            }),
-          )
+          Department.create({
+            id: sd.id,
+            name: sd.name,
+            visibility: this.toDomainVisibility(sd.visibility),
+            parentId: sd.parentId || undefined,
+          }),
+        )
         : [],
     });
   }
@@ -123,7 +123,7 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
       id: department.id.toString(),
       name: department.name,
       visibility: this.fromDomainVisibility(department.visibility),
-      parentId: department.parentId?.toString() || null,
+      parentId: department.parentId.toString() || null,
       updatedAt: sql`CURRENT_TIMESTAMP` as any,
     };
 
@@ -141,7 +141,7 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
       })
       .returning();
 
-    return this.findById(saved.id, queryDto) as Promise<Department>;
+    return this.toDomain(saved);
   }
 
   async findById(
@@ -470,10 +470,10 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
     // Check parent visibility
     const parentCondition = departmentId
       ? await this.db
-          .select()
-          .from(departments)
-          .where(eq(departments.id, departmentId))
-          .limit(1)
+        .select()
+        .from(departments)
+        .where(eq(departments.id, departmentId))
+        .limit(1)
       : [];
 
     if (departmentId && parentCondition.length > 0) {

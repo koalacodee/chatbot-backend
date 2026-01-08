@@ -9,7 +9,7 @@ interface CreateSubDepartmentInput {
 
 @Injectable()
 export class CreateSubDepartmentUseCase {
-  constructor(private readonly departmentRepo: DepartmentRepository) {}
+  constructor(private readonly departmentRepo: DepartmentRepository) { }
 
   async execute(dto: CreateSubDepartmentInput) {
     const parent = await this.departmentRepo.findById(dto.parentId);
@@ -22,6 +22,7 @@ export class CreateSubDepartmentUseCase {
       name: dto.name,
       parent,
       visibility: parent.visibility,
+      parentId: dto.parentId
     });
 
     await this.departmentRepo.save(subDept, { includeParent: true });
