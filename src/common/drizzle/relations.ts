@@ -78,7 +78,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 }));
 
 export const departmentsRelations = relations(departments, ({ one, many }) => ({
-  department: one(departments, {
+  parent: one(departments, {
     fields: [departments.parentId],
     references: [departments.id],
     relationName: 'departments_parentId_departments_id',
