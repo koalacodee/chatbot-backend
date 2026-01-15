@@ -14,8 +14,10 @@ import fastifyHelmet from '@fastify/helmet';
 import fastifyCompress from '@fastify/compress';
 import fastifyCors from '@fastify/cors';
 import fastifyMultipart from '@fastify/multipart';
+import { migrate } from './common/drizzle';
 
 async function bootstrap() {
+  await migrate();
   const adapter = new FastifyAdapter({
     logger:
       process.env.NODE_ENV !== 'production'

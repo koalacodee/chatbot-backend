@@ -391,6 +391,7 @@ export const attachmentGroups = pgTable(
   {
     id: uuid().primaryKey().notNull(),
     createdById: uuid('created_by_id').notNull(),
+    name: varchar({ length: 255 }).notNull().default('Unnamed'),
     key: varchar({ length: 255 }).notNull(),
     ips: varchar({ length: 255 }).array(),
     createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
@@ -2043,8 +2044,3 @@ export const attachmentGroupMembers = pgTable(
       .onDelete('cascade'),
   ],
 );
-
-// In src/common/drizzle/schema.ts
-// At the end of the file, export all relations:
-
-export * from './relations';

@@ -4,6 +4,7 @@ import { UUID } from 'src/shared/value-objects/uuid.vo';
 export interface AttachmentGroupOptions {
   id?: string;
   createdById: string;
+  name?: string;
   key: string;
   clientIds?: string[];
   attachmentIds?: string[];
@@ -16,6 +17,7 @@ export interface AttachmentGroupOptions {
 export class AttachmentGroup {
   private readonly _id: UUID;
   private readonly _createdById: UUID;
+  private _name: string;
   private _key: string;
   private _clientIds: string[];
   private _attachmentIds: UUID[];
@@ -27,6 +29,7 @@ export class AttachmentGroup {
   private constructor(options: AttachmentGroupOptions) {
     this._id = UUID.create(options.id);
     this._createdById = UUID.create(options.createdById);
+    this._name = options.name || 'Unnamed';
     this._key = options.key;
     this._clientIds = options.clientIds || [];
     this._attachmentIds = (options.attachmentIds || []).map((id) =>
@@ -48,6 +51,15 @@ export class AttachmentGroup {
 
   get createdById(): string {
     return this._createdById.value;
+  }
+
+  get name(): string {
+    return this._name;
+  }
+
+  set name(value: string) {
+    this._name = value;
+    this._updatedAt = new Date();
   }
 
   get key(): string {
@@ -116,6 +128,7 @@ export class AttachmentGroup {
     return {
       id: this._id.value,
       createdById: this._createdById.value,
+      name: this._name,
       key: this._key,
       ips: this._clientIds,
       attachmentIds: this._attachmentIds.map((id) => id.value),

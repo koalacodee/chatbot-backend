@@ -11,6 +11,7 @@ interface GetMyAttachmentGroupsUseCaseRequest {
 
 interface AttachmentGroupWithAttachments {
   id: string;
+  name: string;
   key: string;
   clientIds: string[];
   attachments: Attachment[];
@@ -58,6 +59,7 @@ export class GetMyAttachmentGroupsUseCase {
 
         return {
           id: group.id,
+          name: group.name,
           key: group.key,
           clientIds: group.clientIds,
           attachments,

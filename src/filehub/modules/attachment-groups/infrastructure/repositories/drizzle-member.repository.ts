@@ -176,6 +176,7 @@ export class DrizzleMemberRepository extends MemberRepository {
         attachmentGroup: AttachmentGroup.create({
           id: member.attachment_groups.id,
           key: member.attachment_groups.key,
+          name: member.attachment_groups.name,
           createdAt: new Date(member.attachment_groups.createdAt),
           updatedAt: new Date(member.attachment_groups.updatedAt),
           createdById: member.attachment_groups.createdById,

@@ -8,6 +8,7 @@ import { AttachmentGroupMemberGateway } from '../../interface/websocket/member.g
 interface UpdateAttachmentGroupUseCaseRequest {
   groupId: string;
   userId: string;
+  name?: string;
   attachmentIds: string[];
   expiresAt?: Date;
 }
@@ -30,7 +31,7 @@ export class UpdateAttachmentGroupUseCase {
   async execute(
     request: UpdateAttachmentGroupUseCaseRequest,
   ): Promise<UpdateAttachmentGroupUseCaseResponse> {
-    const { groupId, userId, attachmentIds, expiresAt } = request;
+    const { groupId, userId, name, attachmentIds, expiresAt } = request;
 
     // Find the attachment group
     const attachmentGroup =
@@ -68,6 +69,7 @@ export class UpdateAttachmentGroupUseCase {
 
     // Update the attachment group
     await this.attachmentGroupRepository.update(groupId, {
+      name,
       attachmentIds,
       expiresAt,
     });

@@ -14,7 +14,10 @@ export abstract class AttachmentGroupRepository {
   abstract update(
     id: string,
     update: Partial<
-      Pick<AttachmentGroup, 'key' | 'clientIds' | 'attachmentIds' | 'expiresAt'>
+      Pick<
+        AttachmentGroup,
+        'name' | 'key' | 'clientIds' | 'attachmentIds' | 'expiresAt'
+      >
     >,
   ): Promise<AttachmentGroup>;
   abstract getByMemberId(memberId: string): Promise<AttachmentGroup | null>;

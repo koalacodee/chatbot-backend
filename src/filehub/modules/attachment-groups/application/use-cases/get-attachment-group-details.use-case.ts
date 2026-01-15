@@ -10,6 +10,7 @@ interface GetAttachmentGroupDetailsUseCaseRequest {
 
 interface GetAttachmentGroupDetailsUseCaseResponse {
   id: string;
+  name: string;
   key: string;
   ips: string[];
   attachments: Attachment[];
@@ -52,6 +53,7 @@ export class GetAttachmentGroupDetailsUseCase {
 
     return {
       id: attachmentGroup.id,
+      name: attachmentGroup.name,
       key: attachmentGroup.key,
       ips: attachmentGroup.clientIds,
       attachments,

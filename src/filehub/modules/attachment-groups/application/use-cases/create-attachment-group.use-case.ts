@@ -6,6 +6,7 @@ import { randomInt } from 'crypto';
 
 interface CreateAttachmentGroupUseCaseRequest {
   userId: string;
+  name?: string;
   attachmentIds: string[];
   expiresAt?: Date;
 }
@@ -24,7 +25,7 @@ export class CreateAttachmentGroupUseCase {
   async execute(
     request: CreateAttachmentGroupUseCaseRequest,
   ): Promise<CreateAttachmentGroupUseCaseResponse> {
-    const { userId, attachmentIds, expiresAt } = request;
+    const { userId, name, attachmentIds, expiresAt } = request;
 
     // Verify that all attachments exist and belong to the user
     const attachments =
@@ -51,6 +52,7 @@ export class CreateAttachmentGroupUseCase {
     // Create the attachment group
     const attachmentGroup = AttachmentGroup.create({
       createdById: userId,
+      name,
       key,
       attachmentIds,
       expiresAt,

@@ -8,6 +8,13 @@
       "when": 1764607608705,
       "tag": "0001_pink_shiver_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1768482733433,
+      "tag": "0002_chunky_vengeance",
+      "breakpoints": true
     }
   ]
 }

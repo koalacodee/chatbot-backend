@@ -1,0 +1,1 @@
+ALTER TABLE "attachment_groups" ADD COLUMN "name" varchar(255) DEFAULT 'Unnamed' NOT NULL;--> statement-breakpoint

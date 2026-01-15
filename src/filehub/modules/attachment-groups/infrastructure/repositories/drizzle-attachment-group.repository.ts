@@ -42,6 +42,7 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     return AttachmentGroup.create({
       id: record.id,
       createdById: record.createdById,
+      name: record.name,
       key: record.key,
       clientIds: record.ips ?? [],
       attachmentIds: attachmentIds,
@@ -55,6 +56,7 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     const data = {
       id: attachmentGroup.id,
       createdById: attachmentGroup.createdById,
+      name: attachmentGroup.name,
       key: attachmentGroup.key,
       ips: attachmentGroup.clientIds,
       createdAt:
@@ -74,6 +76,7 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
       .onConflictDoUpdate({
         target: attachmentGroups.id,
         set: {
+          name: data.name,
           key: data.key,
           ips: data.ips,
           updatedAt: new Date().toISOString(),
@@ -180,12 +183,19 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
   async update(
     id: string,
     update: Partial<
-      Pick<AttachmentGroup, 'key' | 'clientIds' | 'attachmentIds' | 'expiresAt'>
+      Pick<
+        AttachmentGroup,
+        'name' | 'key' | 'clientIds' | 'attachmentIds' | 'expiresAt'
+      >
     >,
   ): Promise<AttachmentGroup> {
     const updateData: Record<string, any> = {
       updatedAt: new Date().toISOString(),
     };
+
+    if (update.name !== undefined) {
+      updateData.name = update.name;
+    }
 
     if (update.key !== undefined) {
       updateData.key = update.key;
@@ -249,6 +259,7 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
         const attachmentGroup = AttachmentGroup.create({
           id: attachmentGroupRaw.id,
           createdById: attachmentGroupRaw.createdById,
+          name: attachmentGroupRaw.name,
           key: attachmentGroupRaw.key,
           clientIds: attachmentGroupRaw.ips,
           attachments: result.map((attachment) =>

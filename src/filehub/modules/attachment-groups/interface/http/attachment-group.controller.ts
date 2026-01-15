@@ -81,6 +81,7 @@ export class AttachmentGroupController {
 
     const result = await this.createAttachmentGroupUseCase.execute({
       userId,
+      name: createDto.name,
       attachmentIds: createDto.attachmentIds,
       expiresAt: createDto.expiresAt,
     });
@@ -152,6 +153,7 @@ export class AttachmentGroupController {
 
     return {
       id: result.id,
+      name: result.name,
       key: result.key,
       ips: result.ips,
       attachments: attachmentsWithMetadata,
@@ -201,6 +203,7 @@ export class AttachmentGroupController {
 
       return {
         ...group,
+        name: group.name,
         attachments: attachmentsWithMetadata,
         expiresAt: group.expiresAt,
       };
@@ -235,6 +238,7 @@ export class AttachmentGroupController {
     const result = await this.updateAttachmentGroupUseCase.execute({
       groupId: id,
       userId,
+      name: updateDto.name,
       attachmentIds: updateDto.attachmentIds,
       expiresAt: updateDto.expiresAt,
     });

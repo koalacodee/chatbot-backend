@@ -179,6 +179,28 @@ export class AttachmentGroupMemberGateway
     });
   }
 
+  async moveMemberToNewGroup(
+    memberId: string,
+    oldAttachmentGroupId: string,
+    newAttachmentGroupId: string,
+  ): Promise<void> {
+    const memberRoom = `member::${memberId}`;
+    const oldGroupRoom = `attachment-group::${oldAttachmentGroupId}`;
+    const newGroupRoom = `attachment-group::${newAttachmentGroupId}`;
+
+    // Get all sockets in the member room
+    const socketsInRoom = await this.server.in(memberRoom).fetchSockets();
+
+    // Move each socket from old group room to new group room
+    for (const socket of socketsInRoom) {
+      socket.leave(oldGroupRoom);
+      socket.join(newGroupRoom);
+      this.logger.log(
+        `Moved socket ${socket.id} from ${oldGroupRoom} to ${newGroupRoom} for member ${memberId}`,
+      );
+    }
+  }
+
   async notifyAttachmentsChange(
     attachmentGroupId: string,
     attachments: FilehubAttachmentMessage[],

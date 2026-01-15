@@ -15,6 +15,7 @@ export interface MemberWithGroupDetails {
   updatedAt: Date;
   attachmentGroup: {
     id: string;
+    name: string;
     key: string;
     createdAt: Date;
     updatedAt: Date;
@@ -53,6 +54,7 @@ export class GetAllMembersWithGroupsUseCase {
         updatedAt: member.updatedAt,
         attachmentGroup: {
           id: member.attachmentGroup.id,
+          name: member.attachmentGroup.name,
           key: member.attachmentGroup.key,
           createdAt: member.attachmentGroup.createdAt,
           updatedAt: member.attachmentGroup.updatedAt,

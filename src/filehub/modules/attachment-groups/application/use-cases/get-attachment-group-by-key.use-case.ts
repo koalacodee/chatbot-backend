@@ -43,6 +43,7 @@ export class GetAttachmentGroupByKeyUseCase {
     const updatedAttachmentGroup = AttachmentGroup.create({
       id: attachmentGroup.id,
       createdById: attachmentGroup.createdById,
+      name: attachmentGroup.name,
       key: attachmentGroup.key,
       clientIds: attachmentGroup.clientIds,
       attachmentIds: attachmentGroup.attachmentIds,

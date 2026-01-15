@@ -1012,27 +1012,33 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     /* ---------- 6.  return ---------- */
     return {
-      tasks: tasksPage.map((task) => ({
-        task: Task.create({
-          id: task.id,
-          title: task.title,
-          description: task.description,
-          status: drizzleToDomainStatus(task.status),
-          priority: TaskPriority[task.priority.toUpperCase()],
-          assigneeId: task.assigneeId,
-          targetSubDepartmentId: task.targetSubDepartmentId,
-          createdAt: new Date(task.createdAt),
-          updatedAt: new Date(task.updatedAt),
-          creatorId: task.creatorId,
-          assignmentType: TaskAssignmentType[task.assignmentType],
-        }),
-        rejectionReason: task.taskSubmissions.find(
-          (submission) => submission.status === 'rejected',
-        )?.feedback,
-        approvalFeedback: task.taskSubmissions.find(
-          (submission) => submission.status === 'approved',
-        )?.feedback,
-      })),
+      tasks: tasksPage.map((task) => {
+        const submissions = (task.taskSubmissions || []) as Array<{
+          feedback: string | null;
+          status: string;
+        }>;
+        return {
+          task: Task.create({
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            status: drizzleToDomainStatus(task.status),
+            priority: TaskPriority[task.priority.toUpperCase()],
+            assigneeId: task.assigneeId,
+            targetSubDepartmentId: task.targetSubDepartmentId,
+            createdAt: new Date(task.createdAt),
+            updatedAt: new Date(task.updatedAt),
+            creatorId: task.creatorId,
+            assignmentType: TaskAssignmentType[task.assignmentType],
+          }),
+          rejectionReason: submissions.find(
+            (submission) => submission.status === 'rejected',
+          )?.feedback,
+          approvalFeedback: submissions.find(
+            (submission) => submission.status === 'approved',
+          )?.feedback,
+        };
+      }),
       delegations: delegationsPage.map((delegation) =>
         TaskDelegation.create({
           id: delegation.delegation.id,
@@ -1183,7 +1189,10 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     return {
       tasks: tasksPage.map((task) => {
-        const { taskSubmissions } = task;
+        const submissions = (task.taskSubmissions || []) as Array<{
+          feedback: string | null;
+          status: string;
+        }>;
         return {
           task: Task.create({
             id: task.id,
@@ -1199,10 +1208,10 @@ export class DrizzleTaskRepository extends TaskRepository {
             assignmentType: TaskAssignmentType[task.assignmentType],
             targetDepartmentId: task.targetDepartmentId,
           }),
-          rejectionReason: taskSubmissions.find(
+          rejectionReason: submissions.find(
             (submission) => submission.status === 'rejected',
           )?.feedback,
-          approvalFeedback: taskSubmissions.find(
+          approvalFeedback: submissions.find(
             (submission) => submission.status === 'approved',
           )?.feedback,
         };
