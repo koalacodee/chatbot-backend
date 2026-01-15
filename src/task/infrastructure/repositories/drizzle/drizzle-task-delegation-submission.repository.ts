@@ -36,6 +36,15 @@ export class DrizzleTaskDelegationSubmissionRepository extends TaskDelegationSub
     return this.drizzleService.client;
   }
 
+  private toISOStringSafe(
+    date: Date | string | undefined | null,
+  ): string | null {
+    if (!date) return null;
+    if (typeof date === 'string') return date;
+    if (date instanceof Date) return date.toISOString();
+    return null;
+  }
+
   private async resolveDelegation(
     delegationId: string,
   ): Promise<TaskDelegation> {
@@ -155,8 +164,11 @@ export class DrizzleTaskDelegationSubmissionRepository extends TaskDelegationSub
       notes: submission.notes ?? null,
       feedback: submission.feedback ?? null,
       status: TaskDelegationSubmissionStatusMapping[submission.status],
-      submittedAt: submission.submittedAt.toISOString(),
-      reviewedAt: submission.reviewedAt?.toISOString() ?? null,
+      submittedAt:
+        submission.submittedAt instanceof Date
+          ? submission.submittedAt.toISOString()
+          : (submission.submittedAt ?? new Date().toISOString()),
+      reviewedAt: this.toISOStringSafe(submission.reviewedAt),
       reviewedByAdminId:
         submission.reviewedBy && 'admin' in submission.reviewedBy
           ? submission.reviewedBy.id.toString()

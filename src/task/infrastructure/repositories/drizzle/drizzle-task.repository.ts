@@ -161,13 +161,13 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     return result.length > 0
       ? Employee.create({
-        id: result[0].id,
-        userId: result[0].userId,
-        permissions: result[0].permissions.map(
-          (p) => EmployeePermissionsEnum[EmployeePermissionsMapping[p]],
-        ),
-        supervisorId: result[0].supervisorId,
-      })
+          id: result[0].id,
+          userId: result[0].userId,
+          permissions: result[0].permissions.map(
+            (p) => EmployeePermissionsEnum[EmployeePermissionsMapping[p]],
+          ),
+          supervisorId: result[0].supervisorId,
+        })
       : undefined;
   }
 
@@ -182,10 +182,19 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     return result.length > 0
       ? Department.create({
-        ...result[0],
-        visibility: DepartmentVisibility[result[0].visibility.toUpperCase()],
-      })
+          ...result[0],
+          visibility: DepartmentVisibility[result[0].visibility.toUpperCase()],
+        })
       : undefined;
+  }
+
+  private toISOStringSafe(
+    date: Date | string | undefined | null,
+  ): string | null {
+    if (!date) return null;
+    if (typeof date === 'string') return date;
+    if (date instanceof Date) return date.toISOString();
+    return null;
   }
 
   async save(task: Task): Promise<Task> {
@@ -208,10 +217,13 @@ export class DrizzleTaskRepository extends TaskRepository {
       priority: TaskPriorityMapping[task.priority],
       targetDepartmentId: task.targetDepartment?.id.toString() ?? null,
       targetSubDepartmentId: task.targetSubDepartment?.id.toString() ?? null,
-      createdAt: task.createdAt.toISOString(),
+      createdAt:
+        task.createdAt instanceof Date
+          ? task.createdAt.toISOString()
+          : (task.createdAt ?? new Date().toISOString()),
       updatedAt: new Date().toISOString(),
-      completedAt: task.completedAt?.toISOString() ?? null,
-      dueDate: task.dueDate?.toISOString() ?? null,
+      completedAt: this.toISOStringSafe(task.completedAt),
+      dueDate: this.toISOStringSafe(task.dueDate),
       reminderInterval: task.reminderInterval ?? null,
     };
 
@@ -290,9 +302,9 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     const results = whereClause
       ? await query
-        .where(whereClause)
-        .limit(limit ?? 1000)
-        .offset(offset ?? 0)
+          .where(whereClause)
+          .limit(limit ?? 1000)
+          .offset(offset ?? 0)
       : await query.limit(limit ?? 1000).offset(offset ?? 0);
 
     return Promise.all(results.map((r) => this.toDomain(r)));
@@ -866,46 +878,46 @@ export class DrizzleTaskRepository extends TaskRepository {
     const taskWhere =
       status?.length || priority?.length
         ? and(
-          or(
+            or(
+              eq(tasks.assigneeId, empId),
+              inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
+            ),
+            status.length
+              ? inArray(
+                  tasks.status,
+                  status.map((s) => TaskStatusMapping[s]),
+                )
+              : undefined,
+            priority.length
+              ? inArray(
+                  tasks.priority,
+                  priority.map((p) => TaskPriorityMapping[p]),
+                )
+              : undefined,
+          )
+        : or(
             eq(tasks.assigneeId, empId),
             inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
-          ),
-          status.length
-            ? inArray(
-              tasks.status,
-              status.map((s) => TaskStatusMapping[s]),
-            )
-            : undefined,
-          priority.length
-            ? inArray(
-              tasks.priority,
-              priority.map((p) => TaskPriorityMapping[p]),
-            )
-            : undefined,
-        )
-        : or(
-          eq(tasks.assigneeId, empId),
-          inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
-        );
+          );
 
     const delWhere = status?.length
       ? and(
-        or(
-          eq(taskDelegations.assigneeId, empId),
-          inArray(
-            taskDelegations.targetSubDepartmentId,
-            employeeDepartmentIds,
+          or(
+            eq(taskDelegations.assigneeId, empId),
+            inArray(
+              taskDelegations.targetSubDepartmentId,
+              employeeDepartmentIds,
+            ),
           ),
-        ),
-        inArray(
-          taskDelegations.status,
-          status.map((s) => TaskStatusMapping[s]),
-        ),
-      )
+          inArray(
+            taskDelegations.status,
+            status.map((s) => TaskStatusMapping[s]),
+          ),
+        )
       : or(
-        eq(taskDelegations.assigneeId, empId),
-        inArray(taskDelegations.targetSubDepartmentId, employeeDepartmentIds),
-      );
+          eq(taskDelegations.assigneeId, empId),
+          inArray(taskDelegations.targetSubDepartmentId, employeeDepartmentIds),
+        );
 
     const stmt = this.db.$with('g').as(
       this.db
@@ -946,7 +958,7 @@ export class DrizzleTaskRepository extends TaskRepository {
             columns: {
               feedback: true,
               status: true,
-            }
+            },
           },
         },
       }),
@@ -980,9 +992,9 @@ export class DrizzleTaskRepository extends TaskRepository {
     ];
     const attachmentResults = targetIds.length
       ? await this.db
-        .select()
-        .from(attachments)
-        .where(inArray(attachments.targetId, targetIds))
+          .select()
+          .from(attachments)
+          .where(inArray(attachments.targetId, targetIds))
       : [];
 
     const tasksTotal = metrics.completedTasks + metrics.pendingTasks;
@@ -994,12 +1006,13 @@ export class DrizzleTaskRepository extends TaskRepository {
     const combinedTotal = tasksTotal + delegationsTotal;
 
     const combinedCompletionPercentage =
-      combinedTotal === 0 ? 0 : Math.floor((combinedCompleted / combinedTotal) * 100);
+      combinedTotal === 0
+        ? 0
+        : Math.floor((combinedCompleted / combinedTotal) * 100);
 
     /* ---------- 6.  return ---------- */
     return {
-      tasks: tasksPage.map((task) =>
-      ({
+      tasks: tasksPage.map((task) => ({
         task: Task.create({
           id: task.id,
           title: task.title,
@@ -1019,8 +1032,7 @@ export class DrizzleTaskRepository extends TaskRepository {
         approvalFeedback: task.taskSubmissions.find(
           (submission) => submission.status === 'approved',
         )?.feedback,
-      }),
-      ),
+      })),
       delegations: delegationsPage.map((delegation) =>
         TaskDelegation.create({
           id: delegation.delegation.id,
@@ -1068,16 +1080,18 @@ export class DrizzleTaskRepository extends TaskRepository {
           metrics.completedTasks + metrics.pendingTasks === 0
             ? 0
             : Math.floor(
-              (metrics.completedTasks /
-              (metrics.completedTasks + metrics.pendingTasks)) * 100,
-            ),
+                (metrics.completedTasks /
+                  (metrics.completedTasks + metrics.pendingTasks)) *
+                  100,
+              ),
         delegationCompletionPercentage:
           metrics.completedDelegations + metrics.pendingDelegations === 0
             ? 0
             : Math.floor(
-              (metrics.completedDelegations /
-              (metrics.completedDelegations + metrics.pendingDelegations)) * 100,
-            ),
+                (metrics.completedDelegations /
+                  (metrics.completedDelegations + metrics.pendingDelegations)) *
+                  100,
+              ),
         totalPercentage: Math.floor(combinedCompletionPercentage),
       },
     };
@@ -1111,20 +1125,20 @@ export class DrizzleTaskRepository extends TaskRepository {
     const tasksWhere =
       status?.length > 0 || priority?.length > 0
         ? and(
-          inArray(tasks.targetDepartmentId, supervisorDepartmentIds),
-          status?.length > 0
-            ? inArray(
-              tasks.status,
-              status.map((s) => TaskStatusMapping[s]),
-            )
-            : undefined,
-          priority?.length > 0
-            ? inArray(
-              tasks.priority,
-              priority.map((p) => TaskPriorityMapping[p]),
-            )
-            : undefined,
-        )
+            inArray(tasks.targetDepartmentId, supervisorDepartmentIds),
+            status?.length > 0
+              ? inArray(
+                  tasks.status,
+                  status.map((s) => TaskStatusMapping[s]),
+                )
+              : undefined,
+            priority?.length > 0
+              ? inArray(
+                  tasks.priority,
+                  priority.map((p) => TaskPriorityMapping[p]),
+                )
+              : undefined,
+          )
         : inArray(tasks.targetDepartmentId, supervisorDepartmentIds);
 
     const [tasksPage, [taskAgg]] = await Promise.all([
@@ -1162,9 +1176,9 @@ export class DrizzleTaskRepository extends TaskRepository {
     const targetIds = tasksPage.map((t) => t.id);
     const attachmentResults = targetIds.length
       ? await this.db
-        .select()
-        .from(attachments)
-        .where(inArray(attachments.targetId, targetIds))
+          .select()
+          .from(attachments)
+          .where(inArray(attachments.targetId, targetIds))
       : [];
 
     return {
@@ -1212,7 +1226,7 @@ export class DrizzleTaskRepository extends TaskRepository {
         taskCompletionPercentage: Math.floor(
           (metrics.completedTasks /
             (metrics.completedTasks + metrics.pendingTasks)) *
-          100,
+            100,
         ),
       },
     };

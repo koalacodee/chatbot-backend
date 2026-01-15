@@ -82,6 +82,15 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
     });
   }
 
+  private toISOStringSafe(
+    date: Date | string | undefined | null,
+  ): string | null {
+    if (!date) return null;
+    if (typeof date === 'string') return date;
+    if (date instanceof Date) return date.toISOString();
+    return null;
+  }
+
   async save(taskDelegation: TaskDelegation): Promise<TaskDelegation> {
     const data = {
       id: taskDelegation.id.toString(),
@@ -91,9 +100,12 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
       delegatorId: taskDelegation.delegatorId.toString(),
       status: TaskStatusMapping[taskDelegation.status],
       assignmentType: TaskAssignmentTypeMapping[taskDelegation.assignmentType],
-      createdAt: taskDelegation.createdAt.toISOString(),
+      createdAt:
+        taskDelegation.createdAt instanceof Date
+          ? taskDelegation.createdAt.toISOString()
+          : (taskDelegation.createdAt ?? new Date().toISOString()),
       updatedAt: new Date().toISOString(),
-      completedAt: taskDelegation.completedAt?.toISOString() ?? null,
+      completedAt: this.toISOStringSafe(taskDelegation.completedAt),
     };
 
     await this.db

@@ -21,6 +21,15 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     return this.drizzleService.client;
   }
 
+  private toISOStringSafe(
+    date: Date | string | undefined | null,
+  ): string | null {
+    if (!date) return null;
+    if (typeof date === 'string') return date;
+    if (date instanceof Date) return date.toISOString();
+    return null;
+  }
+
   private async toDomain(record: any): Promise<AttachmentGroup> {
     // Fetch attachment IDs from the join table
     const attachmentLinks = await this.db
@@ -48,9 +57,15 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
       createdById: attachmentGroup.createdById,
       key: attachmentGroup.key,
       ips: attachmentGroup.clientIds,
-      createdAt: attachmentGroup.createdAt.toISOString(),
-      updatedAt: attachmentGroup.updatedAt.toISOString(),
-      expiresAt: attachmentGroup.expiresAt?.toISOString() ?? null,
+      createdAt:
+        attachmentGroup.createdAt instanceof Date
+          ? attachmentGroup.createdAt.toISOString()
+          : (attachmentGroup.createdAt ?? new Date().toISOString()),
+      updatedAt:
+        attachmentGroup.updatedAt instanceof Date
+          ? attachmentGroup.updatedAt.toISOString()
+          : (attachmentGroup.updatedAt ?? new Date().toISOString()),
+      expiresAt: this.toISOStringSafe(attachmentGroup.expiresAt),
     };
 
     await this.db
@@ -181,7 +196,7 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     }
 
     if (update.expiresAt !== undefined) {
-      updateData.expiresAt = update.expiresAt?.toISOString() ?? null;
+      updateData.expiresAt = this.toISOStringSafe(update.expiresAt);
     }
 
     await this.db

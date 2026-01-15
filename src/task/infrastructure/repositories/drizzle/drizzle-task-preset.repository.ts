@@ -20,13 +20,22 @@ export class DrizzleTaskPresetRepository implements TaskPresetRepository {
     return this.drizzleService.client;
   }
 
+  private toISOStringSafe(
+    date: Date | string | undefined | null,
+  ): string | null {
+    if (!date) return null;
+    if (typeof date === 'string') return date;
+    if (date instanceof Date) return date.toISOString();
+    return null;
+  }
+
   async save(preset: TaskPreset): Promise<TaskPreset> {
     const data: typeof taskPresets.$inferInsert = {
       id: preset.id.value,
       name: preset.name,
       title: preset.title,
       description: preset.description,
-      dueDate: preset.dueDate?.toISOString() ?? null,
+      dueDate: this.toISOStringSafe(preset.dueDate),
       assigneeId: preset.assigneeId ?? null,
       assignerId: preset.assignerId.value,
       assignerRole: preset.assignerRole,
@@ -85,7 +94,7 @@ export class DrizzleTaskPresetRepository implements TaskPresetRepository {
       name: preset.name,
       title: preset.title,
       description: preset.description,
-      dueDate: preset.dueDate?.toISOString() ?? null,
+      dueDate: this.toISOStringSafe(preset.dueDate),
       assigneeId: preset.assigneeId ?? null,
       assignerRole: preset.assignerRole,
       approverId: preset.approverId ?? null,

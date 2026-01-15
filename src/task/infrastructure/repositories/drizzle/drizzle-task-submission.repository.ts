@@ -57,6 +57,15 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
     return this.drizzleService.client;
   }
 
+  private toISOStringSafe(
+    date: Date | string | undefined | null,
+  ): string | null {
+    if (!date) return null;
+    if (typeof date === 'string') return date;
+    if (date instanceof Date) return date.toISOString();
+    return null;
+  }
+
   async toDomain(row: ToDomainRow): Promise<TaskSubmission> {
     const task = await this.taskRepository.findById(row.taskId);
     if (!task) {
@@ -149,8 +158,11 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
       notes: taskSubmission.notes ?? null,
       feedback: taskSubmission.feedback ?? null,
       status: fromDomainStatusToDrizzleStatus(taskSubmission.status),
-      submittedAt: taskSubmission.submittedAt.toISOString(),
-      reviewedAt: taskSubmission.reviewedAt?.toISOString() ?? null,
+      submittedAt:
+        taskSubmission.submittedAt instanceof Date
+          ? taskSubmission.submittedAt.toISOString()
+          : (taskSubmission.submittedAt ?? new Date().toISOString()),
+      reviewedAt: this.toISOStringSafe(taskSubmission.reviewedAt),
       reviewedByAdminId:
         taskSubmission.reviewedBy && 'admin' in taskSubmission.reviewedBy
           ? taskSubmission.reviewedBy.id.toString()

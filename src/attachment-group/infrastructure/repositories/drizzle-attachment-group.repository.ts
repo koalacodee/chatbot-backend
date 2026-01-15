@@ -18,6 +18,15 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     return this.drizzleService.client;
   }
 
+  private toISOStringSafe(
+    date: Date | string | undefined | null,
+  ): string | null {
+    if (!date) return null;
+    if (typeof date === 'string') return date;
+    if (date instanceof Date) return date.toISOString();
+    return null;
+  }
+
   private toDomain(record: any): AttachmentGroup {
     return AttachmentGroup.create({
       id: record.id,
@@ -37,9 +46,15 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
       createdById: attachmentGroup.createdById,
       key: attachmentGroup.key,
       ips: attachmentGroup.ips,
-      createdAt: attachmentGroup.createdAt.toISOString(),
-      updatedAt: attachmentGroup.updatedAt.toISOString(),
-      expiresAt: attachmentGroup.expiresAt?.toISOString(),
+      createdAt:
+        attachmentGroup.createdAt instanceof Date
+          ? attachmentGroup.createdAt.toISOString()
+          : (attachmentGroup.createdAt ?? new Date().toISOString()),
+      updatedAt:
+        attachmentGroup.updatedAt instanceof Date
+          ? attachmentGroup.updatedAt.toISOString()
+          : (attachmentGroup.updatedAt ?? new Date().toISOString()),
+      expiresAt: this.toISOStringSafe(attachmentGroup.expiresAt),
     };
 
     const attachmentIds = attachmentGroup.attachmentIds;
@@ -205,7 +220,8 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
 
     if (update.key !== undefined) data.key = update.key;
     if (update.ips !== undefined) data.ips = update.ips;
-    if (update.expiresAt !== undefined) data.expiresAt = update.expiresAt;
+    if (update.expiresAt !== undefined)
+      data.expiresAt = this.toISOStringSafe(update.expiresAt);
 
     const updateData: any = {
       ...data,
@@ -240,4 +256,3 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     return this.findById(id);
   }
 }
-

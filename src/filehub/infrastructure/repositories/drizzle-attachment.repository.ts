@@ -3,13 +3,7 @@ import { DrizzleService } from 'src/common/drizzle/drizzle.service';
 import { AttachmentRepository } from '../../domain/repositories/attachment.repository';
 import { Attachment } from '../../domain/entities/attachment.entity';
 import { attachments } from 'src/common/drizzle/schema';
-import {
-  eq,
-  or,
-  inArray,
-  count,
-  desc,
-} from 'drizzle-orm';
+import { eq, or, inArray, count, desc } from 'drizzle-orm';
 
 @Injectable()
 export class DrizzleAttachmentRepository extends AttachmentRepository {
@@ -19,6 +13,15 @@ export class DrizzleAttachmentRepository extends AttachmentRepository {
 
   private get db() {
     return this.drizzleService.client;
+  }
+
+  private toISOStringSafe(
+    date: Date | string | undefined | null,
+  ): string | null {
+    if (!date) return null;
+    if (typeof date === 'string') return date;
+    if (date instanceof Date) return date.toISOString();
+    return null;
   }
 
   private toDomain(record: any): Attachment {
@@ -47,9 +50,15 @@ export class DrizzleAttachmentRepository extends AttachmentRepository {
       type: attachment.type,
       filename: attachment.filename,
       originalName: attachment.originalName,
-      expirationDate: attachment.expirationDate?.toISOString(),
-      createdAt: attachment.createdAt.toISOString(),
-      updatedAt: attachment.updatedAt.toISOString(),
+      expirationDate: this.toISOStringSafe(attachment.expirationDate),
+      createdAt:
+        attachment.createdAt instanceof Date
+          ? attachment.createdAt.toISOString()
+          : (attachment.createdAt ?? new Date().toISOString()),
+      updatedAt:
+        attachment.updatedAt instanceof Date
+          ? attachment.updatedAt.toISOString()
+          : (attachment.updatedAt ?? new Date().toISOString()),
       targetId: attachment.targetId ?? null,
       userId: attachment.userId ?? null,
       guestId: attachment.guestId ?? null,
@@ -138,9 +147,7 @@ export class DrizzleAttachmentRepository extends AttachmentRepository {
       return [];
     }
 
-    await this.db
-      .delete(attachments)
-      .where(eq(attachments.targetId, targetId));
+    await this.db.delete(attachments).where(eq(attachments.targetId, targetId));
 
     return attachmentsToRemove;
   }
@@ -216,12 +223,7 @@ export class DrizzleAttachmentRepository extends AttachmentRepository {
     const baseQuery = this.db
       .select()
       .from(attachments)
-      .where(
-        or(
-          eq(attachments.userId, userId),
-          eq(attachments.isGlobal, true),
-        ),
-      )
+      .where(or(eq(attachments.userId, userId), eq(attachments.isGlobal, true)))
       .orderBy(desc(attachments.createdAt));
 
     const records =
@@ -241,10 +243,7 @@ export class DrizzleAttachmentRepository extends AttachmentRepository {
       .select({ count: count().as('count') })
       .from(attachments)
       .where(
-        or(
-          eq(attachments.userId, userId),
-          eq(attachments.isGlobal, true),
-        ),
+        or(eq(attachments.userId, userId), eq(attachments.isGlobal, true)),
       );
 
     return Number(result[0]?.count || 0);
@@ -287,8 +286,7 @@ export class DrizzleAttachmentRepository extends AttachmentRepository {
     }
 
     if (update.expirationDate !== undefined) {
-      updateData.expirationDate =
-        update.expirationDate?.toISOString() ?? null;
+      updateData.expirationDate = this.toISOStringSafe(update.expirationDate);
     }
 
     if (update.targetId !== undefined) {
@@ -303,4 +301,3 @@ export class DrizzleAttachmentRepository extends AttachmentRepository {
     return this.findById(id);
   }
 }
-
