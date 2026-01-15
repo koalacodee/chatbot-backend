@@ -82,13 +82,14 @@ RUN curl -fsSL https://bun.com/install | bash
 # Make bun CLI globally available
 ENV BUN_INSTALL="/root/.bun" \
   PATH="/root/.bun/bin:${PATH}"
-ENV DRIZZLE_MIGRATIONS_FOLDER=/app/src/common/drizzle
 
 # Copy only runtime artifacts from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/src/common/drizzle ./drizzle
+ENV DRIZZLE_MIGRATIONS_FOLDER=/app/drizzle
 
 EXPOSE 8080
 COPY start.sh .
