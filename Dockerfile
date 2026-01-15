@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install curl, node‑build deps, unzip
 RUN apt-get update && apt-get install -y \
-      curl gnupg ca-certificates build-essential unzip netcat-openbsd \
+  curl gnupg ca-certificates build-essential unzip netcat-openbsd \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x via NodeSource
@@ -25,21 +25,21 @@ COPY package-lock.json* ./
 # Determine package manager based on lock file presence
 RUN \
   if [ -f "pnpm-lock.yaml" ]; then \
-    echo "Using pnpm" && corepack prepare pnpm@latest --activate && export PNPM_HOME="/pnpm" && export PATH="/pnpm:${PATH}"; \
+  echo "Using pnpm" && corepack prepare pnpm@latest --activate && export PNPM_HOME="/pnpm" && export PATH="/pnpm:${PATH}"; \
   elif [ -f "yarn.lock" ]; then \
-    echo "Using yarn" && corepack prepare yarn@stable --activate; \
+  echo "Using yarn" && corepack prepare yarn@stable --activate; \
   else \
-    echo "Using npm"; \
+  echo "Using npm"; \
   fi
 
 # Install project dependencies
 RUN \
   if [ -f "pnpm-lock.yaml" ]; then \
-    pnpm install --frozen-lockfile; \
+  pnpm install --frozen-lockfile; \
   elif [ -f "yarn.lock" ]; then \
-    yarn install --frozen-lockfile; \
+  yarn install --frozen-lockfile; \
   else \
-    npm ci; \
+  npm ci; \
   fi
 
 # Copy prisma, source, TS config, and your SPAs
@@ -50,21 +50,21 @@ COPY tsconfig*.json ./
 # Generate Prisma Client (for build)
 RUN \
   if [ -f "pnpm-lock.yaml" ]; then \
-    pnpm exec prisma generate; \
+  pnpm exec prisma generate; \
   elif [ -f "yarn.lock" ]; then \
-    yarn exec prisma generate; \
+  yarn exec prisma generate; \
   else \
-    npx prisma generate; \
+  npx prisma generate; \
   fi
 
 # Build NestJS application
 RUN \
   if [ -f "pnpm-lock.yaml" ]; then \
-    pnpm run build; \
+  pnpm run build; \
   elif [ -f "yarn.lock" ]; then \
-    yarn run build; \
+  yarn run build; \
   else \
-    npm run build; \
+  npm run build; \
   fi
 
 # ── Stage 2: Production (Debian + bun runtime) ──
@@ -73,7 +73,7 @@ WORKDIR /app
 
 # Install curl/unzip (bun installer needs them)
 RUN apt-get update && apt-get install -y \
-      curl unzip ca-certificates netcat-openbsd \
+  curl unzip ca-certificates netcat-openbsd \
   && rm -rf /var/lib/apt/lists/*
 
 # Install bun runtime via official install script
@@ -81,7 +81,8 @@ RUN curl -fsSL https://bun.com/install | bash
 
 # Make bun CLI globally available
 ENV BUN_INSTALL="/root/.bun" \
-    PATH="/root/.bun/bin:${PATH}"
+  PATH="/root/.bun/bin:${PATH}"
+ENV DRIZZLE_MIGRATIONS_FOLDER=/app/src/common/drizzle
 
 # Copy only runtime artifacts from builder
 COPY --from=builder /app/node_modules ./node_modules
