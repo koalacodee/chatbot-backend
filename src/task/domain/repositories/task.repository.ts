@@ -1,11 +1,13 @@
 import { TaskDelegation } from '../entities/task-delegation.entity';
 import { Task, TaskPriority, TaskStatus } from '../entities/task.entity';
 import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
+import { CursorInput, PaginatedResult } from 'src/common/drizzle/helpers/cursor';
 
 export interface DepartmentTaskFilters {
   status?: TaskStatus[];
   priority?: TaskPriority[];
   search?: string;
+  cursor?: CursorInput;
 }
 
 export interface EmployeeTasksResult {
@@ -54,58 +56,58 @@ export abstract class TaskRepository {
   abstract findById(id: string): Promise<Task | null>;
   abstract findByIds(ids: string[]): Promise<Task[]>;
   abstract findAll(
-    offset?: number,
-    limit?: number,
-    departmentIds?: string[],
-    start?: Date,
-    end?: Date,
-  ): Promise<Task[]>;
+    // opaque cursor
+    filters?: {
+      cursor?: CursorInput;
+      departmentIds?: string[];
+      start?: Date;
+      end?: Date;
+    },
+  ): Promise<PaginatedResult<Task>>;
   abstract removeById(id: string): Promise<Task | null>;
   abstract exists(id: string): Promise<boolean>;
   abstract count(): Promise<number>;
 
-  abstract findByAssignee(assigneeId: string): Promise<Task[]>;
-  abstract findByDepartment(departmentId: string): Promise<Task[]>;
+  abstract findByAssignee(assigneeId: string, cursor?: CursorInput): Promise<PaginatedResult<Task>>;
+  abstract findByDepartment(departmentId: string, cursor?: CursorInput): Promise<PaginatedResult<Task>>;
 
   abstract findByAssignmentType(
     assignmentType: string,
     targetId?: string,
-  ): Promise<Task[]>;
+    cursor?: CursorInput,
+  ): Promise<PaginatedResult<Task>>;
   abstract findDepartmentLevelTasks(
     departmentId?: string,
     filters?: DepartmentTaskFilters,
-  ): Promise<Task[]>;
+  ): Promise<PaginatedResult<Task>>;
   abstract findSubDepartmentLevelTasks(
     subDepartmentId?: string,
     filters?: DepartmentTaskFilters,
-  ): Promise<Task[]>;
+  ): Promise<PaginatedResult<Task>>;
   abstract findSubIndividualsLevelTasks(
     filters?: IndividualTaskFilters,
-  ): Promise<Task[]>;
+  ): Promise<PaginatedResult<Task>>;
   abstract findTeamTasks(options: {
     employeeId?: string;
     subDepartmentId?: string;
     departmentId?: string;
     status?: string[];
-    offset?: number;
-    limit?: number;
-  }): Promise<Task[]>;
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<Task>>;
 
   abstract findTasksForSupervisor(options: {
     supervisorDepartmentIds: string[];
     status?: string[];
-    offset?: number;
-    limit?: number;
-  }): Promise<{ tasks: Task[]; total: number }>;
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<Task>>;
 
   abstract findTasksForEmployee(options: {
     employeeId: string;
     supervisorId: string;
     subDepartmentIds: string[];
     status?: string[];
-    offset?: number;
-    limit?: number;
-  }): Promise<{ tasks: Task[]; total: number }>;
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<Task>>;
 
   abstract getTaskMetricsForSupervisor(
     supervisorDepartmentIds: string[],
@@ -119,9 +121,19 @@ export abstract class TaskRepository {
     supervisorUserId: string;
     status?: TaskStatus[];
     priority?: TaskPriority[];
-    offset: number;
-    limit: number;
-  }): Promise<MyTasksResult>;
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<{
+    task: Task;
+    rejectionReason?: string;
+    approvalFeedback?: string;
+  }> & {
+    fileHubAttachments: Attachment[];
+    metrics: {
+      pendingTasks: number;
+      completedTasks: number;
+      taskCompletionPercentage: number;
+    };
+  }>;
 
   abstract getTaskMetricsForEmployee(
     employeeId: string,
@@ -151,6 +163,22 @@ export abstract class TaskRepository {
     completionPercentage: number;
   }>;
 
+  abstract getTeamTasksForSupervisor(options: {
+    supervisorDepartmentIds: string[];
+    status?: TaskStatus[];
+    priority?: TaskPriority[];
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<{
+    task: Task;
+  }> & {
+    fileHubAttachments: Attachment[];
+    metrics: {
+      pendingTasks: number;
+      completedTasks: number;
+      taskCompletionPercentage: number;
+    };
+  }>;
+
   abstract getTaskMetricsForIndividual(
     filters?: IndividualTaskFilters,
   ): Promise<{
@@ -162,9 +190,24 @@ export abstract class TaskRepository {
     employeeUserId: string;
     status?: TaskStatus[];
     priority?: TaskPriority[];
-    offset: number;
-    limit: number;
-  }): Promise<EmployeeTasksResult>;
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<{
+    task: Task;
+    rejectionReason?: string;
+    approvalFeedback?: string;
+  }> & {
+    delegations: TaskDelegation[];
+    fileHubAttachments: Attachment[];
+    metrics: {
+      pendingTasks: number;
+      completedTasks: number;
+      pendingDelegations: number;
+      completedDelegations: number;
+      taskCompletionPercentage: number;
+      delegationCompletionPercentage: number;
+      totalPercentage: number;
+    };
+  }>;
 
   // Database-level filtering for reminder processing
   abstract findTaskForReminder(taskId: string): Promise<Task | null>;

@@ -45,10 +45,18 @@ import {
   sql,
   ilike,
   SQL,
+  exists,
 } from 'drizzle-orm';
 // import { DepartmentVisibility } from '@prisma/client';
 import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 import { TaskDelegation } from 'src/task/domain/entities/task-delegation.entity';
+import {
+  createCursorPagination,
+  CursorInput,
+  PaginatedResult,
+} from 'src/common/drizzle/helpers/cursor';
+
+type TaskCursorData = { createdAt: string; id: string };
 
 export function drizzleToDomainStatus(
   status: (typeof tasks.$inferSelect)['status'],
@@ -233,6 +241,16 @@ export function drizzleToDomainVisibility(
 
 @Injectable()
 export class DrizzleTaskRepository extends TaskRepository {
+  private readonly pagination = createCursorPagination<TaskCursorData>({
+    table: tasks,
+    cursorFields: [
+      { column: tasks.createdAt, key: 'createdAt' },
+      { column: tasks.id, key: 'id' },
+    ],
+    defaultPageSize: 10,
+    sortDirection: 'desc',
+  });
+
   constructor(
     private readonly drizzleService: DrizzleService,
     private readonly supervisorRepository: SupervisorRepository,
@@ -529,14 +547,25 @@ export class DrizzleTaskRepository extends TaskRepository {
   }
 
   async findAll(
-    offset?: number,
-    limit?: number,
-    departmentIds?: string[],
-    start?: Date,
-    end?: Date,
-  ): Promise<Task[]> {
+    filters?: {
+      cursor?: CursorInput;
+      departmentIds?: string[];
+      start?: Date;
+      end?: Date;
+    },
+  ): Promise<PaginatedResult<Task>> {
     const whereConditions: any[] = [];
+    const {
+      cursor: cursorInput,
+      departmentIds,
+      start,
+      end
+    } = filters ?? {};
 
+    // Parse pagination input
+    const paginationParams = this.pagination.parseInput(cursorInput);
+
+    // Department filter
     if (departmentIds && departmentIds.length > 0) {
       whereConditions.push(
         or(
@@ -546,6 +575,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       );
     }
 
+    // Date range filter
     if (start || end) {
       const dateConditions: any[] = [];
       if (start) {
@@ -559,14 +589,22 @@ export class DrizzleTaskRepository extends TaskRepository {
       }
     }
 
+    // Cursor filter
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    );
+    if (cursorCondition) {
+      whereConditions.push(cursorCondition);
+    }
+
     const whereClause =
       whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
     const results = await this.db.query.tasks.findMany({
       where: whereClause,
-      orderBy: [desc(tasks.createdAt)],
-      limit: limit ?? 1000,
-      offset: offset ?? 0,
+      orderBy: this.pagination.getOrderBy(),
+      limit: paginationParams.limit,
       with: {
         employee: { with: { user: true } },
         admin: { with: { user: true } },
@@ -577,7 +615,17 @@ export class DrizzleTaskRepository extends TaskRepository {
       },
     });
 
-    return Promise.all(results.map((r) => this.toDomain(r)));
+    // Process results and build meta
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (item) => ({ createdAt: item.createdAt, id: item.id }),
+    );
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
   async removeById(id: string): Promise<Task | null> {
@@ -600,40 +648,97 @@ export class DrizzleTaskRepository extends TaskRepository {
     return Number(result[0]?.count || 0);
   }
 
-  async findByAssignee(assigneeId: string): Promise<Task[]> {
-    const results = await this.db
-      .select()
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.assigneeId, assigneeId),
-          eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.INDIVIDUAL)),
-        ),
-      )
-      .orderBy(desc(tasks.createdAt));
+  async findByAssignee(assigneeId: string, cursor?: CursorInput): Promise<PaginatedResult<Task>> {
+    const paginationParams = this.pagination.parseInput(cursor);
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    );
 
-    return Promise.all(results.map((r) => this.toDomain(r)));
+    const whereConditions: any[] = [
+      eq(tasks.assigneeId, assigneeId),
+      eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.INDIVIDUAL)),
+    ];
+    if (cursorCondition) whereConditions.push(cursorCondition);
+
+    const results = await this.db.query.tasks.findMany({
+      where: and(...whereConditions),
+      orderBy: this.pagination.getOrderBy(),
+      limit: paginationParams.limit,
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
+
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (item) => ({ createdAt: item.createdAt, id: item.id }),
+    );
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
-  async findByDepartment(departmentId: string): Promise<Task[]> {
-    const results = await this.db
-      .select()
-      .from(tasks)
-      .where(
-        or(
-          eq(tasks.targetDepartmentId, departmentId),
-          eq(tasks.targetSubDepartmentId, departmentId),
-        ),
-      )
-      .orderBy(desc(tasks.createdAt));
+  async findByDepartment(departmentId: string, cursor?: CursorInput): Promise<PaginatedResult<Task>> {
+    const paginationParams = this.pagination.parseInput(cursor);
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    );
 
-    return Promise.all(results.map((r) => this.toDomain(r)));
+    const whereConditions: any[] = [
+      or(
+        eq(tasks.targetDepartmentId, departmentId),
+        eq(tasks.targetSubDepartmentId, departmentId),
+      ),
+    ];
+    if (cursorCondition) whereConditions.push(cursorCondition);
+
+    const results = await this.db.query.tasks.findMany({
+      where: and(...whereConditions),
+      orderBy: this.pagination.getOrderBy(),
+      limit: paginationParams.limit,
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
+
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (item) => ({ createdAt: item.createdAt, id: item.id }),
+    );
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
   async findByAssignmentType(
     assignmentType: string,
     targetId?: string,
-  ): Promise<Task[]> {
+    cursor?: CursorInput,
+  ): Promise<PaginatedResult<Task>> {
+    const paginationParams = this.pagination.parseInput(cursor);
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    );
+
     const whereConditions: any[] = [
       eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(assignmentType as TaskAssignmentType)),
     ];
@@ -648,19 +753,44 @@ export class DrizzleTaskRepository extends TaskRepository {
       }
     }
 
-    const results = await this.db
-      .select()
-      .from(tasks)
-      .where(and(...whereConditions))
-      .orderBy(desc(tasks.createdAt));
+    if (cursorCondition) whereConditions.push(cursorCondition);
 
-    return Promise.all(results.map((r) => this.toDomain(r)));
+    const results = await this.db.query.tasks.findMany({
+      where: and(...whereConditions),
+      orderBy: this.pagination.getOrderBy(),
+      limit: paginationParams.limit,
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
+
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (item) => ({ createdAt: item.createdAt, id: item.id }),
+    );
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
   async findDepartmentLevelTasks(
     departmentId?: string,
     filters?: DepartmentTaskFilters,
-  ): Promise<Task[]> {
+  ): Promise<PaginatedResult<Task>> {
+    const paginationParams = this.pagination.parseInput(filters?.cursor);
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    );
+
     const whereConditions: any[] = [
       eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.DEPARTMENT)),
     ];
@@ -670,10 +800,12 @@ export class DrizzleTaskRepository extends TaskRepository {
     }
 
     this.applyFilters(whereConditions, filters);
+    if (cursorCondition) whereConditions.push(cursorCondition);
 
     const results = await this.db.query.tasks.findMany({
       where: and(...whereConditions),
-      orderBy: [desc(tasks.createdAt)],
+      orderBy: this.pagination.getOrderBy(),
+      limit: paginationParams.limit,
       with: {
         employee: { with: { user: true } },
         admin: { with: { user: true } },
@@ -684,13 +816,28 @@ export class DrizzleTaskRepository extends TaskRepository {
       },
     });
 
-    return Promise.all(results.map((r) => this.toDomain(r)));
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (item) => ({ createdAt: item.createdAt, id: item.id }),
+    );
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
   async findSubDepartmentLevelTasks(
     subDepartmentId?: string,
     filters?: DepartmentTaskFilters,
-  ): Promise<Task[]> {
+  ): Promise<PaginatedResult<Task>> {
+    const paginationParams = this.pagination.parseInput(filters?.cursor);
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    );
+
     const whereConditions: any[] = [
       eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.SUB_DEPARTMENT)),
     ];
@@ -700,10 +847,12 @@ export class DrizzleTaskRepository extends TaskRepository {
     }
 
     this.applyFilters(whereConditions, filters);
+    if (cursorCondition) whereConditions.push(cursorCondition);
 
     const results = await this.db.query.tasks.findMany({
       where: and(...whereConditions),
-      orderBy: [desc(tasks.createdAt)],
+      orderBy: this.pagination.getOrderBy(),
+      limit: paginationParams.limit,
       with: {
         employee: { with: { user: true } },
         admin: { with: { user: true } },
@@ -714,12 +863,27 @@ export class DrizzleTaskRepository extends TaskRepository {
       },
     });
 
-    return Promise.all(results.map((r) => this.toDomain(r)));
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (item) => ({ createdAt: item.createdAt, id: item.id }),
+    );
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
   async findSubIndividualsLevelTasks(
     filters?: IndividualTaskFilters,
-  ): Promise<Task[]> {
+  ): Promise<PaginatedResult<Task>> {
+    const paginationParams = this.pagination.parseInput(filters?.cursor);
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    );
+
     const whereConditions: any[] = [
       eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.INDIVIDUAL)),
     ];
@@ -729,10 +893,12 @@ export class DrizzleTaskRepository extends TaskRepository {
     }
 
     this.applyFilters(whereConditions, filters);
+    if (cursorCondition) whereConditions.push(cursorCondition);
 
     const results = await this.db.query.tasks.findMany({
       where: and(...whereConditions),
-      orderBy: [desc(tasks.createdAt)],
+      orderBy: this.pagination.getOrderBy(),
+      limit: paginationParams.limit,
       with: {
         employee: { with: { user: true } },
         admin: { with: { user: true } },
@@ -743,7 +909,16 @@ export class DrizzleTaskRepository extends TaskRepository {
       },
     });
 
-    return Promise.all(results.map((r) => this.toDomain(r)));
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (item) => ({ createdAt: item.createdAt, id: item.id }),
+    );
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
   async findTeamTasks(options: {
@@ -751,11 +926,15 @@ export class DrizzleTaskRepository extends TaskRepository {
     subDepartmentId?: string;
     departmentId?: string;
     status?: TaskStatus[];
-    offset?: number;
-    limit?: number;
-  }): Promise<Task[]> {
-    const { employeeId, subDepartmentId, departmentId, status, offset, limit } =
-      options;
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<Task>> {
+    const { employeeId, subDepartmentId, departmentId, status, cursor } = options;
+
+    const paginationParams = this.pagination.parseInput(cursor);
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    );
 
     const orConditions: any[] = [];
 
@@ -800,11 +979,12 @@ export class DrizzleTaskRepository extends TaskRepository {
       );
     }
 
+    if (cursorCondition) whereConditions.push(cursorCondition);
+
     const results = await this.db.query.tasks.findMany({
       where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
-      orderBy: [desc(tasks.createdAt)],
-      limit: limit ?? 1000,
-      offset: offset ?? 0,
+      orderBy: this.pagination.getOrderBy(),
+      limit: paginationParams.limit,
       with: {
         employee: { with: { user: true } },
         admin: { with: { user: true } },
@@ -815,16 +995,30 @@ export class DrizzleTaskRepository extends TaskRepository {
       },
     });
 
-    return Promise.all(results.map((r) => this.toDomain(r)));
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (item) => ({ createdAt: item.createdAt, id: item.id }),
+    );
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
   async findTasksForSupervisor(options: {
     supervisorDepartmentIds: string[];
     status?: TaskStatus[];
-    offset?: number;
-    limit?: number;
-  }): Promise<{ tasks: Task[]; total: number }> {
-    const { supervisorDepartmentIds, status, offset, limit } = options;
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<Task>> {
+    const { supervisorDepartmentIds, status, cursor } = options;
+
+    const paginationParams = this.pagination.parseInput(cursor);
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    );
 
     const whereConditions: SQL[] = [
       inArray(tasks.targetDepartmentId, supervisorDepartmentIds),
@@ -839,28 +1033,34 @@ export class DrizzleTaskRepository extends TaskRepository {
       );
     }
 
+    if (cursorCondition) whereConditions.push(cursorCondition);
+
     const whereClause = and(...whereConditions);
 
-    const [results, totalResult] = await Promise.all([
-      this.db.query.tasks.findMany({
-        where: whereClause,
-        orderBy: [desc(tasks.createdAt)],
-        limit: limit ?? 1000,
-        offset: offset ?? 0,
-        with: {
-          employee: { with: { user: true } },
-          admin: { with: { user: true } },
-          supervisor: { with: { user: true } },
-          department_targetDepartmentId: true,
-          department_targetSubDepartmentId: true,
-          user: true,
-        },
-      }),
-      this.db.select({ count: count() }).from(tasks).where(whereClause),
-    ]);
+    const results = await this.db.query.tasks.findMany({
+      where: whereClause,
+      orderBy: this.pagination.getOrderBy(),
+      limit: paginationParams.limit,
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
 
-    const taskList = await Promise.all(results.map((r) => this.toDomain(r)));
-    return { tasks: taskList, total: Number(totalResult[0]?.count || 0) };
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (item) => ({ createdAt: item.createdAt, id: item.id }),
+    );
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
   async findTasksForEmployee(options: {
@@ -868,17 +1068,21 @@ export class DrizzleTaskRepository extends TaskRepository {
     supervisorId: string;
     subDepartmentIds: string[];
     status?: TaskStatus[];
-    offset?: number;
-    limit?: number;
-  }): Promise<{ tasks: Task[]; total: number }> {
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<Task>> {
     const {
       employeeId,
       supervisorId,
       subDepartmentIds,
       status,
-      offset,
-      limit,
+      cursor,
     } = options;
+
+    const paginationParams = this.pagination.parseInput(cursor);
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    );
 
     const orConditions: any[] = [
       eq(tasks.assigneeId, employeeId),
@@ -900,28 +1104,34 @@ export class DrizzleTaskRepository extends TaskRepository {
       );
     }
 
+    if (cursorCondition) whereConditions.push(cursorCondition);
+
     const whereClause = and(...whereConditions);
 
-    const [results, totalResult] = await Promise.all([
-      this.db.query.tasks.findMany({
-        where: whereClause,
-        orderBy: [desc(tasks.createdAt)],
-        limit: limit ?? 1000,
-        offset: offset ?? 0,
-        with: {
-          employee: { with: { user: true } },
-          admin: { with: { user: true } },
-          supervisor: { with: { user: true } },
-          department_targetDepartmentId: true,
-          department_targetSubDepartmentId: true,
-          user: true,
-        },
-      }),
-      this.db.select({ count: count() }).from(tasks).where(whereClause),
-    ]);
+    const results = await this.db.query.tasks.findMany({
+      where: whereClause,
+      orderBy: this.pagination.getOrderBy(),
+      limit: paginationParams.limit,
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
 
-    const taskList = await Promise.all(results.map((r) => this.toDomain(r)));
-    return { tasks: taskList, total: Number(totalResult[0]?.count || 0) };
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (item) => ({ createdAt: item.createdAt, id: item.id }),
+    );
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
   async getTaskMetricsForSupervisor(
@@ -1157,16 +1367,32 @@ export class DrizzleTaskRepository extends TaskRepository {
     employeeUserId: string;
     status?: TaskStatus[];
     priority?: TaskPriority[];
-    offset: number;
-    limit: number;
-  }): Promise<EmployeeTasksResult> {
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<{
+    task: Task;
+    rejectionReason?: string;
+    approvalFeedback?: string;
+  }> & {
+    delegations: TaskDelegation[];
+    fileHubAttachments: Attachment[];
+    metrics: {
+      pendingTasks: number;
+      completedTasks: number;
+      pendingDelegations: number;
+      completedDelegations: number;
+      taskCompletionPercentage: number;
+      delegationCompletionPercentage: number;
+      totalPercentage: number;
+    };
+  }> {
     const {
       employeeUserId,
       status,
       priority,
-      offset = 0,
-      limit = 20,
+      cursor,
     } = options;
+    const paginationParams = this.pagination.parseInput(cursor);
+    const { limit } = paginationParams;
     /* ---------- 1.  employee meta (unchanged) ---------- */
     const [emp] = await this.db
       .select({ id: employees.id })
@@ -1255,12 +1481,18 @@ export class DrizzleTaskRepository extends TaskRepository {
     );
 
     /* ---------- 4.  paginated rows (same filter) ---------- */
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData as TaskCursorData | null,
+      paginationParams.direction,
+    );
+    const whereWithCursor = cursorCondition ? and(taskWhere, cursorCondition) : taskWhere;
+    const delWhereWithCursor = cursorCondition ? and(delWhere, cursorCondition) : delWhere;
+
     const [tasksPage, delegationsPage, [taskAgg, delAgg]] = await Promise.all([
-      // this.db.select().from(tasks).where(taskWhere).limit(limit).offset(offset),
       this.db.query.tasks.findMany({
-        where: taskWhere,
+        where: whereWithCursor,
         limit: limit,
-        offset: offset,
+        orderBy: this.pagination.getOrderBy(),
         with: {
           taskSubmissions: {
             columns: {
@@ -1281,9 +1513,9 @@ export class DrizzleTaskRepository extends TaskRepository {
         })
         .from(taskDelegations)
         .innerJoin(tasks, eq(taskDelegations.taskId, tasks.id))
-        .where(delWhere)
+        .where(delWhereWithCursor)
         .limit(limit)
-        .offset(offset),
+        .orderBy(...this.pagination.getOrderBy()),
       this.db.with(stmt).select({ tc: stmt.tc, tp: stmt.tp }).from(stmt),
     ]);
 
@@ -1319,8 +1551,18 @@ export class DrizzleTaskRepository extends TaskRepository {
         : Math.floor((combinedCompleted / combinedTotal) * 100);
 
     /* ---------- 6.  return ---------- */
+    const processedResults = this.pagination.processResults(
+      tasksPage,
+      paginationParams,
+      (task) => ({
+        createdAt: task.createdAt,
+        id: task.id,
+      }),
+    );
+
     return {
-      tasks: tasksPage.map((task) => {
+      ...processedResults,
+      data: processedResults.data.map((task) => {
         const submissions = (task.taskSubmissions || []) as Array<{
           feedback: string | null;
           status: string;
@@ -1378,7 +1620,6 @@ export class DrizzleTaskRepository extends TaskRepository {
           }),
         }),
       ),
-      total: taskAgg.tp + delAgg.tp + taskAgg.tc + delAgg.tc,
       fileHubAttachments: attachmentResults.map((attachment) =>
         Attachment.create({
           id: attachment.id,
@@ -1392,21 +1633,24 @@ export class DrizzleTaskRepository extends TaskRepository {
         }),
       ),
       metrics: {
-        ...metrics,
+        completedTasks: taskAgg.tc,
+        pendingTasks: taskAgg.tp,
+        completedDelegations: delAgg.tc,
+        pendingDelegations: delAgg.tp,
         taskCompletionPercentage:
-          metrics.completedTasks + metrics.pendingTasks === 0
+          taskAgg.tc + taskAgg.tp === 0
             ? 0
             : Math.floor(
-              (metrics.completedTasks /
-                (metrics.completedTasks + metrics.pendingTasks)) *
+              (taskAgg.tc /
+                (taskAgg.tc + taskAgg.tp)) *
               100,
             ),
         delegationCompletionPercentage:
-          metrics.completedDelegations + metrics.pendingDelegations === 0
+          delAgg.tc + delAgg.tp === 0
             ? 0
             : Math.floor(
-              (metrics.completedDelegations /
-                (metrics.completedDelegations + metrics.pendingDelegations)) *
+              (delAgg.tc /
+                (delAgg.tc + delAgg.tp)) *
               100,
             ),
         totalPercentage: Math.floor(combinedCompletionPercentage),
@@ -1418,10 +1662,22 @@ export class DrizzleTaskRepository extends TaskRepository {
     supervisorUserId: string;
     status?: TaskStatus[];
     priority?: TaskPriority[];
-    offset: number;
-    limit: number;
-  }): Promise<MyTasksResult> {
-    const { supervisorUserId, status, priority, offset, limit } = options;
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<{
+    task: Task;
+    rejectionReason?: string;
+    approvalFeedback?: string;
+  }> & {
+    fileHubAttachments: Attachment[];
+    metrics: {
+      pendingTasks: number;
+      completedTasks: number;
+      taskCompletionPercentage: number;
+    };
+  }> {
+    const { supervisorUserId, status, priority, cursor } = options;
+    const paginationParams = this.pagination.parseInput(cursor);
+    const { limit } = paginationParams;
 
     const [supervisor] = await this.db
       .select()
@@ -1458,11 +1714,16 @@ export class DrizzleTaskRepository extends TaskRepository {
         )
         : inArray(tasks.targetDepartmentId, supervisorDepartmentIds);
 
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData as TaskCursorData | null,
+      paginationParams.direction,
+    );
+
     const [tasksPage, [taskAgg]] = await Promise.all([
       this.db.query.tasks.findMany({
-        where: tasksWhere,
+        where: cursorCondition ? and(tasksWhere, cursorCondition) : tasksWhere,
         limit: limit,
-        offset: offset,
+        orderBy: this.pagination.getOrderBy(),
         with: {
           taskSubmissions: {
             columns: {
@@ -1498,8 +1759,18 @@ export class DrizzleTaskRepository extends TaskRepository {
         .where(inArray(attachments.targetId, targetIds))
       : [];
 
+    const processedResults = this.pagination.processResults(
+      tasksPage,
+      paginationParams,
+      (task) => ({
+        createdAt: task.createdAt,
+        id: task.id,
+      }),
+    );
+
     return {
-      tasks: tasksPage.map((task) => {
+      ...processedResults,
+      data: processedResults.data.map((task) => {
         const submissions = (task.taskSubmissions || []) as Array<{
           feedback: string | null;
           status: string;
@@ -1527,7 +1798,6 @@ export class DrizzleTaskRepository extends TaskRepository {
           )?.feedback,
         };
       }),
-      total: taskAgg.tp + taskAgg.tc,
       fileHubAttachments: attachmentResults.map((attachment) =>
         Attachment.create({
           id: attachment.id,
@@ -1543,12 +1813,167 @@ export class DrizzleTaskRepository extends TaskRepository {
       metrics: {
         completedTasks: metrics.completedTasks,
         pendingTasks: metrics.pendingTasks,
-        taskCompletionPercentage: Math.floor(
-          (metrics.completedTasks /
-            (metrics.completedTasks + metrics.pendingTasks)) *
-          100,
-        ),
+        taskCompletionPercentage:
+          metrics.completedTasks + metrics.pendingTasks === 0
+            ? 0
+            : Math.floor(
+              (metrics.completedTasks /
+                (metrics.completedTasks + metrics.pendingTasks)) *
+              100,
+            ),
       },
+    };
+  }
+
+  async getTeamTasksForSupervisor(options: {
+    supervisorDepartmentIds: string[];
+    status?: TaskStatus[];
+    priority?: TaskPriority[];
+    cursor?: CursorInput;
+  }): Promise<PaginatedResult<{
+    task: Task;
+  }> & {
+    fileHubAttachments: Attachment[];
+    metrics: {
+      pendingTasks: number;
+      completedTasks: number;
+      taskCompletionPercentage: number;
+    };
+  }> {
+    const { supervisorDepartmentIds, status, priority, cursor } = options;
+    const paginationParams = this.pagination.parseInput(cursor);
+    const { limit } = paginationParams;
+    const whereConditions = [
+      // Path 1: Direct sub-department assignment
+      or(exists(
+        this.db.select({ one: sql`1` })
+          .from(departments)
+          .where(
+            and(
+              eq(departments.id, tasks.targetSubDepartmentId),
+              inArray(departments.parentId, supervisorDepartmentIds)
+            )
+          )
+      ),      // Path 2: Via assignee's department membership
+        exists(
+          this.db.select({ one: sql`1` })
+            .from(employees)
+            .innerJoin(
+              employeeSubDepartments,
+              eq(employees.id, employeeSubDepartments.employeeId)
+            )
+            .innerJoin(
+              departments,
+              eq(employeeSubDepartments.departmentId, departments.id)
+            )
+            .where(
+              and(
+                eq(tasks.assigneeId, employees.id),
+                inArray(departments.parentId, supervisorDepartmentIds)
+              )
+            )
+        ))
+    ]
+
+    if (status && status.length > 0) {
+      whereConditions.push(inArray(tasks.status, status.map((s) => domainToDrizzleStatus(s))));
+    }
+
+    if (priority && priority.length > 0) {
+      whereConditions.push(inArray(tasks.priority, priority.map((p) => domainToDrizzlePriority(p))));
+    }
+
+    const cursorCondition = this.pagination.buildCursorCondition(
+      paginationParams.cursorData as TaskCursorData | null,
+      paginationParams.direction,
+    );
+    const whereClause = and(...whereConditions);
+
+    const results = await this.db.query.tasks.findMany({
+      where: cursorCondition ? and(whereClause, cursorCondition) : whereClause,
+      orderBy: this.pagination.getOrderBy(),
+      limit: limit,
+      with: {
+        taskSubmissions: {
+          columns: {
+            feedback: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (task) => ({
+        createdAt: task.createdAt,
+        id: task.id,
+      }),
+    );
+
+    const attachmentResults = await this.db.select().from(attachments).where(inArray(attachments.targetId, data.map((task) => task.id)));
+    const metrics = await this.db
+      .select({
+        tc: sql<number>`count(*) filter (where status = 'completed')`
+          .mapWith(Number)
+          .as('tc'),
+        tp: sql<number>`count(*) filter (where status <> 'completed')`
+          .mapWith(Number)
+          .as('tp'),
+      })
+      .from(tasks)
+      .where(whereClause) // filter tasks once
+    const metricsResult = {
+      completedTasks: metrics[0].tc,
+      pendingTasks: metrics[0].tp,
+      taskCompletionPercentage:
+        metrics[0].tc + metrics[0].tp === 0
+          ? 0
+          : Math.floor(
+            (metrics[0].tc /
+              (metrics[0].tc + metrics[0].tp)) *
+            100,
+          ),
+    };
+    return {
+      data: data.map((task) => {
+        return {
+          task: Task.create({
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            status: drizzleToDomainStatus(task.status),
+            priority: drizzleToDomainPriority(task.priority),
+            assigneeId: task.assigneeId,
+            targetSubDepartmentId: task.targetSubDepartmentId,
+            createdAt: new Date(task.createdAt),
+            updatedAt: new Date(task.updatedAt),
+            creatorId: task.creatorId,
+            assignmentType: drizzleToDomainAssignmentType(task.assignmentType),
+          }),
+          rejectionReason: task.taskSubmissions.find(
+            (submission) => submission.status === 'rejected',
+          )?.feedback,
+          approvalFeedback: task.taskSubmissions.find(
+            (submission) => submission.status === 'approved',
+          )?.feedback,
+        };
+      }),
+      meta: meta,
+      fileHubAttachments: attachmentResults.map((attachment) =>
+        Attachment.create({
+          id: attachment.id,
+          targetId: attachment.targetId,
+          type: attachment.type,
+          filename: attachment.filename,
+          createdAt: new Date(attachment.createdAt),
+          updatedAt: new Date(attachment.updatedAt),
+          originalName: attachment.originalName,
+          size: attachment.size,
+        }),
+      ),
+      metrics: metricsResult,
     };
   }
 }
