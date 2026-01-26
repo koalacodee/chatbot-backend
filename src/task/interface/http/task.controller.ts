@@ -174,11 +174,16 @@ export class TaskController {
   async getTeamTasks(
     @Query() query: GetTeamTasksDto,
     @Req() req: any,
-  ): Promise<{ tasks: any[]; attachments: { [taskId: string]: string[] } }> {
+  ): Promise<{
+    tasks: any[];
+    attachments: { [taskId: string]: string[] };
+    submissions: any[];
+  }> {
     const result = await this.getTeamTasksUseCase.execute(query, req.user.id);
     return {
       tasks: result.tasks.map((t) => t.toJSON()),
       attachments: result.attachments,
+      submissions: result.submissions.map((s) => s.toJSON()),
     };
   }
 

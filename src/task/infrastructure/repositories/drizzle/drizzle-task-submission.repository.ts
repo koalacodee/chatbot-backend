@@ -21,6 +21,7 @@ import {
   domainToDrizzleSubmissionStatus,
   drizzleToDomainSubmissionStatus,
 } from './drizzle-task.repository';
+import { Task } from 'src/task/domain/entities/task.entity';
 
 @Injectable()
 export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
@@ -44,8 +45,10 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
     return null;
   }
 
-  async toDomain(row: ToDomainRow): Promise<TaskSubmission> {
-    const task = await this.taskRepository.findById(row.taskId);
+  async toDomain(row: ToDomainRow, task?: Task): Promise<TaskSubmission> {
+    if (!task) {
+      task = await this.taskRepository.findById(row.taskId);
+    }
     if (!task) {
       throw new Error(`Task with id ${row.taskId} not found`);
     }
@@ -385,24 +388,72 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
     if (taskIds.length === 0) return [];
 
     const results = await this.db
-      .select()
+      .select({
+        id: taskSubmissions.id,
+        taskId: taskSubmissions.taskId,
+        performerAdminId: taskSubmissions.performerAdminId,
+        performerSupervisorId: taskSubmissions.performerSupervisorId,
+        performerEmployeeId: taskSubmissions.performerEmployeeId,
+        notes: taskSubmissions.notes,
+        feedback: taskSubmissions.feedback,
+        status: taskSubmissions.status,
+        submittedAt: taskSubmissions.submittedAt,
+        reviewedAt: taskSubmissions.reviewedAt,
+        reviewedByAdminId: taskSubmissions.reviewedByAdminId,
+        reviewedBySupervisorId: taskSubmissions.reviewedBySupervisorId,
+        performerAdminUser: users.name,
+        performerAdminUserId: users.id,
+        performerSupervisorUser: users.name,
+        performerSupervisorUserId: users.id,
+        performerEmployeeUser: users.name,
+        performerEmployeeUserId: users.id,
+      })
       .from(taskSubmissions)
-      .where(inArray(taskSubmissions.taskId, taskIds));
+      .leftJoin(admins, eq(taskSubmissions.performerAdminId, admins.id))
+      .leftJoin(
+        supervisors,
+        eq(taskSubmissions.performerSupervisorId, supervisors.id),
+      )
+      .leftJoin(
+        employees,
+        eq(taskSubmissions.performerEmployeeId, employees.id),
+      )
+      .leftJoin(
+        users,
+        or(
+          eq(admins.userId, users.id),
+          eq(supervisors.userId, users.id),
+          eq(employees.userId, users.id),
+        ),
+      )
+      .where(inArray(taskSubmissions.taskId, taskIds))
+      .orderBy(desc(taskSubmissions.submittedAt));
+
+    // Batch fetch all tasks first to avoid N+1 queries in toDomain
+    const uniqueTaskIds = [...new Set(results.map((r) => r.taskId))];
+    const tasks = await this.taskRepository.findByIds(uniqueTaskIds);
+    const tasksMap = new Map(tasks.map((t) => [t.id.toString(), t]));
 
     return Promise.all(
       results.map((row) =>
-        this.toDomain({
-          id: row.id,
-          taskId: row.taskId,
-          performerAdminId: row.performerAdminId,
-          performerSupervisorId: row.performerSupervisorId,
-          performerEmployeeId: row.performerEmployeeId,
-          notes: row.notes,
-          feedback: row.feedback,
-          status: drizzleToDomainSubmissionStatus(row.status),
-          submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
-          reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
-        }),
+        this.toDomain(
+          {
+            id: row.id,
+            taskId: row.taskId,
+            performerAdminId: row.performerAdminId,
+            performerSupervisorId: row.performerSupervisorId,
+            performerEmployeeId: row.performerEmployeeId,
+            performerAdminName: row.performerAdminUser,
+            performerSupervisorName: row.performerSupervisorUser,
+            performerEmployeeName: row.performerEmployeeUser,
+            notes: row.notes,
+            feedback: row.feedback,
+            status: drizzleToDomainSubmissionStatus(row.status),
+            submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
+            reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
+          },
+          tasksMap.get(row.taskId),
+        ),
       ),
     );
   }

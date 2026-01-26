@@ -169,6 +169,20 @@ export class PrismaTaskRepository extends TaskRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async findByIds(ids: string[]): Promise<Task[]> {
+    const rows = await this.prisma.task.findMany({
+      where: { id: { in: ids } },
+      include: {
+        assignee: true,
+        assignerAdmin: true,
+        assignerSupervisor: true,
+        targetDepartment: true,
+        targetSubDepartment: true,
+      },
+    });
+    return Promise.all(rows.map((row) => this.toDomain(row)));
+  }
+
   async findAll(
     offset?: number,
     limit?: number,

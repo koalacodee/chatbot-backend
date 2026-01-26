@@ -17,6 +17,9 @@ import { TaskSubmissionStatus } from '../../../domain/entities/task-submission.e
 import { Department, DepartmentVisibility } from 'src/department/domain/entities/department.entity';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
+import { Admin } from 'src/admin/domain/entities/admin.entity';
+import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
+import { User } from 'src/shared/entities/user.entity';
 import {
   Employee,
   EmployeePermissionsEnum,
@@ -242,35 +245,121 @@ export class DrizzleTaskRepository extends TaskRepository {
     return this.drizzleService.client;
   }
 
-  private async toDomain(row: typeof tasks.$inferSelect): Promise<Task> {
+  private async toDomain(row: any): Promise<Task> {
     const [
       assignee,
-      assignerSupervisor,
-      assignerAdmin,
-      approverAdmin,
-      approverSupervisor,
+      assigner,
       targetDepartment,
       targetSubDepartment,
+      creator,
     ] = await Promise.all([
-      row.assigneeId ? this.fetchEmployee(row.assigneeId) : undefined,
-      row.assignerSupervisorId
-        ? this.supervisorRepository.findById(row.assignerSupervisorId)
-        : undefined,
-      row.assignerAdminId
-        ? this.adminRepository.findById(row.assignerAdminId)
-        : undefined,
-      undefined, // approverAdmin - not in schema
-      undefined, // approverSupervisor - not in schema
-      row.targetDepartmentId
-        ? this.fetchDepartment(row.targetDepartmentId)
-        : undefined,
-      row.targetSubDepartmentId
-        ? this.fetchDepartment(row.targetSubDepartmentId)
+      // Assignee
+      row.employee
+        ? Employee.create({
+          id: row.employee.id,
+          userId: row.employee.userId,
+          permissions: row.employee.permissions.map((p: any) =>
+            drizzleToDomainPermission(p),
+          ),
+          supervisorId: row.employee.supervisorId,
+          user: row.employee.user
+            ? await User.create(
+              {
+                ...row.employee.user,
+                role: row.employee.user.role.toUpperCase(),
+              },
+              false,
+            )
+            : undefined,
+        })
+        : row.assigneeId
+          ? this.fetchEmployee(row.assigneeId)
+          : undefined,
+
+      // Assigner
+      row.admin
+        ? Promise.resolve(
+          Admin.create({
+            id: row.admin.id,
+            userId: row.admin.userId,
+            user: row.admin.user
+              ? await User.create(
+                {
+                  ...row.admin.user,
+                  role: row.admin.user.role.toUpperCase(),
+                },
+                false,
+              )
+              : undefined,
+          }),
+        )
+        : row.supervisor
+          ? Promise.resolve(
+            Supervisor.create({
+              id: row.supervisor.id,
+              userId: row.supervisor.userId,
+              permissions: row.supervisor.permissions.map((p: any) =>
+                p.toUpperCase(),
+              ),
+              user: row.supervisor.user
+                ? await User.create(
+                  {
+                    ...row.supervisor.user,
+                    role: row.supervisor.user.role.toUpperCase(),
+                  },
+                  false,
+                )
+                : undefined,
+            }),
+          )
+          : Promise.all([
+            row.assignerSupervisorId
+              ? this.supervisorRepository.findById(row.assignerSupervisorId)
+              : undefined,
+            row.assignerAdminId
+              ? this.adminRepository.findById(row.assignerAdminId)
+              : undefined,
+          ]).then(([s, a]) => s ?? a),
+
+      // Target Department
+      row.department_targetDepartmentId
+        ? Promise.resolve(
+          Department.create({
+            ...row.department_targetDepartmentId,
+            visibility: drizzleToDomainVisibility(
+              row.department_targetDepartmentId.visibility,
+            ),
+          }),
+        )
+        : row.targetDepartmentId
+          ? this.fetchDepartment(row.targetDepartmentId)
+          : undefined,
+
+      // Target Sub-Department
+      row.department_targetSubDepartmentId
+        ? Promise.resolve(
+          Department.create({
+            ...row.department_targetSubDepartmentId,
+            visibility: drizzleToDomainVisibility(
+              row.department_targetSubDepartmentId.visibility,
+            ),
+          }),
+        )
+        : row.targetSubDepartmentId
+          ? this.fetchDepartment(row.targetSubDepartmentId)
+          : undefined,
+
+      // Creator
+      row.user
+        ? User.create(
+          {
+            ...row.user,
+            role: row.user.role.toUpperCase(),
+          },
+          false,
+        )
         : undefined,
     ]);
-
-    const assigner = assignerSupervisor ?? assignerAdmin;
-    const approver = approverAdmin ?? approverSupervisor;
 
     if (!row.creatorId) {
       throw new Error('Task must have a creatorId');
@@ -281,9 +370,9 @@ export class DrizzleTaskRepository extends TaskRepository {
       title: row.title,
       description: row.description,
       assignee: assignee,
-      assigner: assigner,
-      approver: approver,
+      assigner: assigner as Admin | Supervisor,
       creatorId: row.creatorId,
+      creator: creator,
       status: drizzleToDomainStatus(row.status),
       assignmentType: drizzleToDomainAssignmentType(row.assignmentType),
       priority: drizzleToDomainPriority(row.priority),
@@ -407,13 +496,36 @@ export class DrizzleTaskRepository extends TaskRepository {
   }
 
   async findById(id: string): Promise<Task | null> {
-    const result = await this.db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, id))
-      .limit(1);
+    const result = await this.db.query.tasks.findFirst({
+      where: eq(tasks.id, id),
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
 
-    return result.length > 0 ? this.toDomain(result[0]) : null;
+    return result ? this.toDomain(result) : null;
+  }
+
+  async findByIds(ids: string[]): Promise<Task[]> {
+    if (ids.length === 0) return [];
+    const results = await this.db.query.tasks.findMany({
+      where: inArray(tasks.id, ids),
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
+
+    return Promise.all(results.map((r) => this.toDomain(r)));
   }
 
   async findAll(
@@ -450,14 +562,20 @@ export class DrizzleTaskRepository extends TaskRepository {
     const whereClause =
       whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-    const query = this.db.select().from(tasks).orderBy(desc(tasks.createdAt));
-
-    const results = whereClause
-      ? await query
-        .where(whereClause)
-        .limit(limit ?? 1000)
-        .offset(offset ?? 0)
-      : await query.limit(limit ?? 1000).offset(offset ?? 0);
+    const results = await this.db.query.tasks.findMany({
+      where: whereClause,
+      orderBy: [desc(tasks.createdAt)],
+      limit: limit ?? 1000,
+      offset: offset ?? 0,
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
 
     return Promise.all(results.map((r) => this.toDomain(r)));
   }
@@ -553,11 +671,18 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     this.applyFilters(whereConditions, filters);
 
-    const results = await this.db
-      .select()
-      .from(tasks)
-      .where(and(...whereConditions))
-      .orderBy(desc(tasks.createdAt));
+    const results = await this.db.query.tasks.findMany({
+      where: and(...whereConditions),
+      orderBy: [desc(tasks.createdAt)],
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
 
     return Promise.all(results.map((r) => this.toDomain(r)));
   }
@@ -576,11 +701,18 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     this.applyFilters(whereConditions, filters);
 
-    const results = await this.db
-      .select()
-      .from(tasks)
-      .where(and(...whereConditions))
-      .orderBy(desc(tasks.createdAt));
+    const results = await this.db.query.tasks.findMany({
+      where: and(...whereConditions),
+      orderBy: [desc(tasks.createdAt)],
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
 
     return Promise.all(results.map((r) => this.toDomain(r)));
   }
@@ -598,11 +730,18 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     this.applyFilters(whereConditions, filters);
 
-    const results = await this.db
-      .select()
-      .from(tasks)
-      .where(and(...whereConditions))
-      .orderBy(desc(tasks.createdAt));
+    const results = await this.db.query.tasks.findMany({
+      where: and(...whereConditions),
+      orderBy: [desc(tasks.createdAt)],
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
 
     return Promise.all(results.map((r) => this.toDomain(r)));
   }
@@ -661,17 +800,20 @@ export class DrizzleTaskRepository extends TaskRepository {
       );
     }
 
-    const whereClause =
-      whereConditions.length > 0 ? and(...whereConditions) : undefined;
-
-    const query = this.db
-      .select()
-      .from(tasks)
-      .orderBy(desc(tasks.createdAt))
-      .limit(limit ?? 1000)
-      .offset(offset ?? 0);
-
-    const results = whereClause ? await query.where(whereClause) : await query;
+    const results = await this.db.query.tasks.findMany({
+      where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
+      orderBy: [desc(tasks.createdAt)],
+      limit: limit ?? 1000,
+      offset: offset ?? 0,
+      with: {
+        employee: { with: { user: true } },
+        admin: { with: { user: true } },
+        supervisor: { with: { user: true } },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
+        user: true,
+      },
+    });
 
     return Promise.all(results.map((r) => this.toDomain(r)));
   }
@@ -700,13 +842,20 @@ export class DrizzleTaskRepository extends TaskRepository {
     const whereClause = and(...whereConditions);
 
     const [results, totalResult] = await Promise.all([
-      this.db
-        .select()
-        .from(tasks)
-        .where(whereClause)
-        .orderBy(desc(tasks.createdAt))
-        .limit(limit ?? 1000)
-        .offset(offset ?? 0),
+      this.db.query.tasks.findMany({
+        where: whereClause,
+        orderBy: [desc(tasks.createdAt)],
+        limit: limit ?? 1000,
+        offset: offset ?? 0,
+        with: {
+          employee: { with: { user: true } },
+          admin: { with: { user: true } },
+          supervisor: { with: { user: true } },
+          department_targetDepartmentId: true,
+          department_targetSubDepartmentId: true,
+          user: true,
+        },
+      }),
       this.db.select({ count: count() }).from(tasks).where(whereClause),
     ]);
 
@@ -754,13 +903,20 @@ export class DrizzleTaskRepository extends TaskRepository {
     const whereClause = and(...whereConditions);
 
     const [results, totalResult] = await Promise.all([
-      this.db
-        .select()
-        .from(tasks)
-        .where(whereClause)
-        .orderBy(desc(tasks.createdAt))
-        .limit(limit ?? 1000)
-        .offset(offset ?? 0),
+      this.db.query.tasks.findMany({
+        where: whereClause,
+        orderBy: [desc(tasks.createdAt)],
+        limit: limit ?? 1000,
+        offset: offset ?? 0,
+        with: {
+          employee: { with: { user: true } },
+          admin: { with: { user: true } },
+          supervisor: { with: { user: true } },
+          department_targetDepartmentId: true,
+          department_targetSubDepartmentId: true,
+          user: true,
+        },
+      }),
       this.db.select({ count: count() }).from(tasks).where(whereClause),
     ]);
 

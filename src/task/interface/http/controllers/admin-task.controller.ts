@@ -80,10 +80,11 @@ export class AdminTaskController {
 
     return {
       success: true,
-      data: result.tasks,
+      data: result.tasks.map((t) => t.toJSON()),
       metrics: result.metrics,
       attachments: result.attachments,
       fileHubAttachments: result.fileHubAttachments,
+      submissions: result.submissions.map((s) => s.toJSON()),
     };
   }
 }

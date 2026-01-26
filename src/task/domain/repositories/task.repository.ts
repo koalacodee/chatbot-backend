@@ -52,6 +52,7 @@ export interface MyTasksResult {
 export abstract class TaskRepository {
   abstract save(task: Task): Promise<Task>;
   abstract findById(id: string): Promise<Task | null>;
+  abstract findByIds(ids: string[]): Promise<Task[]>;
   abstract findAll(
     offset?: number,
     limit?: number,
