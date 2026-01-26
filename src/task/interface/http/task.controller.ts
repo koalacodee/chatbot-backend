@@ -55,6 +55,8 @@ import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supe
 import { TaskIdDto } from './dto/task-id.dto';
 import { ExportFileService } from 'src/export/domain/services/export-file.service';
 import { TaskSubmission } from 'src/task/domain/entities/task-submission.entity';
+import { TasksQueryDto } from './dto/tasks-query.dto';
+import { CursorMeta } from 'src/common/drizzle/helpers/cursor';
 @Controller('tasks')
 export class TaskController {
   constructor(
@@ -76,7 +78,7 @@ export class TaskController {
     private readonly createTaskFromPresetUseCase: CreateTaskFromPresetUseCase,
     private readonly exportTasksUseCase: ExportTasksUseCase,
     private readonly exportFileService: ExportFileService,
-  ) {}
+  ) { }
 
   @Post()
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
@@ -138,12 +140,12 @@ export class TaskController {
   @Get()
   async getAll(
     @Req() req: any,
-    @Query('offset') offset?: string,
-    @Query('limit') limit?: string,
-  ): Promise<{ tasks: Task[]; attachments: { [taskId: string]: string[] } }> {
+    @Query() query: TasksQueryDto,
+  ): Promise<{ data: Task[]; meta: CursorMeta; attachments: { [taskId: string]: string[] } }> {
     const list = await this.getAllUseCase.execute(
-      offset ? parseInt(offset, 10) : undefined,
-      limit ? parseInt(limit, 10) : undefined,
+      query.cursor,
+      query.cursorDir,
+      query.limit,
       req.user.id,
     );
     return list;
@@ -175,13 +177,15 @@ export class TaskController {
     @Query() query: GetTeamTasksDto,
     @Req() req: any,
   ): Promise<{
-    tasks: any[];
+    data: (ReturnType<Task['toJSON']>)[];
+    meta: CursorMeta;
     attachments: { [taskId: string]: string[] };
     submissions: any[];
   }> {
     const result = await this.getTeamTasksUseCase.execute(query, req.user.id);
     return {
-      tasks: result.tasks.map((t) => t.toJSON()),
+      data: result.data.map((t) => t.toJSON()),
+      meta: result.meta,
       attachments: result.attachments,
       submissions: result.submissions.map((s) => s.toJSON()),
     };
@@ -274,7 +278,8 @@ export class TaskController {
   async getMyTasks(@Req() req: any, @Query() query: GetMyTasksDto) {
     return this.getMyTasksUseCase.execute({
       userId: req.user.id,
-      offset: query.offset,
+      cursor: query.cursor,
+      cursorDir: query.cursorDir,
       limit: query.limit,
       status: query.status,
     });

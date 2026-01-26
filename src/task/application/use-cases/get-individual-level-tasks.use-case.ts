@@ -17,7 +17,8 @@ import {
 interface GetIndividualLevelTasksInput {
   assigneeId?: string;
   departmentId?: string;
-  offset?: number;
+  cursor?: string;
+  cursorDir?: 'next' | 'prev';
   limit?: number;
   status?: TaskStatus[];
   priority?: TaskPriority[];
@@ -25,7 +26,8 @@ interface GetIndividualLevelTasksInput {
 }
 
 interface IndividualLevelTasksResult {
-  tasks: Task[];
+  data: Task[];
+  meta: any;
   submissions: TaskSubmission[];
   attachments: { [taskId: string]: string[] };
   fileHubAttachments: FilehubAttachmentMessage[];
@@ -44,12 +46,12 @@ export class GetIndividualLevelTasksUseCase {
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
     private readonly departmentRepository: DepartmentRepository,
     private readonly getTargetAttachmentsWithSignedUrlsUseCase: GetTargetAttachmentsWithSignedUrlsUseCase,
-  ) {}
+  ) { }
 
   async execute(
     input: GetIndividualLevelTasksInput,
   ): Promise<IndividualLevelTasksResult> {
-    const { assigneeId, departmentId, status, priority, search } = input;
+    const { assigneeId, departmentId, status, priority, search, cursor, cursorDir, limit } = input;
 
     const normalizedSearch = search?.trim() || undefined;
 
@@ -67,9 +69,10 @@ export class GetIndividualLevelTasksUseCase {
       status: status?.length ? status : undefined,
       priority: priority?.length ? priority : undefined,
       search: normalizedSearch,
+      cursor: cursor ? { cursor, direction: cursorDir ?? 'next', pageSize: limit } : undefined,
     };
 
-    const tasks = await this.taskRepo.findSubIndividualsLevelTasks(filters);
+    const { data: tasks, meta } = await this.taskRepo.findSubIndividualsLevelTasks(filters);
 
     const taskIds = tasks.map((task) => task.id.toString());
 
@@ -87,7 +90,7 @@ export class GetIndividualLevelTasksUseCase {
     // Get metrics for individual-level tasks
     const metrics = await this.taskRepo.getTaskMetricsForIndividual(filters);
 
-    return { tasks, submissions, attachments, fileHubAttachments, metrics };
+    return { data: tasks, meta, submissions, attachments, fileHubAttachments, metrics };
   }
 
   private async getDepartmentWithChildren(

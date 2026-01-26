@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUUID, IsArray, IsInt, Min } from 'class-validator';
+import { IsOptional, IsString, IsUUID, IsArray, IsInt, Min, IsEnum } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class GetTeamTasksDto {
@@ -24,10 +24,12 @@ export class GetTeamTasksDto {
   status?: string[];
 
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Transform(({ value }) => parseInt(value, 10))
-  offset?: number;
+  @IsString()
+  cursor?: string;
+
+  @IsOptional()
+  @IsEnum(['next', 'prev'])
+  cursorDir?: 'next' | 'prev';
 
   @IsOptional()
   @IsInt()

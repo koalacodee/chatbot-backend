@@ -14,20 +14,21 @@ import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 interface GetMyTasksInputDto {
   userId: string;
-  offset?: number;
+  cursor?: string;
+  cursorDir?: 'next' | 'prev';
   limit?: number;
   status?: TaskStatus;
 }
 
 export interface MyTasksResult {
-  tasks: Array<
+  data: Array<
     ReturnType<Task['toJSON']> & {
       rejectionReason?: string;
       approvalFeedback?: string;
     }
   >;
+  meta: any;
   delegations?: TaskDelegation[];
-  total: number;
   fileHubAttachments: FilehubAttachmentMessage[];
   metrics: {
     pendingTasks: number;
@@ -75,53 +76,49 @@ export class GetMyTasksUseCase {
   private async getSupervisorTasks(
     dto: GetMyTasksInputDto,
   ): Promise<MyTasksResult> {
-    const result = await this.taskRepo.getTasksForSupervisor({
+    const { data: tasks, meta, fileHubAttachments: rawAttachments, metrics } = await this.taskRepo.getTasksForSupervisor({
       supervisorUserId: dto.userId,
       status: dto.status ? [dto.status] : undefined,
-      offset: dto.offset,
-      limit: dto.limit,
+      cursor: dto.cursor ? { cursor: dto.cursor, direction: dto.cursorDir ?? 'next', pageSize: dto.limit } : undefined,
     });
 
     const signedUrls = await this.fileHubService.getSignedUrlBatch(
-      result.fileHubAttachments.map((a) => a.filename),
+      rawAttachments.map((a) => a.filename),
     );
 
-    const fileHubAttachments = result.fileHubAttachments.map((a) => ({
+    const fileHubAttachments = rawAttachments.map((a) => ({
       ...a.toJSON(),
       signedUrl: signedUrls.find(
         (signedUrl) => signedUrl.filename === a.filename,
       )?.signedUrl,
     }));
 
-    console.log(result.tasks.map((t) => t.task.toJSON()));
-
     return {
-      tasks: result.tasks.map((t) => ({
+      data: tasks.map((t) => ({
         ...t.task.toJSON(),
         rejectionReason: t.rejectionReason,
         approvalFeedback: t.approvalFeedback,
       })),
-      total: result.total,
+      meta,
       fileHubAttachments,
-      metrics: result.metrics,
+      metrics: metrics,
     };
   }
 
   private async getEmployeeTasks(
     dto: GetMyTasksInputDto,
   ): Promise<MyTasksResult> {
-    const result = await this.taskRepo.getTasksAndDelegationsForEmployee({
+    const { data: tasks, meta, delegations, fileHubAttachments: rawAttachments, metrics } = await this.taskRepo.getTasksAndDelegationsForEmployee({
       employeeUserId: dto.userId,
       status: dto.status ? [dto.status] : undefined,
-      offset: dto.offset,
-      limit: dto.limit,
+      cursor: dto.cursor ? { cursor: dto.cursor, direction: dto.cursorDir ?? 'next', pageSize: dto.limit } : undefined,
     });
 
     const signedUrls = await this.fileHubService.getSignedUrlBatch(
-      result.fileHubAttachments.map((a) => a.filename),
+      rawAttachments.map((a) => a.filename),
     );
 
-    const fileHubAttachments = result.fileHubAttachments.map((a) => ({
+    const fileHubAttachments = rawAttachments.map((a) => ({
       ...a.toJSON(),
       signedUrl: signedUrls.find(
         (signedUrl) => signedUrl.filename === a.filename,
@@ -129,20 +126,20 @@ export class GetMyTasksUseCase {
     }));
 
     return {
-      tasks: result.tasks.map((t) => ({
+      data: tasks.map((t) => ({
         ...t.task.toJSON(),
         rejectionReason: t.rejectionReason,
         approvalFeedback: t.approvalFeedback,
       })),
-      delegations: result.delegations,
-      total: result.total,
+      meta,
+      delegations: delegations,
       fileHubAttachments,
       metrics: {
         pendingTasks:
-          result.metrics.pendingTasks + result.metrics.pendingDelegations,
+          metrics.pendingTasks + metrics.pendingDelegations,
         completedTasks:
-          result.metrics.completedTasks + result.metrics.completedDelegations,
-        taskCompletionPercentage: Math.floor(result.metrics.totalPercentage),
+          metrics.completedTasks + metrics.completedDelegations,
+        taskCompletionPercentage: Math.floor(metrics.totalPercentage),
       },
     };
   }

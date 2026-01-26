@@ -8,6 +8,7 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { GetAttachmentIdsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachment-ids-by-target-ids.use-case';
+import { CursorMeta } from 'src/common/drizzle/helpers/cursor';
 
 @Injectable()
 export class GetAllTasksUseCase {
@@ -18,14 +19,16 @@ export class GetAllTasksUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
-  ) {}
+  ) { }
 
   async execute(
-    offset?: number,
+    cursor?: string,
+    cursorDir?: 'next' | 'prev',
     limit?: number,
     userId?: string,
   ): Promise<{
-    tasks: Task[];
+    data: Task[];
+    meta: CursorMeta;
     submissions: TaskSubmission[];
     attachments: { [taskId: string]: string[] };
   }> {
@@ -38,7 +41,10 @@ export class GetAllTasksUseCase {
       departmentIds = await this.getUserDepartmentIds(userId, userRole);
     }
 
-    const tasks = await this.taskRepo.findAll(offset, limit, departmentIds);
+    const { data: tasks, meta } = await this.taskRepo.findAll({
+      cursor: cursor ? { cursor: cursor, direction: cursorDir, pageSize: limit } : undefined,
+      departmentIds,
+    });
 
     const [attachments, submissions] = await Promise.all([
       this.getAttachmentsUseCase.execute({
@@ -49,7 +55,7 @@ export class GetAllTasksUseCase {
       ),
     ]);
 
-    return { tasks, submissions, attachments };
+    return { data: tasks, meta, submissions, attachments };
   }
 
   private async getUserDepartmentIds(

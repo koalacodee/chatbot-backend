@@ -9,10 +9,12 @@ export class GetMyTasksDto {
   status?: TaskStatus;
 
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Transform(({ value }) => parseInt(value, 10))
-  offset?: number;
+  @IsString()
+  cursor?: string;
+
+  @IsOptional()
+  @IsEnum(['next', 'prev'])
+  cursorDir?: 'next' | 'prev';
 
   @IsOptional()
   @IsInt()

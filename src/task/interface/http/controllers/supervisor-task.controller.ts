@@ -14,10 +14,12 @@ import {
 } from '@nestjs/swagger';
 import { GetSubDepartmentTasksUseCase } from '../../../application/use-cases/get-sub-department-tasks.use-case';
 import { GetIndividualLevelTasksUseCase } from '../../../application/use-cases/get-individual-level-tasks.use-case';
+import { GetTeamTasksForSupervisorUseCase } from '../../../application/use-cases/get-team-tasks-for-supervisor.use-case';
 import { GetTasksByRoleDto } from '../dto/get-tasks-by-role.dto';
 import { TaskPriority, TaskStatus } from '../../../domain/entities/task.entity';
 import { SupervisorPermissions } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
+import { Req } from '@nestjs/common';
 
 @ApiTags('Supervisor Tasks')
 @ApiBearerAuth()
@@ -26,7 +28,44 @@ export class SupervisorTaskController {
   constructor(
     private readonly getSubDepartmentTasksUseCase: GetSubDepartmentTasksUseCase,
     private readonly getIndividualLevelTasksUseCase: GetIndividualLevelTasksUseCase,
-  ) {}
+    private readonly getTeamTasksForSupervisorUseCase: GetTeamTasksForSupervisorUseCase,
+  ) { }
+
+  @Get('team-tasks')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get all team tasks for supervisor (combined)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Team tasks retrieved successfully',
+  })
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
+  async getTeamTasks(
+    @Query() query: GetTasksByRoleDto,
+    @Req() req: any,
+  ) {
+    const result = await this.getTeamTasksForSupervisorUseCase.execute(
+      {
+        status: this.normalizeStatusQuery(query.status),
+        priority: this.normalizePriorityQuery(query.priority),
+        cursor: query.cursor,
+        cursorDir: query.cursorDir,
+        limit: query.limit,
+      },
+      req.user.id,
+    );
+
+    return {
+      success: true,
+      data: result.data.map((item) => ({
+        ...item.task.toJSON(),
+        rejectionReason: item.rejectionReason,
+        approvalFeedback: item.approvalFeedback,
+      })),
+      meta: result.meta,
+      metrics: result.metrics,
+      fileHubAttachments: result.fileHubAttachments.map((a) => a.toJSON()),
+    };
+  }
 
   @Get('sub-department')
   @HttpCode(HttpStatus.OK)
@@ -46,11 +85,15 @@ export class SupervisorTaskController {
       status: this.normalizeStatusQuery(query.status),
       priority: this.normalizePriorityQuery(query.priority),
       search: query.search,
+      cursor: query.cursor,
+      cursorDir: query.cursorDir,
+      limit: query.limit,
     });
 
     return {
       success: true,
-      data: result.tasks.map((t) => t.toJSON()),
+      data: result.data.map((t) => t.toJSON()),
+      meta: result.meta,
       metrics: result.metrics,
       attachments: result.attachments,
       fileHubAttachments: result.fileHubAttachments,
@@ -79,11 +122,15 @@ export class SupervisorTaskController {
       status: this.normalizeStatusQuery(query.status),
       priority: this.normalizePriorityQuery(query.priority),
       search: query.search,
+      cursor: query.cursor,
+      cursorDir: query.cursorDir,
+      limit: query.limit,
     });
 
     return {
       success: true,
-      data: result.tasks.map((t) => t.toJSON()),
+      data: result.data.map((t) => t.toJSON()),
+      meta: result.meta,
       metrics: result.metrics,
       attachments: result.attachments,
       fileHubAttachments: result.fileHubAttachments,

@@ -23,7 +23,7 @@ export class GetTasksWithFiltersUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
-  ) {}
+  ) { }
 
   async execute(
     dto: GetTasksWithFiltersInputDto,
@@ -42,11 +42,14 @@ export class GetTasksWithFiltersUseCase {
     // Choose the most selective repository method available, then filter in-memory for the rest.
     let base: Task[];
     if (assigneeId && !departmentId) {
-      base = await this.taskRepo.findByAssignee(assigneeId);
+      const result = await this.taskRepo.findByAssignee(assigneeId);
+      base = result.data;
     } else if (departmentId && !assigneeId) {
-      base = await this.taskRepo.findByDepartment(departmentId);
+      const result = await this.taskRepo.findByDepartment(departmentId);
+      base = result.data;
     } else {
-      base = await this.taskRepo.findAll(undefined, undefined, departmentIds);
+      const result = await this.taskRepo.findAll({ departmentIds });
+      base = result.data;
     }
 
     let filtered = base;

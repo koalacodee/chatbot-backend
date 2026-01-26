@@ -23,7 +23,7 @@ import { TaskPriority, TaskStatus } from '../../../domain/entities/task.entity';
 export class AdminTaskController {
   constructor(
     private readonly getDepartmentLevelTasksUseCase: GetDepartmentLevelTasksUseCase,
-  ) {}
+  ) { }
 
   @Get('department-level')
   @HttpCode(HttpStatus.OK)
@@ -76,11 +76,15 @@ export class AdminTaskController {
       status: normalizeStatus(query.status),
       priority: normalizePriority(query.priority),
       search: query.search,
+      cursor: query.cursor,
+      cursorDir: query.cursorDir,
+      limit: query.limit,
     });
 
     return {
       success: true,
-      data: result.tasks.map((t) => t.toJSON()),
+      data: result.data.map((t) => t.toJSON()),
+      meta: result.meta,
       metrics: result.metrics,
       attachments: result.attachments,
       fileHubAttachments: result.fileHubAttachments,

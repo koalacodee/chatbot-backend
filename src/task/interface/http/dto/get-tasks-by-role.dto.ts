@@ -23,18 +23,23 @@ export class GetTasksByRoleDto {
   assignmentType?: TaskAssignmentType;
 
   @IsOptional()
-  offset?: number = 0;
+  @IsString()
+  cursor?: string;
 
   @IsOptional()
-  limit?: number = 50;
+  @IsEnum(['next', 'prev'])
+  cursorDir?: 'next' | 'prev';
 
   @IsOptional()
-  @IsEnum(TaskStatus, { each: true })
-  status?: TaskStatus | TaskStatus[];
+  limit?: number = 10;
 
   @IsOptional()
-  @IsEnum(TaskPriority, { each: true })
-  priority?: TaskPriority | TaskPriority[];
+  @IsEnum(TaskStatus)
+  status?: TaskStatus;
+
+  @IsOptional()
+  @IsEnum(TaskPriority)
+  priority?: TaskPriority;
 
   @IsOptional()
   @IsString()

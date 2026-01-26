@@ -12,7 +12,7 @@ export class CountTasksUseCase {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
-  ) {}
+  ) { }
 
   async execute(userId?: string): Promise<number> {
     // For count operations, we need to get all tasks and count them
@@ -21,12 +21,12 @@ export class CountTasksUseCase {
       const user = await this.userRepository.findById(userId);
       const userRole = user.role.getRole();
       const departmentIds = await this.getUserDepartmentIds(userId, userRole);
-      
+
       // Get filtered tasks and count them
-      const tasks = await this.taskRepo.findAll(undefined, undefined, departmentIds);
-      return tasks.length;
+      const result = await this.taskRepo.findAll({ departmentIds });
+      return result.data.length;
     }
-    
+
     return this.taskRepo.count();
   }
 
@@ -39,8 +39,8 @@ export class CountTasksUseCase {
     } else if (role === Roles.EMPLOYEE) {
       const employee = await this.employeeRepository.findByUserId(userId);
       return employee?.subDepartments.map((dep) => dep.id.toString()) ??
-             employee?.supervisor?.departments.map((d) => d.id.toString()) ??
-             [];
+        employee?.supervisor?.departments.map((d) => d.id.toString()) ??
+        [];
     }
     return [];
   }

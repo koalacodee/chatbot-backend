@@ -42,15 +42,15 @@ export class ExportTasksUseCase {
     const endDate = typeof end === 'string' ? new Date(end) : end ?? undefined;
     const self = this;
     async function* batchGenerator() {
-      let offset = 0;
+      let cursor: string | undefined = undefined;
       for (; ;) {
-        const tasks = await self.taskRepo.findAll(
-          offset,
-          batchSize,
+        const result = await self.taskRepo.findAll({
+          cursor: cursor ? { cursor, direction: 'next', pageSize: batchSize } : { cursor: '', direction: 'next', pageSize: batchSize },
           departmentIds,
-          startDate,
-          endDate,
-        );
+          start: startDate,
+          end: endDate,
+        });
+        const tasks = result.data;
         if (!tasks.length) break;
 
         const taskIds = tasks.map((t) => t.id.toString());
@@ -84,7 +84,8 @@ export class ExportTasksUseCase {
         });
 
         yield rows;
-        offset += tasks.length;
+        if (!result.meta.hasNextPage || !result.meta.nextCursor) break;
+        cursor = result.meta.nextCursor;
       }
     }
 

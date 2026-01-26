@@ -16,7 +16,8 @@ export interface GetTeamTasksInput {
   includeSubDepartmentTasks?: boolean;
   includeDepartmentTasks?: boolean;
   status?: string[];
-  offset?: number;
+  cursor?: string;
+  cursorDir?: 'next' | 'prev';
   limit?: number;
 }
 
@@ -29,21 +30,21 @@ export class GetTeamTasksUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly userRepository: UserRepository,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
-  ) {}
+  ) { }
 
   async execute(
     input: GetTeamTasksInput,
     userId?: string,
   ): Promise<{
-    tasks: Task[];
+    data: Task[];
+    meta: any;
     submissions: TaskSubmission[];
     attachments: { [taskId: string]: string[] };
   }> {
-    const { employeeId, subDepartmentId, departmentId, status, offset, limit } =
+    const { employeeId, subDepartmentId, departmentId, status, cursor, cursorDir, limit } =
       input;
 
     // Apply department filtering if userId is provided
-    let filteredInput = { ...input };
     if (userId) {
       const user = await this.userRepository.findById(userId);
       const userRole = user.role.getRole();
@@ -55,22 +56,21 @@ export class GetTeamTasksUseCase {
       // Filter department and subDepartment IDs based on user access
       if (userDepartmentIds.length > 0) {
         if (departmentId && !userDepartmentIds.includes(departmentId)) {
-          return { tasks: [], submissions: [], attachments: {} }; // User doesn't have access to this department
+          return { data: [], meta: {}, submissions: [], attachments: {} }; // User doesn't have access to this department
         }
         if (subDepartmentId && !userDepartmentIds.includes(subDepartmentId)) {
-          return { tasks: [], submissions: [], attachments: {} }; // User doesn't have access to this sub-department
+          return { data: [], meta: {}, submissions: [], attachments: {} }; // User doesn't have access to this sub-department
         }
       }
     }
 
     // Use the new repository method for efficient database-level filtering
-    const tasks = await this.taskRepository.findTeamTasks({
+    const { data: tasks, meta } = await this.taskRepository.findTeamTasks({
       employeeId,
       subDepartmentId,
       departmentId,
       status,
-      offset,
-      limit,
+      cursor: cursor ? { cursor, direction: cursorDir ?? 'next', pageSize: limit } : undefined,
     });
 
     // Get attachments and submissions for all tasks
@@ -83,7 +83,7 @@ export class GetTeamTasksUseCase {
       ),
     ]);
 
-    return { tasks, submissions, attachments };
+    return { data: tasks, meta, submissions, attachments };
   }
 
   private async getUserDepartmentIds(

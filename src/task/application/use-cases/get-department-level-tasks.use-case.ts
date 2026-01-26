@@ -15,7 +15,8 @@ import {
 
 interface GetDepartmentLevelTasksInput {
   departmentId?: string;
-  offset?: number;
+  cursor?: string;
+  cursorDir?: 'next' | 'prev';
   limit?: number;
   status?: TaskStatus[];
   priority?: TaskPriority[];
@@ -23,7 +24,8 @@ interface GetDepartmentLevelTasksInput {
 }
 
 interface DepartmentLevelTasksResult {
-  tasks: Task[];
+  data: Task[];
+  meta: any;
   submissions: TaskSubmission[];
   attachments: { [taskId: string]: string[] };
   fileHubAttachments: FilehubAttachmentMessage[];
@@ -41,22 +43,23 @@ export class GetDepartmentLevelTasksUseCase {
     private readonly taskSubmissionRepo: TaskSubmissionRepository,
     private readonly getAttachmentsUseCase: GetAttachmentIdsByTargetIdsUseCase,
     private readonly getTargetAttachmentsWithSignedUrlsUseCase: GetTargetAttachmentsWithSignedUrlsUseCase,
-  ) {}
+  ) { }
 
   async execute(
     input: GetDepartmentLevelTasksInput,
   ): Promise<DepartmentLevelTasksResult> {
-    const { departmentId, status, priority, search } = input;
+    const { departmentId, status, priority, search, cursor, cursorDir, limit } = input;
     const normalizedSearch = search?.trim() || undefined;
 
     const filters = {
       status: status?.length ? status : undefined,
       priority: priority?.length ? priority : undefined,
       search: normalizedSearch,
+      cursor: cursor ? { cursor, direction: cursorDir ?? 'next', pageSize: limit } : undefined,
     };
 
     // Use repository's optimized query for department-level tasks
-    const tasks = await this.taskRepo.findDepartmentLevelTasks(
+    const { data: tasks, meta } = await this.taskRepo.findDepartmentLevelTasks(
       departmentId,
       filters,
     );
@@ -80,6 +83,6 @@ export class GetDepartmentLevelTasksUseCase {
       filters,
     );
 
-    return { tasks, submissions, attachments, fileHubAttachments, metrics };
+    return { data: tasks, meta, submissions, attachments, fileHubAttachments, metrics };
   }
 }
