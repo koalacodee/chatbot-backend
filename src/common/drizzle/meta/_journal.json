@@ -15,6 +15,13 @@
       "when": 1768482733433,
       "tag": "0002_chunky_vengeance",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769459021953,
+      "tag": "0003_right_bastion",
+      "breakpoints": true
     }
   ]
 }

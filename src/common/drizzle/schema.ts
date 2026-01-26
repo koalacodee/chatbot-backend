@@ -1529,6 +1529,7 @@ export const tasks = pgTable(
     creatorId: uuid('creator_id'),
   },
   (table) => [
+    index("idx_tasks_cursor").on(table.createdAt.desc(), table.id.desc()),
     index('tasks_assignee_id_idx').using(
       'btree',
       table.assigneeId.asc().nullsLast().op('uuid_ops'),
