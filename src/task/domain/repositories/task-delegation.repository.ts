@@ -2,6 +2,7 @@ import { TaskDelegation } from "../entities/task-delegation.entity";
 
 export abstract class TaskDelegationRepository {
   abstract save(taskDelegation: TaskDelegation): Promise<TaskDelegation>;
+  abstract update(id: string, updates: Partial<TaskDelegation>): Promise<TaskDelegation>;
   abstract findById(id: string): Promise<TaskDelegation | null>;
   abstract findByIds(ids: string[]): Promise<TaskDelegation[]>;
   abstract findAll(): Promise<TaskDelegation[]>;

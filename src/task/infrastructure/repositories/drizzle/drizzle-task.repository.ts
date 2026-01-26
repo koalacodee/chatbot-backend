@@ -13,7 +13,8 @@ import {
   TaskPriority,
   TaskStatus,
 } from '../../../domain/entities/task.entity';
-import { Department } from 'src/department/domain/entities/department.entity';
+import { TaskSubmissionStatus } from '../../../domain/entities/task-submission.entity';
+import { Department, DepartmentVisibility } from 'src/department/domain/entities/department.entity';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import {
@@ -42,26 +43,11 @@ import {
   ilike,
   SQL,
 } from 'drizzle-orm';
-import {
-  TaskAssignmentTypeMapping,
-  TaskStatusMapping,
-} from './drizzle-task-delegation.repository';
-import { TaskPriorityMapping } from './drizzle-task-preset.repository';
-import { DepartmentVisibility } from '@prisma/client';
+// import { DepartmentVisibility } from '@prisma/client';
 import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 import { TaskDelegation } from 'src/task/domain/entities/task-delegation.entity';
 
-export enum EmployeePermissionsMapping {
-  handle_tickets = 'HANDLE_TICKETS',
-  handle_tasks = 'HANDLE_TASKS',
-  add_faqs = 'ADD_FAQS',
-  view_analytics = 'VIEW_ANALYTICS',
-  close_tickets = 'CLOSE_TICKETS',
-  manage_knowledge_chunks = 'MANAGE_KNOWLEDGE_CHUNKS',
-  manage_attachment_groups = 'MANAGE_ATTACHMENT_GROUPS',
-}
-
-function drizzleToDomainStatus(
+export function drizzleToDomainStatus(
   status: (typeof tasks.$inferSelect)['status'],
 ): TaskStatus {
   switch (status) {
@@ -75,6 +61,170 @@ function drizzleToDomainStatus(
       return TaskStatus.COMPLETED;
     default:
       throw new Error(`Invalid status: ${status}`);
+  }
+}
+
+export function domainToDrizzleStatus(
+  status: TaskStatus,
+): (typeof tasks.$inferSelect)['status'] {
+  switch (status) {
+    case TaskStatus.TODO:
+      return 'to_do';
+    case TaskStatus.SEEN:
+      return 'seen';
+    case TaskStatus.PENDING_REVIEW:
+      return 'pending_review';
+    case TaskStatus.COMPLETED:
+      return 'completed';
+    default:
+      throw new Error(`Invalid status: ${status}`);
+  }
+}
+
+export function drizzleToDomainPriority(
+  priority: (typeof tasks.$inferSelect)['priority'],
+): TaskPriority {
+  switch (priority) {
+    case 'low':
+      return TaskPriority.LOW;
+    case 'medium':
+      return TaskPriority.MEDIUM;
+    case 'high':
+      return TaskPriority.HIGH;
+    default:
+      throw new Error(`Invalid priority: ${priority}`);
+  }
+}
+
+export function domainToDrizzlePriority(
+  priority: TaskPriority,
+): (typeof tasks.$inferSelect)['priority'] {
+  switch (priority) {
+    case TaskPriority.LOW:
+      return 'low';
+    case TaskPriority.MEDIUM:
+      return 'medium';
+    case TaskPriority.HIGH:
+      return 'high';
+    default:
+      throw new Error(`Invalid priority: ${priority}`);
+  }
+}
+
+export function drizzleToDomainAssignmentType(
+  assignmentType: (typeof tasks.$inferSelect)['assignmentType'],
+): TaskAssignmentType {
+  switch (assignmentType) {
+    case 'individual':
+      return TaskAssignmentType.INDIVIDUAL;
+    case 'department':
+      return TaskAssignmentType.DEPARTMENT;
+    case 'sub_department':
+      return TaskAssignmentType.SUB_DEPARTMENT;
+    default:
+      throw new Error(`Invalid assignment type: ${assignmentType}`);
+  }
+}
+
+export function mapDomainAssignmentTypeToDrizzleAssignmentType(
+  assignmentType: TaskAssignmentType,
+): (typeof tasks.$inferSelect)['assignmentType'] {
+  switch (assignmentType) {
+    case TaskAssignmentType.INDIVIDUAL:
+      return 'individual';
+    case TaskAssignmentType.DEPARTMENT:
+      return 'department';
+    case TaskAssignmentType.SUB_DEPARTMENT:
+      return 'sub_department';
+    default:
+      throw new Error(`Invalid assignment type: ${assignmentType}`);
+  }
+}
+
+export function domainToDrizzleSubmissionStatus(
+  status: TaskSubmissionStatus,
+): (typeof taskSubmissions.$inferSelect)['status'] {
+  switch (status) {
+    case TaskSubmissionStatus.SUBMITTED:
+      return 'submitted';
+    case TaskSubmissionStatus.APPROVED:
+      return 'approved';
+    case TaskSubmissionStatus.REJECTED:
+      return 'rejected';
+    default:
+      throw new Error(`Invalid submission status: ${status}`);
+  }
+}
+
+export function drizzleToDomainSubmissionStatus(
+  status: (typeof taskSubmissions.$inferSelect)['status'],
+): TaskSubmissionStatus {
+  switch (status) {
+    case 'submitted':
+      return TaskSubmissionStatus.SUBMITTED;
+    case 'approved':
+      return TaskSubmissionStatus.APPROVED;
+    case 'rejected':
+      return TaskSubmissionStatus.REJECTED;
+    default:
+      throw new Error(`Invalid submission status: ${status}`);
+  }
+}
+
+export function domainToDrizzlePermission(
+  permission: EmployeePermissionsEnum,
+): (typeof employees.$inferSelect)['permissions'][number] {
+  switch (permission) {
+    case EmployeePermissionsEnum.HANDLE_TICKETS:
+      return 'handle_tickets';
+    case EmployeePermissionsEnum.HANDLE_TASKS:
+      return 'handle_tasks';
+    case EmployeePermissionsEnum.ADD_FAQS:
+      return 'add_faqs';
+    case EmployeePermissionsEnum.VIEW_ANALYTICS:
+      return 'view_analytics';
+    case EmployeePermissionsEnum.CLOSE_TICKETS:
+      return 'close_tickets';
+    case EmployeePermissionsEnum.MANAGE_KNOWLEDGE_CHUNKS:
+      return 'manage_knowledge_chunks';
+    case EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS:
+      return 'manage_attachment_groups';
+    default:
+      throw new Error(`Invalid permission: ${permission}`);
+  }
+}
+
+export function drizzleToDomainPermission(
+  permission: (typeof employees.$inferSelect)['permissions'][number],
+): EmployeePermissionsEnum {
+  switch (permission) {
+    case 'handle_tickets':
+      return EmployeePermissionsEnum.HANDLE_TICKETS;
+    case 'handle_tasks':
+      return EmployeePermissionsEnum.HANDLE_TASKS;
+    case 'add_faqs':
+      return EmployeePermissionsEnum.ADD_FAQS;
+    case 'view_analytics':
+      return EmployeePermissionsEnum.VIEW_ANALYTICS;
+    case 'close_tickets':
+      return EmployeePermissionsEnum.CLOSE_TICKETS;
+    case 'manage_knowledge_chunks':
+      return EmployeePermissionsEnum.MANAGE_KNOWLEDGE_CHUNKS;
+    case 'manage_attachment_groups':
+      return EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS;
+    default:
+      throw new Error(`Invalid permission: ${permission}`);
+  }
+}
+
+export function drizzleToDomainVisibility(
+  visibility: (typeof departments.$inferSelect)['visibility'],
+): DepartmentVisibility {
+  switch (visibility) {
+    case 'public':
+      return DepartmentVisibility.PUBLIC;
+    case 'private':
+      return DepartmentVisibility.PRIVATE;
   }
 }
 
@@ -134,9 +284,9 @@ export class DrizzleTaskRepository extends TaskRepository {
       assigner: assigner,
       approver: approver,
       creatorId: row.creatorId,
-      status: TaskStatus[row.status.toUpperCase()],
-      assignmentType: TaskAssignmentType[row.assignmentType.toUpperCase()],
-      priority: TaskPriority[row.priority.toUpperCase()],
+      status: drizzleToDomainStatus(row.status),
+      assignmentType: drizzleToDomainAssignmentType(row.assignmentType),
+      priority: drizzleToDomainPriority(row.priority),
       targetDepartment: targetDepartment,
       targetSubDepartment: targetSubDepartment,
       createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
@@ -161,13 +311,13 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     return result.length > 0
       ? Employee.create({
-          id: result[0].id,
-          userId: result[0].userId,
-          permissions: result[0].permissions.map(
-            (p) => EmployeePermissionsEnum[EmployeePermissionsMapping[p]],
-          ),
-          supervisorId: result[0].supervisorId,
-        })
+        id: result[0].id,
+        userId: result[0].userId,
+        permissions: result[0].permissions.map((p) =>
+          drizzleToDomainPermission(p),
+        ),
+        supervisorId: result[0].supervisorId,
+      })
       : undefined;
   }
 
@@ -182,9 +332,9 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     return result.length > 0
       ? Department.create({
-          ...result[0],
-          visibility: DepartmentVisibility[result[0].visibility.toUpperCase()],
-        })
+        ...result[0],
+        visibility: drizzleToDomainVisibility(result[0].visibility),
+      })
       : undefined;
   }
 
@@ -212,9 +362,11 @@ export class DrizzleTaskRepository extends TaskRepository {
           ? task.assigner.id.toString()
           : null,
       creatorId: task.creatorId,
-      status: TaskStatusMapping[task.status],
-      assignmentType: TaskAssignmentTypeMapping[task.assignmentType],
-      priority: TaskPriorityMapping[task.priority],
+      status: domainToDrizzleStatus(task.status),
+      assignmentType: mapDomainAssignmentTypeToDrizzleAssignmentType(
+        task.assignmentType,
+      ),
+      priority: domainToDrizzlePriority(task.priority),
       targetDepartmentId: task.targetDepartment?.id.toString() ?? null,
       targetSubDepartmentId: task.targetSubDepartment?.id.toString() ?? null,
       createdAt:
@@ -302,9 +454,9 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     const results = whereClause
       ? await query
-          .where(whereClause)
-          .limit(limit ?? 1000)
-          .offset(offset ?? 0)
+        .where(whereClause)
+        .limit(limit ?? 1000)
+        .offset(offset ?? 0)
       : await query.limit(limit ?? 1000).offset(offset ?? 0);
 
     return Promise.all(results.map((r) => this.toDomain(r)));
@@ -337,7 +489,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       .where(
         and(
           eq(tasks.assigneeId, assigneeId),
-          eq(tasks.assignmentType, TaskAssignmentTypeMapping.INDIVIDUAL),
+          eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.INDIVIDUAL)),
         ),
       )
       .orderBy(desc(tasks.createdAt));
@@ -365,7 +517,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     targetId?: string,
   ): Promise<Task[]> {
     const whereConditions: any[] = [
-      eq(tasks.assignmentType, TaskAssignmentTypeMapping[assignmentType]),
+      eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(assignmentType as TaskAssignmentType)),
     ];
 
     if (targetId) {
@@ -392,7 +544,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     filters?: DepartmentTaskFilters,
   ): Promise<Task[]> {
     const whereConditions: any[] = [
-      eq(tasks.assignmentType, TaskAssignmentTypeMapping.DEPARTMENT),
+      eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.DEPARTMENT)),
     ];
 
     if (departmentId) {
@@ -415,7 +567,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     filters?: DepartmentTaskFilters,
   ): Promise<Task[]> {
     const whereConditions: any[] = [
-      eq(tasks.assignmentType, TaskAssignmentTypeMapping.SUB_DEPARTMENT),
+      eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.SUB_DEPARTMENT)),
     ];
 
     if (subDepartmentId) {
@@ -437,7 +589,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     filters?: IndividualTaskFilters,
   ): Promise<Task[]> {
     const whereConditions: any[] = [
-      eq(tasks.assignmentType, TaskAssignmentTypeMapping.INDIVIDUAL),
+      eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.INDIVIDUAL)),
     ];
 
     if (filters?.assigneeId) {
@@ -459,7 +611,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     employeeId?: string;
     subDepartmentId?: string;
     departmentId?: string;
-    status?: string[];
+    status?: TaskStatus[];
     offset?: number;
     limit?: number;
   }): Promise<Task[]> {
@@ -472,7 +624,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       orConditions.push(
         and(
           eq(tasks.assigneeId, employeeId),
-          eq(tasks.assignmentType, TaskAssignmentTypeMapping.INDIVIDUAL),
+          eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.INDIVIDUAL)),
         ),
       );
     }
@@ -481,7 +633,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       orConditions.push(
         and(
           eq(tasks.targetSubDepartmentId, subDepartmentId),
-          eq(tasks.assignmentType, TaskAssignmentTypeMapping.SUB_DEPARTMENT),
+          eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.SUB_DEPARTMENT)),
         ),
       );
     }
@@ -490,7 +642,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       orConditions.push(
         and(
           eq(tasks.targetDepartmentId, departmentId),
-          eq(tasks.assignmentType, TaskAssignmentTypeMapping.DEPARTMENT),
+          eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.DEPARTMENT)),
         ),
       );
     }
@@ -504,7 +656,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       whereConditions.push(
         inArray(
           tasks.status,
-          status.map((s) => TaskStatusMapping[s]),
+          status.map((s) => domainToDrizzleStatus(s)),
         ),
       );
     }
@@ -526,7 +678,7 @@ export class DrizzleTaskRepository extends TaskRepository {
 
   async findTasksForSupervisor(options: {
     supervisorDepartmentIds: string[];
-    status?: string[];
+    status?: TaskStatus[];
     offset?: number;
     limit?: number;
   }): Promise<{ tasks: Task[]; total: number }> {
@@ -540,7 +692,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       whereConditions.push(
         inArray(
           tasks.status,
-          status.map((s) => TaskStatusMapping[s]),
+          status.map((s) => domainToDrizzleStatus(s)),
         ),
       );
     }
@@ -566,7 +718,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     employeeId: string;
     supervisorId: string;
     subDepartmentIds: string[];
-    status?: string[];
+    status?: TaskStatus[];
     offset?: number;
     limit?: number;
   }): Promise<{ tasks: Task[]; total: number }> {
@@ -594,7 +746,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       whereConditions.push(
         inArray(
           tasks.status,
-          status.map((s) => TaskStatusMapping[s]),
+          status.map((s) => domainToDrizzleStatus(s)),
         ),
       );
     }
@@ -678,7 +830,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     completionPercentage: number;
   }> {
     const whereConditions: any[] = [
-      eq(tasks.assignmentType, TaskAssignmentTypeMapping.DEPARTMENT),
+      eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.DEPARTMENT)),
     ];
 
     if (departmentId) {
@@ -708,7 +860,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     completionPercentage: number;
   }> {
     const whereConditions: any[] = [
-      eq(tasks.assignmentType, TaskAssignmentTypeMapping.SUB_DEPARTMENT),
+      eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.SUB_DEPARTMENT)),
     ];
 
     if (subDepartmentId) {
@@ -735,7 +887,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     completionPercentage: number;
   }> {
     const whereConditions: any[] = [
-      eq(tasks.assignmentType, TaskAssignmentTypeMapping.INDIVIDUAL),
+      eq(tasks.assignmentType, mapDomainAssignmentTypeToDrizzleAssignmentType(TaskAssignmentType.INDIVIDUAL)),
     ];
 
     if (filters?.assigneeId) {
@@ -761,7 +913,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       .select()
       .from(tasks)
       .where(
-        and(eq(tasks.id, taskId), eq(tasks.status, TaskStatusMapping.TODO)),
+        and(eq(tasks.id, taskId), eq(tasks.status, domainToDrizzleStatus(TaskStatus.TODO))),
       )
       .limit(1);
 
@@ -776,7 +928,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       whereConditions.push(
         inArray(
           tasks.status,
-          filters.status.map((s) => TaskStatusMapping[s]),
+          filters.status.map((s) => domainToDrizzleStatus(s)),
         ),
       );
     }
@@ -785,7 +937,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       whereConditions.push(
         inArray(
           tasks.priority,
-          filters.priority.map((p) => TaskPriorityMapping[p]),
+          filters.priority.map((p) => domainToDrizzlePriority(p)),
         ),
       );
     }
@@ -878,46 +1030,46 @@ export class DrizzleTaskRepository extends TaskRepository {
     const taskWhere =
       status?.length || priority?.length
         ? and(
-            or(
-              eq(tasks.assigneeId, empId),
-              inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
-            ),
-            status.length
-              ? inArray(
-                  tasks.status,
-                  status.map((s) => TaskStatusMapping[s]),
-                )
-              : undefined,
-            priority.length
-              ? inArray(
-                  tasks.priority,
-                  priority.map((p) => TaskPriorityMapping[p]),
-                )
-              : undefined,
-          )
-        : or(
+          or(
             eq(tasks.assigneeId, empId),
             inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
-          );
+          ),
+          status.length
+            ? inArray(
+              tasks.status,
+              status.map((s) => domainToDrizzleStatus(s)),
+            )
+            : undefined,
+          priority.length
+            ? inArray(
+              tasks.priority,
+              priority.map((p) => domainToDrizzlePriority(p)),
+            )
+            : undefined,
+        )
+        : or(
+          eq(tasks.assigneeId, empId),
+          inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
+        );
 
     const delWhere = status?.length
       ? and(
-          or(
-            eq(taskDelegations.assigneeId, empId),
-            inArray(
-              taskDelegations.targetSubDepartmentId,
-              employeeDepartmentIds,
-            ),
-          ),
-          inArray(
-            taskDelegations.status,
-            status.map((s) => TaskStatusMapping[s]),
-          ),
-        )
-      : or(
+        or(
           eq(taskDelegations.assigneeId, empId),
-          inArray(taskDelegations.targetSubDepartmentId, employeeDepartmentIds),
-        );
+          inArray(
+            taskDelegations.targetSubDepartmentId,
+            employeeDepartmentIds,
+          ),
+        ),
+        inArray(
+          taskDelegations.status,
+          status.map((s) => domainToDrizzleStatus(s)),
+        ),
+      )
+      : or(
+        eq(taskDelegations.assigneeId, empId),
+        inArray(taskDelegations.targetSubDepartmentId, employeeDepartmentIds),
+      );
 
     const stmt = this.db.$with('g').as(
       this.db
@@ -992,9 +1144,9 @@ export class DrizzleTaskRepository extends TaskRepository {
     ];
     const attachmentResults = targetIds.length
       ? await this.db
-          .select()
-          .from(attachments)
-          .where(inArray(attachments.targetId, targetIds))
+        .select()
+        .from(attachments)
+        .where(inArray(attachments.targetId, targetIds))
       : [];
 
     const tasksTotal = metrics.completedTasks + metrics.pendingTasks;
@@ -1023,13 +1175,13 @@ export class DrizzleTaskRepository extends TaskRepository {
             title: task.title,
             description: task.description,
             status: drizzleToDomainStatus(task.status),
-            priority: TaskPriority[task.priority.toUpperCase()],
+            priority: drizzleToDomainPriority(task.priority),
             assigneeId: task.assigneeId,
             targetSubDepartmentId: task.targetSubDepartmentId,
             createdAt: new Date(task.createdAt),
             updatedAt: new Date(task.updatedAt),
             creatorId: task.creatorId,
-            assignmentType: TaskAssignmentType[task.assignmentType],
+            assignmentType: drizzleToDomainAssignmentType(task.assignmentType),
           }),
           rejectionReason: submissions.find(
             (submission) => submission.status === 'rejected',
@@ -1045,25 +1197,28 @@ export class DrizzleTaskRepository extends TaskRepository {
           taskId: delegation.delegation.taskId,
           assigneeId: delegation.delegation.assigneeId,
           targetSubDepartmentId: delegation.delegation.targetSubDepartmentId,
-          status: TaskStatusMapping[delegation.delegation.status.toUpperCase()],
+          status: drizzleToDomainStatus(delegation.delegation.status),
           createdAt: new Date(delegation.delegation.createdAt),
           updatedAt: new Date(delegation.delegation.updatedAt),
-          assignmentType:
-            TaskAssignmentType[delegation.delegation.assignmentType],
+          assignmentType: drizzleToDomainAssignmentType(
+            delegation.delegation.assignmentType,
+          ),
           delegatorId: delegation.delegation.delegatorId,
           task: Task.create({
             id: delegation.task.id,
             title: delegation.task.title,
             description: delegation.task.description,
             status: drizzleToDomainStatus(delegation.task.status),
-            priority: TaskPriority[delegation.task.priority.toUpperCase()],
+            priority: drizzleToDomainPriority(delegation.task.priority),
             assigneeId: delegation.task.assigneeId,
             targetSubDepartmentId: delegation.task.targetSubDepartmentId,
             targetDepartmentId: delegation.task.targetDepartmentId,
             createdAt: new Date(delegation.task.createdAt),
             updatedAt: new Date(delegation.task.updatedAt),
             creatorId: delegation.task.creatorId,
-            assignmentType: TaskAssignmentType[delegation.task.assignmentType],
+            assignmentType: drizzleToDomainAssignmentType(
+              delegation.task.assignmentType,
+            ),
           }),
         }),
       ),
@@ -1086,18 +1241,18 @@ export class DrizzleTaskRepository extends TaskRepository {
           metrics.completedTasks + metrics.pendingTasks === 0
             ? 0
             : Math.floor(
-                (metrics.completedTasks /
-                  (metrics.completedTasks + metrics.pendingTasks)) *
-                  100,
-              ),
+              (metrics.completedTasks /
+                (metrics.completedTasks + metrics.pendingTasks)) *
+              100,
+            ),
         delegationCompletionPercentage:
           metrics.completedDelegations + metrics.pendingDelegations === 0
             ? 0
             : Math.floor(
-                (metrics.completedDelegations /
-                  (metrics.completedDelegations + metrics.pendingDelegations)) *
-                  100,
-              ),
+              (metrics.completedDelegations /
+                (metrics.completedDelegations + metrics.pendingDelegations)) *
+              100,
+            ),
         totalPercentage: Math.floor(combinedCompletionPercentage),
       },
     };
@@ -1131,20 +1286,20 @@ export class DrizzleTaskRepository extends TaskRepository {
     const tasksWhere =
       status?.length > 0 || priority?.length > 0
         ? and(
-            inArray(tasks.targetDepartmentId, supervisorDepartmentIds),
-            status?.length > 0
-              ? inArray(
-                  tasks.status,
-                  status.map((s) => TaskStatusMapping[s]),
-                )
-              : undefined,
-            priority?.length > 0
-              ? inArray(
-                  tasks.priority,
-                  priority.map((p) => TaskPriorityMapping[p]),
-                )
-              : undefined,
-          )
+          inArray(tasks.targetDepartmentId, supervisorDepartmentIds),
+          status?.length > 0
+            ? inArray(
+              tasks.status,
+              status.map((s) => domainToDrizzleStatus(s)),
+            )
+            : undefined,
+          priority?.length > 0
+            ? inArray(
+              tasks.priority,
+              priority.map((p) => domainToDrizzlePriority(p)),
+            )
+            : undefined,
+        )
         : inArray(tasks.targetDepartmentId, supervisorDepartmentIds);
 
     const [tasksPage, [taskAgg]] = await Promise.all([
@@ -1182,9 +1337,9 @@ export class DrizzleTaskRepository extends TaskRepository {
     const targetIds = tasksPage.map((t) => t.id);
     const attachmentResults = targetIds.length
       ? await this.db
-          .select()
-          .from(attachments)
-          .where(inArray(attachments.targetId, targetIds))
+        .select()
+        .from(attachments)
+        .where(inArray(attachments.targetId, targetIds))
       : [];
 
     return {
@@ -1199,13 +1354,13 @@ export class DrizzleTaskRepository extends TaskRepository {
             title: task.title,
             description: task.description,
             status: drizzleToDomainStatus(task.status),
-            priority: TaskPriority[task.priority.toUpperCase()],
+            priority: drizzleToDomainPriority(task.priority),
             assigneeId: task.assigneeId,
             targetSubDepartmentId: task.targetSubDepartmentId,
             createdAt: new Date(task.createdAt),
             updatedAt: new Date(task.updatedAt),
             creatorId: task.creatorId,
-            assignmentType: TaskAssignmentType[task.assignmentType],
+            assignmentType: drizzleToDomainAssignmentType(task.assignmentType),
             targetDepartmentId: task.targetDepartmentId,
           }),
           rejectionReason: submissions.find(
@@ -1235,7 +1390,7 @@ export class DrizzleTaskRepository extends TaskRepository {
         taskCompletionPercentage: Math.floor(
           (metrics.completedTasks /
             (metrics.completedTasks + metrics.pendingTasks)) *
-            100,
+          100,
         ),
       },
     };

@@ -4,17 +4,16 @@ import { TaskPresetRepository } from '../../../domain/repositories/task-preset.r
 import { TaskPreset } from '../../../domain/entities/task-preset.entity';
 import { taskPresets } from 'src/common/drizzle/schema';
 import { eq, desc, and } from 'drizzle-orm';
-import { TaskAssignmentTypeMapping } from './drizzle-task-delegation.repository';
-
-export enum TaskPriorityMapping {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-}
+import {
+  domainToDrizzlePriority,
+  drizzleToDomainAssignmentType,
+  drizzleToDomainPriority,
+  mapDomainAssignmentTypeToDrizzleAssignmentType,
+} from './drizzle-task.repository';
 
 @Injectable()
 export class DrizzleTaskPresetRepository implements TaskPresetRepository {
-  constructor(private readonly drizzleService: DrizzleService) {}
+  constructor(private readonly drizzleService: DrizzleService) { }
 
   private get db() {
     return this.drizzleService.client;
@@ -40,8 +39,10 @@ export class DrizzleTaskPresetRepository implements TaskPresetRepository {
       assignerId: preset.assignerId.value,
       assignerRole: preset.assignerRole,
       approverId: preset.approverId ?? null,
-      assignmentType: TaskAssignmentTypeMapping[preset.assignmentType],
-      priority: TaskPriorityMapping[preset.priority],
+      assignmentType: mapDomainAssignmentTypeToDrizzleAssignmentType(
+        preset.assignmentType,
+      ),
+      priority: domainToDrizzlePriority(preset.priority),
       targetDepartmentId: preset.targetDepartmentId ?? null,
       targetSubDepartmentId: preset.targetSubDepartmentId ?? null,
       reminderInterval: preset.reminderInterval ?? null,
@@ -98,8 +99,10 @@ export class DrizzleTaskPresetRepository implements TaskPresetRepository {
       assigneeId: preset.assigneeId ?? null,
       assignerRole: preset.assignerRole,
       approverId: preset.approverId ?? null,
-      assignmentType: TaskAssignmentTypeMapping[preset.assignmentType],
-      priority: TaskPriorityMapping[preset.priority],
+      assignmentType: mapDomainAssignmentTypeToDrizzleAssignmentType(
+        preset.assignmentType,
+      ),
+      priority: domainToDrizzlePriority(preset.priority),
       targetDepartmentId: preset.targetDepartmentId ?? null,
       targetSubDepartmentId: preset.targetSubDepartmentId ?? null,
       reminderInterval: preset.reminderInterval ?? null,
@@ -147,8 +150,8 @@ export class DrizzleTaskPresetRepository implements TaskPresetRepository {
       assignerId: data.assignerId,
       assignerRole: data.assignerRole,
       approverId: data.approverId ?? undefined,
-      assignmentType: data.assignmentType,
-      priority: data.priority,
+      assignmentType: drizzleToDomainAssignmentType(data.assignmentType),
+      priority: drizzleToDomainPriority(data.priority),
       targetDepartmentId: data.targetDepartmentId ?? undefined,
       targetSubDepartmentId: data.targetSubDepartmentId ?? undefined,
       reminderInterval: data.reminderInterval ?? undefined,

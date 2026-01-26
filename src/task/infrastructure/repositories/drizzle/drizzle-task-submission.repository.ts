@@ -17,32 +17,10 @@ import {
   users,
 } from 'src/common/drizzle/schema';
 import { eq, inArray, or, desc } from 'drizzle-orm';
-import { TaskStatusMapping } from './drizzle-task-delegation.repository';
-
-export enum TaskSubmissionStatusDomainToDrizzleMapping {
-  SUBMITTED = 'submitted',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-}
-
-export enum TaskSubmissionStatusDrizzleToDomainMapping {
-  submitted = TaskSubmissionStatus.SUBMITTED,
-  approved = TaskSubmissionStatus.APPROVED,
-  rejected = TaskSubmissionStatus.REJECTED,
-}
-
-function fromDomainStatusToDrizzleStatus(
-  status: TaskSubmissionStatus,
-): (typeof taskSubmissions.$inferInsert)['status'] {
-  switch (status) {
-    case TaskSubmissionStatus.SUBMITTED:
-      return 'submitted';
-    case TaskSubmissionStatus.APPROVED:
-      return 'approved';
-    case TaskSubmissionStatus.REJECTED:
-      return 'rejected';
-  }
-}
+import {
+  domainToDrizzleSubmissionStatus,
+  drizzleToDomainSubmissionStatus,
+} from './drizzle-task.repository';
 
 @Injectable()
 export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
@@ -157,7 +135,7 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
       performerEmployeeId,
       notes: taskSubmission.notes ?? null,
       feedback: taskSubmission.feedback ?? null,
-      status: fromDomainStatusToDrizzleStatus(taskSubmission.status),
+      status: domainToDrizzleSubmissionStatus(taskSubmission.status),
       submittedAt:
         taskSubmission.submittedAt instanceof Date
           ? taskSubmission.submittedAt.toISOString()
@@ -252,10 +230,7 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
       performerEmployeeName: row.performerEmployeeUser,
       notes: row.notes,
       feedback: row.feedback,
-      status:
-        TaskSubmissionStatus[
-          TaskSubmissionStatusDrizzleToDomainMapping[row.status]
-        ],
+      status: drizzleToDomainSubmissionStatus(row.status),
       submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
       reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
     });
@@ -319,10 +294,7 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
           performerEmployeeName: row.performerEmployeeUser,
           notes: row.notes,
           feedback: row.feedback,
-          status:
-            TaskSubmissionStatus[
-              TaskSubmissionStatusDrizzleToDomainMapping[row.status]
-            ],
+          status: drizzleToDomainSubmissionStatus(row.status),
           submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
           reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
         }),
@@ -352,10 +324,7 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
           performerEmployeeId: row.performerEmployeeId,
           notes: row.notes,
           feedback: row.feedback,
-          status:
-            TaskSubmissionStatus[
-              TaskSubmissionStatusDrizzleToDomainMapping[row.status]
-            ],
+          status: drizzleToDomainSubmissionStatus(row.status),
           submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
           reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
         }),
@@ -363,11 +332,11 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
     );
   }
 
-  async findByStatus(status: string): Promise<TaskSubmission[]> {
+  async findByStatus(status: TaskSubmissionStatus): Promise<TaskSubmission[]> {
     const results = await this.db
       .select()
       .from(taskSubmissions)
-      .where(eq(taskSubmissions.status, TaskStatusMapping[status]));
+      .where(eq(taskSubmissions.status, domainToDrizzleSubmissionStatus(status)));
 
     return Promise.all(
       results.map((row) =>
@@ -379,10 +348,7 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
           performerEmployeeId: row.performerEmployeeId,
           notes: row.notes,
           feedback: row.feedback,
-          status:
-            TaskSubmissionStatus[
-              TaskSubmissionStatusDrizzleToDomainMapping[row.status]
-            ],
+          status: drizzleToDomainSubmissionStatus(row.status),
           submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
           reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
         }),
@@ -403,10 +369,7 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
           performerEmployeeId: row.performerEmployeeId,
           notes: row.notes,
           feedback: row.feedback,
-          status:
-            TaskSubmissionStatus[
-              TaskSubmissionStatusDrizzleToDomainMapping[row.status]
-            ],
+          status: drizzleToDomainSubmissionStatus(row.status),
           submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
           reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
         }),
@@ -436,10 +399,7 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
           performerEmployeeId: row.performerEmployeeId,
           notes: row.notes,
           feedback: row.feedback,
-          status:
-            TaskSubmissionStatus[
-              TaskSubmissionStatusDrizzleToDomainMapping[row.status]
-            ],
+          status: drizzleToDomainSubmissionStatus(row.status),
           submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
           reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
         }),

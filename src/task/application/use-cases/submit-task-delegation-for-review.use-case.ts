@@ -41,7 +41,7 @@ export class SubmitTaskDelegationForReviewUseCase {
     private readonly filesService: FilesService,
     private readonly fileHubService: FileHubService,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
-  ) {}
+  ) { }
 
   async execute(dto: SubmitTaskDelegationForReviewInputDto): Promise<{
     delegation: TaskDelegation;
@@ -102,27 +102,27 @@ export class SubmitTaskDelegationForReviewUseCase {
     const savedSubmission =
       await this.taskDelegationSubmissionRepository.save(submission);
 
-    delegation.status = TaskStatus.PENDING_REVIEW;
-    delegation.updatedAt = new Date();
-
     const savedDelegation =
-      await this.taskDelegationRepository.save(delegation);
+      await this.taskDelegationRepository.update(delegation.id.toString(), {
+        status: TaskStatus.PENDING_REVIEW,
+        updatedAt: new Date(),
+      });
 
     const uploadKey = dto.attach
       ? await this.filesService.genUploadKey(
-          savedSubmission.id.toString(),
-          dto.submittedBy,
-        )
+        savedSubmission.id.toString(),
+        dto.submittedBy,
+      )
       : undefined;
 
     const fileHubUploadKey = dto.attach
       ? await this.fileHubService
-          .generateUploadToken({
-            expiresInMs: 1000 * 60 * 60 * 24,
-            targetId: savedSubmission.id.toString(),
-            userId: dto.submittedBy,
-          })
-          .then((upload) => upload.uploadKey)
+        .generateUploadToken({
+          expiresInMs: 1000 * 60 * 60 * 24,
+          targetId: savedSubmission.id.toString(),
+          userId: dto.submittedBy,
+        })
+        .then((upload) => upload.uploadKey)
       : undefined;
 
     // Clone attachments if provided

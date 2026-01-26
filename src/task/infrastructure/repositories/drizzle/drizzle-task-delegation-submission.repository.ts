@@ -13,12 +13,10 @@ import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { taskDelegationSubmissions } from 'src/common/drizzle/schema';
 import { eq, inArray, or, desc, and } from 'drizzle-orm';
 import { TaskSubmissionStatus } from 'src/task/domain/entities/task-submission.entity';
-
-export enum TaskDelegationSubmissionStatusMapping {
-  SUBMITTED = 'submitted',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-}
+import {
+  domainToDrizzleSubmissionStatus,
+  drizzleToDomainSubmissionStatus,
+} from './drizzle-task.repository';
 
 @Injectable()
 export class DrizzleTaskDelegationSubmissionRepository extends TaskDelegationSubmissionRepository {
@@ -136,7 +134,7 @@ export class DrizzleTaskDelegationSubmissionRepository extends TaskDelegationSub
       performer: performerDetails.performer,
       notes: row.notes ?? undefined,
       feedback: row.feedback ?? undefined,
-      status: row.status,
+      status: drizzleToDomainSubmissionStatus(row.status),
       submittedAt: row.submittedAt ? new Date(row.submittedAt) : new Date(),
       reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
       reviewedBy: reviewer,
@@ -163,7 +161,7 @@ export class DrizzleTaskDelegationSubmissionRepository extends TaskDelegationSub
       performerEmployeeId,
       notes: submission.notes ?? null,
       feedback: submission.feedback ?? null,
-      status: TaskDelegationSubmissionStatusMapping[submission.status],
+      status: domainToDrizzleSubmissionStatus(submission.status),
       submittedAt:
         submission.submittedAt instanceof Date
           ? submission.submittedAt.toISOString()
@@ -270,7 +268,7 @@ export class DrizzleTaskDelegationSubmissionRepository extends TaskDelegationSub
       .where(
         eq(
           taskDelegationSubmissions.status,
-          TaskDelegationSubmissionStatusMapping[status],
+          domainToDrizzleSubmissionStatus(status),
         ),
       )
       .orderBy(desc(taskDelegationSubmissions.submittedAt));

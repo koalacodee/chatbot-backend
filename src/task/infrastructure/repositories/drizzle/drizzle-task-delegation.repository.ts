@@ -3,26 +3,18 @@ import { DrizzleService } from 'src/common/drizzle/drizzle.service';
 import { TaskDelegationRepository } from '../../../domain/repositories/task-delegation.repository';
 import { TaskDelegation } from '../../../domain/entities/task-delegation.entity';
 import { TaskRepository } from '../../../domain/repositories/task.repository';
-import { Department } from 'src/department/domain/entities/department.entity';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
-import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import { taskDelegations } from 'src/common/drizzle/schema';
 import { eq, inArray, desc, and, count } from 'drizzle-orm';
-
-export enum TaskStatusMapping {
-  TODO = 'to_do',
-  SEEN = 'seen',
-  PENDING_REVIEW = 'pending_review',
-  COMPLETED = 'completed',
-}
-
-export enum TaskAssignmentTypeMapping {
-  INDIVIDUAL = 'individual',
-  DEPARTMENT = 'department',
-  SUB_DEPARTMENT = 'sub_department',
-}
+import { TaskStatus } from 'src/task/domain/entities/task.entity';
+import {
+  domainToDrizzleStatus,
+  drizzleToDomainAssignmentType,
+  drizzleToDomainStatus,
+  mapDomainAssignmentTypeToDrizzleAssignmentType,
+} from './drizzle-task.repository';
 
 @Injectable()
 export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
@@ -74,8 +66,8 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
       targetSubDepartmentId: row.targetSubDepartmentId,
       delegator: delegator,
       delegatorId: row.delegatorId,
-      status: row.status,
-      assignmentType: row.assignmentType,
+      status: drizzleToDomainStatus(row.status),
+      assignmentType: drizzleToDomainAssignmentType(row.assignmentType),
       createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
       updatedAt: row.updatedAt ? new Date(row.updatedAt) : new Date(),
       completedAt: row.completedAt ? new Date(row.completedAt) : undefined,
@@ -92,14 +84,14 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
   }
 
   async save(taskDelegation: TaskDelegation): Promise<TaskDelegation> {
-    const data = {
+    const data: typeof taskDelegations.$inferInsert = {
       id: taskDelegation.id.toString(),
       taskId: taskDelegation.taskId.toString(),
       assigneeId: taskDelegation.assigneeId ?? null,
       targetSubDepartmentId: taskDelegation.targetSubDepartmentId.toString(),
       delegatorId: taskDelegation.delegatorId.toString(),
-      status: TaskStatusMapping[taskDelegation.status],
-      assignmentType: TaskAssignmentTypeMapping[taskDelegation.assignmentType],
+      status: domainToDrizzleStatus(taskDelegation.status),
+      assignmentType: mapDomainAssignmentTypeToDrizzleAssignmentType(taskDelegation.assignmentType),
       createdAt:
         taskDelegation.createdAt instanceof Date
           ? taskDelegation.createdAt.toISOString()
@@ -126,6 +118,25 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
       });
 
     return this.findById(taskDelegation.id.toString());
+  }
+
+  async update(id: string, updates: Partial<TaskDelegation>): Promise<TaskDelegation> {
+    const result = await this.db
+      .update(taskDelegations)
+      .set({
+        ...updates,
+        status: updates?.status ? domainToDrizzleStatus(updates.status) : undefined,
+        updatedAt: updates?.updatedAt?.toISOString(),
+        createdAt: updates?.createdAt?.toISOString(),
+        completedAt: updates?.completedAt?.toISOString(),
+        assignmentType: updates?.assignmentType ? mapDomainAssignmentTypeToDrizzleAssignmentType(updates.assignmentType) : undefined,
+      })
+      .where(eq(taskDelegations.id, id))
+      .returning();
+
+
+    console.log(result);
+    return this.toDomain(result[0]);
   }
 
   async findById(id: string): Promise<TaskDelegation | null> {
@@ -282,7 +293,7 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
 
   async findByDelegatorIdWithFilters(options: {
     delegatorId: string;
-    status?: string;
+    status?: TaskStatus;
     offset?: number;
     limit?: number;
   }): Promise<{ delegations: TaskDelegation[]; total: number }> {
@@ -292,7 +303,7 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
 
     if (status) {
       whereConditions.push(
-        eq(taskDelegations.status, TaskStatusMapping[status]),
+        eq(taskDelegations.status, domainToDrizzleStatus(status)),
       );
     }
 
