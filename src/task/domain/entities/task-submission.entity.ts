@@ -13,7 +13,7 @@ export enum TaskSubmissionStatus {
 
 export interface TaskSubmissionOptions {
   id?: string;
-  task: Task;
+  task?: Task;
   delegationSubmissionId?: string;
   delegationSubmission?: TaskDelegationSubmission;
   performerId: string;

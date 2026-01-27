@@ -2,6 +2,8 @@ import { TaskDelegation } from '../entities/task-delegation.entity';
 import { Task, TaskPriority, TaskStatus } from '../entities/task.entity';
 import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 import { CursorInput, PaginatedResult } from 'src/common/drizzle/helpers/cursor';
+import { TaskSubmission } from '../entities/task-submission.entity';
+import { TaskDelegationSubmission } from '../entities/task-delegation-submission.entity';
 
 export interface DepartmentTaskFilters {
   status?: TaskStatus[];
@@ -168,8 +170,13 @@ export abstract class TaskRepository {
     status?: TaskStatus[];
     priority?: TaskPriority[];
     cursor?: CursorInput;
+    search?: string;
   }): Promise<PaginatedResult<{
-    task: Task;
+    task: {
+      data: Task;
+      submissions: TaskSubmission[];
+      delegationSubmissions: TaskDelegationSubmission[];
+    };
   }> & {
     fileHubAttachments: Attachment[];
     metrics: {

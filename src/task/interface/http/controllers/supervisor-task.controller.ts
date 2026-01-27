@@ -16,10 +16,14 @@ import { GetSubDepartmentTasksUseCase } from '../../../application/use-cases/get
 import { GetIndividualLevelTasksUseCase } from '../../../application/use-cases/get-individual-level-tasks.use-case';
 import { GetTeamTasksForSupervisorUseCase } from '../../../application/use-cases/get-team-tasks-for-supervisor.use-case';
 import { GetTasksByRoleDto } from '../dto/get-tasks-by-role.dto';
-import { TaskPriority, TaskStatus } from '../../../domain/entities/task.entity';
+import { Task, TaskPriority, TaskStatus } from '../../../domain/entities/task.entity';
 import { SupervisorPermissions } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 import { Req } from '@nestjs/common';
+import { TaskSubmission } from 'src/task/domain/entities/task-submission.entity';
+import { PaginatedResult } from 'src/common/drizzle/helpers/cursor';
+import { TaskDelegationSubmission } from 'src/task/domain/entities/task-delegation-submission.entity';
+import { FilehubAttachmentMessage } from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 
 @ApiTags('Supervisor Tasks')
 @ApiBearerAuth()
@@ -42,29 +46,32 @@ export class SupervisorTaskController {
   async getTeamTasks(
     @Query() query: GetTasksByRoleDto,
     @Req() req: any,
-  ) {
-    const result = await this.getTeamTasksForSupervisorUseCase.execute(
+  ): Promise<PaginatedResult<{
+    task: (ReturnType<Task['toJSON']> & {
+      submissions: ReturnType<TaskSubmission['toJSON']>[];
+      delegationSubmissions: ReturnType<TaskDelegationSubmission['toJSON']>[];
+    });
+    rejectionReason?: string;
+    approvalFeedback?: string;
+  }> & {
+    fileHubAttachments: FilehubAttachmentMessage[];
+    metrics: {
+      pendingTasks: number;
+      completedTasks: number;
+      taskCompletionPercentage: number;
+    };
+  }> {
+    return await this.getTeamTasksForSupervisorUseCase.execute(
       {
         status: this.normalizeStatusQuery(query.status),
         priority: this.normalizePriorityQuery(query.priority),
         cursor: query.cursor,
         cursorDir: query.cursorDir,
         limit: query.limit,
+        search: query.search,
       },
       req.user.id,
     );
-
-    return {
-      success: true,
-      data: result.data.map((item) => ({
-        ...item.task.toJSON(),
-        rejectionReason: item.rejectionReason,
-        approvalFeedback: item.approvalFeedback,
-      })),
-      meta: result.meta,
-      metrics: result.metrics,
-      fileHubAttachments: result.fileHubAttachments.map((a) => a.toJSON()),
-    };
   }
 
   @Get('sub-department')

@@ -13,7 +13,7 @@ import {
   TaskPriority,
   TaskStatus,
 } from '../../../domain/entities/task.entity';
-import { TaskSubmissionStatus } from '../../../domain/entities/task-submission.entity';
+import { TaskSubmission, TaskSubmissionStatus } from '../../../domain/entities/task-submission.entity';
 import { Department, DepartmentVisibility } from 'src/department/domain/entities/department.entity';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
@@ -34,6 +34,9 @@ import {
   supervisors,
   departmentToSupervisor,
   taskSubmissions,
+  taskDelegationSubmissions,
+  admins,
+  users,
 } from 'src/common/drizzle/schema';
 import {
   eq,
@@ -55,6 +58,7 @@ import {
   CursorInput,
   PaginatedResult,
 } from 'src/common/drizzle/helpers/cursor';
+import { TaskDelegationSubmission } from 'src/task/domain/entities/task-delegation-submission.entity';
 
 type TaskCursorData = { createdAt: string; id: string };
 
@@ -1830,8 +1834,13 @@ export class DrizzleTaskRepository extends TaskRepository {
     status?: TaskStatus[];
     priority?: TaskPriority[];
     cursor?: CursorInput;
+    search?: string;
   }): Promise<PaginatedResult<{
-    task: Task;
+    task: {
+      data: Task;
+      submissions: TaskSubmission[];
+      delegationSubmissions: TaskDelegationSubmission[];
+    };
   }> & {
     fileHubAttachments: Attachment[];
     metrics: {
@@ -1840,7 +1849,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       taskCompletionPercentage: number;
     };
   }> {
-    const { supervisorDepartmentIds, status, priority, cursor } = options;
+    const { supervisorDepartmentIds, status, priority, cursor, search } = options;
     const paginationParams = this.pagination.parseInput(cursor);
     const { limit } = paginationParams;
     const whereConditions = [
@@ -1883,6 +1892,10 @@ export class DrizzleTaskRepository extends TaskRepository {
       whereConditions.push(inArray(tasks.priority, priority.map((p) => domainToDrizzlePriority(p))));
     }
 
+    if (search) {
+      whereConditions.push(or(ilike(tasks.title, `%${search}%`), ilike(tasks.description, `%${search}%`)));
+    }
+
     const cursorCondition = this.pagination.buildCursorCondition(
       paginationParams.cursorData as TaskCursorData | null,
       paginationParams.direction,
@@ -1911,19 +1924,53 @@ export class DrizzleTaskRepository extends TaskRepository {
         id: task.id,
       }),
     );
-
-    const attachmentResults = await this.db.select().from(attachments).where(inArray(attachments.targetId, data.map((task) => task.id)));
-    const metrics = await this.db
-      .select({
-        tc: sql<number>`count(*) filter (where status = 'completed')`
-          .mapWith(Number)
-          .as('tc'),
-        tp: sql<number>`count(*) filter (where status <> 'completed')`
-          .mapWith(Number)
-          .as('tp'),
-      })
-      .from(tasks)
-      .where(whereClause) // filter tasks once
+    const taskIds = data.map((task) => task.id);
+    const [metrics, submissions, delegationSubmissions] = await Promise.all([
+      this.db
+        .select({
+          tc: sql<number>`count(*) filter (where status = 'completed')`
+            .mapWith(Number)
+            .as('tc'),
+          tp: sql<number>`count(*) filter (where status <> 'completed')`
+            .mapWith(Number)
+            .as('tp'),
+        })
+        .from(tasks)
+        .where(whereClause),
+      this.db
+        .select({
+          submission: taskSubmissions,
+          performerName: users.name,
+        })
+        .from(taskSubmissions)
+        .leftJoin(admins, eq(taskSubmissions.performerAdminId, admins.id))
+        .leftJoin(supervisors, eq(taskSubmissions.performerSupervisorId, supervisors.id))
+        .leftJoin(employees, eq(taskSubmissions.performerEmployeeId, employees.id))
+        .leftJoin(users, or(eq(admins.userId, users.id), eq(supervisors.userId, users.id), eq(employees.userId, users.id)))
+        .where(inArray(taskSubmissions.taskId, taskIds)),
+      this.db
+        .select({
+          submission: taskDelegationSubmissions,
+          performerName: users.name,
+        })
+        .from(taskDelegationSubmissions)
+        .leftJoin(admins, eq(taskDelegationSubmissions.performerAdminId, admins.id))
+        .leftJoin(supervisors, eq(taskDelegationSubmissions.performerSupervisorId, supervisors.id))
+        .leftJoin(employees, eq(taskDelegationSubmissions.performerEmployeeId, employees.id))
+        .leftJoin(users, or(eq(admins.userId, users.id), eq(supervisors.userId, users.id), eq(employees.userId, users.id)))
+        .where(inArray(taskDelegationSubmissions.taskId, taskIds)),
+    ]);
+    const targetIds = new Set<string>();
+    taskIds.forEach((taskId) => {
+      targetIds.add(taskId);
+    });
+    delegationSubmissions.forEach((submission) => {
+      targetIds.add(submission.submission.id);
+    });
+    submissions.forEach((submission) => {
+      targetIds.add(submission.submission.id);
+    });
+    const attachmentResults = await this.db.select().from(attachments).where(inArray(attachments.targetId, Array.from(targetIds)));
     const metricsResult = {
       completedTasks: metrics[0].tc,
       pendingTasks: metrics[0].tp,
@@ -1937,9 +1984,9 @@ export class DrizzleTaskRepository extends TaskRepository {
           ),
     };
     return {
-      data: data.map((task) => {
-        return {
-          task: Task.create({
+      data: data.map((task) => ({
+        task: {
+          data: Task.create({
             id: task.id,
             title: task.title,
             description: task.description,
@@ -1952,14 +1999,42 @@ export class DrizzleTaskRepository extends TaskRepository {
             creatorId: task.creatorId,
             assignmentType: drizzleToDomainAssignmentType(task.assignmentType),
           }),
-          rejectionReason: task.taskSubmissions.find(
-            (submission) => submission.status === 'rejected',
-          )?.feedback,
-          approvalFeedback: task.taskSubmissions.find(
-            (submission) => submission.status === 'approved',
-          )?.feedback,
-        };
-      }),
+          submissions: submissions
+            .filter(({ submission }) => submission.taskId === task.id)
+            .map(({ submission: s, performerName }) =>
+              TaskSubmission.create({
+                id: s.id,
+                performerId: s.performerEmployeeId || s.performerSupervisorId || s.performerAdminId || '',
+                performerType: s.performerAdminId ? 'admin' : s.performerSupervisorId ? 'supervisor' : 'employee',
+                notes: s.notes || undefined,
+                feedback: s.feedback || undefined,
+                status: drizzleToDomainSubmissionStatus(s.status),
+                submittedAt: s.submittedAt ? new Date(s.submittedAt) : undefined,
+                reviewedAt: s.reviewedAt ? new Date(s.reviewedAt) : undefined,
+                delegationSubmissionId: s.delegationSubmissionId || undefined,
+                performerName: performerName,
+              }),
+            ),
+          delegationSubmissions: delegationSubmissions
+            .filter(({ submission }) => submission.taskId === task.id)
+            .map(({ submission: s, performerName }) =>
+              TaskDelegationSubmission.create({
+                id: s.id,
+                delegationId: s.delegationId,
+                taskId: s.taskId,
+                performerId: s.performerEmployeeId || s.performerSupervisorId || s.performerAdminId || '',
+                performerType: s.performerAdminId ? 'admin' : s.performerSupervisorId ? 'supervisor' : 'employee',
+                performerName,
+                notes: s.notes || undefined,
+                feedback: s.feedback || undefined,
+                status: drizzleToDomainSubmissionStatus(s.status),
+                submittedAt: s.submittedAt ? new Date(s.submittedAt) : undefined,
+                reviewedAt: s.reviewedAt ? new Date(s.reviewedAt) : undefined,
+                forwarded: s.forwarded || false,
+              }),
+            ),
+        },
+      })),
       meta: meta,
       fileHubAttachments: attachmentResults.map((attachment) =>
         Attachment.create({
