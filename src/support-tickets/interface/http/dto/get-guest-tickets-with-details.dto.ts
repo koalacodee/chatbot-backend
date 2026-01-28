@@ -1,5 +1,10 @@
-import { IsOptional, IsPositive, IsString, IsNotEmpty } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsOptional,
+  IsString,
+  IsNotEmpty,
+  IsObject,
+} from 'class-validator';
+import { CursorInput } from 'src/common/drizzle/helpers/cursor';
 
 export class GetGuestTicketsWithDetailsDto {
   @IsNotEmpty()
@@ -7,12 +12,6 @@ export class GetGuestTicketsWithDetailsDto {
   phone: string;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsPositive()
-  offset?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsPositive()
-  limit?: number;
+  @IsObject()
+  cursor?: CursorInput;
 }

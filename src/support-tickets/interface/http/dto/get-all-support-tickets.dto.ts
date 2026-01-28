@@ -1,19 +1,16 @@
-import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsObject,
+} from 'class-validator';
 import { SupportTicketStatus } from 'src/support-tickets/domain/entities/support-ticket.entity';
+import { CursorInput } from 'src/common/drizzle/helpers/cursor';
 
 export class GetAllSupportTicketsDto {
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  offset?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  limit?: number;
+  @IsObject()
+  cursor?: CursorInput;
 
   @IsOptional()
   @IsEnum(SupportTicketStatus)

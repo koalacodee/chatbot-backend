@@ -4,6 +4,7 @@ import {
   SupportTicketStatus,
 } from '../entities/support-ticket.entity';
 import { SupportTicketAnswer } from '../entities/support-ticket-answer.entity';
+import { CursorInput, PaginatedArrayResult, PaginatedObjectResult } from 'src/common/drizzle/helpers/cursor';
 
 export interface FrequentTicketSubject {
   subject_original: string; // The exact subject text as written by the user
@@ -21,8 +22,7 @@ export interface SupportTicketMetrics {
 }
 
 export interface GetAllTicketsOptions {
-  limit?: number;
-  offset?: number;
+  cursor?: CursorInput;
   status?: SupportTicketStatus;
   search?: string;
   departmentIds?: string[];
@@ -45,14 +45,15 @@ export abstract class SupportTicketRepository {
   abstract save(ticket: SupportTicket): Promise<SupportTicket>;
   abstract findById(id: string): Promise<SupportTicket | null>;
   abstract findAll(
-    offset?: number,
-    limit?: number,
-    departmentIds?: string[],
-    start?: Date,
-    end?: Date,
-    status?: SupportTicketStatus,
-    search?: string,
-  ): Promise<SupportTicket[]>;
+    options?: {
+      cursor?: CursorInput,
+      departmentIds?: string[],
+      start?: Date,
+      end?: Date,
+      status?: SupportTicketStatus,
+      search?: string,
+    }
+  ): Promise<PaginatedArrayResult<SupportTicket>>;
   abstract removeById(id: string): Promise<SupportTicket | null>;
   abstract exists(id: string): Promise<boolean>;
   abstract count(): Promise<number>;
@@ -60,21 +61,28 @@ export abstract class SupportTicketRepository {
   abstract countAnsweredPendingClosure(): Promise<number>;
 
   abstract findByDepartment(
-    departmentId: string,
-    status?: 'NEW' | 'SEEN' | 'ANSWERED' | 'CLOSED',
-  ): Promise<SupportTicket[]>;
-  abstract search(query: string): Promise<SupportTicket[]>;
+    options: {
+      departmentId: string,
+      cursor?: CursorInput,
+      status?: 'NEW' | 'SEEN' | 'ANSWERED' | 'CLOSED',
+    }
+  ): Promise<PaginatedArrayResult<SupportTicket>>;
+  abstract search(options: {
+    query: string,
+    cursor?: CursorInput,
+  }): Promise<PaginatedArrayResult<SupportTicket>>;
   abstract getFrequentTicketSubjects(
     limit?: number,
   ): Promise<FrequentTicketSubject[]>;
   abstract findByCode(code: string): Promise<GetByCodeResponse | null>;
 
   abstract findByPhoneNumber(
-    phone: string,
-    offset?: number,
-    limit?: number,
+    options: {
+      phone: string,
+      cursor?: CursorInput,
+    }
   ): Promise<
-    {
+    PaginatedArrayResult<{
       id: string;
       subject: string;
       description: string;
@@ -83,7 +91,7 @@ export abstract class SupportTicketRepository {
       departmentId: string;
       createdAt: Date;
       updatedAt: Date;
-    }[]
+    }>
   >;
 
   abstract getMetrics(
@@ -94,11 +102,11 @@ export abstract class SupportTicketRepository {
 
   abstract getAllTicketsAndMetricsForSupervisor(
     options: GetAllTicketsOptions & { supervisorUserId: string },
-  ): Promise<GetAllTicketsAndMetricsOutput>;
+  ): Promise<PaginatedObjectResult<GetAllTicketsAndMetricsOutput>>;
   abstract getAllTicketsAndMetricsForEmployee(
     options: GetAllTicketsOptions & { employeeUserId: string },
-  ): Promise<GetAllTicketsAndMetricsOutput>;
+  ): Promise<PaginatedObjectResult<GetAllTicketsAndMetricsOutput>>;
   abstract getAllTicketsAndMetricsForAdmin(
     options: GetAllTicketsOptions,
-  ): Promise<GetAllTicketsAndMetricsOutput>;
+  ): Promise<PaginatedObjectResult<GetAllTicketsAndMetricsOutput>>;
 }

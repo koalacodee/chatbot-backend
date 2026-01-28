@@ -11,10 +11,13 @@ import {
 } from '../../domain/entities/support-ticket.entity';
 import { FilehubAttachmentMessage } from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 import { FileHubService } from 'src/filehub/domain/services/filehub.service';
+import {
+  CursorInput,
+  CursorMeta,
+} from 'src/common/drizzle/helpers/cursor';
 
 export interface GetAllSupportTicketsUseCaseInput {
-  offset?: number;
-  limit?: number;
+  cursor?: CursorInput;
   userId: string;
   userRole: string;
   status?: SupportTicketStatus;
@@ -27,11 +30,10 @@ export class GetAllSupportTicketsUseCase {
   constructor(
     private readonly supportTicketRepo: SupportTicketRepository,
     private readonly fileHubService: FileHubService,
-  ) {}
+  ) { }
 
   async execute({
-    offset,
-    limit,
+    cursor,
     userId,
     userRole,
     status,
@@ -41,15 +43,15 @@ export class GetAllSupportTicketsUseCase {
     tickets: Array<ReturnType<SupportTicket['toJSON']>>;
     metrics: SupportTicketMetrics;
     attachments: FilehubAttachmentMessage[];
+    meta: CursorMeta;
   }> {
-    let result: GetAllTicketsAndMetricsOutput;
+    let result: { data: GetAllTicketsAndMetricsOutput; meta: CursorMeta };
     console.log(userRole);
 
     switch (userRole) {
       case Roles.ADMIN:
         result = await this.supportTicketRepo.getAllTicketsAndMetricsForAdmin({
-          offset,
-          limit,
+          cursor,
           status,
           departmentIds: departmentId ? [departmentId] : undefined,
           search,
@@ -58,8 +60,7 @@ export class GetAllSupportTicketsUseCase {
       case Roles.SUPERVISOR:
         result =
           await this.supportTicketRepo.getAllTicketsAndMetricsForSupervisor({
-            offset,
-            limit,
+            cursor,
             supervisorUserId: userId,
             status,
             departmentIds: departmentId ? [departmentId] : undefined,
@@ -69,22 +70,25 @@ export class GetAllSupportTicketsUseCase {
       case Roles.EMPLOYEE:
         result =
           await this.supportTicketRepo.getAllTicketsAndMetricsForEmployee({
-            offset,
-            limit,
+            cursor,
             employeeUserId: userId,
             status,
             departmentIds: departmentId ? [departmentId] : undefined,
             search,
           });
         break;
+      default:
+        throw new Error(`Unauthorized role: ${userRole}`);
     }
 
-    if (result.attachments.length > 0) {
+    const { data, meta } = result;
+
+    if (data.attachments.length > 0) {
       const signedUrls = await this.fileHubService.getSignedUrlBatch(
-        result.attachments.map((a) => a.filename),
+        data.attachments.map((a) => a.filename),
       );
 
-      const fileHubAttachments = result.attachments.map((a) => {
+      const fileHubAttachments = data.attachments.map((a) => {
         const signedUrl = signedUrls.find((s) => s.filename === a.filename);
         return {
           ...a.toJSON(),
@@ -93,15 +97,17 @@ export class GetAllSupportTicketsUseCase {
       });
 
       return {
-        tickets: result.tickets.map((t) => t.toJSON()),
-        metrics: result.metrics,
+        tickets: data.tickets.map((t) => t.toJSON()),
+        metrics: data.metrics,
         attachments: fileHubAttachments,
+        meta,
       };
     } else {
       return {
-        tickets: result.tickets.map((t) => t.toJSON()),
-        metrics: result.metrics,
+        tickets: data.tickets.map((t) => t.toJSON()),
+        metrics: data.metrics,
         attachments: [],
+        meta,
       };
     }
   }

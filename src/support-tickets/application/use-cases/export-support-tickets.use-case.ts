@@ -4,6 +4,7 @@ import { SupportTicketRepository } from '../../domain/repositories/support-ticke
 import { SupportTicketAnswerRepository } from '../../domain/repositories/support-ticket-answer.repository';
 import { InteractionType } from '../../domain/entities/support-ticket-interaction.entity';
 import { Export } from 'src/export/domain/entities/export.entity';
+import { CursorInput } from 'src/common/drizzle/helpers/cursor';
 
 interface ExportSupportTicketsInput {
   batchSize?: number;
@@ -43,17 +44,19 @@ export class ExportSupportTicketsUseCase {
     const endDate = typeof end === 'string' ? new Date(end) : end ?? undefined;
     const self = this;
     async function* batchGenerator() {
-      let offset = 0;
+      let currentCursor: CursorInput | undefined = {
+        pageSize: batchSize,
+      };
       for (; ;) {
-        const tickets = await self.ticketRepo.findAll(
-          offset,
-          batchSize,
-          departmentIds,
-          startDate,
-          endDate,
-          undefined,
-          undefined,
+        const result = await self.ticketRepo.findAll(
+          {
+            cursor: currentCursor,
+            departmentIds,
+            start: startDate,
+            end: endDate,
+          }
         );
+        const tickets = result.data;
         if (!tickets.length) break;
 
         const ticketIds = tickets.map((t) => t.id.toString());
@@ -87,7 +90,13 @@ export class ExportSupportTicketsUseCase {
         });
 
         yield rows;
-        offset += tickets.length;
+
+        if (!result.meta.hasNextPage || !result.meta.nextCursor) break;
+        currentCursor = {
+          cursor: result.meta.nextCursor,
+          direction: 'next',
+          pageSize: batchSize,
+        };
       }
     }
 

@@ -2,11 +2,11 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SupportTicketRepository } from '../../domain/repositories/support-ticket.repository';
 import { SupportTicketAnswerRepository } from '../../domain/repositories/support-ticket-answer.repository';
 import { GetAttachmentsByTargetIdsUseCase } from 'src/files/application/use-cases/get-attachments-by-target-ids.use-case';
+import { CursorInput, CursorMeta } from 'src/common/drizzle/helpers/cursor';
 
 export interface GetGuestTicketsWithDetailsInput {
   phone: string;
-  offset?: number;
-  limit?: number;
+  cursor?: CursorInput;
 }
 
 export interface GetGuestTicketsWithDetailsOutput {
@@ -22,6 +22,7 @@ export interface GetGuestTicketsWithDetailsOutput {
   }[];
   attachments: { [ticketId: string]: string[] };
   answerAttachments: { [ticketId: string]: string[] };
+  meta: CursorMeta;
 }
 
 @Injectable()
@@ -30,18 +31,18 @@ export class GetGuestTicketsWithDetailsUseCase {
     private readonly supportTicketRepository: SupportTicketRepository,
     private readonly supportTicketAnswerRepository: SupportTicketAnswerRepository,
     private readonly getAttachmentsUseCase: GetAttachmentsByTargetIdsUseCase,
-  ) {}
+  ) { }
 
   async execute(
     input: GetGuestTicketsWithDetailsInput,
   ): Promise<GetGuestTicketsWithDetailsOutput> {
-    const { phone, offset = 0, limit = 10 } = input;
+    const { phone, cursor } = input;
 
-    const tickets = await this.supportTicketRepository.findByPhoneNumber(
-      phone,
-      offset,
-      limit,
-    );
+    const { data: tickets, meta } =
+      await this.supportTicketRepository.findByPhoneNumber({
+        phone,
+        cursor,
+      });
 
     const ticketIds = tickets.map((ticket) => ticket.id);
 
@@ -61,8 +62,8 @@ export class GetGuestTicketsWithDetailsUseCase {
       }),
       answerIds.length > 0
         ? this.getAttachmentsUseCase.execute({
-            targetIds: answerIds,
-          })
+          targetIds: answerIds,
+        })
         : Promise.resolve({}),
     ]);
 
@@ -76,19 +77,16 @@ export class GetGuestTicketsWithDetailsUseCase {
       }
 
       // Get attachments for this specific answer
-      const answerAttachmentIds = answerAttachments[answer.id.toString()] || [];
+      const answerAttachmentIds =
+        answerAttachments[answer.id.toString()] || [];
       answerAttachmentsByTicket[ticketId].push(...answerAttachmentIds);
     });
-
-    // // Get total count for pagination metadata
-    // const totalTickets =
-    //   await this.supportTicketRepository.findByGuestId(guestId);
-    // const total = totalTickets.length;
 
     return {
       tickets,
       attachments: ticketAttachments,
       answerAttachments: answerAttachmentsByTicket,
+      meta,
     };
   }
 }

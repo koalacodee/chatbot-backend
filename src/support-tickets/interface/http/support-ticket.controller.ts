@@ -100,7 +100,7 @@ export class SupportTicketController {
     private readonly getEmployeesWithTicketHandlingPermissionsUseCase: GetEmployeesWithTicketHandlingPermissionsUseCase,
     private readonly exportSupportTicketsUseCase: ExportSupportTicketsUseCase,
     private readonly exportFileService: ExportFileService,
-  ) {}
+  ) { }
 
   @UseInterceptors(GuestIdInterceptor)
   @Post(':type/:ticketId')
@@ -122,8 +122,7 @@ export class SupportTicketController {
   ) {
     return this.getGuestTicketsWithDetailsUseCase.execute({
       phone: query.phone,
-      offset: query.offset,
-      limit: query.limit,
+      cursor: query.cursor,
     });
   }
 
@@ -178,8 +177,7 @@ export class SupportTicketController {
   @Get()
   async getAll(@Req() req: any, @Query() query: GetAllSupportTicketsDto) {
     return this.getAllUseCase.execute({
-      offset: query.offset,
-      limit: query.limit,
+      cursor: query.cursor,
       userId: req.user.id,
       userRole: req.user.role,
       status: query.status,

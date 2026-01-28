@@ -12,8 +12,6 @@ import {
   SupportTicket,
   SupportTicketStatus,
 } from '../../../domain/entities/support-ticket.entity';
-import { Employee } from 'src/employee/domain/entities/employee.entity';
-import { User } from 'src/shared/entities/user.entity';
 import {
   Department,
   DepartmentVisibility,
@@ -50,6 +48,7 @@ import {
 import { TicketCode } from 'src/tickets/domain/value-objects/ticket-code.vo';
 import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
 import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
+import { CursorInput, PaginatedArrayResult, createCursorPagination, PaginatedObjectResult } from 'src/common/drizzle/helpers/cursor';
 
 export enum SupportTicketStatusMapping {
   NEW = 'new',
@@ -58,8 +57,20 @@ export enum SupportTicketStatusMapping {
   CLOSED = 'closed',
 }
 
+type SupportTicketCursorData = { createdAt: string; id: string };
+
 @Injectable()
 export class DrizzleSupportTicketRepository extends SupportTicketRepository {
+  private readonly pagination = createCursorPagination<SupportTicketCursorData>({
+    table: supportTickets,
+    cursorFields: [
+      { column: supportTickets.createdAt, key: 'createdAt' },
+      { column: supportTickets.id, key: 'id' },
+    ],
+    defaultPageSize: 10,
+    sortDirection: 'desc',
+  });
+
   constructor(private readonly drizzle: DrizzleService) {
     super();
   }
@@ -81,12 +92,12 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       departmentId: rec.ticket.departmentId,
       department: rec.department
         ? Department.create({
-            id: rec.department.id,
-            name: rec.department.name,
-            parentId: rec.department.parentId,
-            visibility:
-              DepartmentVisibility[rec.department.visibility.toUpperCase()],
-          })
+          id: rec.department.id,
+          name: rec.department.name,
+          parentId: rec.department.parentId,
+          visibility:
+            DepartmentVisibility[rec.department.visibility.toUpperCase()],
+        })
         : undefined,
       status: SupportTicketStatus[rec.ticket.status.toUpperCase()],
       createdAt: new Date(rec.ticket.createdAt),
@@ -94,23 +105,23 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       code: rec.ticket.code,
       interaction: rec.interaction
         ? SupportTicketInteraction.create({
-            id: rec.interaction.id,
-            supportTicketId: rec.ticket.id,
-            type: InteractionType[rec.interaction.type.toUpperCase()],
-            guestId: rec.interaction.guestId,
-          })
+          id: rec.interaction.id,
+          supportTicketId: rec.ticket.id,
+          type: InteractionType[rec.interaction.type.toUpperCase()],
+          guestId: rec.interaction.guestId,
+        })
         : undefined,
       guestName: rec.ticket.guestName,
       guestPhone: rec.ticket.guestPhone,
       guestEmail: rec.ticket.guestEmail,
       answer: rec?.answer
         ? SupportTicketAnswer.create({
-            id: rec.answer.id,
-            supportTicketId: rec.ticket.id,
-            content: rec.answer.content,
-            createdAt: new Date(rec.answer.createdAt),
-            updatedAt: new Date(rec.answer.updatedAt),
-          })
+          id: rec.answer.id,
+          supportTicketId: rec.ticket.id,
+          content: rec.answer.content,
+          createdAt: new Date(rec.answer.createdAt),
+          updatedAt: new Date(rec.answer.updatedAt),
+        })
         : undefined,
     });
   }
@@ -189,22 +200,29 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
   }
 
   async findAll(
-    offset?: number,
-    limit?: number,
-    departmentIds?: string[],
-    start?: Date,
-    end?: Date,
-    status?: SupportTicketStatus,
-    search?: string,
-  ): Promise<SupportTicket[]> {
-    const whereConditions: any[] = [];
+    options?: {
+      cursor?: CursorInput,
+      departmentIds?: string[],
+      start?: Date,
+      end?: Date,
+      status?: SupportTicketStatus,
+      search?: string,
+    }
+  ): Promise<PaginatedArrayResult<SupportTicket>> {
+    const paginationParams = this.pagination.parseInput(options.cursor);
+    const cursorCondition: SQL | undefined = paginationParams.cursorData ? this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    ) : undefined;
 
+    const whereConditions: SQL[] = [];
+    const { departmentIds, start, end, status, search } = options ?? {};
     if (departmentIds && departmentIds.length > 0) {
       whereConditions.push(inArray(supportTickets.departmentId, departmentIds));
     }
 
     if (start || end) {
-      const dateConditions: any[] = [];
+      const dateConditions: SQL[] = [];
       if (start) {
         dateConditions.push(gte(supportTickets.createdAt, start.toISOString()));
       }
@@ -235,6 +253,10 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       );
     }
 
+    if (cursorCondition) {
+      whereConditions.push(cursorCondition);
+    }
+
     const whereClause =
       whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
@@ -260,12 +282,19 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
         eq(supportTickets.id, supportTicketAnswers.supportTicketId),
       )
       .orderBy(desc(supportTickets.createdAt))
-      .limit(limit || 1000)
-      .offset(offset || 0);
+      .limit(paginationParams.limit)
 
     const results = whereClause ? await query.where(whereClause) : await query;
 
-    return Promise.all(results.map((r) => this.toDomain(r)));
+    const { data, meta } = this.pagination.processResults(results, paginationParams, (r) => ({
+      createdAt: r.ticket.createdAt,
+      id: r.ticket.id,
+    }));
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
   async removeById(id: string): Promise<SupportTicket | null> {
@@ -308,10 +337,20 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
   }
 
   async findByDepartment(
-    departmentId: string,
-    status?: 'NEW' | 'SEEN' | 'ANSWERED' | 'CLOSED',
-  ): Promise<SupportTicket[]> {
-    const whereConditions: any[] = [
+    options: {
+      departmentId: string,
+      cursor?: CursorInput,
+      status?: 'NEW' | 'SEEN' | 'ANSWERED' | 'CLOSED',
+    }
+  ): Promise<PaginatedArrayResult<SupportTicket>> {
+    const { departmentId, cursor, status } = options;
+    const paginationParams = this.pagination.parseInput(cursor);
+    const cursorCondition = paginationParams.cursorData ? this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    ) : undefined;
+
+    const whereConditions: SQL[] = [
       eq(supportTickets.departmentId, departmentId),
     ];
 
@@ -320,6 +359,8 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
         eq(supportTickets.status, SupportTicketStatusMapping[status]),
       );
     }
+
+    if (cursorCondition) whereConditions.push(cursorCondition)
 
     const results = await this.db
       .select({
@@ -343,12 +384,45 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
         eq(supportTickets.id, supportTicketAnswers.supportTicketId),
       )
       .where(and(...whereConditions))
-      .orderBy(desc(supportTickets.createdAt));
+      .limit(paginationParams.limit)
+      .orderBy(...this.pagination.getOrderBy());
 
-    return Promise.all(results.map((r) => this.toDomain(r)));
+    const { data, meta } = this.pagination.processResults(results, paginationParams, (r) => ({
+      createdAt: r.ticket.createdAt,
+      id: r.ticket.id,
+    }));
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
-  async search(query: string): Promise<SupportTicket[]> {
+  async search({ query, cursor }: {
+    query: string,
+    cursor?: CursorInput,
+  }): Promise<PaginatedArrayResult<SupportTicket>> {
+    const paginationParams = this.pagination.parseInput(cursor);
+    const cursorCondition = paginationParams.cursorData ? this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    ) : undefined;
+
+    const whereConditions: SQL[] = [
+      or(
+        ilike(supportTickets.subject, `%${query}%`),
+        ilike(supportTickets.description, `%${query}%`),
+        ilike(supportTickets.guestName, `%${query}%`),
+        ilike(supportTickets.guestPhone, `%${query}%`),
+        ilike(users.name, `%${query}%`),
+        ilike(departments.name, `%${query}%`),
+      ),
+    ];
+
+    if (cursorCondition) whereConditions.push(cursorCondition);
+
+    const whereClause = whereConditions.length > 0 ? whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0] : undefined;
+
     const results = await this.db
       .select({
         ticket: supportTickets,
@@ -371,20 +445,20 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
         eq(supportTickets.id, supportTicketAnswers.supportTicketId),
       )
       .where(
-        or(
-          eq(supportTickets.id, query),
-          ilike(supportTickets.subject, `%${query}%`),
-          ilike(supportTickets.description, `%${query}%`),
-          eq(supportTickets.assigneeId, query),
-          ilike(supportTickets.guestName, `%${query}%`),
-          ilike(supportTickets.guestPhone, `%${query}%`),
-          ilike(users.name, `%${query}%`),
-          ilike(departments.name, `%${query}%`),
-        ),
+        whereClause
       )
-      .orderBy(desc(supportTickets.createdAt));
+      .orderBy(...this.pagination.getOrderBy())
+      .limit(paginationParams.limit);
 
-    return Promise.all(results.map((r) => this.toDomain(r)));
+    const { data, meta } = this.pagination.processResults(results, paginationParams, (r) => ({
+      createdAt: r.ticket.createdAt,
+      id: r.ticket.id,
+    }));
+
+    return {
+      data: await Promise.all(data.map((r) => this.toDomain(r))),
+      meta,
+    };
   }
 
   async getFrequentTicketSubjects(
@@ -460,52 +534,53 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
 
     return results.length > 0
       ? {
-          ticket: await this.toDomain({
-            ticket: results[0].ticket,
-            department: results[0].department,
-            answer: results[0].answer,
-          }),
-          answers: results
-            .filter((r) => r.answer !== null)
-            .map((r) =>
-              SupportTicketAnswer.create({
-                id: r.answer.id,
-                supportTicketId: r.ticket.id,
-                content: r.answer.content,
-                createdAt: new Date(r.answer.createdAt),
-                updatedAt: new Date(r.answer.updatedAt),
-              }),
-            ),
-          fileHubAttachments: attachmentRows.map((r) =>
-            Attachment.create({
-              id: r.id,
-              type: r.type,
-              createdAt: new Date(r.createdAt),
-              updatedAt: new Date(r.updatedAt),
-              targetId: r.targetId,
-              expirationDate: r.expirationDate
-                ? new Date(r.expirationDate)
-                : undefined,
-              filename: r.filename,
-              originalName: r.originalName,
-              userId: r.userId,
-              guestId: r.guestId,
-              isGlobal: r.isGlobal,
-              size: r.size,
-              cloned: r.cloned,
+        ticket: await this.toDomain({
+          ticket: results[0].ticket,
+          department: results[0].department,
+          answer: results[0].answer,
+        }),
+        answers: results
+          .filter((r) => r.answer !== null)
+          .map((r) =>
+            SupportTicketAnswer.create({
+              id: r.answer.id,
+              supportTicketId: r.ticket.id,
+              content: r.answer.content,
+              createdAt: new Date(r.answer.createdAt),
+              updatedAt: new Date(r.answer.updatedAt),
             }),
           ),
-          isRated: results[0].isRated,
-        }
+        fileHubAttachments: attachmentRows.map((r) =>
+          Attachment.create({
+            id: r.id,
+            type: r.type,
+            createdAt: new Date(r.createdAt),
+            updatedAt: new Date(r.updatedAt),
+            targetId: r.targetId,
+            expirationDate: r.expirationDate
+              ? new Date(r.expirationDate)
+              : undefined,
+            filename: r.filename,
+            originalName: r.originalName,
+            userId: r.userId,
+            guestId: r.guestId,
+            isGlobal: r.isGlobal,
+            size: r.size,
+            cloned: r.cloned,
+          }),
+        ),
+        isRated: results[0].isRated,
+      }
       : null;
   }
 
   async findByPhoneNumber(
-    phone: string,
-    offset: number = 0,
-    limit: number = 10,
+    { phone, cursor }: {
+      phone: string,
+      cursor?: CursorInput,
+    }
   ): Promise<
-    {
+    PaginatedArrayResult<{
       id: string;
       subject: string;
       description: string;
@@ -514,60 +589,69 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       departmentId: string;
       createdAt: Date;
       updatedAt: Date;
-      status: SupportTicketStatus;
-    }[]
+    }>
   > {
-    return this.db
-      .execute(
-        sql`
-      WITH PhoneTickets AS (
-        SELECT 
-          st.id,
-          st.subject,
-          st.description,
-          st.department_id as "departmentId",
-          st.created_at as "createdAt",
-          st.updated_at as "updatedAt",
-          st.guest_phone,
-          st.status,
-          st.code
-        FROM support_tickets st
-        WHERE st.guest_phone = ${phone}
-      ),
-      TicketAnswers AS (
-        SELECT 
-          sta.support_ticket_id,
-          sta.content as answer
-        FROM support_ticket_answers sta
-      ),
-      TicketRatings AS (
-        SELECT 
-          sti.support_ticket_id,
-          CASE 
-            WHEN sti.id IS NOT NULL THEN true 
-            ELSE false 
-          END as "isRated"
-        FROM support_ticket_interactions sti
-      )
-      SELECT 
-        pt.id,
-        pt.subject,
-        pt.description,
-        ta.answer,
-        COALESCE(tr."isRated", false) as "isRated",
-        pt."departmentId",
-        pt."createdAt",
-        pt."updatedAt",
-        UPPER(pt.status::text) AS status,
-        pt.code
-      FROM PhoneTickets pt
-      LEFT JOIN TicketAnswers ta ON ta.support_ticket_id = pt.id
-      LEFT JOIN TicketRatings tr ON tr.support_ticket_id = pt.id
-      ORDER BY pt."createdAt" DESC
-      LIMIT ${limit} OFFSET ${offset};
-    `,
-      )
-      .then((result: any) => result.rows || result);
+    const paginationParams = this.pagination.parseInput(cursor);
+    const cursorCondition = paginationParams.cursorData ? this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    ) : undefined;
+
+    const whereConditions: SQL[] = [
+      eq(supportTickets.guestPhone, phone),
+    ];
+
+    if (cursorCondition) whereConditions.push(cursorCondition);
+
+    const whereClause = whereConditions.length > 0 ? whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0] : undefined;
+
+    const rows = await this.db
+      .select({
+        id: supportTickets.id,
+        subject: supportTickets.subject,
+        description: supportTickets.description,
+        departmentId: supportTickets.departmentId,
+        createdAt: supportTickets.createdAt,
+        updatedAt: supportTickets.updatedAt,
+        status: sql<string>`UPPER(${supportTickets.status}::text)`,
+        code: supportTickets.code,
+        answer: sql<string | null>`
+          SELECT content
+          FROM ${supportTicketAnswers}
+          WHERE ${supportTicketAnswers.supportTicketId} = ${supportTickets.id}
+          ORDER BY id
+          LIMIT 1
+      `,
+        isRated: sql<boolean>`
+        EXISTS(
+          SELECT 1
+          FROM ${supportTicketInteractions}
+          WHERE ${supportTicketInteractions.supportTicketId} = ${supportTickets.id}
+        )`,
+      })
+      .from(supportTickets)
+      .where(whereClause)
+      .orderBy(...this.pagination.getOrderBy())
+      .limit(paginationParams.limit);
+
+    const { data, meta } = this.pagination.processResults(rows, paginationParams, (r) => ({
+      createdAt: r.createdAt,
+      id: r.id,
+    }));
+
+    return {
+      data: data.map((r) => ({
+        id: r.id,
+        subject: r.subject,
+        description: r.description,
+        answer: r.answer ?? undefined,
+        isRated: r.isRated,
+        departmentId: r.departmentId,
+        createdAt: new Date(r.createdAt),
+        updatedAt: new Date(r.updatedAt),
+      })),
+      meta,
+    };
   }
 
   async getMetrics(
@@ -593,12 +677,6 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
         ),
       );
     }
-
-    // const statusFilter = status
-    //   ? [status.toLowerCase()]
-    //   : ['new', 'seen', 'answered', 'closed'];
-
-    // whereConditions.push(inArray(supportTickets.status, statusFilter));
 
     if (status) {
       whereConditions.push(
@@ -649,7 +727,7 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
   /* ------------------------------------------------------------------ */
   async getAllTicketsAndMetricsForSupervisor(
     options: GetAllTicketsOptions & { supervisorUserId: string },
-  ): Promise<GetAllTicketsAndMetricsOutput> {
+  ): Promise<PaginatedObjectResult<GetAllTicketsAndMetricsOutput>> {
     const departmentIds = await this._departmentIdsForSupervisor(
       options.supervisorUserId,
     );
@@ -658,7 +736,7 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
 
   async getAllTicketsAndMetricsForEmployee(
     options: GetAllTicketsOptions & { employeeUserId: string },
-  ): Promise<GetAllTicketsAndMetricsOutput> {
+  ): Promise<PaginatedObjectResult<GetAllTicketsAndMetricsOutput>> {
     const departmentIds = await this._departmentIdsForEmployee(
       options.employeeUserId,
     );
@@ -667,7 +745,7 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
 
   async getAllTicketsAndMetricsForAdmin(
     options: GetAllTicketsOptions,
-  ): Promise<GetAllTicketsAndMetricsOutput> {
+  ): Promise<PaginatedObjectResult<GetAllTicketsAndMetricsOutput>> {
     // Admin may see every department – pass undefined so no filter is injected
     return this._getAllTicketsAndMetrics(undefined, options);
   }
@@ -737,9 +815,15 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
   private async _getAllTicketsAndMetrics(
     allowedDepartmentIds: string[] | undefined,
     options: GetAllTicketsOptions,
-  ): Promise<GetAllTicketsAndMetricsOutput> {
+  ): Promise<PaginatedObjectResult<GetAllTicketsAndMetricsOutput>> {
     /* ---------- department filter ----------------------------------- */
     let departmentIds = allowedDepartmentIds;
+
+    const paginationParams = this.pagination.parseInput(options.cursor);
+    const cursorCondition = paginationParams.cursorData ? this.pagination.buildCursorCondition(
+      paginationParams.cursorData,
+      paginationParams.direction,
+    ) : undefined;
 
     if (options.departmentIds?.length) {
       if (
@@ -759,6 +843,8 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
 
     /* ---------- dynamic WHERE --------------------------------------- */
     const whereConditions: SQL[] = [];
+
+    if (cursorCondition) whereConditions.push(cursorCondition);
 
     if (departmentIds) {
       whereConditions.push(inArray(supportTickets.departmentId, departmentIds));
@@ -800,8 +886,8 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
         )
         .innerJoin(departments, eq(supportTickets.departmentId, departments.id))
         .where(whereClause)
-        .limit(options.limit || 10)
-        .offset(options.offset || 0),
+        .limit(paginationParams.limit)
+      ,
       this.getMetrics(departmentIds, options.status, options.search),
     ]);
 
@@ -819,48 +905,55 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       .from(attachments)
       .where(inArray(attachments.targetId, Array.from(targetIds)));
 
+    const { meta } = this.pagination.processResults(tickets, paginationParams, (r) => ({
+      createdAt: r.support_tickets.createdAt,
+      id: r.support_tickets.id,
+    }));
+
     /* ---------- mapping --------------------------------------------- */
     return {
-      metrics,
-      tickets: tickets.map((t) =>
-        SupportTicket.create({
-          id: t.support_tickets.id,
-          subject: t.support_tickets.subject,
-          description: t.support_tickets.description,
-          departmentId: t.support_tickets.departmentId,
-          createdAt: new Date(t.support_tickets.createdAt),
-          updatedAt: new Date(t.support_tickets.updatedAt),
-          status: SupportTicketStatus[t.support_tickets.status.toUpperCase()],
-          code: TicketCode.create(t.support_tickets.code),
-          guestName: t.support_tickets.guestName,
-          guestEmail: t.support_tickets.guestEmail,
-          guestPhone: t.support_tickets.guestPhone,
-          answer: t.support_ticket_answers
-            ? SupportTicketAnswer.create({
+      data: {
+        metrics,
+        tickets: tickets.map((t) =>
+          SupportTicket.create({
+            id: t.support_tickets.id,
+            subject: t.support_tickets.subject,
+            description: t.support_tickets.description,
+            departmentId: t.support_tickets.departmentId,
+            createdAt: new Date(t.support_tickets.createdAt),
+            updatedAt: new Date(t.support_tickets.updatedAt),
+            status: SupportTicketStatus[t.support_tickets.status.toUpperCase()],
+            code: TicketCode.create(t.support_tickets.code),
+            guestName: t.support_tickets.guestName,
+            guestEmail: t.support_tickets.guestEmail,
+            guestPhone: t.support_tickets.guestPhone,
+            answer: t.support_ticket_answers
+              ? SupportTicketAnswer.create({
                 id: t.support_ticket_answers.id,
                 content: t.support_ticket_answers.content,
                 createdAt: new Date(t.support_ticket_answers.createdAt),
                 updatedAt: new Date(t.support_ticket_answers.updatedAt),
                 supportTicketId: t.support_tickets.id,
               })
-            : undefined,
-          department: Department.create({
-            id: t.departments.id,
-            name: t.departments.name,
-            parentId: t.departments.parentId,
-            visibility:
-              DepartmentVisibility[t.departments.visibility.toUpperCase()],
+              : undefined,
+            department: Department.create({
+              id: t.departments.id,
+              name: t.departments.name,
+              parentId: t.departments.parentId,
+              visibility:
+                DepartmentVisibility[t.departments.visibility.toUpperCase()],
+            }),
           }),
-        }),
-      ),
-      attachments: attachmentRows.map((a) =>
-        Attachment.create({
-          ...a,
-          createdAt: new Date(a.createdAt),
-          updatedAt: new Date(a.updatedAt),
-          expirationDate: new Date(a.expirationDate),
-        }),
-      ),
+        ),
+        attachments: attachmentRows.map((a) =>
+          Attachment.create({
+            ...a,
+            createdAt: new Date(a.createdAt),
+            updatedAt: new Date(a.updatedAt),
+            expirationDate: new Date(a.expirationDate),
+          }),
+        ),
+      }, meta
     };
   }
 }
