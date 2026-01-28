@@ -21,7 +21,7 @@ import { SupervisorPermissions } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum as SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 import { Req } from '@nestjs/common';
 import { TaskSubmission } from 'src/task/domain/entities/task-submission.entity';
-import { PaginatedResult } from 'src/common/drizzle/helpers/cursor';
+import { PaginatedArrayResult } from 'src/common/drizzle/helpers/cursor';
 import { TaskDelegationSubmission } from 'src/task/domain/entities/task-delegation-submission.entity';
 import { FilehubAttachmentMessage } from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 
@@ -46,7 +46,7 @@ export class SupervisorTaskController {
   async getTeamTasks(
     @Query() query: GetTasksByRoleDto,
     @Req() req: any,
-  ): Promise<PaginatedResult<{
+  ): Promise<PaginatedArrayResult<{
     task: (ReturnType<Task['toJSON']> & {
       submissions: ReturnType<TaskSubmission['toJSON']>[];
       delegationSubmissions: ReturnType<TaskDelegationSubmission['toJSON']>[];

@@ -3,7 +3,7 @@ import { TaskRepository } from '../../domain/repositories/task.repository';
 import { Task, TaskPriority, TaskStatus } from '../../domain/entities/task.entity';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
-import { CursorMeta, PaginatedResult } from 'src/common/drizzle/helpers/cursor';
+import { CursorMeta, PaginatedArrayResult } from 'src/common/drizzle/helpers/cursor';
 import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 import { TaskSubmission } from 'src/task/domain/entities/task-submission.entity';
 import { TaskDelegationSubmission } from 'src/task/domain/entities/task-delegation-submission.entity';
@@ -29,7 +29,7 @@ export class GetTeamTasksForSupervisorUseCase {
   async execute(
     input: GetTeamTasksForSupervisorInput,
     userId: string,
-  ): Promise<PaginatedResult<{
+  ): Promise<PaginatedArrayResult<{
     task: (ReturnType<Task['toJSON']> & {
       submissions: ReturnType<TaskSubmission['toJSON']>[];
       delegationSubmissions: ReturnType<TaskDelegationSubmission['toJSON']>[];

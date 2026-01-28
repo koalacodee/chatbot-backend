@@ -30,6 +30,7 @@ import {
   GetTaskPresetsUseCase,
   CreateTaskFromPresetUseCase,
   ExportTasksUseCase,
+  RestartTaskUseCase,
 } from '../../application/use-cases';
 import {
   CreateTaskInputDto,
@@ -78,6 +79,7 @@ export class TaskController {
     private readonly createTaskFromPresetUseCase: CreateTaskFromPresetUseCase,
     private readonly exportTasksUseCase: ExportTasksUseCase,
     private readonly exportFileService: ExportFileService,
+    private readonly restartTaskUseCase: RestartTaskUseCase,
   ) { }
 
   @Post()
@@ -366,6 +368,12 @@ export class TaskController {
       attach: input.attach,
       reminderInterval: input.reminderInterval,
     });
+  }
+
+  @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
+  @Post(':id/restart')
+  async restart(@Param('id') id: string) {
+    return this.restartTaskUseCase.execute(id);
   }
 
   @AdminAuth()

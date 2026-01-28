@@ -31,3 +31,4 @@ export * from './get-delegables.use-case';
 export * from './get-my-delegations.use-case';
 export * from './mark-delegation-seen.use-case';
 export * from './get-team-tasks-for-supervisor.use-case';
+export * from './restart-task.use-case';

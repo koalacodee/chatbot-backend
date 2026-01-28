@@ -56,7 +56,7 @@ import { TaskDelegation } from 'src/task/domain/entities/task-delegation.entity'
 import {
   createCursorPagination,
   CursorInput,
-  PaginatedResult,
+  PaginatedArrayResult,
 } from 'src/common/drizzle/helpers/cursor';
 import { TaskDelegationSubmission } from 'src/task/domain/entities/task-delegation-submission.entity';
 
@@ -557,7 +557,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       start?: Date;
       end?: Date;
     },
-  ): Promise<PaginatedResult<Task>> {
+  ): Promise<PaginatedArrayResult<Task>> {
     const whereConditions: any[] = [];
     const {
       cursor: cursorInput,
@@ -652,7 +652,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     return Number(result[0]?.count || 0);
   }
 
-  async findByAssignee(assigneeId: string, cursor?: CursorInput): Promise<PaginatedResult<Task>> {
+  async findByAssignee(assigneeId: string, cursor?: CursorInput): Promise<PaginatedArrayResult<Task>> {
     const paginationParams = this.pagination.parseInput(cursor);
     const cursorCondition = this.pagination.buildCursorCondition(
       paginationParams.cursorData,
@@ -691,7 +691,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     };
   }
 
-  async findByDepartment(departmentId: string, cursor?: CursorInput): Promise<PaginatedResult<Task>> {
+  async findByDepartment(departmentId: string, cursor?: CursorInput): Promise<PaginatedArrayResult<Task>> {
     const paginationParams = this.pagination.parseInput(cursor);
     const cursorCondition = this.pagination.buildCursorCondition(
       paginationParams.cursorData,
@@ -736,7 +736,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     assignmentType: string,
     targetId?: string,
     cursor?: CursorInput,
-  ): Promise<PaginatedResult<Task>> {
+  ): Promise<PaginatedArrayResult<Task>> {
     const paginationParams = this.pagination.parseInput(cursor);
     const cursorCondition = this.pagination.buildCursorCondition(
       paginationParams.cursorData,
@@ -788,7 +788,7 @@ export class DrizzleTaskRepository extends TaskRepository {
   async findDepartmentLevelTasks(
     departmentId?: string,
     filters?: DepartmentTaskFilters,
-  ): Promise<PaginatedResult<Task>> {
+  ): Promise<PaginatedArrayResult<Task>> {
     const paginationParams = this.pagination.parseInput(filters?.cursor);
     const cursorCondition = this.pagination.buildCursorCondition(
       paginationParams.cursorData,
@@ -835,7 +835,7 @@ export class DrizzleTaskRepository extends TaskRepository {
   async findSubDepartmentLevelTasks(
     subDepartmentId?: string,
     filters?: DepartmentTaskFilters,
-  ): Promise<PaginatedResult<Task>> {
+  ): Promise<PaginatedArrayResult<Task>> {
     const paginationParams = this.pagination.parseInput(filters?.cursor);
     const cursorCondition = this.pagination.buildCursorCondition(
       paginationParams.cursorData,
@@ -881,7 +881,7 @@ export class DrizzleTaskRepository extends TaskRepository {
 
   async findSubIndividualsLevelTasks(
     filters?: IndividualTaskFilters,
-  ): Promise<PaginatedResult<Task>> {
+  ): Promise<PaginatedArrayResult<Task>> {
     const paginationParams = this.pagination.parseInput(filters?.cursor);
     const cursorCondition = this.pagination.buildCursorCondition(
       paginationParams.cursorData,
@@ -931,7 +931,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     departmentId?: string;
     status?: TaskStatus[];
     cursor?: CursorInput;
-  }): Promise<PaginatedResult<Task>> {
+  }): Promise<PaginatedArrayResult<Task>> {
     const { employeeId, subDepartmentId, departmentId, status, cursor } = options;
 
     const paginationParams = this.pagination.parseInput(cursor);
@@ -1015,7 +1015,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     supervisorDepartmentIds: string[];
     status?: TaskStatus[];
     cursor?: CursorInput;
-  }): Promise<PaginatedResult<Task>> {
+  }): Promise<PaginatedArrayResult<Task>> {
     const { supervisorDepartmentIds, status, cursor } = options;
 
     const paginationParams = this.pagination.parseInput(cursor);
@@ -1073,7 +1073,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     subDepartmentIds: string[];
     status?: TaskStatus[];
     cursor?: CursorInput;
-  }): Promise<PaginatedResult<Task>> {
+  }): Promise<PaginatedArrayResult<Task>> {
     const {
       employeeId,
       supervisorId,
@@ -1290,6 +1290,31 @@ export class DrizzleTaskRepository extends TaskRepository {
     return result.length > 0 ? this.toDomain(result[0]) : null;
   }
 
+  async restart(taskId: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      // 1. Update task status back to TODO and clear completedAt
+      await tx
+        .update(tasks)
+        .set({
+          status: 'to_do',
+          completedAt: null,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(tasks.id, taskId));
+
+      // 2. Delete task submissions
+      await tx.delete(taskSubmissions).where(eq(taskSubmissions.taskId, taskId));
+
+      // 3. Delete task delegation submissions
+      await tx
+        .delete(taskDelegationSubmissions)
+        .where(eq(taskDelegationSubmissions.taskId, taskId));
+
+      // 4. Delete task delegations
+      await tx.delete(taskDelegations).where(eq(taskDelegations.taskId, taskId));
+    });
+  }
+
   private applyFilters(
     whereConditions: any[],
     filters?: DepartmentTaskFilters | IndividualTaskFilters,
@@ -1372,7 +1397,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     status?: TaskStatus[];
     priority?: TaskPriority[];
     cursor?: CursorInput;
-  }): Promise<PaginatedResult<{
+  }): Promise<PaginatedArrayResult<{
     task: Task;
     rejectionReason?: string;
     approvalFeedback?: string;
@@ -1667,7 +1692,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     status?: TaskStatus[];
     priority?: TaskPriority[];
     cursor?: CursorInput;
-  }): Promise<PaginatedResult<{
+  }): Promise<PaginatedArrayResult<{
     task: Task;
     rejectionReason?: string;
     approvalFeedback?: string;
@@ -1835,7 +1860,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     priority?: TaskPriority[];
     cursor?: CursorInput;
     search?: string;
-  }): Promise<PaginatedResult<{
+  }): Promise<PaginatedArrayResult<{
     task: {
       data: Task;
       submissions: TaskSubmission[];
