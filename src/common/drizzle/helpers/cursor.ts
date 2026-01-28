@@ -17,8 +17,13 @@ export interface CursorMeta {
   hasPrevPage: boolean;
 }
 
-export interface PaginatedResult<T> {
+export interface PaginatedArrayResult<T> {
   data: T[];
+  meta: CursorMeta;
+}
+
+export interface PaginatedObjectResult<T> {
+  data: T;
   meta: CursorMeta;
 }
 
