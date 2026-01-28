@@ -1445,13 +1445,13 @@ export class DrizzleTaskRepository extends TaskRepository {
             eq(tasks.assigneeId, empId),
             inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
           ),
-          status.length
+          status?.length
             ? inArray(
               tasks.status,
               status.map((s) => domainToDrizzleStatus(s)),
             )
             : undefined,
-          priority.length
+          priority?.length
             ? inArray(
               tasks.priority,
               priority.map((p) => domainToDrizzlePriority(p)),
