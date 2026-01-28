@@ -1148,6 +1148,7 @@ export const supportTickets = pgTable(
     guestPhone: varchar('guest_phone', { length: 255 }).notNull(),
   },
   (table) => [
+    index("idx_support_tickets_cursor").on(table.createdAt.desc(), table.id.desc()),
     index('idx_support_tickets_subject_lower').using(
       'btree',
       sql`lower(TRIM(BOTH FROM subject))`,

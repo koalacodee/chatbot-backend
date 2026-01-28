@@ -22,6 +22,13 @@
       "when": 1769459021953,
       "tag": "0003_right_bastion",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769570184402,
+      "tag": "0004_ordinary_triton",
+      "breakpoints": true
     }
   ]
 }

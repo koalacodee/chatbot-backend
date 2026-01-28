@@ -1,0 +1,1 @@
+CREATE INDEX "idx_support_tickets_cursor" ON "support_tickets" USING btree ("created_at" DESC NULLS LAST,"id" DESC NULLS LAST);
