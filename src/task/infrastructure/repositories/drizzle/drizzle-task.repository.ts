@@ -1821,11 +1821,11 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     const whereConditions = [inArray(tasks.targetDepartmentId, supervisorDepartmentIds)]
 
-    if (status.length > 0) {
+    if (status && status.length > 0) {
       whereConditions.push(inArray(tasks.status, status.map((s) => domainToDrizzleStatus(s))));
     }
 
-    if (priority.length > 0) {
+    if (priority && priority.length > 0) {
       whereConditions.push(inArray(tasks.priority, priority.map((p) => domainToDrizzlePriority(p))));
     }
 
