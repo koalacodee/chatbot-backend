@@ -1446,9 +1446,9 @@ export class DrizzleTaskRepository extends TaskRepository {
 
     /* ---------- 2. Build unified filter conditions ---------- */
 
-    // Common status filter
-    const statusFilter = status?.length
-      ? inArray(sql`status`, status.map((s) => domainToDrizzleStatus(s)))
+    // Common status filter values
+    const drizzleStatuses = status?.length
+      ? status.map((s) => domainToDrizzleStatus(s))
       : undefined;
 
     // Common priority filter (only applies to tasks, delegations inherit from task)
@@ -1519,7 +1519,7 @@ export class DrizzleTaskRepository extends TaskRepository {
               eq(tasks.assigneeId, empId),
               inArray(tasks.targetSubDepartmentId, employeeDepartmentIds)
             ),
-            statusFilter,
+            drizzleStatuses ? inArray(tasks.status, drizzleStatuses) : undefined,
             priorityFilter,
             searchFilter
           )
@@ -1556,7 +1556,7 @@ export class DrizzleTaskRepository extends TaskRepository {
               eq(taskDelegations.assigneeId, empId),
               inArray(taskDelegations.targetSubDepartmentId, employeeDepartmentIds)
             ),
-            statusFilter,
+            drizzleStatuses ? inArray(taskDelegations.status, drizzleStatuses) : undefined,
             priorityFilter, // Applied via join to tasks
             searchFilter    // Applied via join to tasks
           )
@@ -1689,7 +1689,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     ]);
 
     const submissionsByTaskId = new Map(
-      submissions.map(s => [s.taskId, s])
+      submissions ? submissions.map(s => [s.taskId, s]) : []
     );
 
     /* ---------- 8. Map results ---------- */
