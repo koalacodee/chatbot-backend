@@ -50,13 +50,17 @@ export interface CursorPaginationConfig<TTable, TCursorData extends CursorData> 
 
 export class CursorPagination<TCursorData extends CursorData> {
   private readonly defaultPageSize: number;
-  private readonly sortDirection: 'asc' | 'desc';
+  private readonly _sortDirection: 'asc' | 'desc';
   private readonly cursorFields: { column: any; key: keyof TCursorData }[];
 
   constructor(config: CursorPaginationConfig<any, TCursorData>) {
     this.cursorFields = config.cursorFields;
     this.defaultPageSize = config.defaultPageSize ?? 10;
-    this.sortDirection = config.sortDirection ?? 'desc';
+    this._sortDirection = config.sortDirection ?? 'desc';
+  }
+
+  get sortDirection() {
+    return this._sortDirection;
   }
 
   /**
@@ -93,7 +97,7 @@ export class CursorPagination<TCursorData extends CursorData> {
     // Determine comparison operator based on sort and navigation direction
     // For DESC sort: next = <, prev = >
     // For ASC sort: next = >, prev = <
-    const isDescending = this.sortDirection === 'desc';
+    const isDescending = this._sortDirection === 'desc';
     const useGreaterThan = isDescending ? direction === 'prev' : direction === 'next';
 
     // Build the tuple comparison SQL
@@ -110,7 +114,7 @@ export class CursorPagination<TCursorData extends CursorData> {
    * Get the ORDER BY clauses
    */
   getOrderBy() {
-    const orderFn = this.sortDirection === 'desc' ? desc : asc;
+    const orderFn = this._sortDirection === 'desc' ? desc : asc;
     return this.cursorFields.map(f => orderFn(f.column));
   }
 

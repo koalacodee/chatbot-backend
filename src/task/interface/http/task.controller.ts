@@ -284,6 +284,7 @@ export class TaskController {
       cursorDir: query.cursorDir,
       limit: query.limit,
       status: query.status,
+      search: query.search,
     });
   }
 

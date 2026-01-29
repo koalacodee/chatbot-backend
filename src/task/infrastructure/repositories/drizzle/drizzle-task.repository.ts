@@ -49,6 +49,7 @@ import {
   ilike,
   SQL,
   exists,
+  asc,
 } from 'drizzle-orm';
 // import { DepartmentVisibility } from '@prisma/client';
 import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
@@ -61,7 +62,9 @@ import {
 import { TaskDelegationSubmission } from 'src/task/domain/entities/task-delegation-submission.entity';
 
 type TaskCursorData = { createdAt: string; id: string };
-
+type DrizzleTaskStatus = "to_do" | "seen" | "pending_review" | "completed"
+type DrizzleTaskPriority = "low" | "medium" | "high"
+type DrizzleTaskAssignmentType = "individual" | "department" | "sub_department"
 export function drizzleToDomainStatus(
   status: (typeof tasks.$inferSelect)['status'],
 ): TaskStatus {
@@ -1391,12 +1394,12 @@ export class DrizzleTaskRepository extends TaskRepository {
       completionPercentage,
     };
   }
-
   async getTasksAndDelegationsForEmployee(options: {
     employeeUserId: string;
     status?: TaskStatus[];
     priority?: TaskPriority[];
     cursor?: CursorInput;
+    search?: string;
   }): Promise<PaginatedArrayResult<{
     task: Task;
     rejectionReason?: string;
@@ -1419,15 +1422,19 @@ export class DrizzleTaskRepository extends TaskRepository {
       status,
       priority,
       cursor,
+      search,
     } = options;
+
     const paginationParams = this.pagination.parseInput(cursor);
     const { limit } = paginationParams;
-    /* ---------- 1.  employee meta (unchanged) ---------- */
+
+    /* ---------- 1. Employee meta ---------- */
     const [emp] = await this.db
       .select({ id: employees.id })
       .from(employees)
       .where(eq(employees.userId, employeeUserId))
       .limit(1);
+
     if (!emp) throw new Error('employee not found');
     const empId = emp.id;
 
@@ -1437,219 +1444,319 @@ export class DrizzleTaskRepository extends TaskRepository {
       .where(eq(employeeSubDepartments.employeeId, empId))
       .then((r) => r.map((i) => i.id));
 
-    /* ---------- 2.  reusable filter fragments ---------- */
-    const taskWhere =
-      status?.length || priority?.length
-        ? and(
-          or(
-            eq(tasks.assigneeId, empId),
-            inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
-          ),
-          status?.length
-            ? inArray(
-              tasks.status,
-              status.map((s) => domainToDrizzleStatus(s)),
-            )
-            : undefined,
-          priority?.length
-            ? inArray(
-              tasks.priority,
-              priority.map((p) => domainToDrizzlePriority(p)),
-            )
-            : undefined,
-        )
-        : or(
-          eq(tasks.assigneeId, empId),
-          inArray(tasks.targetSubDepartmentId, employeeDepartmentIds),
-        );
+    /* ---------- 2. Build unified filter conditions ---------- */
 
-    const delWhere = status?.length
-      ? and(
-        or(
-          eq(taskDelegations.assigneeId, empId),
-          inArray(
-            taskDelegations.targetSubDepartmentId,
-            employeeDepartmentIds,
-          ),
-        ),
-        inArray(
-          taskDelegations.status,
-          status.map((s) => domainToDrizzleStatus(s)),
-        ),
+    // Common status filter
+    const statusFilter = status?.length
+      ? inArray(sql`status`, status.map((s) => domainToDrizzleStatus(s)))
+      : undefined;
+
+    // Common priority filter (only applies to tasks, delegations inherit from task)
+    const priorityFilter = priority?.length
+      ? inArray(tasks.priority, priority.map((p) => domainToDrizzlePriority(p)))
+      : undefined;
+
+    // Common search filter (searches task title/description)
+    const searchFilter = search
+      ? or(
+        ilike(tasks.title, `%${search}%`),
+        ilike(tasks.description, `%${search}%`)
       )
-      : or(
-        eq(taskDelegations.assigneeId, empId),
-        inArray(taskDelegations.targetSubDepartmentId, employeeDepartmentIds),
-      );
+      : undefined;
 
-    const stmt = this.db.$with('g').as(
+    /* ---------- 3. Unified query using UNION ALL ---------- */
+
+    // Define the unified row structure
+    const unifiedRow = {
+      id: sql<string>`id`.as('id'),
+      type: sql<"task" | "delegation">`type`.as('type'),
+      // Task fields
+      taskId: sql<string>`task_id`.as('task_id'),
+      title: sql<string>`title`.as('title'),
+      description: sql<string | null>`description`.as('description'),
+      status: sql<string>`status`.as('status'),
+      priority: sql<string | null>`priority`.as('priority'),
+      assigneeId: sql<string | null>`assignee_id`.as('assignee_id'),
+      targetSubDepartmentId: sql<string | null>`target_sub_department_id`.as('target_sub_department_id'),
+      createdAt: sql<Date>`created_at`.as('created_at'),
+      updatedAt: sql<Date>`updated_at`.as('updated_at'),
+      creatorId: sql<string>`creator_id`.as('creator_id'),
+      assignmentType: sql<string>`assignment_type`.as('assignment_type'),
+      // Delegation-specific fields
+      delegationId: sql<string | null>`delegation_id`.as('delegation_id'),
+      delegatorId: sql<string | null>`delegator_id`.as('delegator_id'),
+      // For cursor pagination
+      sortCreatedAt: sql<Date>`sort_created_at`.as('sort_created_at'),
+      sortId: sql<string>`sort_id`.as('sort_id'),
+    };
+
+    // Tasks CTE
+    const tasksCte = this.db.$with('tasks_data').as(
       this.db
         .select({
-          tc: sql<number>`count(*) filter (where status = 'completed')`
-            .mapWith(Number)
-            .as('tc'),
-          tp: sql<number>`count(*) filter (where status <> 'completed')`
-            .mapWith(Number)
-            .as('tp'),
+          id: tasks.id,
+          type: sql<"task">`'task'`.as('type'),
+          taskId: sql<string>`${tasks.id}`.as('task_id'),
+          title: tasks.title,
+          description: tasks.description,
+          status: tasks.status,
+          priority: tasks.priority,
+          assigneeId: tasks.assigneeId,
+          targetSubDepartmentId: tasks.targetSubDepartmentId,
+          createdAt: tasks.createdAt,
+          updatedAt: tasks.updatedAt,
+          creatorId: tasks.creatorId,
+          assignmentType: tasks.assignmentType,
+          delegationId: sql<string | null>`null::uuid`.as('delegation_id'),
+          delegatorId: sql<string | null>`null::uuid`.as('delegator_id'),
+          sortCreatedAt: sql<Date>`${tasks.createdAt}`.as('sort_created_at'),
+          sortId: sql<string>`${tasks.id}`.as('sort_id'),
         })
         .from(tasks)
-        .where(taskWhere) // filter tasks once
-        .unionAll(
-          this.db
-            .select({
-              tc: sql<number>`count(*) filter (where status = 'completed')`
-                .mapWith(Number)
-                .as('tc'),
-              tp: sql<number>`count(*) filter (where status <> 'completed')`
-                .mapWith(Number)
-                .as('tp'),
-            })
-            .from(taskDelegations)
-            .where(delWhere), // filter delegations once
-        ),
+        .where(
+          and(
+            or(
+              eq(tasks.assigneeId, empId),
+              inArray(tasks.targetSubDepartmentId, employeeDepartmentIds)
+            ),
+            statusFilter,
+            priorityFilter,
+            searchFilter
+          )
+        )
     );
 
-    /* ---------- 4.  paginated rows (same filter) ---------- */
-    const cursorCondition = this.pagination.buildCursorCondition(
-      paginationParams.cursorData as TaskCursorData | null,
-      paginationParams.direction,
-    );
-    const whereWithCursor = cursorCondition ? and(taskWhere, cursorCondition) : taskWhere;
-    const delWhereWithCursor = cursorCondition ? and(delWhere, cursorCondition) : delWhere;
-
-    const [tasksPage, delegationsPage, [taskAgg, delAgg]] = await Promise.all([
-      this.db.query.tasks.findMany({
-        where: whereWithCursor,
-        limit: limit,
-        orderBy: this.pagination.getOrderBy(),
-        with: {
-          taskSubmissions: {
-            columns: {
-              feedback: true,
-              status: true,
-            },
-          },
-        },
-      }),
+    // Delegations CTE (joined with tasks for search/priority filters)
+    const delegationsCte = this.db.$with('delegations_data').as(
       this.db
         .select({
-          task: {
-            ...tasks,
-          },
-          delegation: {
-            ...taskDelegations,
-          },
+          id: taskDelegations.id,
+          type: sql<"delegation">`'delegation'`.as('type'),
+          taskId: taskDelegations.taskId,
+          title: tasks.title,
+          description: tasks.description,
+          status: taskDelegations.status,
+          priority: tasks.priority,
+          assigneeId: taskDelegations.assigneeId,
+          targetSubDepartmentId: taskDelegations.targetSubDepartmentId,
+          createdAt: taskDelegations.createdAt,
+          updatedAt: taskDelegations.updatedAt,
+          creatorId: tasks.creatorId, // Delegations don't have creator, inherit from task
+          assignmentType: taskDelegations.assignmentType,
+          delegationId: sql<string>`${taskDelegations.id}`.as('delegation_id'),
+          delegatorId: taskDelegations.delegatorId,
+          sortCreatedAt: sql<Date>`${taskDelegations.createdAt}`.as('sort_created_at'),
+          sortId: sql<string>`${taskDelegations.id}`.as('sort_id'),
         })
         .from(taskDelegations)
         .innerJoin(tasks, eq(taskDelegations.taskId, tasks.id))
-        .where(delWhereWithCursor)
-        .limit(limit)
-        .orderBy(...this.pagination.getOrderBy()),
-      this.db.with(stmt).select({ tc: stmt.tc, tp: stmt.tp }).from(stmt),
-    ]);
-
-    const metrics = {
-      completedTasks: taskAgg.tc,
-      pendingTasks: taskAgg.tp,
-      completedDelegations: delAgg.tc,
-      pendingDelegations: delAgg.tp,
-    };
-    /* ---------- 5.  attachments for this page only ---------- */
-    const targetIds = [
-      ...tasksPage.map((t) => t.id),
-      ...delegationsPage.map((d) => d.delegation.taskId),
-    ];
-    const attachmentResults = targetIds.length
-      ? await this.db
-        .select()
-        .from(attachments)
-        .where(inArray(attachments.targetId, targetIds))
-      : [];
-
-    const tasksTotal = metrics.completedTasks + metrics.pendingTasks;
-    const delegationsTotal =
-      metrics.completedDelegations + metrics.pendingDelegations;
-
-    const combinedCompleted =
-      metrics.completedTasks + metrics.completedDelegations;
-    const combinedTotal = tasksTotal + delegationsTotal;
-
-    const combinedCompletionPercentage =
-      combinedTotal === 0
-        ? 0
-        : Math.floor((combinedCompleted / combinedTotal) * 100);
-
-    /* ---------- 6.  return ---------- */
-    const processedResults = this.pagination.processResults(
-      tasksPage,
-      paginationParams,
-      (task) => ({
-        createdAt: task.createdAt,
-        id: task.id,
-      }),
+        .where(
+          and(
+            or(
+              eq(taskDelegations.assigneeId, empId),
+              inArray(taskDelegations.targetSubDepartmentId, employeeDepartmentIds)
+            ),
+            statusFilter,
+            priorityFilter, // Applied via join to tasks
+            searchFilter    // Applied via join to tasks
+          )
+        )
     );
 
-    return {
-      ...processedResults,
-      data: processedResults.data.map((task) => {
-        const submissions = (task.taskSubmissions || []) as Array<{
-          feedback: string | null;
-          status: string;
-        }>;
-        return {
-          task: Task.create({
-            id: task.id,
-            title: task.title,
-            description: task.description,
-            status: drizzleToDomainStatus(task.status),
-            priority: drizzleToDomainPriority(task.priority),
-            assigneeId: task.assigneeId,
-            targetSubDepartmentId: task.targetSubDepartmentId,
-            createdAt: new Date(task.createdAt),
-            updatedAt: new Date(task.updatedAt),
-            creatorId: task.creatorId,
-            assignmentType: drizzleToDomainAssignmentType(task.assignmentType),
-          }),
-          rejectionReason: submissions.find(
-            (submission) => submission.status === 'rejected',
-          )?.feedback,
-          approvalFeedback: submissions.find(
-            (submission) => submission.status === 'approved',
-          )?.feedback,
-        };
-      }),
-      delegations: delegationsPage.map((delegation) =>
-        TaskDelegation.create({
-          id: delegation.delegation.id,
-          taskId: delegation.delegation.taskId,
-          assigneeId: delegation.delegation.assigneeId,
-          targetSubDepartmentId: delegation.delegation.targetSubDepartmentId,
-          status: drizzleToDomainStatus(delegation.delegation.status),
-          createdAt: new Date(delegation.delegation.createdAt),
-          updatedAt: new Date(delegation.delegation.updatedAt),
-          assignmentType: drizzleToDomainAssignmentType(
-            delegation.delegation.assignmentType,
-          ),
-          delegatorId: delegation.delegation.delegatorId,
-          task: Task.create({
-            id: delegation.task.id,
-            title: delegation.task.title,
-            description: delegation.task.description,
-            status: drizzleToDomainStatus(delegation.task.status),
-            priority: drizzleToDomainPriority(delegation.task.priority),
-            assigneeId: delegation.task.assigneeId,
-            targetSubDepartmentId: delegation.task.targetSubDepartmentId,
-            targetDepartmentId: delegation.task.targetDepartmentId,
-            createdAt: new Date(delegation.task.createdAt),
-            updatedAt: new Date(delegation.task.updatedAt),
-            creatorId: delegation.task.creatorId,
-            assignmentType: drizzleToDomainAssignmentType(
-              delegation.task.assignmentType,
+    // Unified CTE with UNION ALL
+    const unifiedCte = this.db.$with('unified').as(
+      this.db
+        .select(unifiedRow)
+        .from(tasksCte)
+        .unionAll(
+          this.db.select(unifiedRow).from(delegationsCte)
+        )
+    );
+
+    /* ---------- 4. Cursor condition for unified result ---------- */
+    // Build cursor condition manually using unified CTE columns (not tasks.*)
+    const cursorData = paginationParams.cursorData as TaskCursorData | null;
+    const cursorCondition = cursorData
+      ? (() => {
+        const isDescending = this.pagination.sortDirection === 'desc';
+        const useGreaterThan = isDescending
+          ? paginationParams.direction === 'prev'
+          : paginationParams.direction === 'next';
+        const op = useGreaterThan ? sql`>` : sql`<`;
+        // Use raw SQL column names since we're querying the unified CTE
+        return sql`("sort_created_at", "sort_id") ${op} (${cursorData.createdAt}, ${cursorData.id})`;
+      })()
+      : undefined;
+
+    /* ---------- 5. Execute queries in parallel ---------- */
+
+    // Get paginated unified results
+    const unifiedQuery = this.db
+      .with(tasksCte, delegationsCte, unifiedCte)
+      .select()
+      .from(unifiedCte)
+      .where(cursorCondition)
+      .orderBy(
+        // Reference the unified CTE columns, not tasks.* 
+        this.pagination.sortDirection == "desc"
+          ? desc(unifiedCte.sortCreatedAt)  // was: desc(tasks.createdAt)
+          : asc(unifiedCte.sortCreatedAt),
+        this.pagination.sortDirection == "desc"
+          ? desc(unifiedCte.sortId)         // was: desc(tasks.id)
+          : asc(unifiedCte.sortId)
+      )
+      .limit(limit);
+
+    // Get metrics (separate queries for accurate counts)
+    const [unifiedResults, taskMetrics, delegationMetrics] = await Promise.all([
+      unifiedQuery,
+      // Task counts
+      this.db
+        .select({
+          completed: sql<number>`count(*) filter (where ${tasks.status} = 'completed')`.mapWith(Number),
+          pending: sql<number>`count(*) filter (where ${tasks.status} <> 'completed')`.mapWith(Number),
+        })
+        .from(tasks)
+        .where(
+          and(
+            or(
+              eq(tasks.assigneeId, empId),
+              inArray(tasks.targetSubDepartmentId, employeeDepartmentIds)
             ),
-          }),
-        }),
-      ),
-      fileHubAttachments: attachmentResults.map((attachment) =>
+            priorityFilter,
+            searchFilter
+          )
+        ),
+      // Delegation counts  
+      this.db
+        .select({
+          completed: sql<number>`count(*) filter (where ${taskDelegations.status} = 'completed')`.mapWith(Number),
+          pending: sql<number>`count(*) filter (where ${taskDelegations.status} <> 'completed')`.mapWith(Number),
+        })
+        .from(taskDelegations)
+        .innerJoin(tasks, eq(taskDelegations.taskId, tasks.id))
+        .where(
+          and(
+            or(
+              eq(taskDelegations.assigneeId, empId),
+              inArray(taskDelegations.targetSubDepartmentId, employeeDepartmentIds)
+            ),
+            priorityFilter,
+            searchFilter
+          )
+        ),
+    ]);
+
+    /* ---------- 6. Process pagination ---------- */
+    const { data, meta } = this.pagination.processResults(unifiedResults, paginationParams, (r) => ({
+      createdAt: new Date(r.sortCreatedAt).toISOString(),
+      id: r.sortId,
+    }));
+
+    /* ---------- 7. Fetch related data ---------- */
+    const taskIds = data
+      .filter(r => r.type === 'task')
+      .map(r => r.taskId);
+
+    const allTaskIds = [...new Set([
+      ...taskIds,
+      ...data.filter(r => r.type === 'delegation').map(r => r.taskId)
+    ])];
+
+    // Fetch task submissions for rejection/approval feedback
+    const [submissions, attachmentsData] = await Promise.all([
+      taskIds.length > 0
+        ? this.db
+          .select({
+            taskId: taskSubmissions.taskId,
+            feedback: taskSubmissions.feedback,
+            status: taskSubmissions.status,
+          })
+          .from(taskSubmissions)
+          .where(
+            and(
+              inArray(taskSubmissions.taskId, taskIds),
+              inArray(taskSubmissions.status, ['rejected', 'approved'])
+            )
+          )
+        : undefined,
+      allTaskIds.length > 0
+        ? this.db
+          .select()
+          .from(attachments)
+          .where(inArray(attachments.targetId, allTaskIds))
+        : [],
+    ]);
+
+    const submissionsByTaskId = new Map(
+      submissions.map(s => [s.taskId, s])
+    );
+
+    /* ---------- 8. Map results ---------- */
+    const taskItems: Array<{ task: Task; rejectionReason?: string; approvalFeedback?: string }> = [];
+    const delegationItems: TaskDelegation[] = [];
+
+    for (const row of data) {
+      const baseTaskData = {
+        id: row.taskId,
+        title: row.title,
+        description: row.description,
+        status: drizzleToDomainStatus(row.status as DrizzleTaskStatus),
+        priority: row.priority ? drizzleToDomainPriority(row.priority as DrizzleTaskPriority) : undefined,
+        assigneeId: row.assigneeId,
+        targetSubDepartmentId: row.targetSubDepartmentId,
+        createdAt: new Date(row.createdAt),
+        updatedAt: new Date(row.updatedAt),
+        creatorId: row.creatorId,
+        assignmentType: drizzleToDomainAssignmentType(row.assignmentType as DrizzleTaskAssignmentType),
+      };
+
+      if (row.type === 'task') {
+        const submission = submissionsByTaskId.get(row.taskId);
+        taskItems.push({
+          task: Task.create(baseTaskData),
+          rejectionReason: submission?.status === 'rejected' ? submission.feedback ?? undefined : undefined,
+          approvalFeedback: submission?.status === 'approved' ? submission.feedback ?? undefined : undefined,
+        });
+      } else {
+        // Fetch full task data for delegation (you might want to optimize this)
+        const [fullTaskData] = await this.db
+          .select()
+          .from(tasks)
+          .where(eq(tasks.id, row.taskId))
+          .limit(1);
+
+        delegationItems.push(
+          TaskDelegation.create({
+            id: row.delegationId!,
+            taskId: row.taskId,
+            assigneeId: row.assigneeId,
+            targetSubDepartmentId: row.targetSubDepartmentId,
+            status: drizzleToDomainStatus(row.status as DrizzleTaskStatus),
+            createdAt: new Date(row.createdAt),
+            updatedAt: new Date(row.updatedAt),
+            assignmentType: drizzleToDomainAssignmentType(row.assignmentType as DrizzleTaskAssignmentType),
+            delegatorId: row.delegatorId!,
+            task: Task.create({
+              ...baseTaskData,
+              targetDepartmentId: fullTaskData?.targetDepartmentId,
+            }),
+          })
+        );
+      }
+    }
+
+    /* ---------- 9. Calculate metrics ---------- */
+    const totalTasks = taskMetrics[0].completed + taskMetrics[0].pending;
+    const totalDelegations = delegationMetrics[0].completed + delegationMetrics[0].pending;
+    const combinedCompleted = taskMetrics[0].completed + delegationMetrics[0].completed;
+    const combinedTotal = totalTasks + totalDelegations;
+
+    return {
+      data: taskItems,
+      delegations: delegationItems,
+      meta,
+      fileHubAttachments: attachmentsData.map((attachment) =>
         Attachment.create({
           id: attachment.id,
           targetId: attachment.targetId,
@@ -1662,27 +1769,13 @@ export class DrizzleTaskRepository extends TaskRepository {
         }),
       ),
       metrics: {
-        completedTasks: taskAgg.tc,
-        pendingTasks: taskAgg.tp,
-        completedDelegations: delAgg.tc,
-        pendingDelegations: delAgg.tp,
-        taskCompletionPercentage:
-          taskAgg.tc + taskAgg.tp === 0
-            ? 0
-            : Math.floor(
-              (taskAgg.tc /
-                (taskAgg.tc + taskAgg.tp)) *
-              100,
-            ),
-        delegationCompletionPercentage:
-          delAgg.tc + delAgg.tp === 0
-            ? 0
-            : Math.floor(
-              (delAgg.tc /
-                (delAgg.tc + delAgg.tp)) *
-              100,
-            ),
-        totalPercentage: Math.floor(combinedCompletionPercentage),
+        pendingTasks: taskMetrics[0].pending,
+        completedTasks: taskMetrics[0].completed,
+        pendingDelegations: delegationMetrics[0].pending,
+        completedDelegations: delegationMetrics[0].completed,
+        taskCompletionPercentage: totalTasks === 0 ? 0 : Math.floor((taskMetrics[0].completed / totalTasks) * 100),
+        delegationCompletionPercentage: totalDelegations === 0 ? 0 : Math.floor((delegationMetrics[0].completed / totalDelegations) * 100),
+        totalPercentage: combinedTotal === 0 ? 0 : Math.floor((combinedCompleted / combinedTotal) * 100),
       },
     };
   }
@@ -1692,6 +1785,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     status?: TaskStatus[];
     priority?: TaskPriority[];
     cursor?: CursorInput;
+    search?: string;
   }): Promise<PaginatedArrayResult<{
     task: Task;
     rejectionReason?: string;
@@ -1704,7 +1798,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       taskCompletionPercentage: number;
     };
   }> {
-    const { supervisorUserId, status, priority, cursor } = options;
+    const { supervisorUserId, status, priority, cursor, search } = options;
     const paginationParams = this.pagination.parseInput(cursor);
     const { limit } = paginationParams;
 
@@ -1724,24 +1818,22 @@ export class DrizzleTaskRepository extends TaskRepository {
       .where(eq(departmentToSupervisor.b, supervisor.id))
       .then((res) => res.map((r) => r.a));
 
-    const tasksWhere =
-      status?.length > 0 || priority?.length > 0
-        ? and(
-          inArray(tasks.targetDepartmentId, supervisorDepartmentIds),
-          status?.length > 0
-            ? inArray(
-              tasks.status,
-              status.map((s) => domainToDrizzleStatus(s)),
-            )
-            : undefined,
-          priority?.length > 0
-            ? inArray(
-              tasks.priority,
-              priority.map((p) => domainToDrizzlePriority(p)),
-            )
-            : undefined,
-        )
-        : inArray(tasks.targetDepartmentId, supervisorDepartmentIds);
+
+    const whereConditions = [inArray(tasks.targetDepartmentId, supervisorDepartmentIds)]
+
+    if (status.length > 0) {
+      whereConditions.push(inArray(tasks.status, status.map((s) => domainToDrizzleStatus(s))));
+    }
+
+    if (priority.length > 0) {
+      whereConditions.push(inArray(tasks.priority, priority.map((p) => domainToDrizzlePriority(p))));
+    }
+
+    if (search) {
+      whereConditions.push(or(ilike(tasks.title, `%${search}%`), ilike(tasks.description, `%${search}%`)));
+    }
+
+    const tasksWhere = whereConditions.length > 0 ? whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0] : undefined;
 
     const cursorCondition = this.pagination.buildCursorCondition(
       paginationParams.cursorData as TaskCursorData | null,
@@ -1764,10 +1856,10 @@ export class DrizzleTaskRepository extends TaskRepository {
       }),
       this.db
         .select({
-          tc: sql<number>`count(*) filter (where status = 'completed')`
+          tc: sql<number>`count(*) filter (where ${tasks.status} = 'completed')`
             .mapWith(Number)
             .as('tc'),
-          tp: sql<number>`count(*) filter (where status <> 'completed')`
+          tp: sql<number>`count(*) filter (where ${tasks.status} <> 'completed')`
             .mapWith(Number)
             .as('tp'),
         })
@@ -1953,10 +2045,10 @@ export class DrizzleTaskRepository extends TaskRepository {
     const [metrics, submissions, delegationSubmissions] = await Promise.all([
       this.db
         .select({
-          tc: sql<number>`count(*) filter (where status = 'completed')`
+          tc: sql<number>`count(*) filter (where ${tasks.status} = 'completed')`
             .mapWith(Number)
             .as('tc'),
-          tp: sql<number>`count(*) filter (where status <> 'completed')`
+          tp: sql<number>`count(*) filter (where ${tasks.status} <> 'completed')`
             .mapWith(Number)
             .as('tp'),
         })

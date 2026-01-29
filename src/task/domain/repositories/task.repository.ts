@@ -124,6 +124,7 @@ export abstract class TaskRepository {
     status?: TaskStatus[];
     priority?: TaskPriority[];
     cursor?: CursorInput;
+    search?: string;
   }): Promise<PaginatedArrayResult<{
     task: Task;
     rejectionReason?: string;
@@ -198,6 +199,7 @@ export abstract class TaskRepository {
     status?: TaskStatus[];
     priority?: TaskPriority[];
     cursor?: CursorInput;
+    search?: string;
   }): Promise<PaginatedArrayResult<{
     task: Task;
     rejectionReason?: string;

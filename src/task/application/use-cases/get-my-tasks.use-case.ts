@@ -18,6 +18,7 @@ interface GetMyTasksInputDto {
   cursorDir?: 'next' | 'prev';
   limit?: number;
   status?: TaskStatus;
+  search?: string;
 }
 
 export interface MyTasksResult {
@@ -80,6 +81,7 @@ export class GetMyTasksUseCase {
       supervisorUserId: dto.userId,
       status: dto.status ? [dto.status] : undefined,
       cursor: dto.cursor ? { cursor: dto.cursor, direction: dto.cursorDir ?? 'next', pageSize: dto.limit } : undefined,
+      search: dto.search,
     });
 
     const signedUrls = await this.fileHubService.getSignedUrlBatch(
@@ -112,6 +114,7 @@ export class GetMyTasksUseCase {
       employeeUserId: dto.userId,
       status: dto.status ? [dto.status] : undefined,
       cursor: dto.cursor ? { cursor: dto.cursor, direction: dto.cursorDir ?? 'next', pageSize: dto.limit } : undefined,
+      search: dto.search,
     });
 
     const signedUrls = await this.fileHubService.getSignedUrlBatch(

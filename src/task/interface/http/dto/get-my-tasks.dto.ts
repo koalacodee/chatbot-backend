@@ -21,4 +21,8 @@ export class GetMyTasksDto {
   @Min(1)
   @Transform(({ value }) => parseInt(value, 10))
   limit?: number;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
 }
