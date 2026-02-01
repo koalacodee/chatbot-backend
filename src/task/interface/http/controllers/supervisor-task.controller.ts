@@ -69,6 +69,8 @@ export class SupervisorTaskController {
         cursorDir: query.cursorDir,
         limit: query.limit,
         search: query.search,
+        departmentId: query.departmentId,
+        subDepartmentId: query.subDepartmentId,
       },
       req.user.id,
     );

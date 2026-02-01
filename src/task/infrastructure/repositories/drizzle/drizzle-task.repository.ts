@@ -1400,6 +1400,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     priority?: TaskPriority[];
     cursor?: CursorInput;
     search?: string;
+    subDepartmentId?: string;
   }): Promise<PaginatedArrayResult<{
     task: Task;
     rejectionReason?: string;
@@ -1423,6 +1424,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       priority,
       cursor,
       search,
+      subDepartmentId,
     } = options;
 
     const paginationParams = this.pagination.parseInput(cursor);
@@ -1443,6 +1445,14 @@ export class DrizzleTaskRepository extends TaskRepository {
       .from(employeeSubDepartments)
       .where(eq(employeeSubDepartments.employeeId, empId))
       .then((r) => r.map((i) => i.id));
+
+    const tasksScopeCondition = subDepartmentId
+      ? or(eq(tasks.targetSubDepartmentId, subDepartmentId), eq(tasks.assigneeId, empId))
+      : or(eq(tasks.assigneeId, empId), inArray(tasks.targetSubDepartmentId, employeeDepartmentIds));
+
+    const delegationsScopeCondition = subDepartmentId
+      ? or(eq(taskDelegations.targetSubDepartmentId, subDepartmentId), eq(taskDelegations.assigneeId, empId))
+      : or(eq(taskDelegations.assigneeId, empId), inArray(taskDelegations.targetSubDepartmentId, employeeDepartmentIds));
 
     /* ---------- 2. Build unified filter conditions ---------- */
 
@@ -1515,10 +1525,7 @@ export class DrizzleTaskRepository extends TaskRepository {
         .from(tasks)
         .where(
           and(
-            or(
-              eq(tasks.assigneeId, empId),
-              inArray(tasks.targetSubDepartmentId, employeeDepartmentIds)
-            ),
+            tasksScopeCondition,
             drizzleStatuses ? inArray(tasks.status, drizzleStatuses) : undefined,
             priorityFilter,
             searchFilter
@@ -1552,10 +1559,7 @@ export class DrizzleTaskRepository extends TaskRepository {
         .innerJoin(tasks, eq(taskDelegations.taskId, tasks.id))
         .where(
           and(
-            or(
-              eq(taskDelegations.assigneeId, empId),
-              inArray(taskDelegations.targetSubDepartmentId, employeeDepartmentIds)
-            ),
+            delegationsScopeCondition,
             drizzleStatuses ? inArray(taskDelegations.status, drizzleStatuses) : undefined,
             priorityFilter, // Applied via join to tasks
             searchFilter    // Applied via join to tasks
@@ -1786,6 +1790,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     priority?: TaskPriority[];
     cursor?: CursorInput;
     search?: string;
+    departmentId?: string;
   }): Promise<PaginatedArrayResult<{
     task: Task;
     rejectionReason?: string;
@@ -1798,7 +1803,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       taskCompletionPercentage: number;
     };
   }> {
-    const { supervisorUserId, status, priority, cursor, search } = options;
+    const { supervisorUserId, status, priority, cursor, search, departmentId } = options;
     const paginationParams = this.pagination.parseInput(cursor);
     const { limit } = paginationParams;
 
@@ -1819,7 +1824,26 @@ export class DrizzleTaskRepository extends TaskRepository {
       .then((res) => res.map((r) => r.a));
 
 
-    const whereConditions = [inArray(tasks.targetDepartmentId, supervisorDepartmentIds)]
+    const whereConditions = [inArray(tasks.targetDepartmentId, supervisorDepartmentIds)];
+
+    if (departmentId) {
+      whereConditions.push(
+        or(
+          eq(tasks.targetDepartmentId, departmentId),
+          exists(
+            this.db
+              .select({ one: sql`1` })
+              .from(departments)
+              .where(
+                and(
+                  eq(departments.id, tasks.targetSubDepartmentId),
+                  eq(departments.parentId, departmentId)
+                )
+              )
+          )
+        )
+      );
+    }
 
     if (status && status.length > 0) {
       whereConditions.push(inArray(tasks.status, status.map((s) => domainToDrizzleStatus(s))));
@@ -1952,6 +1976,8 @@ export class DrizzleTaskRepository extends TaskRepository {
     priority?: TaskPriority[];
     cursor?: CursorInput;
     search?: string;
+    departmentId?: string;
+    subDepartmentId?: string;
   }): Promise<PaginatedArrayResult<{
     task: {
       data: Task;
@@ -1966,7 +1992,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       taskCompletionPercentage: number;
     };
   }> {
-    const { supervisorDepartmentIds, status, priority, cursor, search } = options;
+    const { supervisorDepartmentIds, status, priority, cursor, search, departmentId, subDepartmentId } = options;
     const paginationParams = this.pagination.parseInput(cursor);
     const { limit } = paginationParams;
     const whereConditions = [
@@ -1999,7 +2025,46 @@ export class DrizzleTaskRepository extends TaskRepository {
               )
             )
         ))
-    ]
+    ];
+
+    if (departmentId) {
+      whereConditions.push(
+        or(
+          eq(tasks.targetDepartmentId, departmentId),
+          exists(
+            this.db
+              .select({ one: sql`1` })
+              .from(departments)
+              .where(
+                and(
+                  eq(departments.id, tasks.targetSubDepartmentId),
+                  eq(departments.parentId, departmentId)
+                )
+              )
+          )
+        )
+      );
+    }
+
+    if (subDepartmentId) {
+      whereConditions.push(
+        or(
+          eq(tasks.targetSubDepartmentId, subDepartmentId),
+          exists(
+            this.db
+              .select({ one: sql`1` })
+              .from(employees)
+              .innerJoin(employeeSubDepartments, eq(employees.id, employeeSubDepartments.employeeId))
+              .where(
+                and(
+                  eq(tasks.assigneeId, employees.id),
+                  eq(employeeSubDepartments.departmentId, subDepartmentId)
+                )
+              )
+          )
+        )
+      );
+    }
 
     if (status && status.length > 0) {
       whereConditions.push(inArray(tasks.status, status.map((s) => domainToDrizzleStatus(s))));

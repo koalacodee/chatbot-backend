@@ -74,6 +74,12 @@ export class DepartmentController {
     private readonly getSharedSubDepartmentFaqsUseCase: GetSharedSubDepartmentFaqsUseCase,
   ) {}
 
+  @AdminAuth()
+  @Get('main')
+  async getMainDepartmentsForAdmin(@Req() req: any): Promise<GetAllDepartmentsOutputDto> {
+    return this.getAllDepartmentsUseCase.execute(req.user.id);
+  }
+
   @Get('view/main')
   @UseInterceptors(GuestIdInterceptor)
   async viewMainDepartments(@Query() queryDto: PaginateDto, @Req() req: any) {

@@ -25,4 +25,12 @@ export class GetMyTasksDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsString()
+  departmentId?: string;
+
+  @IsOptional()
+  @IsString()
+  subDepartmentId?: string;
 }

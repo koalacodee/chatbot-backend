@@ -30,10 +30,12 @@ import { AcceptEmployeeInvitationRequestUseCase } from 'src/employee/application
 import { GetAllEmployeeInvitationRequestsUseCase } from 'src/employee/application/use-cases/get-all-employee-invitation-requests.use-case';
 import { GetMyEmployeeInvitationRequestsUseCase } from 'src/employee/application/use-cases/get-my-employee-invitation-requests.use-case';
 import { DeleteEmployeeInvitationUseCase } from 'src/employee/application/use-cases/delete-employee-invitation.use-case';
-import { SupervisorPermissions } from 'src/rbac/decorators';
+import { SupervisorPermissions, EmployeePermissions } from 'src/rbac/decorators';
 import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
+import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { CompleteEmployeeInvitationDto } from 'src/employee/interface/http/dtos/complete-employee-invitation.dto';
+import { GetMySubDepartmentsUseCase } from 'src/employee/application/use-cases/get-my-sub-departments.use-case';
 
 @Controller('employees')
 export class EmployeeController {
@@ -54,6 +56,7 @@ export class EmployeeController {
     private readonly getAllEmployeeInvitationRequestsUseCase: GetAllEmployeeInvitationRequestsUseCase,
     private readonly getMyEmployeeInvitationRequestsUseCase: GetMyEmployeeInvitationRequestsUseCase,
     private readonly deleteEmployeeInvitationUseCase: DeleteEmployeeInvitationUseCase,
+    private readonly getMySubDepartmentsUseCase: GetMySubDepartmentsUseCase,
   ) { }
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_STAFF_DIRECTLY)
@@ -76,6 +79,12 @@ export class EmployeeController {
     );
 
     return result;
+  }
+
+  @EmployeePermissions(EmployeePermissionsEnum.HANDLE_TASKS)
+  @Get('me/sub-departments')
+  async getMySubDepartments(@Req() req: any): Promise<Array<{ id: string; name: string }>> {
+    return this.getMySubDepartmentsUseCase.execute(req.user.id);
   }
 
   @Get('invitation/:token')

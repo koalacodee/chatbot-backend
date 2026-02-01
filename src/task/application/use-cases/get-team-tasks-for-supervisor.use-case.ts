@@ -16,6 +16,8 @@ export interface GetTeamTasksForSupervisorInput {
   cursorDir?: 'next' | 'prev';
   limit?: number;
   search?: string;
+  departmentId?: string;
+  subDepartmentId?: string;
 }
 
 @Injectable()
@@ -44,7 +46,7 @@ export class GetTeamTasksForSupervisorUseCase {
       taskCompletionPercentage: number;
     };
   }> {
-    const { status, priority, cursor, cursorDir, limit, search } = input;
+    const { status, priority, cursor, cursorDir, limit, search, departmentId, subDepartmentId } = input;
 
     const supervisor = await this.supervisorRepository.findByUserId(userId);
     if (!supervisor) {
@@ -59,6 +61,8 @@ export class GetTeamTasksForSupervisorUseCase {
       priority,
       cursor: cursor ? { cursor, direction: cursorDir ?? 'next', pageSize: limit } : undefined,
       search,
+      departmentId,
+      subDepartmentId,
     });
 
     const signedUrls = await this.fileHubService.getSignedUrlBatch(

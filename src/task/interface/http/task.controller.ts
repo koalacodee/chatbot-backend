@@ -285,6 +285,8 @@ export class TaskController {
       limit: query.limit,
       status: query.status,
       search: query.search,
+      departmentId: query.departmentId,
+      subDepartmentId: query.subDepartmentId,
     });
   }
 

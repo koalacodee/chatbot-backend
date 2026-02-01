@@ -12,5 +12,6 @@ export * from './complete-employee-invitation.use-case';
 export * from './get-employee-invitation.use-case';
 export * from './get-all-employee-invitation-requests.use-case';
 export * from './get-my-employee-invitation-requests.use-case';
+export * from './get-my-sub-departments.use-case';
 export * from './request-employee-invitation.use-case';
 export * from './delete-employee-invitation.use-case';
