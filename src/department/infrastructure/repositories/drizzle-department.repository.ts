@@ -385,9 +385,6 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
       if (!(await this.findMainDepartmentById(departmentId))) return false;
     }
 
-    const hasRelation = async (promise: Promise<number>): Promise<boolean> =>
-      (await promise) > 0;
-
     // Check questions
     const [questionCount] = await this.db
       .select({ count: count() })

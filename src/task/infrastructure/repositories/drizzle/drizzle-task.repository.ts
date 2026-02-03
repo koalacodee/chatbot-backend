@@ -1980,6 +1980,7 @@ export class DrizzleTaskRepository extends TaskRepository {
     subDepartmentId?: string;
   }): Promise<PaginatedArrayResult<{
     task: {
+      assigneeName?: string;
       data: Task;
       submissions: TaskSubmission[];
       delegationSubmissions: TaskDelegationSubmission[];
@@ -2095,6 +2096,13 @@ export class DrizzleTaskRepository extends TaskRepository {
             status: true,
           },
         },
+        employee: {
+          with: {
+            user: true,
+          },
+        },
+        department_targetDepartmentId: true,
+        department_targetSubDepartmentId: true,
       },
     });
 
@@ -2168,6 +2176,11 @@ export class DrizzleTaskRepository extends TaskRepository {
     return {
       data: data.map((task) => ({
         task: {
+          assigneeName:
+            task.employee?.user?.name ??
+            task.department_targetSubDepartmentId?.name ??
+            task.department_targetDepartmentId?.name ??
+            undefined,
           data: Task.create({
             id: task.id,
             title: task.title,

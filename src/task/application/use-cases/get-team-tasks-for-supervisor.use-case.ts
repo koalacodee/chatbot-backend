@@ -33,6 +33,7 @@ export class GetTeamTasksForSupervisorUseCase {
     userId: string,
   ): Promise<PaginatedArrayResult<{
     task: (ReturnType<Task['toJSON']> & {
+      assigneeName?: string;
       submissions: ReturnType<TaskSubmission['toJSON']>[];
       delegationSubmissions: ReturnType<TaskDelegationSubmission['toJSON']>[];
     });
@@ -80,6 +81,7 @@ export class GetTeamTasksForSupervisorUseCase {
       data: result.data.map((t) => ({
         task: {
           ...t.task.data.toJSON(),
+          assigneeName: t.task.assigneeName,
           submissions: t.task.submissions.map((s) => s.toJSON()),
           delegationSubmissions: t.task.delegationSubmissions.map((s) => s.toJSON()),
         },

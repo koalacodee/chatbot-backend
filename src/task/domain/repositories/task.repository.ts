@@ -177,6 +177,7 @@ export abstract class TaskRepository {
     subDepartmentId?: string;
   }): Promise<PaginatedArrayResult<{
     task: {
+      assigneeName?: string;
       data: Task;
       submissions: TaskSubmission[];
       delegationSubmissions: TaskDelegationSubmission[];
