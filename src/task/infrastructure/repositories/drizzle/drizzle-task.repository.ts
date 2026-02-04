@@ -1774,9 +1774,13 @@ export class DrizzleTaskRepository extends TaskRepository {
           targetId: attachment.targetId,
           type: attachment.type,
           filename: attachment.filename,
+          expirationDate: attachment.expirationDate
+            ? new Date(attachment.expirationDate)
+            : undefined,
           createdAt: new Date(attachment.createdAt),
           updatedAt: new Date(attachment.updatedAt),
           originalName: attachment.originalName,
+          isGlobal: attachment.isGlobal ?? false,
           size: attachment.size,
         }),
       ),
@@ -1959,9 +1963,13 @@ export class DrizzleTaskRepository extends TaskRepository {
           targetId: attachment.targetId,
           type: attachment.type,
           filename: attachment.filename,
+          expirationDate: attachment.expirationDate
+            ? new Date(attachment.expirationDate)
+            : undefined,
           createdAt: new Date(attachment.createdAt),
           updatedAt: new Date(attachment.updatedAt),
           originalName: attachment.originalName,
+          isGlobal: attachment.isGlobal ?? false,
           size: attachment.size,
         }),
       ),
@@ -2249,9 +2257,13 @@ export class DrizzleTaskRepository extends TaskRepository {
           targetId: attachment.targetId,
           type: attachment.type,
           filename: attachment.filename,
+          expirationDate: attachment.expirationDate
+            ? new Date(attachment.expirationDate)
+            : undefined,
           createdAt: new Date(attachment.createdAt),
           updatedAt: new Date(attachment.updatedAt),
           originalName: attachment.originalName,
+          isGlobal: attachment.isGlobal ?? false,
           size: attachment.size,
         }),
       ),
