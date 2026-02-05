@@ -68,6 +68,11 @@ export class CreateTaskInputDto {
   @Min(60000) // Minimum 1 minute (60000ms)
   reminderInterval?: number; // in milliseconds
 
+  @IsDate()
+  @IsOptional()
+  @Type(() => Date)
+  reminderStartDate?: Date;
+
   @ApiProperty({
     description: 'Whether to save this task as a preset automatically',
     example: false,

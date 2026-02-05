@@ -5,9 +5,11 @@ import {
   IsUUID,
   IsEnum,
   IsDateString,
+  IsDate,
   IsBoolean,
   IsNumber,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import {
   TaskAssignmentType,
   TaskPriority,
@@ -119,4 +121,13 @@ export class CreateTaskFromPresetDto {
   @IsNumber()
   @IsOptional()
   reminderInterval?: number;
+
+  @ApiProperty({
+    description: 'Optional reminder start date override',
+    required: false,
+  })
+  @IsDate()
+  @IsOptional()
+  @Type(() => Date)
+  reminderStartDate?: Date;
 }

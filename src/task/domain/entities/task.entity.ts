@@ -44,6 +44,7 @@ export interface TaskOptions {
   updatedAt?: Date;
   completedAt?: Date;
   reminderInterval?: number; // in milliseconds
+  reminderStartDate?: Date;
   assigneeId?: string;
   targetDepartmentId?: string;
   targetSubDepartmentId?: string;
@@ -68,6 +69,7 @@ export class Task {
   private _updatedAt: Date;
   private _completedAt?: Date;
   private _reminderInterval?: number; // in milliseconds
+  private _reminderStartDate?: Date;
   private _assigneeId?: string;
   private _targetDepartmentId?: string;
   private _targetSubDepartmentId?: string;
@@ -91,6 +93,7 @@ export class Task {
     this._updatedAt = options.updatedAt ?? new Date();
     this._completedAt = options.completedAt ?? undefined;
     this._reminderInterval = options.reminderInterval ?? undefined;
+    this._reminderStartDate = options.reminderStartDate ?? undefined;
     this._assigneeId = options.assigneeId ?? undefined;
     this._targetDepartmentId = options.targetDepartmentId ?? undefined;
     this._targetSubDepartmentId = options.targetSubDepartmentId ?? undefined;
@@ -208,6 +211,14 @@ export class Task {
     this._reminderInterval = value;
   }
 
+  get reminderStartDate(): Date | undefined {
+    return this._reminderStartDate;
+  }
+
+  set reminderStartDate(value: Date | undefined) {
+    this._reminderStartDate = value;
+  }
+
   get assigneeId(): string | undefined {
     return this._assigneeId;
   }
@@ -303,6 +314,7 @@ export class Task {
       updatedAt: this.updatedAt.toISOString(),
       completedAt: this.completedAt?.toISOString(),
       reminderInterval: this.reminderInterval,
+      reminderStartDate: this.reminderStartDate?.toISOString(),
       assigneeId: this.assigneeId,
       targetDepartmentId: this.targetDepartmentId,
       targetSubDepartmentId: this.targetSubDepartmentId,

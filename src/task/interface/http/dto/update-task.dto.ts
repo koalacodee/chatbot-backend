@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsOptional,
@@ -7,6 +8,7 @@ import {
   IsUUID,
   IsPositive,
   Min,
+  IsDate,
 } from 'class-validator';
 import { TaskPriority } from 'src/task/domain/entities/task.entity';
 
@@ -70,6 +72,11 @@ export class UpdateTaskInputDto {
   @IsPositive()
   @Min(60000) // Minimum 1 minute (60000ms)
   reminderInterval?: number | null; // in milliseconds, null to remove
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  reminderStartDate?: Date | null;
 
   @IsOptional()
   @IsArray()

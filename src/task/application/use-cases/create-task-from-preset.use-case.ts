@@ -32,6 +32,7 @@ interface CreateTaskFromPresetRequest {
   priority?: TaskPriority;
   attach?: boolean;
   reminderInterval?: number;
+  reminderStartDate?: Date;
 }
 
 interface CreateTaskFromPresetResponse {
@@ -83,6 +84,8 @@ export class CreateTaskFromPresetUseCase {
       priority: overrides.priority ?? preset.priority,
       attach: overrides.attach ?? false,
       reminderInterval: overrides.reminderInterval ?? preset.reminderInterval,
+      // presets currently don't store a separate start date; use override only
+      reminderStartDate: overrides.reminderStartDate,
     };
 
     // Create the task using the existing CreateTaskUseCase

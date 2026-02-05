@@ -370,6 +370,7 @@ export class TaskController {
       priority: input.priority,
       attach: input.attach,
       reminderInterval: input.reminderInterval,
+      reminderStartDate: input.reminderStartDate,
     });
   }
 

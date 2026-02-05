@@ -17,14 +17,20 @@ export class DelegationReminderQueueService {
   async scheduleReminder(
     delegationId: string,
     reminderInterval: number,
+    startAt?: Date,
   ): Promise<void> {
     const jobId = `delegation-reminder-${delegationId}`;
+
+    const now = Date.now();
+    const startMs = startAt?.getTime() ?? now;
+    const baseStart = startMs > now ? startMs : now;
+    const delay = baseStart - now + reminderInterval;
 
     await this.reminderQueue.add(
       'remind',
       { delegationId },
       {
-        delay: reminderInterval, // Initial delay
+        delay, // Initial delay (respects optional reminderStartDate)
         repeat: { every: reminderInterval },
         jobId,
         removeOnComplete: true,
@@ -57,12 +63,13 @@ export class DelegationReminderQueueService {
   async updateReminder(
     delegationId: string,
     newReminderInterval: number,
+    startAt?: Date,
   ): Promise<void> {
     // Remove existing job first
     await this.removeReminder(delegationId);
 
     // Schedule new job with updated interval
-    await this.scheduleReminder(delegationId, newReminderInterval);
+    await this.scheduleReminder(delegationId, newReminderInterval, startAt);
   }
 }
 

@@ -41,6 +41,7 @@ interface UpdateTaskInputDto {
   deleteAttachments?: string[];
   reminderInterval?: number | null; // in milliseconds, null to remove
   chooseAttachments?: string[];
+  reminderStartDate?: Date | null;
 }
 
 @Injectable()
@@ -148,6 +149,11 @@ export class UpdateTaskUseCase {
     if (dto.completedAt !== undefined)
       existing.completedAt = dto.completedAt ?? null;
 
+    if (dto.reminderStartDate !== undefined) {
+      existing.reminderStartDate =
+        dto.reminderStartDate === null ? undefined : dto.reminderStartDate;
+    }
+
     // Handle reminder interval updates
     if (dto.reminderInterval !== undefined) {
       if (dto.reminderInterval === null) {
@@ -157,9 +163,11 @@ export class UpdateTaskUseCase {
       } else {
         // Update or add reminder
         existing.reminderInterval = dto.reminderInterval;
+        const startAt = existing.reminderStartDate ?? existing.createdAt;
         await this.reminderQueueService.updateReminder(
           id,
           dto.reminderInterval,
+          startAt,
         );
       }
     }

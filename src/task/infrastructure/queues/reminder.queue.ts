@@ -17,14 +17,22 @@ export class ReminderQueueService {
   async scheduleReminder(
     taskId: string,
     reminderInterval: number,
+    startAt?: Date,
   ): Promise<void> {
     const jobId = `reminder-${taskId}`;
+
+    const now = Date.now();
+    const startMs = startAt?.getTime() ?? now;
+    const baseStart = startMs > now ? startMs : now;
+    const delay = baseStart - now + reminderInterval;
+
+    console.log(`Running after ${delay / (1000 * 60 * 60 * 24)} days`);
 
     await this.reminderQueue.add(
       'remind',
       { taskId },
       {
-        delay: reminderInterval, // Initial delay
+        delay, // Initial delay (respects optional reminderStartDate)
         repeat: { every: reminderInterval },
         jobId,
         removeOnComplete: true,
@@ -57,11 +65,12 @@ export class ReminderQueueService {
   async updateReminder(
     taskId: string,
     newReminderInterval: number,
+    startAt?: Date,
   ): Promise<void> {
     // Remove existing job first
     await this.removeReminder(taskId);
 
     // Schedule new job with updated interval
-    await this.scheduleReminder(taskId, newReminderInterval);
+    await this.scheduleReminder(taskId, newReminderInterval, startAt);
   }
 }

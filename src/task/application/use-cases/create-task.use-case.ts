@@ -42,6 +42,7 @@ interface CreateTaskInputDto {
   priority?: TaskPriority;
   attach?: boolean;
   reminderInterval?: number; // in milliseconds
+  reminderStartDate?: Date;
   savePreset?: boolean;
   chooseAttachments?: string[];
 }
@@ -202,6 +203,7 @@ export class CreateTaskUseCase {
       priority: dto.priority ?? TaskPriority.MEDIUM,
       completedAt: dto.completedAt ?? undefined,
       reminderInterval: dto.reminderInterval ?? undefined,
+      reminderStartDate: dto.reminderStartDate ?? undefined,
     });
 
     const [saved, uploadKey, fileHubUploadKey] = await Promise.all([
@@ -242,9 +244,11 @@ export class CreateTaskUseCase {
 
     // Schedule reminder job if reminderInterval is provided
     if (dto.reminderInterval) {
+      const startAt = task.reminderStartDate ?? task.createdAt;
       await this.reminderQueueService.scheduleReminder(
         saved.id.toString(),
         dto.reminderInterval,
+        startAt,
       );
     }
 

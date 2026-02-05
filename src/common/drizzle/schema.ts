@@ -1527,6 +1527,10 @@ export const tasks = pgTable(
     priority: taskPriority().default('medium').notNull(),
     dueDate: timestamp('due_date', { precision: 3, mode: 'string' }),
     reminderInterval: integer('reminder_interval'),
+    reminderStartDate: timestamp('reminder_start_date', {
+      precision: 3,
+      mode: 'string',
+    }),
     creatorId: uuid('creator_id'),
   },
   (table) => [

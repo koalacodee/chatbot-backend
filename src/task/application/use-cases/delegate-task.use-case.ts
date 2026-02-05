@@ -271,9 +271,11 @@ export class DelegateTaskUseCase {
 
     // Schedule reminder if task has reminderInterval
     if (task.reminderInterval) {
+      const startAt = task.reminderStartDate ?? task.createdAt;
       await this.delegationReminderQueueService.scheduleReminder(
         savedDelegation.id.toString(),
         task.reminderInterval,
+        startAt,
       );
     }
 
