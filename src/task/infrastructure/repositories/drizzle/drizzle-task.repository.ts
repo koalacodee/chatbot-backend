@@ -408,6 +408,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       completedAt: row.completedAt ? new Date(row.completedAt) : undefined,
       dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
       reminderInterval: row.reminderInterval ?? undefined,
+      reminderStartDate: row.reminderStartDate ? new Date(row.reminderStartDate) : undefined,
       assigneeId: row.assigneeId ?? undefined,
       targetDepartmentId: row.targetDepartmentId ?? undefined,
       targetSubDepartmentId: row.targetSubDepartmentId ?? undefined,
@@ -491,6 +492,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       completedAt: this.toISOStringSafe(task.completedAt),
       dueDate: this.toISOStringSafe(task.dueDate),
       reminderInterval: task.reminderInterval ?? null,
+      reminderStartDate: this.toISOStringSafe(task.reminderStartDate),
     };
 
     await this.db
@@ -514,6 +516,7 @@ export class DrizzleTaskRepository extends TaskRepository {
           dueDate: data.dueDate,
           completedAt: data.completedAt,
           reminderInterval: data.reminderInterval,
+          reminderStartDate: data.reminderStartDate,
         },
       });
 
@@ -1490,6 +1493,7 @@ export class DrizzleTaskRepository extends TaskRepository {
       targetSubDepartmentId: sql<string | null>`target_sub_department_id`.as('target_sub_department_id'),
       dueDate: sql<string | null>`due_date`.as('due_date'),
       reminderInterval: sql<number | null>`reminder_interval`.as('reminder_interval'),
+      reminderStartDate: sql<Date | null>`reminder_start_date`.as('reminder_start_date'),
       createdAt: sql<Date>`created_at`.as('created_at'),
       updatedAt: sql<Date>`updated_at`.as('updated_at'),
       creatorId: sql<string>`creator_id`.as('creator_id'),
@@ -1517,6 +1521,7 @@ export class DrizzleTaskRepository extends TaskRepository {
           targetSubDepartmentId: tasks.targetSubDepartmentId,
           dueDate: tasks.dueDate,
           reminderInterval: tasks.reminderInterval,
+          reminderStartDate: tasks.reminderStartDate,
           createdAt: tasks.createdAt,
           updatedAt: tasks.updatedAt,
           creatorId: tasks.creatorId,
@@ -1552,6 +1557,7 @@ export class DrizzleTaskRepository extends TaskRepository {
           targetSubDepartmentId: taskDelegations.targetSubDepartmentId,
           dueDate: tasks.dueDate,
           reminderInterval: tasks.reminderInterval,
+          reminderStartDate: tasks.reminderStartDate,
           createdAt: taskDelegations.createdAt,
           updatedAt: taskDelegations.updatedAt,
           creatorId: tasks.creatorId, // Delegations don't have creator, inherit from task
@@ -1717,6 +1723,7 @@ export class DrizzleTaskRepository extends TaskRepository {
         targetSubDepartmentId: row.targetSubDepartmentId,
         dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
         reminderInterval: row.reminderInterval ?? undefined,
+        reminderStartDate: row.reminderStartDate ? new Date(row.reminderStartDate) : undefined,
         createdAt: new Date(row.createdAt),
         updatedAt: new Date(row.updatedAt),
         creatorId: row.creatorId,
@@ -1752,6 +1759,7 @@ export class DrizzleTaskRepository extends TaskRepository {
             task: Task.create({
               ...baseTaskData,
               targetDepartmentId: fullTaskData?.targetDepartmentId,
+              reminderStartDate: fullTaskData?.reminderStartDate ? new Date(fullTaskData.reminderStartDate) : baseTaskData.reminderStartDate,
             }),
           })
         );
@@ -1939,8 +1947,9 @@ export class DrizzleTaskRepository extends TaskRepository {
             description: task.description,
             status: drizzleToDomainStatus(task.status),
             priority: drizzleToDomainPriority(task.priority),
-              dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-              reminderInterval: task.reminderInterval ?? undefined,
+            dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+            reminderInterval: task.reminderInterval ?? undefined,
+            reminderStartDate: task.reminderStartDate ? new Date(task.reminderStartDate) : undefined,
             assigneeId: task.assigneeId,
             targetSubDepartmentId: task.targetSubDepartmentId,
             createdAt: new Date(task.createdAt),
@@ -2207,6 +2216,7 @@ export class DrizzleTaskRepository extends TaskRepository {
             priority: drizzleToDomainPriority(task.priority),
             dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
             reminderInterval: task.reminderInterval ?? undefined,
+            reminderStartDate: task.reminderStartDate ? new Date(task.reminderStartDate) : undefined,
             assigneeId: task.assigneeId,
             targetSubDepartmentId: task.targetSubDepartmentId,
             createdAt: new Date(task.createdAt),
