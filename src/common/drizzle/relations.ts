@@ -39,6 +39,7 @@ import {
   attachments,
   attachmentToAttachmentGroup,
   attachmentGroupMembers,
+  taskReminders,
 } from './schema';
 
 export const adminsRelations = relations(admins, ({ one, many }) => ({
@@ -457,6 +458,14 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   }),
   taskDelegations: many(taskDelegations),
   taskDelegationSubmissions: many(taskDelegationSubmissions),
+  taskReminders: many(taskReminders),
+}));
+
+export const taskRemindersRelations = relations(taskReminders, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskReminders.taskId],
+    references: [tasks.id],
+  }),
 }));
 
 export const taskDelegationSubmissionsRelations = relations(

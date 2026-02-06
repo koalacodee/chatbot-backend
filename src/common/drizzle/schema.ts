@@ -1604,6 +1604,32 @@ export const tasks = pgTable(
   ],
 );
 
+export const taskReminders = pgTable(
+  "task_reminders",
+  {
+    id: uuid().primaryKey().notNull(),
+    taskId: uuid('task_id').notNull(),
+    reminderDate: timestamp('reminder_date', { mode: 'date' }).notNull(),
+    createdAt: timestamp('created_at', {mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', {
+      mode: 'date',
+    }).defaultNow().notNull(),
+    name: varchar({ length: 255 }).notNull(),
+    reminderInterval: integer('reminder_interval').notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.taskId],
+      foreignColumns: [tasks.id],
+    })
+      .onUpdate('cascade')
+      .onDelete('cascade'),
+    index().on(table.taskId)
+  ],
+)
+
 export const users = pgTable(
   'users',
   {

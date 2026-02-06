@@ -36,6 +36,13 @@
       "when": 1770257877570,
       "tag": "0005_dry_invisible_woman",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1770341151808,
+      "tag": "0006_volatile_frog_thor",
+      "breakpoints": true
     }
   ]
 }
