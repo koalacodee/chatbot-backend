@@ -22,6 +22,7 @@ import { DeleteAttachmentsByIdsUseCase } from 'src/files/application/use-cases/d
 import { ReminderQueueService } from '../../infrastructure/queues/reminder.queue';
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 import { FileHubService } from 'src/filehub/domain/services/filehub.service';
+import { UUID } from 'src/shared/value-objects/uuid.vo';
 
 interface UpdateTaskInputDto {
   title?: string;
@@ -39,9 +40,13 @@ interface UpdateTaskInputDto {
   completedAt?: Date | null;
   attach?: boolean;
   deleteAttachments?: string[];
-  reminderInterval?: number | null; // in milliseconds, null to remove
+  deleteReminders?: string[];
+  addReminders?: {
+    name: string;
+    reminderDate: Date;
+    reminderInterval: number;
+  }[];
   chooseAttachments?: string[];
-  reminderStartDate?: Date | null;
 }
 
 @Injectable()
@@ -58,7 +63,7 @@ export class UpdateTaskUseCase {
     private readonly reminderQueueService: ReminderQueueService,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
     private readonly fileHubService: FileHubService,
-  ) {}
+  ) { }
 
   async execute(
     id: string,
@@ -149,25 +154,43 @@ export class UpdateTaskUseCase {
     if (dto.completedAt !== undefined)
       existing.completedAt = dto.completedAt ?? null;
 
-    if (dto.reminderStartDate !== undefined) {
-      existing.reminderStartDate =
-        dto.reminderStartDate === null ? undefined : dto.reminderStartDate;
+    // Handle reminder interval updates
+
+
+    // Handle reminder deletions: remove from queue and filter from entity
+    if (dto.deleteReminders && dto.deleteReminders.length > 0) {
+      const removeFromQueuePromises = dto.deleteReminders.map((reminderId) =>
+        this.reminderQueueService.removeReminder(reminderId),
+      );
+      await Promise.all(removeFromQueuePromises);
+      existing.taskReminders = (existing.taskReminders ?? []).filter(
+        (r) => !dto.deleteReminders.includes(r.id),
+      );
     }
 
-    // Handle reminder interval updates
-    if (dto.reminderInterval !== undefined) {
-      if (dto.reminderInterval === null) {
-        // Remove reminder
-        existing.reminderInterval = undefined;
-        await this.reminderQueueService.removeReminder(id);
-      } else {
-        // Update or add reminder
-        existing.reminderInterval = dto.reminderInterval;
-        const startAt = existing.reminderStartDate ?? existing.createdAt;
-        await this.reminderQueueService.updateReminder(
-          id,
-          dto.reminderInterval,
-          startAt,
+    // Handle reminder additions: add to entity and schedule in queue
+    if (dto.addReminders && dto.addReminders.length > 0) {
+      const newReminders = dto.addReminders.map((reminder) => ({
+        id: UUID.create().toString(),
+        taskId: existing.id.toString(),
+        reminderDate: reminder.reminderDate,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        name: reminder.name,
+        reminderInterval: reminder.reminderInterval,
+      }));
+
+      existing.taskReminders = [
+        ...(existing.taskReminders ?? []),
+        ...newReminders,
+      ];
+
+      for (const reminder of newReminders) {
+        await this.reminderQueueService.scheduleReminder(
+          reminder.id,
+          existing.id.toString(),
+          reminder.reminderInterval,
+          reminder.reminderDate,
         );
       }
     }
@@ -184,12 +207,12 @@ export class UpdateTaskUseCase {
       dto.attach ? this.filesService.genUploadKey(id, userId) : undefined,
       dto.attach
         ? this.fileHubService
-            .generateUploadToken({
-              expiresInMs: 1000 * 60 * 60 * 24,
-              targetId: id,
-              userId,
-            })
-            .then((upload) => upload.uploadKey)
+          .generateUploadToken({
+            expiresInMs: 1000 * 60 * 60 * 24,
+            targetId: id,
+            userId,
+          })
+          .then((upload) => upload.uploadKey)
         : undefined,
     ]);
 

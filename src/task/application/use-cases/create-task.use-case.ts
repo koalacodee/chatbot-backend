@@ -26,6 +26,12 @@ import { ReminderQueueService } from '../../infrastructure/queues/reminder.queue
 import { CloneAttachmentUseCase } from 'src/files/application/use-cases/clone-attachment.use-case';
 import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
+interface ReminderDto {
+  name: string;
+  reminderDate: Date;
+  reminderInterval: number;
+}
+
 interface CreateTaskInputDto {
   title: string;
   description: string;
@@ -41,8 +47,7 @@ interface CreateTaskInputDto {
   completedAt?: Date | null;
   priority?: TaskPriority;
   attach?: boolean;
-  reminderInterval?: number; // in milliseconds
-  reminderStartDate?: Date;
+  reminders?: ReminderDto[];
   savePreset?: boolean;
   chooseAttachments?: string[];
 }
@@ -62,7 +67,7 @@ export class CreateTaskUseCase {
     private readonly reminderQueueService: ReminderQueueService,
     private readonly cloneAttachmentUseCase: CloneAttachmentUseCase,
     private readonly fileHubService: FileHubService,
-  ) {}
+  ) { }
 
   async execute(
     dto: CreateTaskInputDto,
@@ -202,8 +207,7 @@ export class CreateTaskUseCase {
       status: dto.status,
       priority: dto.priority ?? TaskPriority.MEDIUM,
       completedAt: dto.completedAt ?? undefined,
-      reminderInterval: dto.reminderInterval ?? undefined,
-      reminderStartDate: dto.reminderStartDate ?? undefined,
+      taskReminders: dto.reminders ?? undefined,
     });
 
     const [saved, uploadKey, fileHubUploadKey] = await Promise.all([
@@ -213,12 +217,12 @@ export class CreateTaskUseCase {
         : undefined,
       dto.attach
         ? this.fileHubService
-            .generateUploadToken({
-              expiresInMs: 1000 * 60 * 60 * 24,
-              targetId: task.id.toString(),
-              userId,
-            })
-            .then((upload) => upload.uploadKey)
+          .generateUploadToken({
+            expiresInMs: 1000 * 60 * 60 * 24,
+            targetId: task.id.toString(),
+            userId,
+          })
+          .then((upload) => upload.uploadKey)
         : undefined,
       this.eventEmitter.emitAsync(
         TaskCreatedEvent.name,
@@ -242,14 +246,16 @@ export class CreateTaskUseCase {
       });
     }
 
-    // Schedule reminder job if reminderInterval is provided
-    if (dto.reminderInterval) {
-      const startAt = task.reminderStartDate ?? task.createdAt;
-      await this.reminderQueueService.scheduleReminder(
-        saved.id.toString(),
-        dto.reminderInterval,
-        startAt,
-      );
+    // Schedule reminder jobs for each reminder
+    if (task.taskReminders && task.taskReminders.length > 0) {
+      for (const reminder of task.taskReminders) {
+        await this.reminderQueueService.scheduleReminder(
+          reminder.id,
+          task.id.toString(),
+          reminder.reminderInterval,
+          reminder.reminderDate,
+        );
+      }
     }
 
     // Emit preset creation event if savePreset is true

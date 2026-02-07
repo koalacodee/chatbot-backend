@@ -116,15 +116,16 @@ export class TaskController {
     uploadKey?: string;
     fileHubUploadKey?: string;
   }> {
-    const { completedAt, ...rest } = input;
+    console.log("Update input:", input);
+    
+    const { completedAt, dueDate, ...rest } = input;
     return this.updateUseCase.execute(
       id,
       {
         ...rest,
-        completedAt: completedAt
-          ? new Date(completedAt)
-          : (completedAt ?? undefined),
-      } as any,
+        completedAt: completedAt ? new Date(completedAt) : undefined,
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+      },
       req.user.id,
     );
   }

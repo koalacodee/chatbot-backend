@@ -9,6 +9,7 @@ import {
   Min,
   IsArray,
   IsUUID,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TaskStatus, TaskPriority } from 'src/task/domain/entities/task.entity';
@@ -17,6 +18,22 @@ export enum CreateTaskAssignmentType {
   INDIVIDUAL = 'INDIVIDUAL',
   DEPARTMENT = 'DEPARTMENT',
   SUB_DEPARTMENT = 'SUB_DEPARTMENT',
+}
+
+export class ReminderDto {
+  @IsString()
+  name: string;
+
+
+  @IsDate()
+  @Type(() => Date)
+  reminderDate: Date;
+
+
+  @IsPositive()
+  @Min(60000)
+  reminderInterval: number;
+
 }
 
 export class CreateTaskInputDto {
@@ -64,14 +81,10 @@ export class CreateTaskInputDto {
   attach?: boolean;
 
   @IsOptional()
-  @IsPositive()
-  @Min(60000) // Minimum 1 minute (60000ms)
-  reminderInterval?: number; // in milliseconds
-
-  @IsDate()
-  @IsOptional()
-  @Type(() => Date)
-  reminderStartDate?: Date;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ReminderDto)
+  reminders?: ReminderDto[];
 
   @ApiProperty({
     description: 'Whether to save this task as a preset automatically',

@@ -25,6 +25,16 @@ export enum TaskPriority {
   HIGH = 'HIGH',
 }
 
+export interface TaskReminder {
+  id: string;
+  taskId: string;
+  reminderDate: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  name: string;
+  reminderInterval: number;
+}
+
 export interface TaskOptions {
   id?: string;
   title: string;
@@ -43,8 +53,14 @@ export interface TaskOptions {
   createdAt?: Date;
   updatedAt?: Date;
   completedAt?: Date;
-  reminderInterval?: number; // in milliseconds
-  reminderStartDate?: Date;
+  taskReminders?: {
+    id?: string;
+    name: string;
+    reminderDate: Date;
+    reminderInterval: number;
+    createdAt?: Date;
+    updatedAt?: Date;
+  }[];
   assigneeId?: string;
   targetDepartmentId?: string;
   targetSubDepartmentId?: string;
@@ -68,8 +84,7 @@ export class Task {
   private _createAt: Date;
   private _updatedAt: Date;
   private _completedAt?: Date;
-  private _reminderInterval?: number; // in milliseconds
-  private _reminderStartDate?: Date;
+  private _taskReminders?: TaskReminder[];
   private _assigneeId?: string;
   private _targetDepartmentId?: string;
   private _targetSubDepartmentId?: string;
@@ -92,11 +107,18 @@ export class Task {
     this._createAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
     this._completedAt = options.completedAt ?? undefined;
-    this._reminderInterval = options.reminderInterval ?? undefined;
-    this._reminderStartDate = options.reminderStartDate ?? undefined;
     this._assigneeId = options.assigneeId ?? undefined;
     this._targetDepartmentId = options.targetDepartmentId ?? undefined;
     this._targetSubDepartmentId = options.targetSubDepartmentId ?? undefined;
+    this._taskReminders = options.taskReminders?.map((reminder) => ({
+      id: reminder.id ?? UUID.create().toString(),
+      taskId: this._id.toString(),
+      reminderDate: reminder.reminderDate,
+      createdAt: reminder.createdAt ?? new Date(),
+      updatedAt: reminder.updatedAt ?? new Date(),
+      name: reminder.name,
+      reminderInterval: reminder.reminderInterval,
+    })) ?? undefined;
   }
 
   static create(options: TaskOptions): Task {
@@ -203,20 +225,12 @@ export class Task {
     this._completedAt = value;
   }
 
-  get reminderInterval(): number | undefined {
-    return this._reminderInterval;
+  get taskReminders(): TaskReminder[] | undefined {
+    return this._taskReminders;
   }
 
-  set reminderInterval(value: number | undefined) {
-    this._reminderInterval = value;
-  }
-
-  get reminderStartDate(): Date | undefined {
-    return this._reminderStartDate;
-  }
-
-  set reminderStartDate(value: Date | undefined) {
-    this._reminderStartDate = value;
+  set taskReminders(value: TaskReminder[] | undefined) {
+    this._taskReminders = value;
   }
 
   get assigneeId(): string | undefined {
@@ -313,8 +327,7 @@ export class Task {
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
       completedAt: this.completedAt?.toISOString(),
-      reminderInterval: this.reminderInterval,
-      reminderStartDate: this.reminderStartDate?.toISOString(),
+      taskReminders: this.taskReminders,
       assigneeId: this.assigneeId,
       targetDepartmentId: this.targetDepartmentId,
       targetSubDepartmentId: this.targetSubDepartmentId,

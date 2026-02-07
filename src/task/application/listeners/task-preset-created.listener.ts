@@ -12,7 +12,7 @@ export class TaskPresetCreatedListener {
     @Inject('TaskPresetRepository')
     private readonly taskPresetRepository: TaskPresetRepository,
     private readonly taskRepository: TaskRepository,
-  ) {}
+  ) { }
 
   @OnEvent(TaskPresetCreatedEvent.name)
   async handleTaskPresetCreated(event: TaskPresetCreatedEvent) {
@@ -55,7 +55,7 @@ export class TaskPresetCreatedListener {
         targetDepartmentId: task.targetDepartmentId,
         targetSubDepartmentId: task.targetSubDepartmentId,
         priority: task.priority,
-        reminderInterval: task.reminderInterval,
+
       });
 
       // Save the preset

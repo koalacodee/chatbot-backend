@@ -10,67 +10,66 @@ export class ReminderQueueService {
   ) {}
 
   /**
-   * Schedule a repeatable reminder job for a task
-   * @param taskId - The task ID
+   * Schedule a repeatable reminder job for a specific reminder
+   * @param reminderId - The reminder record ID (from task_reminders table)
+   * @param taskId - The task ID (stored in job data for processing)
    * @param reminderInterval - Interval in milliseconds
+   * @param startAt - Optional start date for the first reminder
    */
   async scheduleReminder(
+    reminderId: string,
     taskId: string,
     reminderInterval: number,
     startAt?: Date,
   ): Promise<void> {
-    const jobId = `reminder-${taskId}`;
+    const jobId = `reminder-${reminderId}`;
 
     const now = Date.now();
     const startMs = startAt?.getTime() ?? now;
     const baseStart = startMs > now ? startMs : now;
     const delay = baseStart - now + reminderInterval;
 
-    console.log(`Running after ${delay / (1000 * 60 * 60 * 24)} days`);
-
     await this.reminderQueue.add(
       'remind',
-      { taskId },
+      { taskId, reminderId },
       {
-        delay, // Initial delay (respects optional reminderStartDate)
+        delay,
         repeat: { every: reminderInterval },
         jobId,
         removeOnComplete: true,
-        removeOnFail: false, // Keep failed jobs for debugging
+        removeOnFail: false,
       },
     );
   }
 
   /**
-   * Remove a repeatable reminder job for a task
-   * @param taskId - The task ID
+   * Remove a repeatable reminder job
+   * @param reminderId - The reminder record ID
    */
-  async removeReminder(taskId: string): Promise<void> {
-    const jobId = `reminder-${taskId}`;
+  async removeReminder(reminderId: string): Promise<void> {
+    const jobId = `reminder-${reminderId}`;
 
-    // Remove the repeatable job
     await this.reminderQueue.removeJobScheduler(
       `repeat:${jobId}:${this.reminderQueue.name}`,
     );
 
-    // Also remove any existing jobs with this ID
     await this.reminderQueue.remove(jobId);
   }
 
   /**
    * Update an existing reminder job
+   * @param reminderId - The reminder record ID
    * @param taskId - The task ID
    * @param newReminderInterval - New interval in milliseconds
+   * @param startAt - Optional start date
    */
   async updateReminder(
+    reminderId: string,
     taskId: string,
     newReminderInterval: number,
     startAt?: Date,
   ): Promise<void> {
-    // Remove existing job first
-    await this.removeReminder(taskId);
-
-    // Schedule new job with updated interval
-    await this.scheduleReminder(taskId, newReminderInterval, startAt);
+    await this.removeReminder(reminderId);
+    await this.scheduleReminder(reminderId, taskId, newReminderInterval, startAt);
   }
 }

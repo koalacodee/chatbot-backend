@@ -7,6 +7,7 @@ import { TaskStatus } from '../../domain/entities/task.entity';
 
 interface ReminderJobData {
   taskId: string;
+  reminderId: string;
 }
 
 @Processor('task-reminders')

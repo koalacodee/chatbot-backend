@@ -30,7 +30,7 @@ export class SaveTaskPresetUseCase {
     private readonly taskPresetRepository: TaskPresetRepository,
     private readonly taskRepository: TaskRepository,
     private readonly userRepository: UserRepository,
-  ) {}
+  ) { }
 
   async execute(
     request: SaveTaskPresetRequest,
@@ -97,7 +97,6 @@ export class SaveTaskPresetUseCase {
       targetDepartmentId: task.targetDepartmentId,
       targetSubDepartmentId: task.targetSubDepartmentId,
       priority: task.priority,
-      reminderInterval: task.reminderInterval,
     });
 
     // Save the preset

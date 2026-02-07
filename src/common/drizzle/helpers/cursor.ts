@@ -66,7 +66,13 @@ export class CursorPagination<TCursorData extends CursorData> {
   /**
    * Parse cursor input and return pagination params
    */
-  parseInput(input?: CursorInput) {
+  parseInput(input?: CursorInput): {
+    pageSize: number;
+    direction: 'next' | 'prev';
+    cursor: string | undefined;
+    cursorData: TCursorData | null;
+    limit: number;
+  } {
     const pageSize = input?.pageSize ?? this.defaultPageSize;
     const direction = input?.direction ?? 'next';
     const cursor = input?.cursor;

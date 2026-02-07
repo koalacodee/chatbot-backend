@@ -6,11 +6,10 @@ import {
   IsBoolean,
   IsArray,
   IsUUID,
-  IsPositive,
-  Min,
-  IsDate,
+  ValidateNested,
 } from 'class-validator';
-import { TaskPriority } from 'src/task/domain/entities/task.entity';
+import { ReminderDto } from './create-task.dto';
+import { TaskPriority, TaskStatus } from 'src/task/domain/entities/task.entity';
 
 export enum UpdateTaskAssignmentType {
   INDIVIDUAL = 'INDIVIDUAL',
@@ -40,8 +39,8 @@ export class UpdateTaskInputDto {
   assignerId?: string;
 
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsEnum(TaskStatus)
+  status?: TaskStatus;
 
   @IsOptional()
   @IsEnum(TaskPriority)
@@ -69,14 +68,15 @@ export class UpdateTaskInputDto {
   deleteAttachments?: string[];
 
   @IsOptional()
-  @IsPositive()
-  @Min(60000) // Minimum 1 minute (60000ms)
-  reminderInterval?: number | null; // in milliseconds, null to remove
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ReminderDto)
+  addReminders?: ReminderDto[];
 
   @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  reminderStartDate?: Date | null;
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  deleteReminders?: string[];
 
   @IsOptional()
   @IsArray()

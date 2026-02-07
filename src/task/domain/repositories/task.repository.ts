@@ -1,5 +1,5 @@
 import { TaskDelegation } from '../entities/task-delegation.entity';
-import { Task, TaskPriority, TaskStatus } from '../entities/task.entity';
+import { Task, TaskPriority, TaskReminder, TaskStatus } from '../entities/task.entity';
 import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 import { CursorInput, PaginatedArrayResult } from 'src/common/drizzle/helpers/cursor';
 import { TaskSubmission } from '../entities/task-submission.entity';
@@ -198,6 +198,9 @@ export abstract class TaskRepository {
     completedCount: number;
     completionPercentage: number;
   }>;
+
+  abstract removeReminders(reminderIds: string[]): Promise<void>;
+  abstract saveReminders(reminders: TaskReminder[]): Promise<void>;
   abstract getTasksAndDelegationsForEmployee(options: {
     employeeUserId: string;
     status?: TaskStatus[];
