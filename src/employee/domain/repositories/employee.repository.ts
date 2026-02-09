@@ -1,5 +1,9 @@
 import { Employee, EmployeePermissionsEnum } from '../entities/employee.entity';
-
+export type EmployeeQueryOptions = {
+  includeSubDepartments?: boolean;
+  includeSupervisor?: boolean;
+  includeUser?: boolean;
+};
 export abstract class EmployeeRepository {
   abstract save(employee: Employee): Promise<Employee>;
   abstract findById(id: string): Promise<Employee | null>;
@@ -39,4 +43,9 @@ export abstract class EmployeeRepository {
     supervisorDepartmentIds: string[],
     searchQuery?: string,
   ): Promise<Employee[]>;
+
+  abstract supervisorHasAccessToEmployee(options: {
+    supervisor: { supervisorId: string } | { supervisorUserId: string };
+    employee: { employeeId: string } | { employeeUserId: string };
+  }): Promise<boolean>;
 }
