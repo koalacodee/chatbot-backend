@@ -75,6 +75,7 @@
     "@nestjs/cli": "^11.0.10",
     "@nestjs/testing": "^11.1.6",
     "@types/axios": "^0.14.4",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.3.1",
     "@types/passport-jwt": "^4.0.1",
     "@types/pg": "^8.15.6",
@@ -104,7 +105,7 @@
       "ts"
     ],
     "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
+    "testRegex": ".*\\.(spec|test)\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
