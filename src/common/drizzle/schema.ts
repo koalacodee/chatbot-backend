@@ -904,12 +904,9 @@ export const supervisors = pgTable(
     id: uuid().primaryKey().notNull(),
     permissions: adminPermissions().array(),
     userId: uuid('user_id').notNull(),
-    createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', {
-      precision: 3,
-      mode: 'string',
+      mode: 'date',
     }).notNull(),
   },
   (table) => [
@@ -1148,7 +1145,10 @@ export const supportTickets = pgTable(
     guestPhone: varchar('guest_phone', { length: 255 }).notNull(),
   },
   (table) => [
-    index("idx_support_tickets_cursor").on(table.createdAt.desc(), table.id.desc()),
+    index('idx_support_tickets_cursor').on(
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
     index('idx_support_tickets_subject_lower').using(
       'btree',
       sql`lower(TRIM(BOTH FROM subject))`,
@@ -1189,7 +1189,7 @@ export const taskPresets = pgTable(
     name: varchar({ length: 255 }).notNull(),
     title: varchar({ length: 255 }).notNull(),
     description: text().notNull(),
-    dueDate: timestamp('due_date', { precision: 3, mode: 'string' }),
+    dueDate: timestamp('due_date', { mode: 'date' }),
     assigneeId: uuid('assignee_id'),
     assignerId: uuid('assigner_id').notNull(),
     assignerRole: varchar('assigner_role', { length: 20 }).notNull(),
@@ -1199,12 +1199,9 @@ export const taskPresets = pgTable(
     targetDepartmentId: uuid('target_department_id'),
     targetSubDepartmentId: uuid('target_sub_department_id'),
     reminderInterval: integer('reminder_interval'),
-    createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', {
-      precision: 3,
-      mode: 'string',
+      mode: 'date',
     }).notNull(),
   },
   (table) => [
@@ -1234,10 +1231,10 @@ export const taskSubmissions = pgTable(
     notes: text(),
     feedback: text(),
     status: taskSubmissionStatus().default('submitted').notNull(),
-    submittedAt: timestamp('submitted_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
+    submittedAt: timestamp('submitted_at', { mode: 'date' })
+      .defaultNow()
       .notNull(),
-    reviewedAt: timestamp('reviewed_at', { precision: 3, mode: 'string' }),
+    reviewedAt: timestamp('reviewed_at', { mode: 'date' }),
     reviewedByAdminId: uuid('reviewed_by_admin_id'),
     reviewedBySupervisorId: uuid('reviewed_by_supervisor_id'),
     delegationSubmissionId: uuid('delegation_submission_id'),
@@ -1511,30 +1508,26 @@ export const tasks = pgTable(
     description: text().notNull(),
     assigneeId: uuid('assignee_id'),
     status: taskStatus().default('to_do').notNull(),
-    createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', {
-      precision: 3,
-      mode: 'string',
+      mode: 'date',
     }).notNull(),
-    completedAt: timestamp('completed_at', { precision: 3, mode: 'string' }),
+    completedAt: timestamp('completed_at', { mode: 'date' }),
     assignmentType: taskAssignmentType('assignment_type').notNull(),
     targetDepartmentId: uuid('target_department_id'),
     targetSubDepartmentId: uuid('target_sub_department_id'),
     assignerAdminId: uuid('assigner_admin_id'),
     assignerSupervisorId: uuid('assigner_supervisor_id'),
     priority: taskPriority().default('medium').notNull(),
-    dueDate: timestamp('due_date', { precision: 3, mode: 'string' }),
+    dueDate: timestamp('due_date', { mode: 'date' }),
     reminderInterval: integer('reminder_interval'),
     reminderStartDate: timestamp('reminder_start_date', {
-      precision: 3,
-      mode: 'string',
+      mode: 'date',
     }),
     creatorId: uuid('creator_id'),
   },
   (table) => [
-    index("idx_tasks_cursor").on(table.createdAt.desc(), table.id.desc()),
+    index('idx_tasks_cursor').on(table.createdAt.desc(), table.id.desc()),
     index('tasks_assignee_id_idx').using(
       'btree',
       table.assigneeId.asc().nullsLast().op('uuid_ops'),
@@ -1605,17 +1598,17 @@ export const tasks = pgTable(
 );
 
 export const taskReminders = pgTable(
-  "task_reminders",
+  'task_reminders',
   {
     id: uuid().primaryKey().notNull(),
     taskId: uuid('task_id').notNull(),
     reminderDate: timestamp('reminder_date', { mode: 'date' }).notNull(),
-    createdAt: timestamp('created_at', {mode: 'date' })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', {
       mode: 'date',
-    }).defaultNow().notNull(),
+    })
+      .defaultNow()
+      .notNull(),
     name: varchar({ length: 255 }).notNull(),
     reminderInterval: integer('reminder_interval').notNull(),
   },
@@ -1626,9 +1619,9 @@ export const taskReminders = pgTable(
     })
       .onUpdate('cascade')
       .onDelete('cascade'),
-    index().on(table.taskId)
+    index().on(table.taskId),
   ],
-)
+);
 
 export const users = pgTable(
   'users',
@@ -1638,12 +1631,9 @@ export const users = pgTable(
     email: varchar({ length: 255 }).notNull(),
     password: char({ length: 97 }).notNull(),
     role: userRole().notNull(),
-    createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', {
-      precision: 3,
-      mode: 'string',
+      mode: 'date',
     }).notNull(),
     employeeId: varchar('employee_id', { length: 255 }),
     jobTitle: varchar('job_title', { length: 255 }),
@@ -1670,12 +1660,9 @@ export const questionInteractions = pgTable(
   {
     id: uuid().primaryKey().notNull(),
     type: interactionType().notNull(),
-    createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', {
-      precision: 3,
-      mode: 'string',
+      mode: 'date',
     }).notNull(),
     questionId: uuid('question_id').notNull(),
     guestId: uuid('guest_id').notNull(),
@@ -1821,17 +1808,14 @@ export const taskDelegations = pgTable(
     id: uuid().primaryKey().notNull(),
     taskId: uuid('task_id').notNull(),
     assigneeId: uuid('assignee_id'),
-    targetSubDepartmentId: uuid('target_sub_department_id').notNull(),
+    targetSubDepartmentId: uuid('target_sub_department_id'),
     status: taskStatus().default('to_do').notNull(),
     assignmentType: taskAssignmentType('assignment_type').notNull(),
-    createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', {
-      precision: 3,
-      mode: 'string',
+      mode: 'date',
     }).notNull(),
-    completedAt: timestamp('completed_at', { precision: 3, mode: 'string' }),
+    completedAt: timestamp('completed_at', { mode: 'date' }),
     delegatorId: uuid('delegator_id').notNull(),
   },
   (table) => [
@@ -1897,10 +1881,10 @@ export const taskDelegationSubmissions = pgTable(
     notes: text(),
     feedback: text(),
     status: taskSubmissionStatus().default('submitted').notNull(),
-    submittedAt: timestamp('submitted_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
+    submittedAt: timestamp('submitted_at', { mode: 'date' })
+      .defaultNow()
       .notNull(),
-    reviewedAt: timestamp('reviewed_at', { precision: 3, mode: 'string' }),
+    reviewedAt: timestamp('reviewed_at', { mode: 'date' }),
     reviewedByAdminId: uuid('reviewed_by_admin_id'),
     reviewedBySupervisorId: uuid('reviewed_by_supervisor_id'),
     forwarded: boolean().default(false).notNull(),
@@ -1989,27 +1973,27 @@ export const taskDelegationSubmissions = pgTable(
 export const departmentToSupervisor = pgTable(
   '_DepartmentToSupervisor',
   {
-    a: uuid('A').notNull(),
-    b: uuid('B').notNull(),
+    departmentId: uuid('A').notNull(),
+    supervisorId: uuid('B').notNull(),
   },
   (table) => [
-    index().using('btree', table.b.asc().nullsLast().op('uuid_ops')),
+    index().using('btree', table.supervisorId.asc().nullsLast().op('uuid_ops')),
     foreignKey({
-      columns: [table.a],
+      columns: [table.departmentId],
       foreignColumns: [departments.id],
       name: '_DepartmentToSupervisor_A_fkey',
     })
       .onUpdate('cascade')
       .onDelete('cascade'),
     foreignKey({
-      columns: [table.b],
+      columns: [table.supervisorId],
       foreignColumns: [supervisors.id],
       name: '_DepartmentToSupervisor_B_fkey',
     })
       .onUpdate('cascade')
       .onDelete('cascade'),
     primaryKey({
-      columns: [table.a, table.b],
+      columns: [table.departmentId, table.supervisorId],
       name: '_DepartmentToSupervisor_AB_pkey',
     }),
   ],

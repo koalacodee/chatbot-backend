@@ -43,6 +43,13 @@
       "when": 1770341151808,
       "tag": "0006_volatile_frog_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1770626216254,
+      "tag": "0007_abandoned_vermin",
+      "breakpoints": true
     }
   ]
 }
