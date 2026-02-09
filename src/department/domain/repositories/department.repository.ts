@@ -7,6 +7,14 @@ export interface DepartmentQueryDto {
   includeParent?: boolean;
 }
 
+export type SupervisorIdOrUserId =
+  | { supervisorId: string; supervisorUserId?: never }
+  | { supervisorId?: never; supervisorUserId: string };
+
+export type EmployeeIdOrUserId =
+  | { employeeId: string; employeeUserId?: never }
+  | { employeeId?: never; employeeUserId: string };
+
 export abstract class DepartmentRepository {
   /**
    * Save a department. If the department already exists (by id), it should update it.
@@ -210,4 +218,67 @@ export abstract class DepartmentRepository {
     parentDepartmentIds: string[],
     subDepartmentIds: string[],
   ): Promise<Array<{ id: string; name: string }>>;
+
+  // Department Hierarchy & Access Control
+
+  /**
+   * Check if a supervisor has access to a specific department whether it's a main or sub-department.
+   * Returns true if the supervisor has access, false otherwise.
+   */
+  abstract supervisorHasAccessToDepartment(
+    supervisorIdOrUserId: SupervisorIdOrUserId,
+    departmentId: string,
+  ): Promise<
+    | {
+      hasAccess: true;
+      department: Department;
+    }
+    | {
+      hasAccess: false;
+      department?: never;
+    }
+  >;
+
+  /**
+   * Check if a supervisor has access to a list of departments whether it's a main or sub-department.
+   * Returns true if the supervisor has access to all departments, false otherwise.
+   */
+  abstract supervisorHasAccessToDepartments(
+    supervisorIdOrUserId: SupervisorIdOrUserId,
+    departmentIds: string[],
+  ): Promise<boolean>;
+
+  /**
+   * Get all departments a supervisor has access to whether it's a main or sub-department.
+   * Returns all departments that the supervisor has access to.
+   */
+  abstract getSupervisorDepartments<T extends boolean>(options: {
+    supervisorIdOrUserId: SupervisorIdOrUserId;
+    fullDepartment: T;
+    onlySubDepartments?: boolean;
+  }): Promise<T extends true ? Department[] : { id: string }[]>;
+
+  abstract employeeHasAccessToSubDepartment(
+    employeeIdOrUserId: EmployeeIdOrUserId,
+    subDepartmentId: string,
+  ): Promise<
+    | {
+      hasAccess: true;
+      department: Department;
+    }
+    | {
+      hasAccess: false;
+      department?: never;
+    }
+  >;
+
+  abstract employeeHasAccessToSubDepartments(
+    employeeIdOrUserId: EmployeeIdOrUserId,
+    subDepartmentIds: string[],
+  ): Promise<boolean>;
+
+  abstract getEmployeeSubDepartments<T extends boolean>(
+    employeeIdOrUserId: EmployeeIdOrUserId,
+    fullSubDepartment: T,
+  ): Promise<T extends true ? Department[] : { id: string }[]>;
 }
