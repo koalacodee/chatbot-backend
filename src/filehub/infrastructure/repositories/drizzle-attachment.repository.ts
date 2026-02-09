@@ -131,6 +131,19 @@ export class DrizzleAttachmentRepository extends AttachmentRepository {
     return records.map((record) => this.toDomain(record));
   }
 
+  async findByTargetIds(targetIds: string[]): Promise<Attachment[]> {
+    if (targetIds.length === 0) {
+      return [];
+    }
+
+    const records = await this.db
+      .select()
+      .from(attachments)
+      .where(inArray(attachments.targetId, targetIds));
+
+    return records.map((record) => this.toDomain(record));
+  }
+
   async countByTargetId(targetId: string): Promise<number> {
     const result = await this.db
       .select({ count: count().as('count') })

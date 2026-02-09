@@ -8,6 +8,7 @@ export abstract class AttachmentRepository {
 
   // Target helpers
   abstract findByTargetId(targetId: string): Promise<Attachment[]>;
+  abstract findByTargetIds(targetIds: string[]): Promise<Attachment[]>;
   abstract countByTargetId(targetId: string): Promise<number>;
   abstract removeByTargetId(targetId: string): Promise<Attachment[]>;
 
