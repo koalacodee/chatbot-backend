@@ -3,9 +3,10 @@ import {
   type CursorInput,
   type PaginatedArrayResult,
 } from '@/common/drizzle/helpers/cursor';
-import type {
-  DatabaseInstance,
-  DrizzleTransaction,
+import {
+  type DatabaseInstance,
+  DrizzleService,
+  type DrizzleTransaction,
 } from '@/common/drizzle/drizzle.service';
 import { tasks } from '@/common/drizzle/schema';
 import type {
@@ -31,7 +32,10 @@ import * as get from './repository-get';
 import * as misc from './repository-misc';
 import type { TaskRepoContext } from './repository-query';
 import * as team from './repository-team';
+import { Injectable } from '@nestjs/common';
+import { inArray } from 'drizzle-orm';
 
+@Injectable()
 export class DrizzleTaskRepository implements TaskRepository {
   private readonly pagination = createCursorPagination<TaskCursorData>({
     table: tasks,
@@ -43,6 +47,8 @@ export class DrizzleTaskRepository implements TaskRepository {
     sortDirection: 'desc',
   });
 
+  private readonly db: DatabaseInstance | DrizzleTransaction;
+
   private get ctx(): TaskRepoContext {
     return {
       db: this.db,
@@ -51,10 +57,8 @@ export class DrizzleTaskRepository implements TaskRepository {
     };
   }
 
-  constructor(private readonly db: DatabaseInstance | DrizzleTransaction) {}
-
-  static fromTransaction(tx: DrizzleTransaction): DrizzleTaskRepository {
-    return new DrizzleTaskRepository(tx);
+  constructor(drizzleService: DrizzleService) {
+    this.db = drizzleService.client;
   }
 
   async save(task: Task): Promise<Task> {
@@ -65,8 +69,20 @@ export class DrizzleTaskRepository implements TaskRepository {
     return crud.findById(this.ctx, id);
   }
 
+  async findByIdWithSubmissions(
+    id: string,
+  ): Promise<{ task: Task; submissions: TaskSubmission[] } | null> {
+    return crud.findByIdWithSubmissions(this.ctx, id);
+  }
+
   async findByIds(ids: string[]): Promise<Task[]> {
     return crud.findByIds(this.ctx, ids);
+  }
+
+  async findByIdsWithSubmissions(
+    ids: string[],
+  ): Promise<{ task: Task; submissions: TaskSubmission[] }[]> {
+    return crud.findByIdsWithSubmissions(this.ctx, ids);
   }
 
   async findAll(filters?: {
@@ -129,7 +145,9 @@ export class DrizzleTaskRepository implements TaskRepository {
   async findDepartmentLevelTasks(
     departmentId?: string,
     filters?: DepartmentTaskFilters,
-  ): Promise<PaginatedArrayResult<Task>> {
+  ): Promise<
+    PaginatedArrayResult<{ task: Task; submissions: TaskSubmission[] }>
+  > {
     return find.findDepartmentLevelTasks(this.ctx, departmentId, filters);
   }
 
@@ -190,7 +208,12 @@ export class DrizzleTaskRepository implements TaskRepository {
     completedCount: number;
     completionPercentage: number;
   }> {
-    return get.getTaskMetricsForSupervisor(this.ctx, supervisorDepartmentIds);
+    const whereConditions = [
+      inArray(tasks.targetDepartmentId, supervisorDepartmentIds),
+    ];
+    return get.getTaskMetricsForSupervisor(this.ctx, {
+      whereConditions: whereConditions,
+    });
   }
 
   async getTasksForSupervisor(options: {
@@ -206,7 +229,6 @@ export class DrizzleTaskRepository implements TaskRepository {
       rejectionReason?: string;
       approvalFeedback?: string;
     }> & {
-      fileHubAttachments: Attachment[];
       metrics: {
         pendingTasks: number;
         completedTasks: number;
@@ -276,7 +298,6 @@ export class DrizzleTaskRepository implements TaskRepository {
         delegationSubmissions: TaskDelegationSubmission[];
       };
     }> & {
-      fileHubAttachments: Attachment[];
       metrics: {
         pendingTasks: number;
         completedTasks: number;

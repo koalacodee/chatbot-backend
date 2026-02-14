@@ -10,6 +10,7 @@ import {
   TaskPriority,
   TaskStatus,
 } from '@/v2/tasks/domain/entities/task.entity';
+import type { TaskSubmission } from '@/v2/tasks/domain/entities/task-submission.entity';
 import {
   assignmentTypeToDb,
   dbToStatus,
@@ -111,6 +112,14 @@ export async function findById(
   id: string,
 ): Promise<Task | null> {
   const list = await fetchTasks(ctx, { where: eq(tasks.id, id) });
+  return list.length > 0 ? list[0].task : null;
+}
+
+export async function findByIdWithSubmissions(
+  ctx: TaskRepoContext,
+  id: string,
+): Promise<{ task: Task; submissions: TaskSubmission[] } | null> {
+  const list = await fetchTasks(ctx, { where: eq(tasks.id, id) });
   return list.length > 0 ? list[0] : null;
 }
 
@@ -118,6 +127,15 @@ export async function findByIds(
   ctx: TaskRepoContext,
   ids: string[],
 ): Promise<Task[]> {
+  if (ids.length === 0) return [];
+  const list = await fetchTasks(ctx, { where: inArray(tasks.id, ids) });
+  return list.map((t) => t.task);
+}
+
+export async function findByIdsWithSubmissions(
+  ctx: TaskRepoContext,
+  ids: string[],
+): Promise<{ task: Task; submissions: TaskSubmission[] }[]> {
   if (ids.length === 0) return [];
   return fetchTasks(ctx, { where: inArray(tasks.id, ids) });
 }
@@ -186,7 +204,7 @@ export async function findAll(
     where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
     paginationParams,
   });
-  return ctx.pagination.processResults(list, paginationParams, (t) => ({
+  return ctx.pagination.processResults(list.map((t) => t.task), paginationParams, (t) => ({
     createdAt: t.createdAt.toISOString(),
     id: t.id,
   }));

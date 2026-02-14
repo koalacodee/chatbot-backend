@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import {
+  buildConflictUpdateColumns,
   DatabaseInstance,
   DrizzleTransaction,
 } from '@/common/drizzle/drizzle.service';
@@ -47,7 +48,7 @@ export async function save(
     .values(data)
     .onConflictDoUpdate({
       target: taskSubmissions.id,
-      set: data,
+      set: buildConflictUpdateColumns(taskSubmissions),
     })
     .returning();
   return result ? rowToEntity(result) : taskSubmission;

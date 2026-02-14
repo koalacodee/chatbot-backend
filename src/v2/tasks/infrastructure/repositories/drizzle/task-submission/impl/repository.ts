@@ -1,6 +1,7 @@
-import type {
-  DatabaseInstance,
-  DrizzleTransaction,
+import {
+  type DatabaseInstance,
+  DrizzleService,
+  type DrizzleTransaction,
 } from '@/common/drizzle/drizzle.service';
 import type {
   TaskSubmission,
@@ -9,16 +10,14 @@ import type {
 import type { TaskSubmissionRepository } from '@/v2/tasks/domain/repositories/task-submission.repository';
 import * as crud from './repository-crud';
 import * as find from './repository-find';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class DrizzleTaskSubmissionRepository
-  implements TaskSubmissionRepository
-{
-  constructor(private readonly db: DatabaseInstance | DrizzleTransaction) {}
-
-  static fromTransaction(
-    tx: DrizzleTransaction,
-  ): DrizzleTaskSubmissionRepository {
-    return new DrizzleTaskSubmissionRepository(tx);
+  implements TaskSubmissionRepository {
+  private readonly db: DatabaseInstance | DrizzleTransaction;
+  constructor(drizzleService: DrizzleService) {
+    this.db = drizzleService.client;
   }
 
   async save(taskSubmission: TaskSubmission): Promise<TaskSubmission> {

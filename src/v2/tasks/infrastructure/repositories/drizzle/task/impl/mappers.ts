@@ -1,4 +1,4 @@
-import type { taskReminders, tasks } from '@/common/drizzle/schema';
+import type { taskDelegationSubmissions, taskReminders, tasks, taskSubmissions } from '@/common/drizzle/schema';
 import {
   Task,
   TaskAssignmentType,
@@ -8,6 +8,12 @@ import {
 
 export type TaskRow = typeof tasks.$inferSelect & {
   reminders?: (typeof taskReminders.$inferSelect)[];
+  submissions?: (typeof taskSubmissions.$inferSelect & {
+    performerId?: string;
+    performerType?: "admin" | "supervisor" | "employee";
+    performerName?: string;
+  })[];
+  assigneeName?: string;
 };
 export type TaskCursorData = { createdAt: string; id: string };
 
@@ -87,5 +93,6 @@ export function mapRowToTask(row: TaskRow): Task {
     updatedAt: row.updatedAt,
     completedAt: row.completedAt ?? undefined,
     reminders: row.reminders,
+    assigneeName: row.assigneeName,
   });
 }

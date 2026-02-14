@@ -89,7 +89,7 @@ const getNotificationHref = (type: NotificationType): string => {
     case 'task_approved':
     case 'task_rejected':
     case 'task_submitted':
-      return '/tasks';
+      return '/v2/tasks';
 
     // Ticket notifications -> Tickets page
     case 'ticket_assigned':

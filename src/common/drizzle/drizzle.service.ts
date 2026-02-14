@@ -25,6 +25,7 @@ export function getDatabaseInstance(connectionString: string) {
   return drizzle({
     client: pgClient,
     schema: fullSchema,
+    logger: true,
   });
 }
 
@@ -56,12 +57,23 @@ export type DrizzleTransaction = PgTransaction<
   ExtractTablesWithRelations<typeof fullSchema>
 >;
 
+const NOT_UPDATABLE_COLUMNS = new Set([
+  'id',
+  'created_at',
+  'createdAt',
+  'updated_at',
+  'updatedAt',
+]);
+
 // Helper function to build conflict update columns (Drizzle 1.0+)
 export function buildConflictUpdateColumns<
   T extends PgTable,
   Q extends keyof T['_']['columns'],
->(table: T, columns: Q[]) {
+>(table: T, columns?: Q[]) {
   const cls = getTableColumns(table);
+  columns ||= Object.keys(cls).filter(
+    (key) => !NOT_UPDATABLE_COLUMNS.has(key),
+  ) as Q[];
   return columns.reduce(
     (acc, column) => {
       const colName = cls[column].name;

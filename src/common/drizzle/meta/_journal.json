@@ -50,6 +50,13 @@
       "when": 1770626216254,
       "tag": "0007_abandoned_vermin",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1770991157994,
+      "tag": "0008_add_forwarded_message_and_target",
+      "breakpoints": true
     }
   ]
 }

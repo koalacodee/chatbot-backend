@@ -183,6 +183,7 @@ export async function findMyDelegationsForSupervisor(
       | { delegatorId: string; delegatorUserId: never }
       | { delegatorUserId: string; delegatorId: never };
     cursor?: CursorInput;
+    status?: string[];
   },
 ): Promise<PaginatedArrayResult<TaskDelegation>> {
   const paginationParams = cursorPagination.parseInput(options.cursor);
@@ -191,12 +192,26 @@ export async function findMyDelegationsForSupervisor(
     paginationParams.direction,
   );
 
+  const statusCondition =
+    options.status && options.status.length > 0
+      ? (() => {
+          const statusConditions = options
+            .status!.map((s) => parseStatus(s))
+            .filter((s): s is TaskDelegationRow['status'] => s !== null)
+            .map((s) => eq(taskDelegations.status, s));
+          return statusConditions.length > 0
+            ? or(...statusConditions)
+            : undefined;
+        })()
+      : undefined;
+
   let rows: { taskDelegation: typeof taskDelegations.$inferSelect }[];
 
   if (options.delegator.delegatorId) {
     const conditions = [
       eq(taskDelegations.delegatorId, options.delegator.delegatorId),
       cursorCondition,
+      statusCondition,
     ].filter((c): c is SQL => c !== undefined);
     rows = await db
       .select({ taskDelegation: taskDelegations })
@@ -208,6 +223,7 @@ export async function findMyDelegationsForSupervisor(
     const conditions = [
       eq(supervisors.userId, options.delegator.delegatorUserId),
       cursorCondition,
+      statusCondition,
     ].filter((c): c is SQL => c !== undefined);
     rows = await db
       .select({ taskDelegation: taskDelegations })
@@ -241,6 +257,7 @@ export async function findMyDelegationsForEmployee(
       | { assigneeUserId: string; assigneeId: never };
     subDepartmentIds: string[];
     cursor?: CursorInput;
+    status?: string[];
   },
 ): Promise<PaginatedArrayResult<TaskDelegation>> {
   const paginationParams = cursorPagination.parseInput(options.cursor);
@@ -261,7 +278,20 @@ export async function findMyDelegationsForEmployee(
     );
   }
 
-  const conditions = [accessCondition, cursorCondition].filter(
+  const statusCondition =
+    options.status && options.status.length > 0
+      ? (() => {
+          const statusConditions = options
+            .status!.map((s) => parseStatus(s))
+            .filter((s): s is TaskDelegationRow['status'] => s !== null)
+            .map((s) => eq(taskDelegations.status, s));
+          return statusConditions.length > 0
+            ? or(...statusConditions)
+            : undefined;
+        })()
+      : undefined;
+
+  const conditions = [accessCondition, cursorCondition, statusCondition].filter(
     (c): c is SQL => c !== undefined,
   );
 
@@ -506,17 +536,17 @@ export async function findDelegablesForSupervisor(
           ilike(accessibleEmployees.email, `%${search.trim()}%`),
           ilike(accessibleEmployees.username, `%${search.trim()}%`),
           ilike(accessibleEmployees.jobTitle, `%${search.trim()}%`),
-          ilike(accessibleEmployees.employeeId, `%${search.trim()}%`),
         )
       : undefined;
 
-  // Main query
-  const result = await db
-    .with(
-      supervisorMainDepartments,
-      supervisorAllDepartments,
-      accessibleEmployees,
-    )
+  // Main query - use the same query builder with CTEs for both union parts
+  // so that accessible_employees is in scope for the second part
+  const queryWithCtes = db.with(
+    supervisorMainDepartments,
+    supervisorAllDepartments,
+    accessibleEmployees,
+  );
+  const result = await queryWithCtes
     .select({
       type: sql<'sub_department' | 'employee'>`'sub_department'`.as('type'),
       itemId: sql<string>`${departments.id}::text`.as('item_id'),
@@ -532,7 +562,7 @@ export async function findDelegablesForSupervisor(
     )
     .where(deptSearchCondition)
     .unionAll(
-      db
+      queryWithCtes
         .select({
           type: sql<'sub_department' | 'employee'>`'employee'`.as('type'),
           itemId: sql<string>`${accessibleEmployees.employeeId}::text`.as(

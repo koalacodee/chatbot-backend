@@ -34,6 +34,7 @@ import { DrizzleModule } from './common/drizzle/drizzle.module';
 import { FilehubModule } from './filehub/filehub.module';
 import { FileHubAttachmentGroupModule } from './filehub/modules/attachment-groups/attachment-group.module';
 import { ProfilePictureModule } from './filehub/modules/profile-pictures/profile.picture.module';
+import { TasksModule } from './v2/tasks/tasks.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -85,6 +86,7 @@ import { ProfilePictureModule } from './filehub/modules/profile-pictures/profile
     FilehubModule,
     FileHubAttachmentGroupModule,
     ProfilePictureModule,
+    TasksModule
   ],
 })
-export class AppModule {}
+export class AppModule { }

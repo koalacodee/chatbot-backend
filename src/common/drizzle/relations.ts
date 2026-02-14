@@ -606,11 +606,11 @@ export const departmentToSupervisorRelations = relations(
   departmentToSupervisor,
   ({ one }) => ({
     department: one(departments, {
-      fields: [departmentToSupervisor.a],
+      fields: [departmentToSupervisor.departmentId],
       references: [departments.id],
     }),
     supervisor: one(supervisors, {
-      fields: [departmentToSupervisor.b],
+      fields: [departmentToSupervisor.supervisorId],
       references: [supervisors.id],
     }),
   }),

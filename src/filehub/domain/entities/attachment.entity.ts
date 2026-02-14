@@ -127,7 +127,7 @@ export class Attachment {
     return this._cloned;
   }
 
-  toJSON(): AttachmentOptions {
+  toJSON() {
     return {
       id: this._id.value,
       type: this._type,

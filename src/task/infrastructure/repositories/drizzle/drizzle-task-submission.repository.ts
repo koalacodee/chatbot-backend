@@ -130,7 +130,7 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
         break;
     }
 
-    const data = {
+    const data: typeof taskSubmissions.$inferInsert = {
       id: taskSubmission.id.toString(),
       taskId: taskSubmission.task.id.toString(),
       performerAdminId,
@@ -139,11 +139,8 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
       notes: taskSubmission.notes ?? null,
       feedback: taskSubmission.feedback ?? null,
       status: domainToDrizzleSubmissionStatus(taskSubmission.status),
-      submittedAt:
-        taskSubmission.submittedAt instanceof Date
-          ? taskSubmission.submittedAt.toISOString()
-          : (taskSubmission.submittedAt ?? new Date().toISOString()),
-      reviewedAt: this.toISOStringSafe(taskSubmission.reviewedAt),
+      submittedAt: taskSubmission.submittedAt,
+      reviewedAt: taskSubmission.reviewedAt,
       reviewedByAdminId:
         taskSubmission.reviewedBy && 'admin' in taskSubmission.reviewedBy
           ? taskSubmission.reviewedBy.id.toString()
@@ -339,7 +336,9 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
     const results = await this.db
       .select()
       .from(taskSubmissions)
-      .where(eq(taskSubmissions.status, domainToDrizzleSubmissionStatus(status)));
+      .where(
+        eq(taskSubmissions.status, domainToDrizzleSubmissionStatus(status)),
+      );
 
     return Promise.all(
       results.map((row) =>
@@ -449,7 +448,9 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
             notes: row.notes,
             feedback: row.feedback,
             status: drizzleToDomainSubmissionStatus(row.status),
-            submittedAt: row.submittedAt ? new Date(row.submittedAt) : undefined,
+            submittedAt: row.submittedAt
+              ? new Date(row.submittedAt)
+              : undefined,
             reviewedAt: row.reviewedAt ? new Date(row.reviewedAt) : undefined,
           },
           tasksMap.get(row.taskId),

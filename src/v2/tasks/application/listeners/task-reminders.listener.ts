@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { TaskRemindersCreatedEvent } from '../../domain/events/task-reminders-created.event';
-import { ReminderQueueService } from '@/task/infrastructure/queues/reminder.queue';
+import { ReminderQueueService } from '@/v2/tasks/infrastructure/queues/reminder.queue';
 
 @Injectable()
 export class TaskRemindersListener {

@@ -152,7 +152,7 @@ export class DrizzleTaskDelegationSubmissionRepository extends TaskDelegationSub
     const performerEmployeeId =
       submission.performerType === 'employee' ? submission.performerId : null;
 
-    const data = {
+    const data: typeof taskDelegationSubmissions.$inferInsert = {
       id: submission.id.toString(),
       delegationId: submission.delegation.id.toString(),
       taskId: submission.taskId.toString(),
@@ -162,11 +162,8 @@ export class DrizzleTaskDelegationSubmissionRepository extends TaskDelegationSub
       notes: submission.notes ?? null,
       feedback: submission.feedback ?? null,
       status: domainToDrizzleSubmissionStatus(submission.status),
-      submittedAt:
-        submission.submittedAt instanceof Date
-          ? submission.submittedAt.toISOString()
-          : (submission.submittedAt ?? new Date().toISOString()),
-      reviewedAt: this.toISOStringSafe(submission.reviewedAt),
+      submittedAt: submission.submittedAt,
+      reviewedAt: submission.reviewedAt,
       reviewedByAdminId:
         submission.reviewedBy && 'admin' in submission.reviewedBy
           ? submission.reviewedBy.id.toString()

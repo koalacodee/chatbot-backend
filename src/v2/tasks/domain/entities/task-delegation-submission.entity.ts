@@ -25,6 +25,8 @@ export interface TaskDelegationSubmissionOptions {
 	reviewedByAdminId?: string;
 	reviewedBySupervisorId?: string;
 	forwarded?: boolean;
+	forwardedMessage?: string;
+	forwardedToSupervisorId?: string;
 }
 
 export class TaskDelegationSubmission {
@@ -46,6 +48,8 @@ export class TaskDelegationSubmission {
 	private _reviewedByAdminId?: string;
 	private _reviewedBySupervisorId?: string;
 	private _forwarded: boolean;
+	private _forwardedMessage?: string;
+	private _forwardedToSupervisorId?: string;
 
 	private constructor(options: TaskDelegationSubmissionOptions) {
 		this._id = options.id ?? uuidv7();
@@ -66,6 +70,8 @@ export class TaskDelegationSubmission {
 		this._reviewedByAdminId = options.reviewedByAdminId ?? undefined;
 		this._reviewedBySupervisorId = options.reviewedBySupervisorId ?? undefined;
 		this._forwarded = options.forwarded ?? false;
+		this._forwardedMessage = options.forwardedMessage ?? undefined;
+		this._forwardedToSupervisorId = options.forwardedToSupervisorId ?? undefined;
 	}
 
 	static create(
@@ -212,6 +218,22 @@ export class TaskDelegationSubmission {
 		this._forwarded = value;
 	}
 
+	get forwardedMessage(): string | undefined {
+		return this._forwardedMessage;
+	}
+
+	set forwardedMessage(value: string | undefined) {
+		this._forwardedMessage = value;
+	}
+
+	get forwardedToSupervisorId(): string | undefined {
+		return this._forwardedToSupervisorId;
+	}
+
+	set forwardedToSupervisorId(value: string | undefined) {
+		this._forwardedToSupervisorId = value;
+	}
+
 	// Business logic methods
 	approve(reviewer: Admin | Supervisor, feedback?: string): void {
 		this._status = TaskSubmissionStatus.APPROVED;
@@ -263,6 +285,8 @@ export class TaskDelegationSubmission {
 			reviewedByAdminId: this.reviewedByAdminId,
 			reviewedBySupervisorId: this.reviewedBySupervisorId,
 			forwarded: this.forwarded,
+			forwardedMessage: this.forwardedMessage,
+			forwardedToSupervisorId: this.forwardedToSupervisorId,
 		};
 	}
 }

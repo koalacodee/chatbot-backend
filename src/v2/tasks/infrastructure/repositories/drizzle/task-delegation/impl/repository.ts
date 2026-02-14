@@ -1,6 +1,7 @@
-import type {
-  DatabaseInstance,
-  DrizzleTransaction,
+import {
+  type DatabaseInstance,
+  DrizzleService,
+  type DrizzleTransaction,
 } from '@/common/drizzle/drizzle.service';
 import type { TaskDelegation } from '@/v2/tasks/domain/entities/task-delegation.entity';
 import type {
@@ -13,16 +14,15 @@ import {
   CursorInput,
   PaginatedArrayResult,
 } from '@/common/drizzle/helpers/cursor';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class DrizzleTaskDelegationRepository
   implements TaskDelegationRepository
 {
-  constructor(private readonly db: DatabaseInstance | DrizzleTransaction) {}
-
-  static fromTransaction(
-    tx: DrizzleTransaction,
-  ): DrizzleTaskDelegationRepository {
-    return new DrizzleTaskDelegationRepository(tx);
+  private readonly db: DatabaseInstance | DrizzleTransaction;
+  constructor(drizzleService: DrizzleService) {
+    this.db = drizzleService.client;
   }
 
   async save(taskDelegation: TaskDelegation): Promise<TaskDelegation> {
@@ -114,6 +114,7 @@ export class DrizzleTaskDelegationRepository
       | { delegatorId: string; delegatorUserId: never }
       | { delegatorUserId: string; delegatorId: never };
     cursor?: CursorInput;
+    status?: string[];
   }): Promise<PaginatedArrayResult<TaskDelegation>> {
     return find.findMyDelegationsForSupervisor(this.db, options);
   }
@@ -124,6 +125,7 @@ export class DrizzleTaskDelegationRepository
       | { assigneeUserId: string; assigneeId: never };
     subDepartmentIds: string[];
     cursor?: CursorInput;
+    status?: string[];
   }): Promise<PaginatedArrayResult<TaskDelegation>> {
     return find.findMyDelegationsForEmployee(this.db, options);
   }

@@ -59,7 +59,13 @@ export interface MyTasksResult {
 export abstract class TaskRepository {
   abstract save(task: Task): Promise<Task>;
   abstract findById(id: string): Promise<Task | null>;
+  abstract findByIdWithSubmissions(
+    id: string,
+  ): Promise<{ task: Task; submissions: TaskSubmission[] } | null>;
   abstract findByIds(ids: string[]): Promise<Task[]>;
+  abstract findByIdsWithSubmissions(
+    ids: string[],
+  ): Promise<{ task: Task; submissions: TaskSubmission[] }[]>;
   abstract findAll(
     // opaque cursor
     filters?: {
@@ -95,7 +101,9 @@ export abstract class TaskRepository {
   abstract findDepartmentLevelTasks(
     departmentId?: string,
     filters?: DepartmentTaskFilters,
-  ): Promise<PaginatedArrayResult<Task>>;
+  ): Promise<
+    PaginatedArrayResult<{ task: Task; submissions: TaskSubmission[] }>
+  >;
   abstract findSubDepartmentLevelTasks(
     subDepartmentId?: string,
     filters?: DepartmentTaskFilters,
@@ -146,7 +154,6 @@ export abstract class TaskRepository {
       rejectionReason?: string;
       approvalFeedback?: string;
     }> & {
-      fileHubAttachments: Attachment[];
       metrics: {
         pendingTasks: number;
         completedTasks: number;
@@ -199,7 +206,6 @@ export abstract class TaskRepository {
         delegationSubmissions: TaskDelegationSubmission[];
       };
     }> & {
-      fileHubAttachments: Attachment[];
       metrics: {
         pendingTasks: number;
         completedTasks: number;

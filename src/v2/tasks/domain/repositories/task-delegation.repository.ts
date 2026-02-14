@@ -57,6 +57,7 @@ export abstract class TaskDelegationRepository {
       | { delegatorId: string; delegatorUserId: never }
       | { delegatorUserId: string; delegatorId: never };
     cursor?: CursorInput;
+    status?: string[];
   }): Promise<PaginatedArrayResult<TaskDelegation>>;
 
   abstract findMyDelegationsForEmployee(options: {
@@ -65,6 +66,7 @@ export abstract class TaskDelegationRepository {
       | { assigneeUserId: string; assigneeId: never };
     subDepartmentIds: string[];
     cursor?: CursorInput;
+    status?: string[];
   }): Promise<PaginatedArrayResult<TaskDelegation>>;
 
   abstract findBySubDepartment(

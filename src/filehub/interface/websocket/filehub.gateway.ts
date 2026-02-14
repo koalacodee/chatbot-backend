@@ -80,8 +80,12 @@ export class FilehubGateway
 
     const payload: FilehubAttachmentMessage = {
       ...attachment.toJSON(),
-      signedUrl: (await this.fileHubService.getSignedUrl(attachment.filename))
-        .signedUrl,
+      signedUrl: (
+        await this.fileHubService.getSignedUrl(
+          attachment.filename,
+          1000 * 60 * 60 * 24,
+        )
+      ).signedUrl,
     };
 
     const userId = attachment.userId;

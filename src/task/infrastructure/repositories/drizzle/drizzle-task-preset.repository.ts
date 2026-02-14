@@ -13,7 +13,7 @@ import {
 
 @Injectable()
 export class DrizzleTaskPresetRepository implements TaskPresetRepository {
-  constructor(private readonly drizzleService: DrizzleService) { }
+  constructor(private readonly drizzleService: DrizzleService) {}
 
   private get db() {
     return this.drizzleService.client;
@@ -34,7 +34,7 @@ export class DrizzleTaskPresetRepository implements TaskPresetRepository {
       name: preset.name,
       title: preset.title,
       description: preset.description,
-      dueDate: this.toISOStringSafe(preset.dueDate),
+      dueDate: preset.dueDate,
       assigneeId: preset.assigneeId ?? null,
       assignerId: preset.assignerId.value,
       assignerRole: preset.assignerRole,
@@ -46,8 +46,8 @@ export class DrizzleTaskPresetRepository implements TaskPresetRepository {
       targetDepartmentId: preset.targetDepartmentId ?? null,
       targetSubDepartmentId: preset.targetSubDepartmentId ?? null,
       reminderInterval: preset.reminderInterval ?? null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     await this.db.insert(taskPresets).values(data);
@@ -91,11 +91,11 @@ export class DrizzleTaskPresetRepository implements TaskPresetRepository {
   }
 
   async update(preset: TaskPreset): Promise<TaskPreset> {
-    const data = {
+    const data: Partial<typeof taskPresets.$inferInsert> = {
       name: preset.name,
       title: preset.title,
       description: preset.description,
-      dueDate: this.toISOStringSafe(preset.dueDate),
+      dueDate: preset.dueDate,
       assigneeId: preset.assigneeId ?? null,
       assignerRole: preset.assignerRole,
       approverId: preset.approverId ?? null,
@@ -106,7 +106,7 @@ export class DrizzleTaskPresetRepository implements TaskPresetRepository {
       targetDepartmentId: preset.targetDepartmentId ?? null,
       targetSubDepartmentId: preset.targetSubDepartmentId ?? null,
       reminderInterval: preset.reminderInterval ?? null,
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date(),
     };
 
     await this.db

@@ -1,12 +1,23 @@
-import { and, eq, inArray, or } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import type {
   DatabaseInstance,
   DrizzleTransaction,
 } from '@/common/drizzle/drizzle.service';
-import { taskDelegationSubmissions } from '@/common/drizzle/schema';
+import {
+  admins,
+  employees,
+  supervisors,
+  taskDelegationSubmissions,
+  users,
+} from '@/common/drizzle/schema';
 import type { TaskDelegationSubmission } from '@/v2/tasks/domain/entities/task-delegation-submission.entity';
 import type { TaskDelegationSubmissionRow } from './mappers';
-import { rowToEntity, statusToDb, TaskSubmissionStatus } from './mappers';
+import {
+  rowToEntity,
+  rowToEntityWithPerformerName,
+  statusToDb,
+  TaskSubmissionStatus,
+} from './mappers';
 
 export async function findByDelegationId(
   db: DatabaseInstance | DrizzleTransaction,
@@ -25,10 +36,35 @@ export async function findByDelegationIds(
 ): Promise<TaskDelegationSubmission[]> {
   if (delegationIds.length === 0) return [];
   const rows = await db
-    .select()
+    .select({
+      submission: taskDelegationSubmissions,
+      performerName: sql<string | null>`
+        CASE
+          WHEN ${admins.id} IS NOT NULL THEN ${users.name}
+          WHEN ${supervisors.id} IS NOT NULL THEN ${users.name}
+          WHEN ${employees.id} IS NOT NULL THEN ${users.name}
+          ELSE NULL
+        END
+      `.as('performer_name'),
+    })
     .from(taskDelegationSubmissions)
+    .leftJoin(admins, eq(admins.id, taskDelegationSubmissions.performerAdminId))
+    .leftJoin(
+      supervisors,
+      eq(supervisors.id, taskDelegationSubmissions.performerSupervisorId),
+    )
+    .leftJoin(
+      employees,
+      eq(employees.id, taskDelegationSubmissions.performerEmployeeId),
+    )
+    .leftJoin(
+      users,
+      sql`${users.id} = COALESCE(${admins.userId}, ${supervisors.userId}, ${employees.userId})`,
+    )
     .where(inArray(taskDelegationSubmissions.delegationId, delegationIds));
-  return rows.map(rowToEntity);
+  return rows.map((row) =>
+    rowToEntityWithPerformerName(row.submission, row.performerName),
+  );
 }
 
 export async function findByPerformerId(

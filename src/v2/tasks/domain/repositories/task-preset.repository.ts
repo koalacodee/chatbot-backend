@@ -4,18 +4,18 @@ import type {
 } from '@/common/drizzle/helpers/cursor';
 import type { TaskPreset } from '../entities/task-preset.entity';
 
-export interface TaskPresetRepository {
-  save(preset: TaskPreset): Promise<TaskPreset>;
-  findById(id: string): Promise<TaskPreset | null>;
-  findByAssignerId(
+export abstract class TaskPresetRepository {
+  abstract save(preset: TaskPreset): Promise<TaskPreset>;
+  abstract findById(id: string): Promise<TaskPreset | null>;
+  abstract findByAssignerId(
     assignerId: string,
     cursor?: CursorInput,
   ): Promise<PaginatedArrayResult<TaskPreset> & { total: number }>;
-  findByNameAndAssignerId(
+  abstract findByNameAndAssignerId(
     name: string,
     assignerId: string,
   ): Promise<TaskPreset | null>;
-  update(preset: TaskPreset): Promise<TaskPreset>;
-  delete(id: string): Promise<void>;
-  findAll(offset?: number, limit?: number): Promise<TaskPreset[]>;
+  abstract update(preset: TaskPreset): Promise<TaskPreset>;
+  abstract delete(id: string): Promise<void>;
+  abstract findAll(offset?: number, limit?: number): Promise<TaskPreset[]>;
 }

@@ -178,13 +178,12 @@ export const departments = pgTable(
     id: uuid().primaryKey().notNull(),
     name: varchar({ length: 255 }).notNull(),
     parentId: uuid('parent_id'),
-    createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', {
-      precision: 3,
-      mode: 'string',
-    }).notNull(),
+      mode: 'date',
+    })
+      .notNull()
+      .defaultNow(),
     visibility: departmentVisibility().default('public').notNull(),
   },
   (table) => [
@@ -1888,6 +1887,8 @@ export const taskDelegationSubmissions = pgTable(
     reviewedByAdminId: uuid('reviewed_by_admin_id'),
     reviewedBySupervisorId: uuid('reviewed_by_supervisor_id'),
     forwarded: boolean().default(false).notNull(),
+    forwardedMessage: text('forwarded_message'),
+    forwardedToSupervisorId: uuid('forwarded_to_supervisor_id'),
     taskId: uuid('task_id').notNull(),
   },
   (table) => [
@@ -1967,6 +1968,13 @@ export const taskDelegationSubmissions = pgTable(
     })
       .onUpdate('cascade')
       .onDelete('cascade'),
+    foreignKey({
+      columns: [table.forwardedToSupervisorId],
+      foreignColumns: [supervisors.id],
+      name: 'task_delegation_submissions_forwarded_to_supervisor_id_fkey',
+    })
+      .onUpdate('cascade')
+      .onDelete('set null'),
   ],
 );
 

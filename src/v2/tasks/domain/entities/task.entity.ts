@@ -68,6 +68,7 @@ export interface TaskOptions {
   reminders?: TaskReminderOptions[];
   targetDepartmentId?: string;
   targetSubDepartmentId?: string;
+  assigneeName?: string;
 }
 
 export class Task {
@@ -94,6 +95,8 @@ export class Task {
   private _targetDepartmentId?: string;
   private _targetSubDepartmentId?: string;
   private _reminders?: TaskReminder[];
+  // Either assignee name or department name or sub-department name based on assignment type, used for display purposes
+  private _assigneeName?: string;
 
   private constructor(options: TaskOptions) {
     this._id = options.id ?? uuidv7();
@@ -128,6 +131,7 @@ export class Task {
         createdAt: reminder.createdAt ?? new Date(),
         updatedAt: reminder.updatedAt ?? new Date(),
       })) ?? undefined;
+    this._assigneeName = options.assigneeName ?? undefined;
   }
 
   static create(options: TaskOptions): Task {
@@ -347,6 +351,14 @@ export class Task {
     this._reminders = value;
   }
 
+  get assigneeName(): string | undefined {
+    return this._assigneeName;
+  }
+
+  set assigneeName(value: string | undefined) {
+    this._assigneeName = value;
+  }
+
   toJSON() {
     return {
       id: this.id,
@@ -369,6 +381,7 @@ export class Task {
       assigneeId: this.assigneeId,
       targetDepartmentId: this.targetDepartmentId,
       targetSubDepartmentId: this.targetSubDepartmentId,
+      assigneeName: this.assigneeName,
       reminders: this.reminders,
     };
   }

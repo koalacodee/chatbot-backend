@@ -1,6 +1,7 @@
-import type {
-  DatabaseInstance,
-  DrizzleTransaction,
+import {
+  type DatabaseInstance,
+  DrizzleService,
+  type DrizzleTransaction,
 } from '@/common/drizzle/drizzle.service';
 import type {
   CursorInput,
@@ -10,12 +11,13 @@ import type { TaskPreset } from '@/v2/tasks/domain/entities/task-preset.entity';
 import type { TaskPresetRepository } from '@/v2/tasks/domain/repositories/task-preset.repository';
 import * as crud from './repository-crud';
 import * as find from './repository-find';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class DrizzleTaskPresetRepository implements TaskPresetRepository {
-  constructor(private readonly db: DatabaseInstance | DrizzleTransaction) {}
-
-  static fromTransaction(tx: DrizzleTransaction): DrizzleTaskPresetRepository {
-    return new DrizzleTaskPresetRepository(tx);
+  private readonly db: DatabaseInstance | DrizzleTransaction;
+  constructor(drizzleService: DrizzleService) {
+    this.db = drizzleService.client;
   }
 
   async save(preset: TaskPreset): Promise<TaskPreset> {

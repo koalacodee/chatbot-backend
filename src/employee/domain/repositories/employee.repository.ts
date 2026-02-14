@@ -6,7 +6,7 @@ export type EmployeeQueryOptions = {
 };
 export abstract class EmployeeRepository {
   abstract save(employee: Employee): Promise<Employee>;
-  abstract findById(id: string): Promise<Employee | null>;
+  abstract findById(id: string, options?: EmployeeQueryOptions): Promise<Employee | null>;
   abstract findAll(): Promise<Employee[]>;
   abstract removeById(id: string): Promise<Employee | null>;
 

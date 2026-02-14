@@ -311,12 +311,15 @@ export class DrizzleDashboardRepository extends DashboardRepository {
             .innerJoin(supervisors, eq(supervisors.userId, users.id))
             .innerJoin(
               departmentToSupervisor,
-              eq(departmentToSupervisor.b, supervisors.id),
+              eq(departmentToSupervisor.supervisorId, supervisors.id),
             )
             .where(
               and(
                 eq(users.role, 'supervisor'),
-                inArray(departmentToSupervisor.a, deptTree.rootDepartmentIds),
+                inArray(
+                  departmentToSupervisor.departmentId,
+                  deptTree.rootDepartmentIds,
+                ),
               ),
             )
         : hasFilter

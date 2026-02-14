@@ -5,26 +5,31 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { TaskDelegationRepository } from '../../domain/repositories/task-delegation.repository';
+import { TaskSubmissionRepository } from '../../domain/repositories/task-submission.repository';
 import { SupervisorRepository } from '@/supervisor/domain/repository/supervisor.repository';
 import { UserRepository } from '@/shared/repositories/user.repository';
 import { Roles } from '@/shared/value-objects/role.vo';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TaskDelegationSubmissionForwardedEvent } from '../../domain/events/task-delegation-submission-forwarded.event';
-
-// Note: In v2, TaskDelegationSubmission might be the same as TaskSubmission or a separate entity.
-// Based on previous tool outputs, TaskDelegationSubmission exists in v2 tasks domain.
 import { TaskDelegationSubmissionRepository as v2TaskDelegationSubmissionRepo } from '../../domain/repositories/task-delegation-submission.repository';
 import { TaskDelegationSubmission as v2TaskDelegationSubmission } from '../../domain/entities/task-delegation-submission.entity';
+import {
+  TaskSubmission,
+  TaskSubmissionStatus,
+} from '../../domain/entities/task-submission.entity';
 
 interface ForwardTaskDelegationSubmissionInputDto {
   submissionId: string;
-  delegatorUserId: string; // userId of the delegator
+  delegatorUserId: string;
+  message?: string;
+  targetSupervisorId?: string;
 }
 
 @Injectable()
 export class ForwardTaskDelegationSubmissionUseCase {
   constructor(
     private readonly taskDelegationSubmissionRepo: v2TaskDelegationSubmissionRepo,
+    private readonly taskSubmissionRepo: TaskSubmissionRepository,
     private readonly taskDelegationRepo: TaskDelegationRepository,
     private readonly supervisorRepo: SupervisorRepository,
     private readonly userRepo: UserRepository,
@@ -98,6 +103,21 @@ export class ForwardTaskDelegationSubmissionUseCase {
     }
 
     submission.forwarded = true;
+    if (dto.message) submission.forwardedMessage = dto.message;
+    if (dto.targetSupervisorId)
+      submission.forwardedToSupervisorId = dto.targetSupervisorId;
+
+    const taskSubmission = TaskSubmission.create({
+      taskId: submission.taskId,
+      delegationSubmissionId: submission.id,
+      performerId: submission.performerId,
+      performerType: submission.performerType,
+      performerName: submission.performerName,
+      notes: submission.notes,
+      status: submission.status as TaskSubmissionStatus,
+      submittedAt: submission.submittedAt,
+    });
+    await this.taskSubmissionRepo.save(taskSubmission);
 
     const savedSubmission =
       await this.taskDelegationSubmissionRepo.save(submission);

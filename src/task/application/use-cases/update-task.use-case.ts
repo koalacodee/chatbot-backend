@@ -154,9 +154,6 @@ export class UpdateTaskUseCase {
     if (dto.completedAt !== undefined)
       existing.completedAt = dto.completedAt ?? null;
 
-    // Handle reminder interval updates
-
-
     // Handle reminder deletions: remove from queue and filter from entity
     if (dto.deleteReminders && dto.deleteReminders.length > 0) {
       const removeFromQueuePromises = dto.deleteReminders.map((reminderId) =>

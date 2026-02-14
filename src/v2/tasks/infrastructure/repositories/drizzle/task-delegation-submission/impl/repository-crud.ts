@@ -32,6 +32,8 @@ export async function save(
     reviewedByAdminId: submission.reviewedByAdminId ?? null,
     reviewedBySupervisorId: submission.reviewedBySupervisorId ?? null,
     forwarded: submission.forwarded,
+    forwardedMessage: submission.forwardedMessage ?? null,
+    forwardedToSupervisorId: submission.forwardedToSupervisorId ?? null,
   };
   const [result] = await db
     .insert(taskDelegationSubmissions)

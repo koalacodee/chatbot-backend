@@ -9,6 +9,7 @@ import {
   type SQL,
   sql,
 } from 'drizzle-orm';
+import { DrizzleService } from '@/common/drizzle/drizzle.service';
 import type {
   DatabaseInstance,
   DrizzleTransaction,
@@ -39,6 +40,7 @@ import {
 } from '@/supervisor/domain/entities/supervisor.entity';
 import { Roles } from '@/shared/value-objects/role.vo';
 import { User } from '@/shared/entities/user.entity';
+import { Injectable } from '@nestjs/common';
 
 type DrizzleUserRole = (typeof users.$inferSelect)['role'];
 
@@ -135,11 +137,11 @@ function mapToDepartmentVisibility(
   }
 }
 
+@Injectable()
 export class DrizzleEmployeeRepository implements EmployeeRepository {
-  constructor(private readonly db: DatabaseInstance | DrizzleTransaction) {}
-
-  static fromTransaction(tx: DrizzleTransaction): DrizzleEmployeeRepository {
-    return new DrizzleEmployeeRepository(tx);
+  private readonly db: DatabaseInstance | DrizzleTransaction;
+  constructor(drizzleService: DrizzleService) {
+    this.db = drizzleService.client;
   }
 
   async save(employee: Employee): Promise<Employee> {

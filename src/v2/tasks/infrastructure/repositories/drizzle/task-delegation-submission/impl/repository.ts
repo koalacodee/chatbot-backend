@@ -1,21 +1,21 @@
-import type {
-  DatabaseInstance,
-  DrizzleTransaction,
+import {
+  type DatabaseInstance,
+  DrizzleService,
+  type DrizzleTransaction,
 } from '@/common/drizzle/drizzle.service';
 import type { TaskDelegationSubmission } from '@/v2/tasks/domain/entities/task-delegation-submission.entity';
 import type { TaskDelegationSubmissionRepository } from '@/v2/tasks/domain/repositories/task-delegation-submission.repository';
 import * as crud from './repository-crud';
 import * as find from './repository-find';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class DrizzleTaskDelegationSubmissionRepository
   implements TaskDelegationSubmissionRepository
 {
-  constructor(private readonly db: DatabaseInstance | DrizzleTransaction) {}
-
-  static fromTransaction(
-    tx: DrizzleTransaction,
-  ): DrizzleTaskDelegationSubmissionRepository {
-    return new DrizzleTaskDelegationSubmissionRepository(tx);
+  private readonly db: DatabaseInstance | DrizzleTransaction;
+  constructor(drizzleService: DrizzleService) {
+    this.db = drizzleService.client;
   }
 
   async save(

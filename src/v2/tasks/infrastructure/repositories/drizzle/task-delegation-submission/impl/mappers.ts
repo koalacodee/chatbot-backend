@@ -38,6 +38,13 @@ export function dbToStatus(
 export function rowToEntity(
 	row: TaskDelegationSubmissionRow,
 ): TaskDelegationSubmission {
+	return rowToEntityWithPerformerName(row, undefined);
+}
+
+export function rowToEntityWithPerformerName(
+	row: TaskDelegationSubmissionRow,
+	performerName?: string | null,
+): TaskDelegationSubmission {
 	const performerId =
 		row.performerAdminId ??
 		row.performerSupervisorId ??
@@ -55,6 +62,7 @@ export function rowToEntity(
 		taskId: row.taskId,
 		performerId,
 		performerType,
+		performerName: performerName ?? undefined,
 		notes: row.notes ?? undefined,
 		feedback: row.feedback ?? undefined,
 		status: dbToStatus(row.status),
@@ -63,6 +71,8 @@ export function rowToEntity(
 		reviewedByAdminId: row.reviewedByAdminId ?? undefined,
 		reviewedBySupervisorId: row.reviewedBySupervisorId ?? undefined,
 		forwarded: row.forwarded,
+		forwardedMessage: row.forwardedMessage ?? undefined,
+		forwardedToSupervisorId: row.forwardedToSupervisorId ?? undefined,
 	});
 }
 

@@ -1,5 +1,5 @@
 import type { SQL } from 'drizzle-orm';
-import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, count, eq, exists, ilike, inArray, or, sql } from 'drizzle-orm';
 import type {
   CursorInput,
   PaginatedArrayResult,
@@ -8,6 +8,7 @@ import {
   departments,
   departmentToSupervisor,
   employees,
+  employeeSubDepartments,
   supervisors,
   taskDelegations,
   tasks,
@@ -32,52 +33,70 @@ import {
   fetchTasks,
   paginateEmpty,
 } from './repository-query';
+import { Matches } from 'class-validator';
 
 export async function getTaskMetricsForSupervisor(
   ctx: TaskRepoContext,
-  supervisorDepartmentIds: string[],
+  options?: {
+    filters?: {
+      priority?: TaskPriority[];
+      search?: string;
+      departmentId?: string;
+      subDepartmentId?: string;
+    };
+    whereConditions?: SQL[];
+  },
 ): Promise<{
   pendingCount: number;
   completedCount: number;
   completionPercentage: number;
 }> {
-  const subDeptIds = (
-    await ctx.db
-      .select({ id: departments.id })
-      .from(departments)
-      .where(inArray(departments.parentId, supervisorDepartmentIds))
-  ).map((r) => r.id);
+  const conditions = options?.whereConditions ?? [];
+
+  if (options?.filters?.departmentId) {
+    conditions.push(eq(tasks.targetDepartmentId, options.filters.departmentId));
+  }
+
+  if (options?.filters?.subDepartmentId) {
+    conditions.push(
+      eq(tasks.targetSubDepartmentId, options.filters.subDepartmentId),
+    );
+  }
+
+  if (options?.filters?.priority) {
+    conditions.push(
+      inArray(
+        tasks.priority,
+        options.filters.priority.map((p) => priorityToDb(p)),
+      ),
+    );
+  }
+
+  if (options?.filters?.search) {
+    conditions.push(
+      or(
+        ilike(tasks.title, `%${options.filters.search}%`),
+        ilike(tasks.description, `%${options.filters.search}%`),
+      ),
+    );
+  }
+
   const [pending] = await ctx.db
     .select({ count: count(tasks.id) })
     .from(tasks)
-    .where(
-      and(
-        or(
-          inArray(tasks.targetDepartmentId, supervisorDepartmentIds),
-          inArray(tasks.targetSubDepartmentId, subDeptIds),
-        ) as SQL,
-        sql`${tasks.status} <> 'completed'`,
-      ),
-    );
+    .where(and(...conditions, sql`${tasks.status} <> 'completed'`));
   const [completed] = await ctx.db
     .select({ count: count(tasks.id) })
     .from(tasks)
-    .where(
-      and(
-        or(
-          inArray(tasks.targetDepartmentId, supervisorDepartmentIds),
-          inArray(tasks.targetSubDepartmentId, subDeptIds),
-        ) as SQL,
-        eq(tasks.status, 'completed'),
-      ),
-    );
+    .where(and(...conditions, eq(tasks.status, 'completed')));
   const pendingCount = pending?.count ?? 0;
   const completedCount = completed?.count ?? 0;
   const total = pendingCount + completedCount;
   return {
     pendingCount,
     completedCount,
-    completionPercentage: total > 0 ? (completedCount / total) * 100 : 0,
+    completionPercentage:
+      total > 0 ? Math.round((completedCount / total) * 100) : 0,
   };
 }
 
@@ -97,7 +116,6 @@ export async function getTasksForSupervisor(
     rejectionReason?: string;
     approvalFeedback?: string;
   }> & {
-    fileHubAttachments: Attachment[];
     metrics: {
       pendingTasks: number;
       completedTasks: number;
@@ -115,7 +133,6 @@ export async function getTasksForSupervisor(
     return {
       data: [],
       meta: empty.meta,
-      fileHubAttachments: [],
       metrics: {
         pendingTasks: 0,
         completedTasks: 0,
@@ -132,18 +149,7 @@ export async function getTasksForSupervisor(
     : deptRows.map((r) => r.departmentId);
 
   const whereConditions: SQL[] = [
-    or(
-      inArray(tasks.targetDepartmentId, departmentIds),
-      inArray(
-        tasks.targetSubDepartmentId,
-        (
-          await ctx.db
-            .select({ id: departments.id })
-            .from(departments)
-            .where(inArray(departments.parentId, departmentIds))
-        ).map((r) => r.id),
-      ) as SQL,
-    ) as SQL,
+    inArray(tasks.targetDepartmentId, departmentIds),
   ];
   applyDepartmentTaskFilters(whereConditions, {
     status: options.status,
@@ -156,14 +162,27 @@ export async function getTasksForSupervisor(
     paginationParams,
   });
   const result = ctx.pagination.processResults(list, paginationParams, (t) => ({
-    createdAt: t.createdAt.toISOString(),
-    id: t.id,
+    createdAt: t.task.createdAt.toISOString(),
+    id: t.task.id,
   }));
-  const metrics = await getTaskMetricsForSupervisor(ctx, departmentIds);
+
+  const metrics = await getTaskMetricsForSupervisor(ctx, {
+    filters: {
+      priority: options.priority,
+      search: options.search,
+      departmentId: options.departmentId,
+    },
+    whereConditions: whereConditions,
+  });
   return {
-    data: result.data.map((task) => ({ task })),
+    data: result.data.map((task) => ({
+      task: task.task,
+      rejectionReason: task.submissions.find((s) => s.status === 'REJECTED')
+        ?.feedback,
+      approvalFeedback: task.submissions.find((s) => s.status === 'APPROVED')
+        ?.feedback,
+    })),
     meta: result.meta,
-    fileHubAttachments: [],
     metrics: {
       pendingTasks: metrics.pendingCount,
       completedTasks: metrics.completedCount,
@@ -213,7 +232,7 @@ export async function getTaskMetricsForDepartment(
   completedCount: number;
   completionPercentage: number;
 }> {
-  const whereConditions: SQL[] = [];
+  const whereConditions: SQL[] = [eq(tasks.assignmentType, 'department')];
   if (departmentId) {
     whereConditions.push(eq(tasks.targetDepartmentId, departmentId));
   }
@@ -242,7 +261,8 @@ export async function getTaskMetricsForDepartment(
   return {
     pendingCount,
     completedCount,
-    completionPercentage: total > 0 ? (completedCount / total) * 100 : 0,
+    completionPercentage:
+      total > 0 ? Math.floor((completedCount / total) * 100) : 0,
   };
 }
 
@@ -297,7 +317,6 @@ export async function getTeamTasksForSupervisor(
       delegationSubmissions: TaskDelegationSubmission[];
     };
   }> & {
-    fileHubAttachments: Attachment[];
     metrics: {
       pendingTasks: number;
       completedTasks: number;
@@ -305,28 +324,94 @@ export async function getTeamTasksForSupervisor(
     };
   }
 > {
-  const departmentIds = options.departmentId
-    ? [options.departmentId]
-    : options.supervisorDepartmentIds;
+  const { supervisorDepartmentIds } = options;
 
+  // ── Base condition: two paths to find tasks visible to this supervisor ──
   const whereConditions: SQL[] = [
     or(
-      inArray(tasks.targetDepartmentId, departmentIds),
-      inArray(
-        tasks.targetSubDepartmentId,
-        (
-          await ctx.db
-            .select({ id: departments.id })
-            .from(departments)
-            .where(
-              options.subDepartmentId
-                ? eq(departments.id, options.subDepartmentId)
-                : inArray(departments.parentId, departmentIds),
-            )
-        ).map((r) => r.id),
-      ) as SQL,
+      // Path 1: Task targets a sub-department under supervisor's departments
+      exists(
+        ctx.db
+          .select({ one: sql`1` })
+          .from(departments)
+          .where(
+            and(
+              eq(departments.id, tasks.targetSubDepartmentId),
+              inArray(departments.parentId, supervisorDepartmentIds),
+            ),
+          ),
+      ),
+      // Path 2: Task assigned to an employee who belongs to a sub-department
+      //         under supervisor's departments
+      exists(
+        ctx.db
+          .select({ one: sql`1` })
+          .from(employees)
+          .innerJoin(
+            employeeSubDepartments,
+            eq(employees.id, employeeSubDepartments.employeeId),
+          )
+          .innerJoin(
+            departments,
+            eq(employeeSubDepartments.departmentId, departments.id),
+          )
+          .where(
+            and(
+              eq(tasks.assigneeId, employees.id),
+              inArray(departments.parentId, supervisorDepartmentIds),
+            ),
+          ),
+      ),
     ) as SQL,
   ];
+
+  // ── Optional department filter ──
+  if (options.departmentId) {
+    whereConditions.push(
+      or(
+        eq(tasks.targetDepartmentId, options.departmentId),
+        exists(
+          ctx.db
+            .select({ one: sql`1` })
+            .from(departments)
+            .where(
+              and(
+                eq(departments.id, tasks.targetSubDepartmentId),
+                eq(departments.parentId, options.departmentId),
+              ),
+            ),
+        ),
+      ) as SQL,
+    );
+  }
+
+  // ── Optional sub-department filter ──
+  if (options.subDepartmentId) {
+    whereConditions.push(
+      or(
+        eq(tasks.targetSubDepartmentId, options.subDepartmentId),
+        exists(
+          ctx.db
+            .select({ one: sql`1` })
+            .from(employees)
+            .innerJoin(
+              employeeSubDepartments,
+              eq(employees.id, employeeSubDepartments.employeeId),
+            )
+            .where(
+              and(
+                eq(tasks.assigneeId, employees.id),
+                eq(
+                  employeeSubDepartments.departmentId,
+                  options.subDepartmentId,
+                ),
+              ),
+            ),
+        ),
+      ) as SQL,
+    );
+  }
+
   applyDepartmentTaskFilters(whereConditions, {
     status: options.status,
     priority: options.priority,
@@ -338,23 +423,25 @@ export async function getTeamTasksForSupervisor(
     paginationParams,
   });
   const result = ctx.pagination.processResults(list, paginationParams, (t) => ({
-    createdAt: t.createdAt.toISOString(),
-    id: t.id,
+    createdAt: t.task.createdAt.toISOString(),
+    id: t.task.id,
   }));
-  const metrics = await getTaskMetricsForSupervisor(
-    ctx,
-    options.supervisorDepartmentIds,
-  );
+  const metrics = await getTaskMetricsForSupervisor(ctx, {
+    filters: {
+      priority: options.priority,
+      search: options.search,
+    },
+    whereConditions: whereConditions,
+  });
   return {
     data: result.data.map((task) => ({
       task: {
-        data: task,
-        submissions: [],
+        data: task.task,
+        submissions: task.submissions,
         delegationSubmissions: [],
       },
     })),
     meta: result.meta,
-    fileHubAttachments: [],
     metrics: {
       pendingTasks: metrics.pendingCount,
       completedTasks: metrics.completedCount,
@@ -468,8 +555,8 @@ export async function getTasksAndDelegationsForEmployee(
     paginationParams,
   });
   const result = ctx.pagination.processResults(list, paginationParams, (t) => ({
-    createdAt: t.createdAt.toISOString(),
-    id: t.id,
+    createdAt: t.task.createdAt.toISOString(),
+    id: t.task.id,
   }));
   const delegationRows = await ctx.db
     .select()
@@ -509,7 +596,13 @@ export async function getTasksAndDelegationsForEmployee(
       ? ((taskCompleted + completedDelegations) / totalItems) * 100
       : 0;
   return {
-    data: result.data.map((task) => ({ task })),
+    data: result.data.map((task) => ({
+      task: task.task,
+      rejectionReason: task.submissions.find((s) => s.status === 'REJECTED')
+        ?.feedback,
+      approvalFeedback: task.submissions.find((s) => s.status === 'APPROVED')
+        ?.feedback,
+    })),
     meta: result.meta,
     delegations,
     fileHubAttachments: [],

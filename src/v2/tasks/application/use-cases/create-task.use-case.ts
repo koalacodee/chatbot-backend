@@ -24,6 +24,10 @@ import { TaskPresetCreatedEvent } from '../../domain/events/task-preset-created.
 import { CloneTaskAttachmentsEvent } from '../../domain/events/clone-task-attachments.event';
 import { TaskRemindersCreatedEvent } from '../../domain/events/task-reminders-created.event';
 import { TaskCreatedEvent } from '../../domain/events/task-created.event';
+import { Admin } from '@/admin/domain/entities/admin.entity';
+import { Supervisor } from '@/supervisor/domain/entities/supervisor.entity';
+import { Employee } from '@/employee/domain/entities/employee.entity';
+import { Department } from '@/department/domain/entities/department.entity';
 
 interface CreateTaskInputDto {
   title: string;
@@ -48,7 +52,6 @@ interface CreateTaskInputDto {
   assignerId: string;
   assignerRole: Roles;
   approverId?: string;
-  status: TaskStatus;
   completedAt?: Date | null;
   priority?: TaskPriority;
   attach?: boolean;
@@ -122,9 +125,18 @@ export class CreateTaskUseCase {
       approverSupervisor,
       targetDepartment,
       targetSubDepartment,
+    ]: [
+      Employee | null,
+      Admin | Supervisor | null,
+      Admin | null,
+      Supervisor | null,
+      Department | null,
+      Department | null,
     ] = await Promise.all([
       dto.assignee.assigneeId
-        ? this.employeeRepository.findById(dto.assignee.assigneeId)
+        ? this.employeeRepository.findById(dto.assignee.assigneeId, {
+            includeUser: true,
+          })
         : Promise.resolve(null),
       dto.assignerRole === Roles.ADMIN
         ? this.adminRepository.findByUserId(dto.assignerId)
@@ -180,6 +192,13 @@ export class CreateTaskUseCase {
       });
     }
 
+    const assigneeName =
+      assignmentType === TaskAssignmentType.INDIVIDUAL
+        ? assignee?.user?.name
+        : assignmentType === TaskAssignmentType.DEPARTMENT
+          ? targetDepartment?.name
+          : targetSubDepartment?.name;
+
     const task = Task.create({
       title: dto.title,
       description: dto.description,
@@ -192,10 +211,13 @@ export class CreateTaskUseCase {
       targetDepartment:
         !assignee && !targetSubDepartment ? targetDepartment : undefined,
       targetSubDepartment: !assignee ? targetSubDepartment : undefined,
-      status: dto.status,
+      status: TaskStatus.TODO,
       priority: dto.priority ?? TaskPriority.MEDIUM,
       completedAt: dto.completedAt ?? undefined,
       reminders: dto.reminders,
+      targetSubDepartmentId: dto.assignee.targetSubDepartmentId,
+      targetDepartmentId: dto.assignee.targetDepartmentId,
+      assigneeId: dto.assignee.assigneeId,
     });
 
     const [saved, fileHubUploadKey] = await Promise.all([
@@ -262,6 +284,8 @@ export class CreateTaskUseCase {
         ),
       );
     }
+
+    saved.assigneeName = assigneeName;
 
     return { task: saved.toJSON(), fileHubUploadKey };
   }

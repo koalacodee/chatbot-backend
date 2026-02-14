@@ -48,7 +48,12 @@ import {
 import { TicketCode } from 'src/tickets/domain/value-objects/ticket-code.vo';
 import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
 import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
-import { CursorInput, PaginatedArrayResult, createCursorPagination, PaginatedObjectResult } from 'src/common/drizzle/helpers/cursor';
+import {
+  CursorInput,
+  PaginatedArrayResult,
+  createCursorPagination,
+  PaginatedObjectResult,
+} from 'src/common/drizzle/helpers/cursor';
 
 export enum SupportTicketStatusMapping {
   NEW = 'new',
@@ -61,15 +66,17 @@ type SupportTicketCursorData = { createdAt: string; id: string };
 
 @Injectable()
 export class DrizzleSupportTicketRepository extends SupportTicketRepository {
-  private readonly pagination = createCursorPagination<SupportTicketCursorData>({
-    table: supportTickets,
-    cursorFields: [
-      { column: supportTickets.createdAt, key: 'createdAt' },
-      { column: supportTickets.id, key: 'id' },
-    ],
-    defaultPageSize: 10,
-    sortDirection: 'desc',
-  });
+  private readonly pagination = createCursorPagination<SupportTicketCursorData>(
+    {
+      table: supportTickets,
+      cursorFields: [
+        { column: supportTickets.createdAt, key: 'createdAt' },
+        { column: supportTickets.id, key: 'id' },
+      ],
+      defaultPageSize: 10,
+      sortDirection: 'desc',
+    },
+  );
 
   constructor(private readonly drizzle: DrizzleService) {
     super();
@@ -92,12 +99,12 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       departmentId: rec.ticket.departmentId,
       department: rec.department
         ? Department.create({
-          id: rec.department.id,
-          name: rec.department.name,
-          parentId: rec.department.parentId,
-          visibility:
-            DepartmentVisibility[rec.department.visibility.toUpperCase()],
-        })
+            id: rec.department.id,
+            name: rec.department.name,
+            parentId: rec.department.parentId,
+            visibility:
+              DepartmentVisibility[rec.department.visibility.toUpperCase()],
+          })
         : undefined,
       status: SupportTicketStatus[rec.ticket.status.toUpperCase()],
       createdAt: new Date(rec.ticket.createdAt),
@@ -105,23 +112,23 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       code: rec.ticket.code,
       interaction: rec.interaction
         ? SupportTicketInteraction.create({
-          id: rec.interaction.id,
-          supportTicketId: rec.ticket.id,
-          type: InteractionType[rec.interaction.type.toUpperCase()],
-          guestId: rec.interaction.guestId,
-        })
+            id: rec.interaction.id,
+            supportTicketId: rec.ticket.id,
+            type: InteractionType[rec.interaction.type.toUpperCase()],
+            guestId: rec.interaction.guestId,
+          })
         : undefined,
       guestName: rec.ticket.guestName,
       guestPhone: rec.ticket.guestPhone,
       guestEmail: rec.ticket.guestEmail,
       answer: rec?.answer
         ? SupportTicketAnswer.create({
-          id: rec.answer.id,
-          supportTicketId: rec.ticket.id,
-          content: rec.answer.content,
-          createdAt: new Date(rec.answer.createdAt),
-          updatedAt: new Date(rec.answer.updatedAt),
-        })
+            id: rec.answer.id,
+            supportTicketId: rec.ticket.id,
+            content: rec.answer.content,
+            createdAt: new Date(rec.answer.createdAt),
+            updatedAt: new Date(rec.answer.updatedAt),
+          })
         : undefined,
     });
   }
@@ -199,21 +206,21 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
     return results.length > 0 ? this.toDomain(results[0]) : null;
   }
 
-  async findAll(
-    options?: {
-      cursor?: CursorInput,
-      departmentIds?: string[],
-      start?: Date,
-      end?: Date,
-      status?: SupportTicketStatus,
-      search?: string,
-    }
-  ): Promise<PaginatedArrayResult<SupportTicket>> {
+  async findAll(options?: {
+    cursor?: CursorInput;
+    departmentIds?: string[];
+    start?: Date;
+    end?: Date;
+    status?: SupportTicketStatus;
+    search?: string;
+  }): Promise<PaginatedArrayResult<SupportTicket>> {
     const paginationParams = this.pagination.parseInput(options.cursor);
-    const cursorCondition: SQL | undefined = paginationParams.cursorData ? this.pagination.buildCursorCondition(
-      paginationParams.cursorData,
-      paginationParams.direction,
-    ) : undefined;
+    const cursorCondition: SQL | undefined = paginationParams.cursorData
+      ? this.pagination.buildCursorCondition(
+          paginationParams.cursorData,
+          paginationParams.direction,
+        )
+      : undefined;
 
     const whereConditions: SQL[] = [];
     const { departmentIds, start, end, status, search } = options ?? {};
@@ -282,14 +289,18 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
         eq(supportTickets.id, supportTicketAnswers.supportTicketId),
       )
       .orderBy(desc(supportTickets.createdAt))
-      .limit(paginationParams.limit)
+      .limit(paginationParams.limit);
 
     const results = whereClause ? await query.where(whereClause) : await query;
 
-    const { data, meta } = this.pagination.processResults(results, paginationParams, (r) => ({
-      createdAt: r.ticket.createdAt,
-      id: r.ticket.id,
-    }));
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (r) => ({
+        createdAt: r.ticket.createdAt,
+        id: r.ticket.id,
+      }),
+    );
 
     return {
       data: await Promise.all(data.map((r) => this.toDomain(r))),
@@ -336,19 +347,19 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
     return result ? Number(result.count) : 0;
   }
 
-  async findByDepartment(
-    options: {
-      departmentId: string,
-      cursor?: CursorInput,
-      status?: 'NEW' | 'SEEN' | 'ANSWERED' | 'CLOSED',
-    }
-  ): Promise<PaginatedArrayResult<SupportTicket>> {
+  async findByDepartment(options: {
+    departmentId: string;
+    cursor?: CursorInput;
+    status?: 'NEW' | 'SEEN' | 'ANSWERED' | 'CLOSED';
+  }): Promise<PaginatedArrayResult<SupportTicket>> {
     const { departmentId, cursor, status } = options;
     const paginationParams = this.pagination.parseInput(cursor);
-    const cursorCondition = paginationParams.cursorData ? this.pagination.buildCursorCondition(
-      paginationParams.cursorData,
-      paginationParams.direction,
-    ) : undefined;
+    const cursorCondition = paginationParams.cursorData
+      ? this.pagination.buildCursorCondition(
+          paginationParams.cursorData,
+          paginationParams.direction,
+        )
+      : undefined;
 
     const whereConditions: SQL[] = [
       eq(supportTickets.departmentId, departmentId),
@@ -360,7 +371,7 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       );
     }
 
-    if (cursorCondition) whereConditions.push(cursorCondition)
+    if (cursorCondition) whereConditions.push(cursorCondition);
 
     const results = await this.db
       .select({
@@ -387,10 +398,14 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       .limit(paginationParams.limit)
       .orderBy(...this.pagination.getOrderBy());
 
-    const { data, meta } = this.pagination.processResults(results, paginationParams, (r) => ({
-      createdAt: r.ticket.createdAt,
-      id: r.ticket.id,
-    }));
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (r) => ({
+        createdAt: r.ticket.createdAt,
+        id: r.ticket.id,
+      }),
+    );
 
     return {
       data: await Promise.all(data.map((r) => this.toDomain(r))),
@@ -398,15 +413,20 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
     };
   }
 
-  async search({ query, cursor }: {
-    query: string,
-    cursor?: CursorInput,
+  async search({
+    query,
+    cursor,
+  }: {
+    query: string;
+    cursor?: CursorInput;
   }): Promise<PaginatedArrayResult<SupportTicket>> {
     const paginationParams = this.pagination.parseInput(cursor);
-    const cursorCondition = paginationParams.cursorData ? this.pagination.buildCursorCondition(
-      paginationParams.cursorData,
-      paginationParams.direction,
-    ) : undefined;
+    const cursorCondition = paginationParams.cursorData
+      ? this.pagination.buildCursorCondition(
+          paginationParams.cursorData,
+          paginationParams.direction,
+        )
+      : undefined;
 
     const whereConditions: SQL[] = [
       or(
@@ -421,7 +441,12 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
 
     if (cursorCondition) whereConditions.push(cursorCondition);
 
-    const whereClause = whereConditions.length > 0 ? whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0] : undefined;
+    const whereClause =
+      whereConditions.length > 0
+        ? whereConditions.length > 1
+          ? and(...whereConditions)
+          : whereConditions[0]
+        : undefined;
 
     const results = await this.db
       .select({
@@ -444,16 +469,18 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
         supportTicketAnswers,
         eq(supportTickets.id, supportTicketAnswers.supportTicketId),
       )
-      .where(
-        whereClause
-      )
+      .where(whereClause)
       .orderBy(...this.pagination.getOrderBy())
       .limit(paginationParams.limit);
 
-    const { data, meta } = this.pagination.processResults(results, paginationParams, (r) => ({
-      createdAt: r.ticket.createdAt,
-      id: r.ticket.id,
-    }));
+    const { data, meta } = this.pagination.processResults(
+      results,
+      paginationParams,
+      (r) => ({
+        createdAt: r.ticket.createdAt,
+        id: r.ticket.id,
+      }),
+    );
 
     return {
       data: await Promise.all(data.map((r) => this.toDomain(r))),
@@ -534,52 +561,53 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
 
     return results.length > 0
       ? {
-        ticket: await this.toDomain({
-          ticket: results[0].ticket,
-          department: results[0].department,
-          answer: results[0].answer,
-        }),
-        answers: results
-          .filter((r) => r.answer !== null)
-          .map((r) =>
-            SupportTicketAnswer.create({
-              id: r.answer.id,
-              supportTicketId: r.ticket.id,
-              content: r.answer.content,
-              createdAt: new Date(r.answer.createdAt),
-              updatedAt: new Date(r.answer.updatedAt),
+          ticket: await this.toDomain({
+            ticket: results[0].ticket,
+            department: results[0].department,
+            answer: results[0].answer,
+          }),
+          answers: results
+            .filter((r) => r.answer !== null)
+            .map((r) =>
+              SupportTicketAnswer.create({
+                id: r.answer.id,
+                supportTicketId: r.ticket.id,
+                content: r.answer.content,
+                createdAt: new Date(r.answer.createdAt),
+                updatedAt: new Date(r.answer.updatedAt),
+              }),
+            ),
+          fileHubAttachments: attachmentRows.map((r) =>
+            Attachment.create({
+              id: r.id,
+              type: r.type,
+              createdAt: new Date(r.createdAt),
+              updatedAt: new Date(r.updatedAt),
+              targetId: r.targetId,
+              expirationDate: r.expirationDate
+                ? new Date(r.expirationDate)
+                : undefined,
+              filename: r.filename,
+              originalName: r.originalName,
+              userId: r.userId,
+              guestId: r.guestId,
+              isGlobal: r.isGlobal,
+              size: r.size,
+              cloned: r.cloned,
             }),
           ),
-        fileHubAttachments: attachmentRows.map((r) =>
-          Attachment.create({
-            id: r.id,
-            type: r.type,
-            createdAt: new Date(r.createdAt),
-            updatedAt: new Date(r.updatedAt),
-            targetId: r.targetId,
-            expirationDate: r.expirationDate
-              ? new Date(r.expirationDate)
-              : undefined,
-            filename: r.filename,
-            originalName: r.originalName,
-            userId: r.userId,
-            guestId: r.guestId,
-            isGlobal: r.isGlobal,
-            size: r.size,
-            cloned: r.cloned,
-          }),
-        ),
-        isRated: results[0].isRated,
-      }
+          isRated: results[0].isRated,
+        }
       : null;
   }
 
-  async findByPhoneNumber(
-    { phone, cursor }: {
-      phone: string,
-      cursor?: CursorInput,
-    }
-  ): Promise<
+  async findByPhoneNumber({
+    phone,
+    cursor,
+  }: {
+    phone: string;
+    cursor?: CursorInput;
+  }): Promise<
     PaginatedArrayResult<{
       id: string;
       subject: string;
@@ -592,18 +620,23 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
     }>
   > {
     const paginationParams = this.pagination.parseInput(cursor);
-    const cursorCondition = paginationParams.cursorData ? this.pagination.buildCursorCondition(
-      paginationParams.cursorData,
-      paginationParams.direction,
-    ) : undefined;
+    const cursorCondition = paginationParams.cursorData
+      ? this.pagination.buildCursorCondition(
+          paginationParams.cursorData,
+          paginationParams.direction,
+        )
+      : undefined;
 
-    const whereConditions: SQL[] = [
-      eq(supportTickets.guestPhone, phone),
-    ];
+    const whereConditions: SQL[] = [eq(supportTickets.guestPhone, phone)];
 
     if (cursorCondition) whereConditions.push(cursorCondition);
 
-    const whereClause = whereConditions.length > 0 ? whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0] : undefined;
+    const whereClause =
+      whereConditions.length > 0
+        ? whereConditions.length > 1
+          ? and(...whereConditions)
+          : whereConditions[0]
+        : undefined;
 
     const rows = await this.db
       .select({
@@ -634,10 +667,14 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       .orderBy(...this.pagination.getOrderBy())
       .limit(paginationParams.limit);
 
-    const { data, meta } = this.pagination.processResults(rows, paginationParams, (r) => ({
-      createdAt: r.createdAt,
-      id: r.id,
-    }));
+    const { data, meta } = this.pagination.processResults(
+      rows,
+      paginationParams,
+      (r) => ({
+        createdAt: r.createdAt,
+        id: r.id,
+      }),
+    );
 
     return {
       data: data.map((r) => ({
@@ -770,11 +807,11 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       .innerJoin(
         departments,
         or(
-          eq(departmentToSupervisor.a, departments.id),
-          eq(departmentToSupervisor.a, departments.parentId),
+          eq(departmentToSupervisor.departmentId, departments.id),
+          eq(departmentToSupervisor.departmentId, departments.parentId),
         ),
       )
-      .where(eq(departmentToSupervisor.b, supervisor.id));
+      .where(eq(departmentToSupervisor.supervisorId, supervisor.id));
 
     return rows.map((r) => r.departments.id);
   }
@@ -820,10 +857,12 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
     let departmentIds = allowedDepartmentIds;
 
     const paginationParams = this.pagination.parseInput(options.cursor);
-    const cursorCondition = paginationParams.cursorData ? this.pagination.buildCursorCondition(
-      paginationParams.cursorData,
-      paginationParams.direction,
-    ) : undefined;
+    const cursorCondition = paginationParams.cursorData
+      ? this.pagination.buildCursorCondition(
+          paginationParams.cursorData,
+          paginationParams.direction,
+        )
+      : undefined;
 
     if (options.departmentIds?.length) {
       if (
@@ -886,8 +925,7 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
         )
         .innerJoin(departments, eq(supportTickets.departmentId, departments.id))
         .where(whereClause)
-        .limit(paginationParams.limit)
-      ,
+        .limit(paginationParams.limit),
       this.getMetrics(departmentIds, options.status, options.search),
     ]);
 
@@ -905,10 +943,14 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       .from(attachments)
       .where(inArray(attachments.targetId, Array.from(targetIds)));
 
-    const { meta } = this.pagination.processResults(tickets, paginationParams, (r) => ({
-      createdAt: r.support_tickets.createdAt,
-      id: r.support_tickets.id,
-    }));
+    const { meta } = this.pagination.processResults(
+      tickets,
+      paginationParams,
+      (r) => ({
+        createdAt: r.support_tickets.createdAt,
+        id: r.support_tickets.id,
+      }),
+    );
 
     /* ---------- mapping --------------------------------------------- */
     return {
@@ -929,12 +971,12 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
             guestPhone: t.support_tickets.guestPhone,
             answer: t.support_ticket_answers
               ? SupportTicketAnswer.create({
-                id: t.support_ticket_answers.id,
-                content: t.support_ticket_answers.content,
-                createdAt: new Date(t.support_ticket_answers.createdAt),
-                updatedAt: new Date(t.support_ticket_answers.updatedAt),
-                supportTicketId: t.support_tickets.id,
-              })
+                  id: t.support_ticket_answers.id,
+                  content: t.support_ticket_answers.content,
+                  createdAt: new Date(t.support_ticket_answers.createdAt),
+                  updatedAt: new Date(t.support_ticket_answers.updatedAt),
+                  supportTicketId: t.support_tickets.id,
+                })
               : undefined,
             department: Department.create({
               id: t.departments.id,
@@ -953,7 +995,8 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
             expirationDate: new Date(a.expirationDate),
           }),
         ),
-      }, meta
+      },
+      meta,
     };
   }
 }

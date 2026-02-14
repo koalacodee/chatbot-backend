@@ -91,13 +91,12 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
       targetSubDepartmentId: taskDelegation.targetSubDepartmentId.toString(),
       delegatorId: taskDelegation.delegatorId.toString(),
       status: domainToDrizzleStatus(taskDelegation.status),
-      assignmentType: mapDomainAssignmentTypeToDrizzleAssignmentType(taskDelegation.assignmentType),
-      createdAt:
-        taskDelegation.createdAt instanceof Date
-          ? taskDelegation.createdAt.toISOString()
-          : (taskDelegation.createdAt ?? new Date().toISOString()),
-      updatedAt: new Date().toISOString(),
-      completedAt: this.toISOStringSafe(taskDelegation.completedAt),
+      assignmentType: mapDomainAssignmentTypeToDrizzleAssignmentType(
+        taskDelegation.assignmentType,
+      ),
+      createdAt: taskDelegation.createdAt,
+      updatedAt: new Date(),
+      completedAt: taskDelegation.completedAt,
     };
 
     await this.db
@@ -120,20 +119,28 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
     return this.findById(taskDelegation.id.toString());
   }
 
-  async update(id: string, updates: Partial<TaskDelegation>): Promise<TaskDelegation> {
+  async update(
+    id: string,
+    updates: Partial<TaskDelegation>,
+  ): Promise<TaskDelegation> {
     const result = await this.db
       .update(taskDelegations)
       .set({
         ...updates,
-        status: updates?.status ? domainToDrizzleStatus(updates.status) : undefined,
-        updatedAt: updates?.updatedAt?.toISOString(),
-        createdAt: updates?.createdAt?.toISOString(),
-        completedAt: updates?.completedAt?.toISOString(),
-        assignmentType: updates?.assignmentType ? mapDomainAssignmentTypeToDrizzleAssignmentType(updates.assignmentType) : undefined,
+        status: updates?.status
+          ? domainToDrizzleStatus(updates.status)
+          : undefined,
+        updatedAt: updates?.updatedAt,
+        createdAt: updates?.createdAt,
+        completedAt: updates?.completedAt,
+        assignmentType: updates?.assignmentType
+          ? mapDomainAssignmentTypeToDrizzleAssignmentType(
+              updates.assignmentType,
+            )
+          : undefined,
       })
       .where(eq(taskDelegations.id, id))
       .returning();
-
 
     console.log(result);
     return this.toDomain(result[0]);

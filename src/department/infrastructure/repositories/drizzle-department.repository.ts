@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
+  DatabaseInstance,
   DrizzleService,
   DrizzleTransaction,
 } from '../../../common/drizzle/drizzle.service';
@@ -37,18 +38,19 @@ import {
   sql,
   ilike,
   count,
+  SQL,
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 type DrizzleDepartmentVisibility =
-  (typeof departments.$inferSelect)["visibility"];
+  (typeof departments.$inferSelect)['visibility'];
 
 export function mapToDepartmentVisibility(
   visibility: DrizzleDepartmentVisibility,
 ): DepartmentVisibility {
   switch (visibility) {
-    case "public":
+    case 'public':
       return DepartmentVisibility.PUBLIC;
-    case "private":
+    case 'private':
       return DepartmentVisibility.PRIVATE;
   }
 }
@@ -58,220 +60,148 @@ export function mapToDrizzleDepartmentVisibility(
 ): DrizzleDepartmentVisibility {
   switch (visibility) {
     case DepartmentVisibility.PUBLIC:
-      return "public";
+      return 'public';
     case DepartmentVisibility.PRIVATE:
-      return "private";
+      return 'private';
   }
 }
+
 @Injectable()
-export class DrizzleDepartmentRepository extends DepartmentRepository {
-  private readonly parent = alias(departments, "parent");
-  private readonly subDepartments = alias(departments, "children");
-  constructor(
-    private drizzle:
-      | {
-        drizzleService: DrizzleService;
-        tx?: never;
-      }
-      | {
-        drizzleService?: never;
-        tx: DrizzleTransaction;
-      },
-  ) {
-    super();
+export class DrizzleDepartmentRepository implements DepartmentRepository {
+  private readonly parent = alias(departments, 'parent');
+  private readonly subDepartments = alias(departments, 'children');
+  private readonly db: DatabaseInstance | DrizzleTransaction;
+  constructor(drizzleService: DrizzleService) {
+    this.db = drizzleService.client;
   }
 
-  static fromTransaction(tx: DrizzleTransaction): DrizzleDepartmentRepository {
-    return new DrizzleDepartmentRepository({ tx });
-  }
-
-  private get db() {
-    return this.drizzle.drizzleService.client ?? this.drizzle.tx;
-  }
-
-  private toDomainVisibility(visibility: string): DepartmentVisibility {
-    return visibility.toUpperCase() as DepartmentVisibility;
-  }
-
-  private fromDomainVisibility(
-    visibility: DepartmentVisibility,
-  ): 'public' | 'private' {
-    return visibility.toLowerCase() as 'public' | 'private';
-  }
-
-  private toDomain(
-    dept: typeof departments.$inferSelect,
-    relations?: {
-      questions?: (typeof questions.$inferSelect)[];
-      knowledgeChunks?: (typeof knowledgeChunks.$inferSelect)[];
-      subDepartments?: (typeof departments.$inferSelect)[];
-      parent?: typeof departments.$inferSelect;
-    },
-  ): Department {
-    return Department.create({
-      id: dept.id,
-      name: dept.name,
-      visibility: this.toDomainVisibility(dept.visibility),
-      parentId: dept.parentId || undefined,
-      parent: relations?.parent
-        ? Department.create({
-          id: relations.parent.id,
-          name: relations.parent.name,
-          visibility: this.toDomainVisibility(relations.parent.visibility),
-          parentId: relations.parent.parentId || undefined,
-        })
-        : undefined,
-      questions: relations?.questions
-        ? relations.questions.map((q) =>
-          Question.create({
-            id: q.id,
-            text: q.text,
-            departmentId: q.departmentId,
-            knowledgeChunkId: q.knowledgeChunkId || undefined,
-            creatorEmployeeId: q.creatorEmployeeId,
-            creatorAdminId: q.creatorAdminId || undefined,
-            creatorSupervisorId: q.creatorSupervisorId || undefined,
-            satisfaction: q.satisfaction,
-            dissatisfaction: q.dissatisfaction,
-            views: q.views,
-          }),
-        )
-        : [],
-      knowledgeChunks: relations?.knowledgeChunks
-        ? relations.knowledgeChunks.map((kc) =>
-          KnowledgeChunk.create({
-            id: kc.id,
-            content: kc.content,
-            departmentId: kc.departmentId,
-            pointId: kc.pointId || undefined,
-          }),
-        )
-        : [],
-      subDepartments: relations?.subDepartments
-        ? relations.subDepartments.map((sd) =>
-          Department.create({
-            id: sd.id,
-            name: sd.name,
-            visibility: this.toDomainVisibility(sd.visibility),
-            parentId: sd.parentId || undefined,
-          }),
-        )
-        : [],
-    });
-  }
-
-  async save(
-    department: Department,
-    queryDto?: DepartmentQueryDto,
-  ): Promise<Department> {
-    const data = {
+  async save(department: Department): Promise<Department> {
+    const departmentData: typeof departments.$inferInsert = {
       id: department.id.toString(),
       name: department.name,
-      visibility: this.fromDomainVisibility(department.visibility),
-      parentId: department.parentId?.toString() || null,
-      updatedAt: sql`CURRENT_TIMESTAMP` as any,
+      parentId: department.parentId?.toString() ?? null,
+      visibility: mapToDrizzleDepartmentVisibility(department.visibility),
+      updatedAt: new Date(),
     };
 
-    const [saved] = await this.db
+    const result = await this.db
       .insert(departments)
-      .values(data)
+      .values(departmentData)
       .onConflictDoUpdate({
         target: departments.id,
         set: {
-          name: data.name,
-          visibility: data.visibility,
-          parentId: data.parentId,
-          updatedAt: sql`CURRENT_TIMESTAMP`,
+          name: departmentData.name,
+          parentId: departmentData.parentId?.toString() ?? null,
+          visibility: departmentData.visibility,
+          updatedAt: departmentData.updatedAt,
         },
       })
       .returning();
 
-    return this.toDomain(saved);
+    return this.mapToDepartment({ department: result[0] });
   }
 
   async findById(
     id: string,
     queryDto?: DepartmentQueryDto,
   ): Promise<Department | null> {
-    const [dept] = await this.db.query.departments.findMany({
-      with: {
-        parent: Boolean(queryDto?.includeParent) ? true : undefined,
-        departments: Boolean(queryDto?.includeSubDepartments)
-          ? true
-          : undefined,
-        questions: Boolean(queryDto?.includeQuestions) ? true : undefined,
-        knowledgeChunks: Boolean(queryDto?.includeKnowledgeChunks)
-          ? true
-          : undefined,
-      },
+    const result = await this.fetchDepartments({
       where: eq(departments.id, id),
+      queryDto,
       limit: 1,
     });
 
-    if (!dept) return null;
+    if (result.length === 0) {
+      return null;
+    }
 
-    return this.toDomain(dept, {
-      parent: dept.parent,
-      subDepartments: dept.departments,
-      questions: dept.questions,
-      knowledgeChunks: dept.knowledgeChunks,
-    });
+    return this.mapToDepartment(result[0]);
   }
 
   async findByIds(
     ids: string[],
     queryDto?: DepartmentQueryDto,
   ): Promise<Department[]> {
-    if (ids.length === 0) return [];
+    if (ids.length === 0) {
+      return [];
+    }
 
-    const depts = await this.db.query.departments.findMany({
-      with: {
-        parent: Boolean(queryDto?.includeParent) ? true : undefined,
-        departments: Boolean(queryDto?.includeSubDepartments)
-          ? true
-          : undefined,
-        questions: Boolean(queryDto?.includeQuestions) ? true : undefined,
-        knowledgeChunks: Boolean(queryDto?.includeKnowledgeChunks)
-          ? true
-          : undefined,
-      },
+    const result = await this.fetchDepartments({
       where: inArray(departments.id, ids),
+      queryDto,
     });
-    return depts.map((dept) =>
-      this.toDomain(dept, {
-        parent: dept.parent,
-        subDepartments: dept.departments,
-        questions: dept.questions,
-        knowledgeChunks: dept.knowledgeChunks,
-      }),
-    );
+
+    return result.map((row) => this.mapToDepartment(row));
+  }
+
+  async findByCriteria(criteria: Partial<Department>): Promise<Department[]> {
+    const conditions = [];
+    if (criteria.name) {
+      conditions.push(eq(departments.name, criteria.name));
+    }
+    if (criteria.visibility) {
+      conditions.push(
+        eq(
+          departments.visibility,
+          mapToDrizzleDepartmentVisibility(criteria.visibility),
+        ),
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const depts = await this.db.select().from(departments).where(whereClause);
+
+    return depts.map((dept) => this.mapToDepartment({ department: dept }));
   }
 
   async findAll(queryDto?: DepartmentQueryDto): Promise<Department[]> {
-    const depts = await this.db.query.departments.findMany({
-      with: {
-        parent: Boolean(queryDto?.includeParent) ? true : undefined,
-        departments: Boolean(queryDto?.includeSubDepartments)
-          ? true
-          : undefined,
-        questions: Boolean(queryDto?.includeQuestions) ? true : undefined,
-        knowledgeChunks: Boolean(queryDto?.includeKnowledgeChunks)
-          ? true
-          : undefined,
-      },
+    const result = await this.fetchDepartments({ queryDto });
+    return result.map((row) => this.mapToDepartment(row));
+  }
+
+  async findAllDepartments(
+    queryDto?: DepartmentQueryDto,
+  ): Promise<Department[]> {
+    return this.findAll(queryDto);
+  }
+
+  async findMainDepartmentById(
+    id: string,
+    queryDto?: DepartmentQueryDto,
+  ): Promise<Department | null> {
+    const result = await this.fetchDepartments({
+      where: and(eq(departments.id, id), isNull(departments.parentId)),
+      queryDto,
+      limit: 1,
     });
-    return depts.map((dept) =>
-      this.toDomain(dept, {
-        parent: dept.parent,
-        subDepartments: dept.departments,
-        questions: dept.questions,
-        knowledgeChunks: dept.knowledgeChunks,
-      }),
-    );
+
+    return result.length > 0 ? this.mapToDepartment(result[0]) : null;
+  }
+
+  async findSubDepartmentById(
+    id: string,
+    queryDto?: DepartmentQueryDto,
+  ): Promise<Department | null> {
+    const result = await this.fetchDepartments({
+      where: and(eq(departments.id, id), isNotNull(departments.parentId)),
+      queryDto,
+      limit: 1,
+    });
+
+    return result.length > 0 ? this.mapToDepartment(result[0]) : null;
   }
 
   async removeById(id: string): Promise<void> {
     await this.db.delete(departments).where(eq(departments.id, id));
+  }
+
+  async removeByIds(ids: string[]): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+
+    await this.db.delete(departments).where(inArray(departments.id, ids));
   }
 
   async removeMainDepartmentById(id: string): Promise<void> {
@@ -282,24 +212,39 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
     return this.removeById(id);
   }
 
-  async removeByIds(ids: string[]): Promise<void> {
-    await this.db.delete(departments).where(inArray(departments.id, ids));
-  }
+  async update(
+    id: string,
+    update: Partial<Department>,
+  ): Promise<Department | null> {
+    const updateData: Partial<typeof departments.$inferInsert> = {};
 
-  async update(id: string, update: Partial<Department>): Promise<Department> {
-    const data: typeof departments.$inferInsert | undefined =
-      {} as typeof departments.$inferInsert;
-    if (update.name) data.name = update.name;
-    if (update.visibility)
-      data.visibility = this.fromDomainVisibility(update.visibility);
+    if (update.name !== undefined) {
+      updateData.name = update.name;
+    }
 
-    const [updated] = await this.db
+    if (update.visibility !== undefined) {
+      updateData.visibility = mapToDrizzleDepartmentVisibility(
+        update.visibility,
+      );
+    }
+
+    if (update.parentId !== undefined) {
+      updateData.parentId = update.parentId.toString() ?? null;
+    }
+
+    updateData.updatedAt = new Date();
+
+    const result = await this.db
       .update(departments)
-      .set({ ...data, updatedAt: sql`CURRENT_TIMESTAMP` })
+      .set(updateData)
       .where(eq(departments.id, id))
       .returning();
 
-    return this.toDomain(updated);
+    if (result.length === 0) {
+      return null;
+    }
+
+    return this.mapToDepartment({ department: result[0] });
   }
 
   async updateMainDepartment(
@@ -340,39 +285,19 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
   }
 
   async exists(id: string): Promise<boolean> {
-    const [result] = await this.db
-      .select({ count: count() })
-      .from(departments)
-      .where(eq(departments.id, id));
-
-    return (result?.count ?? 0) > 0;
+    const result = await this.fetchDepartments({
+      where: eq(departments.id, id),
+      limit: 1,
+    });
+    return result.length > 0;
   }
 
   async count(): Promise<number> {
-    const [result] = await this.db.select({ count: count() }).from(departments);
+    const result = await this.db
+      .select({ count: count(departments.id) })
+      .from(departments);
 
-    return result?.count ?? 0;
-  }
-
-  async findByCriteria(criteria: Partial<Department>): Promise<Department[]> {
-    const conditions = [];
-    if (criteria.name) {
-      conditions.push(eq(departments.name, criteria.name));
-    }
-    if (criteria.visibility) {
-      conditions.push(
-        eq(
-          departments.visibility,
-          this.fromDomainVisibility(criteria.visibility),
-        ),
-      );
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-    const depts = await this.db.select().from(departments).where(whereClause);
-
-    return depts.map((dept) => this.toDomain(dept));
+    return result[0]?.count ?? 0;
   }
 
   async findAllSubDepartments(
@@ -380,114 +305,16 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
     departmentId?: string,
   ): Promise<Department[]> {
     const conditions = [isNotNull(departments.parentId)];
+
     if (departmentId) {
       conditions.push(eq(departments.parentId, departmentId));
     }
 
-    const whereClause =
-      conditions.length > 0
-        ? conditions.length > 1
-          ? and(...conditions)
-          : conditions[0]
-        : undefined;
-
-    const depts = await this.db.query.departments.findMany({
-      with: {
-        parent: Boolean(queryDto?.includeParent) ? true : undefined,
-        questions: Boolean(queryDto?.includeQuestions) ? true : undefined,
-        knowledgeChunks: Boolean(queryDto?.includeKnowledgeChunks)
-          ? true
-          : undefined,
-      },
-      where: whereClause,
+    const result = await this.fetchDepartments({
+      where: and(...conditions),
+      queryDto,
     });
-    return depts.map((dept) =>
-      this.toDomain(dept, {
-        parent: dept.parent,
-        questions: dept.questions,
-        knowledgeChunks: dept.knowledgeChunks,
-      }),
-    );
-  }
-
-  async findMainDepartmentById(
-    id: string,
-    queryDto?: DepartmentQueryDto,
-  ): Promise<Department | null> {
-    const depts = await this.db.query.departments.findMany({
-      with: {
-        parent: Boolean(queryDto?.includeParent) ? true : undefined,
-        departments: Boolean(queryDto?.includeSubDepartments)
-          ? true
-          : undefined,
-        questions: Boolean(queryDto?.includeQuestions) ? true : undefined,
-        knowledgeChunks: Boolean(queryDto?.includeKnowledgeChunks)
-          ? true
-          : undefined,
-      },
-      where: eq(departments.id, id),
-      limit: 1,
-    });
-    const dept = depts[0];
-    if (!dept) return null;
-    return this.toDomain(dept, {
-      parent: dept.parent,
-      subDepartments: dept.departments,
-      questions: dept.questions,
-      knowledgeChunks: dept.knowledgeChunks,
-    });
-  }
-
-  async findSubDepartmentById(
-    id: string,
-    queryDto?: Omit<DepartmentQueryDto, 'includeSubDepartments'>,
-  ): Promise<Department | null> {
-    const [dept] = await this.db.query.departments.findMany({
-      with: {
-        parent: Boolean(queryDto?.includeParent) ? true : undefined,
-        questions: Boolean(queryDto?.includeQuestions) ? true : undefined,
-        knowledgeChunks: Boolean(queryDto?.includeKnowledgeChunks)
-          ? true
-          : undefined,
-      },
-      where: and(eq(departments.id, id), isNotNull(departments.parentId)),
-      limit: 1,
-    });
-
-    if (!dept) return null;
-
-    return this.toDomain(dept, {
-      parent: dept.parent,
-      questions: dept.questions,
-      knowledgeChunks: dept.knowledgeChunks,
-    });
-  }
-
-  async findAllDepartments(
-    queryDto?: DepartmentQueryDto,
-  ): Promise<Department[]> {
-    const depts = await this.db.query.departments.findMany({
-      with: {
-        parent: Boolean(queryDto?.includeParent) ? true : undefined,
-        departments: Boolean(queryDto?.includeSubDepartments)
-          ? true
-          : undefined,
-        questions: Boolean(queryDto?.includeQuestions) ? true : undefined,
-        knowledgeChunks: Boolean(queryDto?.includeKnowledgeChunks)
-          ? true
-          : undefined,
-      },
-      where: isNull(departments.parentId),
-    });
-
-    return depts.map((dept) =>
-      this.toDomain(dept, {
-        parent: dept.parent,
-        subDepartments: dept.departments,
-        questions: dept.questions,
-        knowledgeChunks: dept.knowledgeChunks,
-      }),
-    );
+    return result.map((row) => this.mapToDepartment(row));
   }
 
   async canDelete(
@@ -500,7 +327,7 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
       if (!(await this.findMainDepartmentById(departmentId))) return false;
     }
 
-    // Check questions
+    // Check FAQs
     const [questionCount] = await this.db
       .select({ count: count() })
       .from(questions)
@@ -520,13 +347,6 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
       .from(departmentToSupervisor)
       .where(eq(departmentToSupervisor.departmentId, departmentId));
     if ((supervisorCount?.count ?? 0) > 0) return false;
-
-    // Check tickets
-    const [ticketCount] = await this.db
-      .select({ count: count() })
-      .from(tickets)
-      .where(eq(tickets.departmentId, departmentId));
-    if ((ticketCount?.count ?? 0) > 0) return false;
 
     // Check sub-departments
     const [subDeptCount] = await this.db
@@ -565,40 +385,42 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
   }
 
   async isMainDepartment(id: string): Promise<boolean> {
-    const [result] = await this.db
-      .select({ count: count() })
+    const result = await this.db
+      .select()
       .from(departments)
-      .where(and(eq(departments.id, id), isNull(departments.parentId)));
+      .where(and(eq(departments.id, id), isNull(departments.parentId)))
+      .limit(1);
 
-    return (result?.count ?? 0) > 0;
+    return result.length > 0;
   }
 
   async isSubDepartment(id: string): Promise<boolean> {
-    const [result] = await this.db
-      .select({ count: count() })
+    const result = await this.db
+      .select()
       .from(departments)
-      .where(and(eq(departments.id, id), isNotNull(departments.parentId)));
+      .where(and(eq(departments.id, id), isNotNull(departments.parentId)))
+      .limit(1);
 
-    return (result?.count ?? 0) > 0;
+    return result.length > 0;
   }
 
   async viewMainDepartments(options?: {
     limit?: number;
     page?: number;
   }): Promise<Department[]> {
-    const { limit = 10, page = 1 } = options || {};
-    const skip = (page - 1) * limit;
+    const result = await this.fetchDepartments({
+      where: and(
+        isNull(departments.parentId),
+        eq(
+          departments.visibility,
+          mapToDrizzleDepartmentVisibility(DepartmentVisibility.PUBLIC),
+        ),
+      ),
+      limit: options?.limit,
+      page: options?.page,
+    });
 
-    const depts = await this.db
-      .select()
-      .from(departments)
-      .where(
-        and(isNull(departments.parentId), eq(departments.visibility, 'public')),
-      )
-      .limit(limit)
-      .offset(skip);
-
-    return Promise.all(depts.map((dept) => this.toDomain(dept)));
+    return result.map(this.mapToDepartment);
   }
 
   async viewSubDepartments(options?: {
@@ -606,124 +428,100 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
     page?: number;
     departmentId?: string;
   }): Promise<Department[]> {
-    const { limit = 10, page = 1, departmentId } = options || {};
-    const skip = (page - 1) * limit;
+    const conditions = [
+      isNotNull(departments.parentId),
+      eq(
+        departments.visibility,
+        mapToDrizzleDepartmentVisibility(DepartmentVisibility.PUBLIC),
+      ),
+    ];
 
-    const conditions = [isNotNull(departments.parentId)];
-    if (departmentId) {
-      conditions.push(eq(departments.parentId, departmentId));
+    if (options?.departmentId) {
+      conditions.push(eq(departments.parentId, options.departmentId));
     }
 
-    // Check parent visibility
-    const parentCondition = departmentId
-      ? await this.db
-        .select()
-        .from(departments)
-        .where(eq(departments.id, departmentId))
-        .limit(1)
-      : [];
+    const result = await this.fetchDepartments({
+      where: and(...conditions),
+      limit: options?.limit,
+      page: options?.page,
+    });
 
-    if (departmentId && parentCondition.length > 0) {
-      const parent = parentCondition[0];
-      if (parent.visibility !== 'public') {
-        return [];
-      }
-    }
-
-    const depts = await this.db
-      .select()
-      .from(departments)
-      .where(and(...conditions))
-      .limit(limit)
-      .offset(skip);
-
-    return Promise.all(depts.map((dept) => this.toDomain(dept)));
+    return result.map(this.mapToDepartment);
   }
 
   async findSubDepartmentByParentId(parentId: string): Promise<Department[]> {
-    const depts = await this.db
-      .select()
-      .from(departments)
-      .where(eq(departments.parentId, parentId));
+    const result = await this.fetchDepartments({
+      where: eq(departments.parentId, parentId),
+    });
 
-    return Promise.all(depts.map((dept) => this.toDomain(dept)));
+    return result.map(this.mapToDepartment);
   }
 
   async findAllByDepartmentIds(
     departmentIds: string[],
     queryDto?: DepartmentQueryDto,
   ): Promise<Department[]> {
-    if (departmentIds.length === 0) return [];
+    if (departmentIds.length === 0) {
+      return [];
+    }
 
-    return this.findByIds(departmentIds, queryDto);
+    const result = await this.fetchDepartments({
+      where: inArray(departments.id, departmentIds),
+      queryDto,
+    });
+
+    return result.map(this.mapToDepartment);
   }
 
   async findAllSubDepartmentsByParentIds(
     parentDepartmentIds: string[],
     queryDto?: Omit<DepartmentQueryDto, 'includeSubDepartments'>,
   ): Promise<Department[]> {
-    if (parentDepartmentIds.length === 0) return [];
+    if (parentDepartmentIds.length === 0) {
+      return [];
+    }
 
-    const depts = await this.db.query.departments.findMany({
-      with: {
-        parent: Boolean(queryDto?.includeParent) ? true : undefined,
-        questions: Boolean(queryDto?.includeQuestions) ? true : undefined,
-        knowledgeChunks: Boolean(queryDto?.includeKnowledgeChunks)
-          ? true
-          : undefined,
-      },
-      where: inArray(departments.parentId, parentDepartmentIds),
+    const result = await this.fetchDepartments({
+      where: and(
+        isNotNull(departments.parentId),
+        inArray(departments.parentId, parentDepartmentIds),
+      ),
+      queryDto,
     });
 
-    return depts.map((dept) =>
-      this.toDomain(dept, {
-        parent: dept.parent,
-        questions: dept.questions,
-        knowledgeChunks: dept.knowledgeChunks,
-      }),
-    );
+    return result.map(this.mapToDepartment);
   }
 
   async validateDepartmentAccess(
     departmentId: string,
     userDepartmentIds: string[],
   ): Promise<boolean> {
-    if (userDepartmentIds.includes(departmentId)) {
-      return true;
+    if (userDepartmentIds.length === 0) {
+      return false;
     }
 
-    const [department] = await this.db
-      .select()
-      .from(departments)
-      .where(eq(departments.id, departmentId))
-      .limit(1);
+    const result = await this.fetchDepartments({
+      where: and(
+        eq(departments.id, departmentId),
+        inArray(departments.id, userDepartmentIds),
+      ),
+      limit: 1,
+    });
 
-    if (!department) return false;
-
-    if (
-      department.parentId &&
-      userDepartmentIds.includes(department.parentId)
-    ) {
-      return true;
-    }
-
-    return false;
+    return result.length > 0;
   }
 
   async updateDepartmentVisibilityByParentId(
     parentId: string,
-    visibility: Department['visibility'],
-  ) {
-    const result = await this.db
+    visibility: DepartmentVisibility,
+  ): Promise<void> {
+    await this.db
       .update(departments)
       .set({
-        visibility: this.fromDomainVisibility(visibility),
-        updatedAt: sql`CURRENT_TIMESTAMP`,
+        visibility: mapToDrizzleDepartmentVisibility(visibility),
+        updatedAt: new Date(),
       })
-      .where(eq(departments.parentId, parentId))
-      .returning();
-
-    return { count: result.length };
+      .where(eq(departments.parentId, parentId));
   }
 
   async findDelegableSubDepartments(
@@ -731,66 +529,54 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
     queryDto?: Omit<DepartmentQueryDto, 'includeSubDepartments'>,
     searchQuery?: string,
   ): Promise<Department[]> {
-    const conditions = [
-      inArray(departments.parentId, supervisorDepartmentIds),
-      isNotNull(departments.parentId),
-    ];
-
-    if (searchQuery && searchQuery.trim()) {
-      conditions.push(ilike(departments.name, `%${searchQuery.trim()}%`));
+    if (supervisorDepartmentIds.length === 0) {
+      return [];
     }
 
-    const depts = await this.db.query.departments.findMany({
-      with: {
-        parent: Boolean(queryDto?.includeParent) ? true : undefined,
-        questions: Boolean(queryDto?.includeQuestions) ? true : undefined,
-        knowledgeChunks: Boolean(queryDto?.includeKnowledgeChunks)
-          ? true
-          : undefined,
-      },
+    const conditions = [
+      isNotNull(departments.parentId),
+      inArray(departments.parentId, supervisorDepartmentIds),
+    ];
+
+    if (searchQuery) {
+      const searchTerm = `%${searchQuery}%`;
+      conditions.push(ilike(departments.name, searchTerm));
+    }
+
+    const result = await this.fetchDepartments({
       where: and(...conditions),
+      queryDto,
     });
 
-    return depts.map((dept) =>
-      this.toDomain(dept, {
-        parent: dept.parent,
-        questions: dept.questions,
-        knowledgeChunks: dept.knowledgeChunks,
-      }),
-    );
+    return result.map(this.mapToDepartment);
   }
 
   async validateSubDepartments(
     parentDepartmentIds: string[],
     subDepartmentIds: string[],
   ): Promise<Array<{ id: string; name: string }>> {
-    const parentIdsArray = parentDepartmentIds.map((id) => `'${id}'`).join(',');
-    const subIdsArray = subDepartmentIds.map((id) => `'${id}'`).join(',');
+    if (subDepartmentIds.length === 0) {
+      return [];
+    }
 
-    const query = `
-      WITH sub_department_validation AS (
-        SELECT 
-          sd.id,
-          sd.name,
-          sd.parent_id,
-          CASE 
-            WHEN sd.parent_id = ANY(ARRAY[${parentIdsArray}]::uuid[]) THEN TRUE
-            ELSE FALSE
-          END AS belongs_to_parent
-        FROM departments sd
-        WHERE sd.id = ANY(ARRAY[${subIdsArray}]::uuid[])
-      )
-      SELECT 
-        id,
-        name
-      FROM sub_department_validation
-      WHERE belongs_to_parent = FALSE;
-    `;
+    const result = await this.db
+      .select({
+        id: departments.id,
+        name: departments.name,
+      })
+      .from(departments)
+      .where(
+        and(
+          inArray(departments.id, subDepartmentIds),
+          isNotNull(departments.parentId),
+          inArray(departments.parentId, parentDepartmentIds),
+        ),
+      );
 
-    const pgClient = this.db;
-    const result = await pgClient.execute(query);
-
-    return (result.rows as Array<{ id: string; name: string }>) || [];
+    return result.map((row) => ({
+      id: row.id,
+      name: row.name,
+    }));
   }
 
   async supervisorHasAccessToDepartment(
@@ -798,13 +584,13 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
     departmentId: string,
   ): Promise<
     | {
-      hasAccess: true;
-      department: Department;
-    }
+        hasAccess: true;
+        department: Department;
+      }
     | {
-      hasAccess: false;
-      department?: never;
-    }
+        hasAccess: false;
+        department?: never;
+      }
   > {
     const supervisorId = await this._getSupervisorId(supervisorIdOrUserId);
     if (!supervisorId) return { hasAccess: false };
@@ -813,7 +599,9 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
       true,
     );
 
-    const department = supervisorDepartments.find((d) => d.id.toString() === departmentId);
+    const department = supervisorDepartments.find(
+      (d) => d.id.toString() === departmentId,
+    );
     if (!department) return { hasAccess: false };
     return { hasAccess: true, department };
   }
@@ -823,11 +611,11 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
   ): Promise<string | null> {
     return supervisorIdOrUserId.supervisorUserId
       ? await this.db
-        .select({ id: supervisors.id })
-        .from(supervisors)
-        .where(eq(supervisors.userId, supervisorIdOrUserId.supervisorUserId))
-        .limit(1)
-        .then((result) => result[0]?.id)
+          .select({ id: supervisors.id })
+          .from(supervisors)
+          .where(eq(supervisors.userId, supervisorIdOrUserId.supervisorUserId))
+          .limit(1)
+          .then((result) => result[0]?.id)
       : (supervisorIdOrUserId.supervisorId ?? null);
   }
 
@@ -868,63 +656,67 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
   ): Promise<T extends true ? Department[] : { id: string }[]> {
     const mainDepartments: Department[] | { id: string }[] = fullDepartment
       ? await this.db
-        .select({
-          id: departments.id,
-          name: departments.name,
-          visibility: departments.visibility,
-          createdAt: departments.createdAt,
-          updatedAt: departments.updatedAt,
-          parentId: departments.parentId,
-        })
-        .from(departmentToSupervisor)
-        .innerJoin(
-          departments,
-          eq(departmentToSupervisor.departmentId, departments.id),
-        )
-        .where(
-          and(
-            eq(departmentToSupervisor.supervisorId, supervisorId),
-            isNull(departments.parentId),
-          ),
-        )
-        .then((mainDepartments) =>
-          mainDepartments.map((d) =>
-            this.mapToDepartment({
-              department: d,
-            }),
-          ),
-        )
+          .select({
+            id: departments.id,
+            name: departments.name,
+            visibility: departments.visibility,
+            createdAt: departments.createdAt,
+            updatedAt: departments.updatedAt,
+            parentId: departments.parentId,
+          })
+          .from(departmentToSupervisor)
+          .innerJoin(
+            departments,
+            eq(departmentToSupervisor.departmentId, departments.id),
+          )
+          .where(
+            and(
+              eq(departmentToSupervisor.supervisorId, supervisorId),
+              isNull(departments.parentId),
+            ),
+          )
+          .then((mainDepartments) =>
+            mainDepartments.map((d) =>
+              this.mapToDepartment({
+                department: d,
+              }),
+            ),
+          )
       : await this.db
-        .select({ id: departmentToSupervisor.departmentId })
-        .from(departmentToSupervisor)
-        .where(eq(departmentToSupervisor.supervisorId, supervisorId));
+          .select({ id: departmentToSupervisor.departmentId })
+          .from(departmentToSupervisor)
+          .where(eq(departmentToSupervisor.supervisorId, supervisorId));
 
     const subDepartments: Department[] | { id: string }[] = fullDepartment
       ? await this.db
-        .select()
-        .from(departments)
-        .where(
-          inArray(
-            departments.parentId,
-            mainDepartments.map((d) => d.id),
-          ),
-        )
-        .then((subDepartments) =>
-          subDepartments.map((d) =>
-            this.mapToDepartment({
-              department: d,
-            }),
-          ),
-        )
+          .select()
+          .from(departments)
+          .where(
+            inArray(
+              departments.parentId,
+              mainDepartments.map((d: Department | { id: string }) =>
+                d.id.toString(),
+              ),
+            ),
+          )
+          .then((subDepartments) =>
+            subDepartments.map((d) =>
+              this.mapToDepartment({
+                department: d,
+              }),
+            ),
+          )
       : await this.db
-        .select({ id: departments.id })
-        .from(departments)
-        .where(
-          inArray(
-            departments.parentId,
-            mainDepartments.map((d) => d.id),
-          ),
-        );
+          .select({ id: departments.id })
+          .from(departments)
+          .where(
+            inArray(
+              departments.parentId,
+              mainDepartments.map((d: Department | { id: string }) =>
+                d.id.toString(),
+              ),
+            ),
+          );
 
     return (
       fullDepartment
@@ -933,10 +725,16 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
           : subDepartments
         : !onlySubDepartments
           ? [
-            ...mainDepartments.map((d) => ({ id: d.id })),
-            ...subDepartments.map((d) => ({ id: d.id })),
-          ]
-          : mainDepartments.map((d) => ({ id: d.id }))
+              ...mainDepartments.map((d: Department | { id: string }) => ({
+                id: d.id.toString(),
+              })),
+              ...subDepartments.map((d: Department | { id: string }) => ({
+                id: d.id.toString(),
+              })),
+            ]
+          : mainDepartments.map((d: Department | { id: string }) => ({
+              id: d.id.toString(),
+            }))
     ) as T extends true ? Department[] : { id: string }[];
   }
 
@@ -960,11 +758,11 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
       ),
       parent: row.parent
         ? Department.create({
-          id: row.parent.id,
-          name: row.parent.name,
-          visibility: mapToDepartmentVisibility(row.parent.visibility),
-          parentId: row.parent.parentId ?? undefined,
-        })
+            id: row.parent.id,
+            name: row.parent.name,
+            visibility: mapToDepartmentVisibility(row.parent.visibility),
+            parentId: row.parent.parentId ?? undefined,
+          })
         : undefined,
     });
   }
@@ -974,13 +772,13 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
     subDepartmentId: string,
   ): Promise<
     | {
-      hasAccess: true;
-      department: Department;
-    }
+        hasAccess: true;
+        department: Department;
+      }
     | {
-      hasAccess: false;
-      department?: never;
-    }
+        hasAccess: false;
+        department?: never;
+      }
   > {
     const employeeId = await this._getEmployeeId(employeeIdOrUserId);
     if (!employeeId) return { hasAccess: false };
@@ -1026,11 +824,11 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
   ): Promise<string | null> {
     return employeeIdOrUserId.employeeUserId
       ? await this.db
-        .select({ id: employees.id })
-        .from(employees)
-        .where(eq(employees.userId, employeeIdOrUserId.employeeUserId))
-        .limit(1)
-        .then((result) => result[0]?.id)
+          .select({ id: employees.id })
+          .from(employees)
+          .where(eq(employees.userId, employeeIdOrUserId.employeeUserId))
+          .limit(1)
+          .then((result) => result[0]?.id)
       : (employeeIdOrUserId.employeeId ?? null);
   }
 
@@ -1040,31 +838,192 @@ export class DrizzleDepartmentRepository extends DepartmentRepository {
   ): Promise<T extends true ? Department[] : { id: string }[]> {
     const result: Department[] | { id: string }[] = fullSubDepartment
       ? await this.db
-        .select({
-          id: employeeSubDepartments.departmentId,
-          name: departments.name,
-          visibility: departments.visibility,
-          parentId: departments.parentId,
-          createdAt: departments.createdAt,
-          updatedAt: departments.updatedAt,
-        })
-        .from(employeeSubDepartments)
-        .innerJoin(
-          departments,
-          eq(employeeSubDepartments.departmentId, departments.id),
-        )
-        .where(eq(employeeSubDepartments.employeeId, employeeId))
-        .then((subDepartments) =>
-          subDepartments.map((d) =>
-            this.mapToDepartment({
-              department: d,
-            }),
-          ),
-        )
+          .select({
+            id: employeeSubDepartments.departmentId,
+            name: departments.name,
+            visibility: departments.visibility,
+            parentId: departments.parentId,
+            createdAt: departments.createdAt,
+            updatedAt: departments.updatedAt,
+          })
+          .from(employeeSubDepartments)
+          .innerJoin(
+            departments,
+            eq(employeeSubDepartments.departmentId, departments.id),
+          )
+          .where(eq(employeeSubDepartments.employeeId, employeeId))
+          .then((subDepartments) =>
+            subDepartments.map((d) =>
+              this.mapToDepartment({
+                department: d,
+              }),
+            ),
+          )
       : await this.db
-        .select({ id: employeeSubDepartments.departmentId })
-        .from(employeeSubDepartments)
-        .where(eq(employeeSubDepartments.employeeId, employeeId));
+          .select({ id: employeeSubDepartments.departmentId })
+          .from(employeeSubDepartments)
+          .where(eq(employeeSubDepartments.employeeId, employeeId));
     return result as T extends true ? Department[] : { id: string }[];
+  }
+
+  private departmentQueryWithParent() {
+    return this.db
+      .select({
+        department: departments,
+        parent: this.parent,
+      })
+      .from(departments)
+      .leftJoin(this.parent, eq(departments.parentId, this.parent.id));
+  }
+
+  private departmentQueryWithSubDepartments() {
+    return this.db
+      .select({
+        department: departments,
+        subDepartments: this.subDepartments,
+      })
+      .from(departments)
+      .leftJoin(
+        this.subDepartments,
+        eq(this.subDepartments.parentId, departments.id),
+      );
+  }
+
+  private departmentQueryWithParentAndSubDepartments() {
+    return this.db
+      .select({
+        department: departments,
+        parent: this.parent,
+        subDepartments: this.subDepartments,
+      })
+      .from(departments)
+      .leftJoin(this.parent, eq(departments.parentId, this.parent.id))
+      .leftJoin(
+        this.subDepartments,
+        eq(this.subDepartments.parentId, departments.id),
+      );
+  }
+
+  private async fetchDepartments(options?: {
+    where?: SQL;
+    limit?: number;
+    page?: number;
+    queryDto?: DepartmentQueryDto;
+  }): Promise<
+    {
+      department: typeof departments.$inferSelect;
+      parent?: typeof departments.$inferSelect;
+      subDepartments?: (typeof departments.$inferSelect)[];
+    }[]
+  > {
+    if (
+      options?.queryDto?.includeParent &&
+      options?.queryDto?.includeSubDepartments
+    ) {
+      const query =
+        this.departmentQueryWithParentAndSubDepartments().$dynamic();
+      if (options?.where) {
+        query.where(options.where);
+      }
+      if (options?.limit) {
+        query.limit(options.limit);
+      }
+      if (options?.page) {
+        query.offset((options.page - 1) * (options.limit ?? 10));
+      }
+      const result = await query;
+
+      const departmentsMap: Record<
+        string,
+        {
+          department: typeof departments.$inferSelect;
+          parent?: typeof departments.$inferSelect;
+          subDepartments?: (typeof departments.$inferSelect)[];
+        }
+      > = {};
+
+      result.forEach((row) => {
+        departmentsMap[row.department.id] ??= {
+          department: row.department,
+        };
+
+        departmentsMap[row.department.id].parent ??= row.parent ?? undefined;
+        departmentsMap[row.department.id].subDepartments ??= [];
+        if (row.subDepartments) {
+          departmentsMap?.[row.department.id]?.subDepartments?.push(
+            row.subDepartments,
+          );
+        }
+      });
+
+      return Object.values(departmentsMap);
+    } else if (options?.queryDto?.includeParent) {
+      const query = this.departmentQueryWithParent().$dynamic();
+      if (options?.where) {
+        query.where(options.where);
+      }
+      if (options?.limit) {
+        query.limit(options.limit);
+      }
+      if (options?.page) {
+        query.offset((options.page - 1) * (options.limit ?? 10));
+      }
+      const result = await query;
+
+      return result.map((row) => ({
+        department: row.department,
+        parent: row.parent ?? undefined,
+      }));
+    } else if (options?.queryDto?.includeSubDepartments) {
+      const query = this.departmentQueryWithSubDepartments().$dynamic();
+      if (options?.where) {
+        query.where(options.where);
+      }
+      if (options?.limit) {
+        query.limit(options.limit);
+      }
+      if (options?.page) {
+        query.offset((options.page - 1) * (options.limit ?? 10));
+      }
+      const result = await query;
+      const departmentsMap: Record<
+        string,
+        {
+          department: typeof departments.$inferSelect;
+          subDepartments?: (typeof departments.$inferSelect)[];
+        }
+      > = {};
+      result.forEach((row) => {
+        departmentsMap[row.department.id] ??= {
+          department: row.department,
+        };
+
+        departmentsMap[row.department.id].subDepartments ??= [];
+        if (row.subDepartments) {
+          departmentsMap?.[row.department.id]?.subDepartments?.push(
+            row.subDepartments,
+          );
+        }
+      });
+
+      return Object.values(departmentsMap);
+    } else {
+      const query = this.db.select().from(departments).$dynamic();
+
+      if (options?.where) {
+        query.where(options.where);
+      }
+      if (options?.limit) {
+        query.limit(options.limit);
+      }
+      if (options?.page) {
+        query.offset((options.page - 1) * (options.limit ?? 10));
+      }
+      const result = await query;
+
+      return result.map((row) => ({
+        department: row,
+      }));
+    }
   }
 }

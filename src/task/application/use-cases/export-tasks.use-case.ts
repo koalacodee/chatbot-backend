@@ -17,7 +17,7 @@ export class ExportTasksUseCase {
     private readonly exportService: ExportService,
     private readonly taskRepo: TaskRepository,
     private readonly taskSubmissionRepo: TaskSubmissionRepository,
-  ) { }
+  ) {}
 
   private formatDateHuman(d: Date | string | undefined | null): string {
     if (!d) return '';
@@ -28,7 +28,7 @@ export class ExportTasksUseCase {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-    } as any).format(date as Date);
+    }).format(date);
   }
 
   async execute({
@@ -38,14 +38,17 @@ export class ExportTasksUseCase {
     end,
   }: ExportTasksInput = {}): Promise<Export> {
     const startDate =
-      typeof start === 'string' ? new Date(start) : start ?? undefined;
-    const endDate = typeof end === 'string' ? new Date(end) : end ?? undefined;
+      typeof start === 'string' ? new Date(start) : (start ?? undefined);
+    const endDate =
+      typeof end === 'string' ? new Date(end) : (end ?? undefined);
     const self = this;
     async function* batchGenerator() {
       let cursor: string | undefined = undefined;
-      for (; ;) {
+      for (;;) {
         const result = await self.taskRepo.findAll({
-          cursor: cursor ? { cursor, direction: 'next', pageSize: batchSize } : { cursor: '', direction: 'next', pageSize: batchSize },
+          cursor: cursor
+            ? { cursor, direction: 'next', pageSize: batchSize }
+            : { cursor: '', direction: 'next', pageSize: batchSize },
           departmentIds,
           start: startDate,
           end: endDate,
@@ -54,7 +57,8 @@ export class ExportTasksUseCase {
         if (!tasks.length) break;
 
         const taskIds = tasks.map((t) => t.id.toString());
-        const submissions = await self.taskSubmissionRepo.findByTaskIds(taskIds);
+        const submissions =
+          await self.taskSubmissionRepo.findByTaskIds(taskIds);
 
         const rows = tasks.map((t) => {
           const submission = submissions.find(
@@ -89,8 +93,8 @@ export class ExportTasksUseCase {
       }
     }
 
-    const exportEntity = await this.exportService.exportFromAsyncGenerator(batchGenerator());
+    const exportEntity =
+      await this.exportService.exportFromAsyncGenerator(batchGenerator());
     return exportEntity;
   }
 }
-

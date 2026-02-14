@@ -41,7 +41,7 @@ export async function findTeamTasks(
 		where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
 		paginationParams,
 	});
-	return ctx.pagination.processResults(list, paginationParams, (t) => ({
+	return ctx.pagination.processResults(list.map((t) => t.task), paginationParams, (t) => ({
 		createdAt: t.createdAt.toISOString(),
 		id: t.id,
 	}));
@@ -76,7 +76,7 @@ export async function findTasksForSupervisor(
 		where: and(...whereConditions),
 		paginationParams,
 	});
-	return ctx.pagination.processResults(list, paginationParams, (t) => ({
+	return ctx.pagination.processResults(list.map((t) => t.task), paginationParams, (t) => ({
 		createdAt: t.createdAt.toISOString(),
 		id: t.id,
 	}));
@@ -107,7 +107,7 @@ export async function findTasksForEmployee(
 		where: and(...whereConditions),
 		paginationParams,
 	});
-	return ctx.pagination.processResults(list, paginationParams, (t) => ({
+	return ctx.pagination.processResults(list.map((t) => t.task), paginationParams, (t) => ({
 		createdAt: t.createdAt.toISOString(),
 		id: t.id,
 	}));

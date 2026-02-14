@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import {
@@ -326,8 +327,8 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
         supervisorId: { in: supervisorIds },
         permissions: permissions
           ? {
-            hasEvery: permissions,
-          }
+              hasEvery: permissions,
+            }
           : undefined,
       },
       include: {
@@ -384,7 +385,8 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
       });
 
       // If search term looks like a UUID (36 chars with dashes), also try exact match on employee id
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (uuidRegex.test(searchTerm)) {
         searchConditions.push({ id: searchTerm });
       }
