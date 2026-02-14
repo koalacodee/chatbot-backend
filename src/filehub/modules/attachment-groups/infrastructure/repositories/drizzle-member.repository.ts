@@ -22,7 +22,9 @@ export class DrizzleMemberRepository extends MemberRepository {
     return this.drizzleService.client;
   }
 
-  private toDomain(record: any): AttachmentGroupMember {
+  private toDomain(
+    record: typeof attachmentGroupMembers.$inferSelect,
+  ): AttachmentGroupMember {
     return AttachmentGroupMember.create({
       id: record.id,
       attachmentGroupId: record.attachmentGroupId,
@@ -124,8 +126,8 @@ export class DrizzleMemberRepository extends MemberRepository {
     id: string,
     update: Partial<AttachmentGroupMemberProps>,
   ): Promise<AttachmentGroupMember> {
-    const updateData: Record<string, any> = {
-      updatedAt: new Date().toISOString(),
+    const updateData: Partial<typeof attachmentGroupMembers.$inferSelect> = {
+      updatedAt: new Date(),
     };
 
     if (update.name !== undefined) {
