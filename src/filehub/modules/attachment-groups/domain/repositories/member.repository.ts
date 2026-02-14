@@ -20,5 +20,11 @@ export abstract class MemberRepository {
   abstract findAll(options: {
     limit?: number;
     offset?: number;
-  }): Promise<AttachmentGroupMember[]>;
+    departmentIds?: string[];
+  }): Promise<
+    Array<{
+      member: AttachmentGroupMember;
+      department: { id: string; name: string } | null;
+    }>
+  >;
 }

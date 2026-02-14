@@ -27,6 +27,7 @@ import { GetAllMembersWithGroupsUseCase } from '../../application/use-cases/get-
 import { UpdateMemberUseCase } from '../../application/use-cases/update-member.use-case';
 import { DeleteMemberUseCase } from '../../application/use-cases/delete-member.use-case';
 import { AddMemberUseCase } from '../../application/use-cases/add-member.use-case';
+import { GetAvailableDepartmentsForMemberUseCase } from '../../application/use-cases/get-available-departments-for-member.use-case';
 import { CreateAttachmentGroupDto } from './dto/create-attachment-group.dto';
 import { UpdateAttachmentGroupDto } from './dto/update-attachment-group.dto';
 import { VerifyMemberOtpDto } from './dto/verify-member-otp.dto';
@@ -58,6 +59,7 @@ export class AttachmentGroupController {
     private readonly updateMemberUseCase: UpdateMemberUseCase,
     private readonly deleteMemberUseCase: DeleteMemberUseCase,
     private readonly addMemberUseCase: AddMemberUseCase,
+    private readonly getAvailableDepartmentsForMemberUseCase: GetAvailableDepartmentsForMemberUseCase,
     private readonly configService: ConfigService,
   ) {}
 
@@ -367,6 +369,7 @@ export class AttachmentGroupController {
       otp: addMemberDto.otp,
       name: addMemberDto.name,
       attachmentGroupId: addMemberDto.attachmentGroupId,
+      departmentId: addMemberDto.departmentId,
     });
 
     return {
@@ -388,16 +391,41 @@ export class AttachmentGroupController {
     employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
     supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
   })
-  async getAllMembersWithGroups(@Query() query: GetAllMembersDto) {
+  async getAllMembersWithGroups(@Query() query: GetAllMembersDto, @Req() req: any) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new HttpException(
+        'User not authenticated',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
     const result = await this.getAllMembersWithGroupsUseCase.execute({
       limit: query.limit,
       offset: query.offset,
+      userId,
     });
 
     return {
       members: result.members,
       pagination: result.pagination,
     };
+  }
+
+  @Get('members/available-departments')
+  @SupervisorOrEmployeePermissions({
+    employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+    supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+  })
+  async getAvailableDepartmentsForMember(@Req() req: any) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new HttpException(
+        'User not authenticated',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+    return this.getAvailableDepartmentsForMemberUseCase.execute(userId);
   }
 
   // Update a member's details
@@ -414,6 +442,7 @@ export class AttachmentGroupController {
       memberId,
       name: updateDto.name,
       attachmentGroupId: updateDto.attachmentGroupId,
+      departmentId: updateDto.departmentId,
     });
 
     return {

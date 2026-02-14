@@ -14,6 +14,7 @@ export interface UpdateMemberUseCaseRequest {
   memberId: string;
   name?: string;
   attachmentGroupId?: string;
+  departmentId?: string;
 }
 
 export interface UpdateMemberUseCaseResponse {
@@ -38,12 +39,12 @@ export class UpdateMemberUseCase {
   async execute(
     request: UpdateMemberUseCaseRequest,
   ): Promise<UpdateMemberUseCaseResponse> {
-    const { memberId, name, attachmentGroupId } = request;
+    const { memberId, name, attachmentGroupId, departmentId } = request;
 
     // Validate that at least one field is provided
-    if (!name && !attachmentGroupId) {
+    if (!name && !attachmentGroupId && departmentId === undefined) {
       throw new BadRequestException(
-        'At least one field (name or attachmentGroupId) must be provided for update',
+        'At least one field (name, attachmentGroupId, or departmentId) must be provided for update',
       );
     }
 
@@ -74,12 +75,19 @@ export class UpdateMemberUseCase {
     }
 
     // Prepare update data
-    const updateData: { name?: string; attachmentGroupId?: string } = {};
+    const updateData: {
+      name?: string;
+      attachmentGroupId?: string;
+      departmentId?: string | null;
+    } = {};
     if (name !== undefined) {
       updateData.name = name;
     }
     if (attachmentGroupId !== undefined) {
       updateData.attachmentGroupId = attachmentGroupId;
+    }
+    if (departmentId !== undefined) {
+      updateData.departmentId = departmentId || null;
     }
 
     // Use the update method from the repository

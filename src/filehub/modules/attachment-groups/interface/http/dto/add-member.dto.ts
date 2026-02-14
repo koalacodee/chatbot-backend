@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class AddMemberDto {
   @IsString()
@@ -12,4 +12,8 @@ export class AddMemberDto {
   @IsUUID()
   @IsNotEmpty()
   attachmentGroupId: string;
+
+  @IsUUID()
+  @IsOptional()
+  departmentId?: string;
 }

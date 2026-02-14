@@ -23,6 +23,8 @@ import { AddMemberUseCase } from './application/use-cases/add-member.use-case';
 import { UpdateMemberUseCase } from './application/use-cases/update-member.use-case';
 import { DeleteMemberUseCase } from './application/use-cases/delete-member.use-case';
 import { GetAllMembersWithGroupsUseCase } from './application/use-cases/get-all-members-with-groups.use-case';
+import { GetAvailableDepartmentsForMemberUseCase } from './application/use-cases/get-available-departments-for-member.use-case';
+import { DepartmentModule } from '@/department/department.module';
 
 @Global()
 @Module({
@@ -53,8 +55,10 @@ import { GetAllMembersWithGroupsUseCase } from './application/use-cases/get-all-
     UpdateMemberUseCase,
     DeleteMemberUseCase,
     GetAllMembersWithGroupsUseCase,
+    GetAvailableDepartmentsForMemberUseCase,
   ],
   imports: [
+    DepartmentModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

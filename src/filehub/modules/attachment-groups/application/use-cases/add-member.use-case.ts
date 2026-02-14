@@ -9,6 +9,7 @@ export interface AddMemberUseCaseInput {
   otp: string;
   name: string;
   attachmentGroupId: string;
+  departmentId?: string;
 }
 
 @Injectable()
@@ -21,7 +22,7 @@ export class AddMemberUseCase {
   ) {}
 
   async execute(input: AddMemberUseCaseInput) {
-    const { otp, name, attachmentGroupId } = input;
+    const { otp, name, attachmentGroupId, departmentId } = input;
 
     const redisAck = await this.redisService.get(
       `attachment-group:membership:${otp}`,
@@ -42,6 +43,7 @@ export class AddMemberUseCase {
       name,
       attachmentGroupId,
       memberId: attachmentGroup.id,
+      departmentId: departmentId ?? undefined,
     });
 
     await this.memberRepository.save(member);

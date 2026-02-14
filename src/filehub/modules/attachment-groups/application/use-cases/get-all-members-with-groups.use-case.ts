@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { MemberRepository } from '../../domain/repositories/member.repository';
-import { AttachmentGroupMember } from '../../domain/entities/member.entity';
+import { DepartmentRepository } from '@/department/domain/repositories/department.repository';
+import { UserRepository } from '@/shared/repositories/user.repository';
+import { Roles } from '@/shared/value-objects/role.vo';
 
 export interface GetAllMembersWithGroupsUseCaseRequest {
   limit?: number;
   offset?: number;
+  userId: string;
 }
 
 export interface MemberWithGroupDetails {
@@ -21,6 +24,7 @@ export interface MemberWithGroupDetails {
     updatedAt: Date;
     createdById: string;
   };
+  department: { id: string; name: string } | null;
 }
 
 export interface GetAllMembersWithGroupsUseCaseResponse {
@@ -34,19 +38,51 @@ export interface GetAllMembersWithGroupsUseCaseResponse {
 
 @Injectable()
 export class GetAllMembersWithGroupsUseCase {
-  constructor(private readonly memberRepository: MemberRepository) {}
+  constructor(
+    private readonly memberRepository: MemberRepository,
+    private readonly departmentRepository: DepartmentRepository,
+    private readonly userRepository: UserRepository,
+  ) {}
 
   async execute(
     request: GetAllMembersWithGroupsUseCaseRequest,
   ): Promise<GetAllMembersWithGroupsUseCaseResponse> {
-    const { limit, offset } = request;
+    const { limit, offset, userId } = request;
 
-    // Leverage the findAll method which includes attachment group details via inner join
-    const members = await this.memberRepository.findAll({ limit, offset });
+    let departmentIds: string[] | undefined;
+
+    const user = await this.userRepository.findById(userId);
+    const userRole = user.role.getRole();
+
+    if (userRole === Roles.ADMIN) {
+      departmentIds = undefined;
+    } else if (userRole === Roles.SUPERVISOR) {
+      const depts =
+        await this.departmentRepository.getSupervisorDepartments({
+          supervisorIdOrUserId: { supervisorUserId: userId },
+          fullDepartment: false,
+        });
+      departmentIds = depts.map((d) => d.id);
+    } else if (userRole === Roles.EMPLOYEE) {
+      const subDepts =
+        await this.departmentRepository.getEmployeeSubDepartments(
+          { employeeUserId: userId },
+          false,
+        );
+      departmentIds = subDepts.map((d) => d.id);
+    } else {
+      departmentIds = [];
+    }
+
+    const membersWithDepts = await this.memberRepository.findAll({
+      limit,
+      offset,
+      departmentIds,
+    });
 
     // Transform to response format
-    const membersWithGroupDetails: MemberWithGroupDetails[] = members.map(
-      (member) => ({
+    const membersWithGroupDetails: MemberWithGroupDetails[] =
+      membersWithDepts.map(({ member, department }) => ({
         id: member.id.value,
         memberId: member.memberId.value,
         name: member.name,
@@ -60,11 +96,11 @@ export class GetAllMembersWithGroupsUseCase {
           updatedAt: member.attachmentGroup.updatedAt,
           createdById: member.attachmentGroup.createdById,
         },
-      }),
-    );
+        department,
+      }));
 
     // Check if there might be more results
-    const hasMore = members.length === limit;
+    const hasMore = membersWithDepts.length === limit;
 
     return {
       members: membersWithGroupDetails,

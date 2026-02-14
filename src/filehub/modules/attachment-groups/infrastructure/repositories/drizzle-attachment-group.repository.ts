@@ -52,7 +52,17 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     });
   }
 
+  private toDateSafe(
+    date: Date | string | undefined | null,
+  ): Date | null {
+    if (!date) return null;
+    if (date instanceof Date) return date;
+    if (typeof date === 'string') return new Date(date);
+    return null;
+  }
+
   async save(attachmentGroup: AttachmentGroup): Promise<AttachmentGroup> {
+    const now = new Date();
     const data = {
       id: attachmentGroup.id,
       createdById: attachmentGroup.createdById,
@@ -61,13 +71,13 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
       ips: attachmentGroup.clientIds,
       createdAt:
         attachmentGroup.createdAt instanceof Date
-          ? attachmentGroup.createdAt.toISOString()
-          : (attachmentGroup.createdAt ?? new Date().toISOString()),
+          ? attachmentGroup.createdAt
+          : new Date(attachmentGroup.createdAt ?? now),
       updatedAt:
         attachmentGroup.updatedAt instanceof Date
-          ? attachmentGroup.updatedAt.toISOString()
-          : (attachmentGroup.updatedAt ?? new Date().toISOString()),
-      expiresAt: this.toISOStringSafe(attachmentGroup.expiresAt),
+          ? attachmentGroup.updatedAt
+          : new Date(attachmentGroup.updatedAt ?? now),
+      expiresAt: this.toDateSafe(attachmentGroup.expiresAt) ?? undefined,
     };
 
     await this.db
@@ -79,7 +89,7 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
           name: data.name,
           key: data.key,
           ips: data.ips,
-          updatedAt: new Date().toISOString(),
+          updatedAt: new Date(),
           expiresAt: data.expiresAt,
         },
       });
@@ -190,7 +200,7 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     >,
   ): Promise<AttachmentGroup> {
     const updateData: Record<string, any> = {
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date(),
     };
 
     if (update.name !== undefined) {
@@ -206,7 +216,7 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     }
 
     if (update.expiresAt !== undefined) {
-      updateData.expiresAt = this.toISOStringSafe(update.expiresAt);
+      updateData.expiresAt = this.toDateSafe(update.expiresAt) ?? undefined;
     }
 
     await this.db

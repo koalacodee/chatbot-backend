@@ -8,8 +8,9 @@ import {
 import {
   attachmentGroupMembers,
   attachmentGroups,
+  departments,
 } from 'src/common/drizzle/schema';
-import { eq, count, desc } from 'drizzle-orm';
+import { eq, count, desc, inArray } from 'drizzle-orm';
 import { AttachmentGroup } from '../../domain/entities/attachment-group.entity';
 
 @Injectable()
@@ -157,41 +158,73 @@ export class DrizzleMemberRepository extends MemberRepository {
   async findAll({
     limit,
     offset,
+    departmentIds,
   }: {
     limit?: number;
     offset?: number;
-  }): Promise<AttachmentGroupMember[]> {
-    const query = this.db
-      .select()
+    departmentIds?: string[];
+  }): Promise<
+    Array<{
+      member: AttachmentGroupMember;
+      department: { id: string; name: string } | null;
+    }>
+  > {
+    if (departmentIds !== undefined && departmentIds.length === 0) {
+      return [];
+    }
+
+    let query = this.db
+      .select({
+        member: attachmentGroupMembers,
+        attachmentGroup: attachmentGroups,
+        departmentId: departments.id,
+        departmentName: departments.name,
+      })
       .from(attachmentGroupMembers)
       .innerJoin(
         attachmentGroups,
         eq(attachmentGroupMembers.attachmentGroupId, attachmentGroups.id),
+      )
+      .leftJoin(
+        departments,
+        eq(attachmentGroupMembers.departmentId, departments.id),
+      )
+      .$dynamic();
+
+    if (departmentIds !== undefined && departmentIds.length > 0) {
+      query = query.where(
+        inArray(attachmentGroupMembers.departmentId, departmentIds),
       );
+    }
 
-    if (limit) query.limit(limit);
-    if (offset) query.offset(offset);
+    if (limit) query = query.limit(limit);
+    if (offset) query = query.offset(offset);
 
-    const members = await query;
+    const rows = await query;
 
-    return members.map((member) =>
-      AttachmentGroupMember.create({
-        id: member.attachment_group_members.id,
-        attachmentGroupId: member.attachment_group_members.attachmentGroupId,
-        memberId: member.attachment_group_members.memberId,
-        name: member.attachment_group_members.name,
-        createdAt: new Date(member.attachment_group_members.createdAt),
-        updatedAt: new Date(member.attachment_group_members.updatedAt),
-        departmentId: member.attachment_group_members.departmentId ?? undefined,
+    return rows.map((row) => {
+      const member = AttachmentGroupMember.create({
+        id: row.member.id,
+        attachmentGroupId: row.member.attachmentGroupId,
+        memberId: row.member.memberId,
+        name: row.member.name,
+        createdAt: new Date(row.member.createdAt),
+        updatedAt: new Date(row.member.updatedAt),
+        departmentId: row.member.departmentId ?? undefined,
         attachmentGroup: AttachmentGroup.create({
-          id: member.attachment_groups.id,
-          key: member.attachment_groups.key,
-          name: member.attachment_groups.name,
-          createdAt: new Date(member.attachment_groups.createdAt),
-          updatedAt: new Date(member.attachment_groups.updatedAt),
-          createdById: member.attachment_groups.createdById,
+          id: row.attachmentGroup.id,
+          key: row.attachmentGroup.key,
+          name: row.attachmentGroup.name,
+          createdAt: new Date(row.attachmentGroup.createdAt),
+          updatedAt: new Date(row.attachmentGroup.updatedAt),
+          createdById: row.attachmentGroup.createdById,
         }),
-      }),
-    );
+      });
+      const department =
+        row.departmentId && row.departmentName
+          ? { id: row.departmentId, name: row.departmentName }
+          : null;
+      return { member, department };
+    });
   }
 }

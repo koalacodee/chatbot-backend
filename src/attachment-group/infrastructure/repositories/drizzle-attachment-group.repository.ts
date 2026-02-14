@@ -27,6 +27,15 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     return null;
   }
 
+  private toDateSafe(
+    date: Date | string | undefined | null,
+  ): Date | null {
+    if (!date) return null;
+    if (date instanceof Date) return date;
+    if (typeof date === 'string') return new Date(date);
+    return null;
+  }
+
   private toDomain(record: any): AttachmentGroup {
     return AttachmentGroup.create({
       id: record.id,
@@ -41,6 +50,7 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
   }
 
   async save(attachmentGroup: AttachmentGroup): Promise<AttachmentGroup> {
+    const now = new Date();
     const data = {
       id: attachmentGroup.id,
       createdById: attachmentGroup.createdById,
@@ -48,13 +58,13 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
       ips: attachmentGroup.ips,
       createdAt:
         attachmentGroup.createdAt instanceof Date
-          ? attachmentGroup.createdAt.toISOString()
-          : (attachmentGroup.createdAt ?? new Date().toISOString()),
+          ? attachmentGroup.createdAt
+          : new Date(attachmentGroup.createdAt ?? now),
       updatedAt:
         attachmentGroup.updatedAt instanceof Date
-          ? attachmentGroup.updatedAt.toISOString()
-          : (attachmentGroup.updatedAt ?? new Date().toISOString()),
-      expiresAt: this.toISOStringSafe(attachmentGroup.expiresAt),
+          ? attachmentGroup.updatedAt
+          : new Date(attachmentGroup.updatedAt ?? now),
+      expiresAt: this.toDateSafe(attachmentGroup.expiresAt) ?? undefined,
     };
 
     const attachmentIds = attachmentGroup.attachmentIds;
@@ -68,7 +78,7 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
         set: {
           key: data.key,
           ips: data.ips,
-          updatedAt: new Date().toISOString(),
+          updatedAt: new Date(),
           expiresAt: data.expiresAt,
         },
       });
@@ -221,11 +231,11 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     if (update.key !== undefined) data.key = update.key;
     if (update.ips !== undefined) data.ips = update.ips;
     if (update.expiresAt !== undefined)
-      data.expiresAt = this.toISOStringSafe(update.expiresAt);
+      data.expiresAt = this.toDateSafe(update.expiresAt) ?? undefined;
 
     const updateData: any = {
       ...data,
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date(),
     };
 
     // Update the group

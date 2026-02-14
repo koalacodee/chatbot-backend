@@ -8,4 +8,8 @@ export class UpdateMemberDto {
   @IsUUID()
   @IsOptional()
   attachmentGroupId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  departmentId?: string;
 }
