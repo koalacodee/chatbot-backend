@@ -4,27 +4,32 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { TaskRepository } from '../../domain/repositories/task.repository';
+import { TaskDelegationSubmissionRepository } from '../../domain/repositories/task-delegation-submission.repository';
 import { UserRepository } from '@/shared/repositories/user.repository';
 import { Roles } from '@/shared/value-objects/role.vo';
-import { FileHubService } from '@/filehub/domain/services/filehub.service';
-import { Attachment } from '@/filehub/domain/entities/attachment.entity';
 import { CursorInput } from '@/common/drizzle/helpers/cursor';
 import { TaskPriority, TaskStatus } from '../../domain/entities/task.entity';
 import { Task } from '@/v2/tasks/domain/entities/task.entity';
-import { TaskDelegation } from '@/v2/tasks/domain/entities/task-delegation.entity';
 import {
   FilehubAttachmentMessage,
   GetTargetAttachmentsWithSignedUrlsUseCase,
 } from '@/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 
+interface UnifiedMyTaskItemResult {
+  type: 'task' | 'delegation';
+  taskId: string;
+  delegationId?: string;
+  task: ReturnType<typeof Task.prototype.toJSON>;
+  rejectionReason?: string;
+  approvalFeedback?: string;
+  submissions?: ReturnType<
+    import('@/v2/tasks/domain/entities/task-delegation-submission.entity').TaskDelegationSubmission['toJSON']
+  >[];
+}
+
 interface MyTasksResult {
-  data: Array<{
-    task: ReturnType<typeof Task.prototype.toJSON>;
-    rejectionReason?: string;
-    approvalFeedback?: string;
-  }>;
+  data: UnifiedMyTaskItemResult[];
   meta: any;
-  delegations?: Array<ReturnType<typeof TaskDelegation.prototype.toJSON>>;
   fileHubAttachments: FilehubAttachmentMessage[];
   metrics: {
     pendingTasks: number;
@@ -37,6 +42,7 @@ interface MyTasksResult {
 export class GetMyTasksUseCase {
   constructor(
     private readonly taskRepo: TaskRepository,
+    private readonly taskDelegationSubmissionRepo: TaskDelegationSubmissionRepository,
     private readonly userRepo: UserRepository,
     private readonly getTargetAttachmentsWithSignedUrlsUseCase: GetTargetAttachmentsWithSignedUrlsUseCase,
   ) {}
@@ -106,6 +112,8 @@ export class GetMyTasksUseCase {
 
     return {
       data: tasks.map((t) => ({
+        type: 'task' as const,
+        taskId: t.task.id,
         task: t.task.toJSON(),
         rejectionReason: t.rejectionReason,
         approvalFeedback: t.approvalFeedback,
@@ -125,11 +133,10 @@ export class GetMyTasksUseCase {
     subDepartmentId?: string;
   }): Promise<MyTasksResult> {
     const {
-      data: tasks,
+      data: unifiedItems,
       meta,
-      delegations,
       metrics,
-    } = await this.taskRepo.getTasksAndDelegationsForEmployee({
+    } = await this.taskRepo.getUnifiedMyTasksForEmployee({
       employeeUserId: dto.userId,
       status: dto.status ? [dto.status] : undefined,
       priority: dto.priority ? [dto.priority] : undefined,
@@ -138,26 +145,59 @@ export class GetMyTasksUseCase {
       subDepartmentId: dto.subDepartmentId,
     });
 
-    const fileHubAttachments =
-      await this.getTargetAttachmentsWithSignedUrlsUseCase.execute({
-        targetIds: tasks.map((t) => t.task.id),
+    const delegationIds = unifiedItems
+      .filter((i) => i.type === 'delegation' && i.delegationId)
+      .map((i) => i.delegationId!);
+    const allTaskIds = unifiedItems.map((i) => i.taskId);
+
+    const [fileHubAttachments, delegationSubmissionsList] = await Promise.all([
+      this.getTargetAttachmentsWithSignedUrlsUseCase.execute({
+        targetIds: [...new Set(allTaskIds)],
         expiresInMs: 1000 * 60 * 60 * 24,
-      });
+      }),
+      delegationIds.length > 0
+        ? this.taskDelegationSubmissionRepo.findByDelegationIds(delegationIds)
+        : Promise.resolve([]),
+    ]);
+
+    const submissionsMap = new Map<string, typeof delegationSubmissionsList>();
+    for (const s of delegationSubmissionsList) {
+      const list = submissionsMap.get(s.delegationId) ?? [];
+      list.push(s);
+      submissionsMap.set(s.delegationId, list);
+    }
+
+    const data: UnifiedMyTaskItemResult[] = unifiedItems.map((item) => {
+      const taskJson = item.task.toJSON();
+      if (item.statusOverride) {
+        (taskJson as Record<string, unknown>).status = item.statusOverride;
+      }
+      const result: UnifiedMyTaskItemResult = {
+        type: item.type,
+        taskId: item.taskId,
+        task: taskJson,
+        rejectionReason: item.rejectionReason,
+        approvalFeedback: item.approvalFeedback,
+      };
+      if (item.delegationId) {
+        result.delegationId = item.delegationId;
+        const subs = submissionsMap.get(item.delegationId);
+        if (subs?.length) {
+          result.submissions = subs.map((s) => s.toJSON());
+          const rejected = subs.find((s) => s.status === 'REJECTED');
+          const approved = subs.find((s) => s.status === 'APPROVED');
+          if (rejected?.feedback) result.rejectionReason = rejected.feedback;
+          if (approved?.feedback) result.approvalFeedback = approved.feedback;
+        }
+      }
+      return result;
+    });
 
     return {
-      data: tasks.map((t) => ({
-        task: t.task.toJSON(),
-        rejectionReason: t.rejectionReason,
-        approvalFeedback: t.approvalFeedback,
-      })),
+      data,
       meta,
-      delegations: delegations.map((d) => d.toJSON()),
       fileHubAttachments,
-      metrics: {
-        pendingTasks: metrics.pendingTasks + metrics.pendingDelegations,
-        completedTasks: metrics.completedTasks + metrics.completedDelegations,
-        taskCompletionPercentage: Math.floor(metrics.totalPercentage),
-      },
+      metrics,
     };
   }
 }

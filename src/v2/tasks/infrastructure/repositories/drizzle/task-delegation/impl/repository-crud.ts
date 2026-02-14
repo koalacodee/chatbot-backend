@@ -15,7 +15,7 @@ export async function save(
     id: taskDelegation.id,
     taskId: taskDelegation.taskId,
     assigneeId: taskDelegation.assigneeId ?? null,
-    targetSubDepartmentId: taskDelegation.targetSubDepartmentId ?? '',
+    targetSubDepartmentId: taskDelegation.targetSubDepartmentId ?? null,
     delegatorId: taskDelegation.delegatorId,
     status: statusToDb(taskDelegation.status),
     assignmentType: assignmentTypeToDb(taskDelegation.assignmentType),

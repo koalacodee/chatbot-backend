@@ -62,9 +62,14 @@ export class GetDepartmentLevelTasksUseCase {
     ]);
 
     const submissions = tasks.flatMap((t) => t.submissions);
+    const delegationSubmissionIds = submissions
+      .map((s) => s.delegationSubmissionId)
+      .filter((id): id is string => Boolean(id));
+
     const targetIds = [
       ...tasks.map((t) => t.task.id),
       ...submissions.map((s) => s.id),
+      ...delegationSubmissionIds,
     ];
 
     const [attachments] = await Promise.all([

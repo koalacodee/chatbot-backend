@@ -13,6 +13,10 @@ import {
   taskDelegations,
   tasks,
 } from '@/common/drizzle/schema';
+import {
+  dbToStatus as delegationDbToStatus,
+  rowToEntity as delegationRowToEntity,
+} from '@/v2/tasks/infrastructure/repositories/drizzle/task-delegation/impl/mappers';
 import type { Attachment } from '@/filehub/domain/entities/attachment.entity';
 import type {
   Task,
@@ -33,7 +37,11 @@ import {
   fetchTasks,
   paginateEmpty,
 } from './repository-query';
-import { Matches } from 'class-validator';
+import * as crud from './repository-crud';
+import {
+  encodeCursor,
+  decodeCursor,
+} from '@/common/drizzle/helpers/cursor-encoders';
 
 export async function getTaskMetricsForSupervisor(
   ctx: TaskRepoContext,
@@ -562,7 +570,20 @@ export async function getTasksAndDelegationsForEmployee(
     .select()
     .from(taskDelegations)
     .where(eq(taskDelegations.assigneeId, employeeRow.id));
-  const delegations: TaskDelegation[] = [];
+
+  const delegationTaskIds = [...new Set(delegationRows.map((d) => d.taskId))];
+  const tasksForDelegations =
+    delegationTaskIds.length > 0
+      ? await crud.findByIds(ctx, delegationTaskIds)
+      : [];
+  const taskMap = new Map(tasksForDelegations.map((t) => [t.id, t]));
+
+  const delegations: TaskDelegation[] = delegationRows.map((row) => {
+    const delegation = delegationRowToEntity(row);
+    const task = taskMap.get(row.taskId);
+    if (task) delegation.task = task;
+    return delegation;
+  });
   const [pendingTasks] = await ctx.db
     .select({ count: count(tasks.id) })
     .from(tasks)
@@ -614,6 +635,284 @@ export async function getTasksAndDelegationsForEmployee(
       taskCompletionPercentage: taskPct,
       delegationCompletionPercentage: delPct,
       totalPercentage,
+    },
+  };
+}
+
+export type UnifiedMyTaskItem = {
+  type: 'task' | 'delegation';
+  taskId: string;
+  delegationId?: string;
+  task: Task;
+  /** For type='delegation': the delegation's status (not the parent task's) */
+  statusOverride?: TaskStatus;
+  rejectionReason?: string;
+  approvalFeedback?: string;
+  submissions?: TaskDelegationSubmission[];
+  createdAt: Date;
+};
+
+interface UnifiedCursorData {
+  createdAt: string;
+  type: string;
+  taskId: string;
+  delegationId?: string;
+}
+
+export async function getUnifiedMyTasksForEmployee(
+  ctx: TaskRepoContext,
+  options: {
+    employeeUserId: string;
+    status?: TaskStatus[];
+    priority?: TaskPriority[];
+    cursor?: CursorInput;
+    search?: string;
+    subDepartmentId?: string;
+  },
+): Promise<
+  PaginatedArrayResult<UnifiedMyTaskItem> & {
+    fileHubAttachments: Attachment[];
+    metrics: {
+      pendingTasks: number;
+      completedTasks: number;
+      taskCompletionPercentage: number;
+    };
+  }
+> {
+  const [employeeRow] = await ctx.db
+    .select()
+    .from(employees)
+    .where(eq(employees.userId, options.employeeUserId))
+    .limit(1);
+
+  if (!employeeRow) {
+    const empty = await paginateEmpty(ctx, options.cursor);
+    return {
+      data: [],
+      meta: empty.meta,
+      fileHubAttachments: [],
+      metrics: {
+        pendingTasks: 0,
+        completedTasks: 0,
+        taskCompletionPercentage: 0,
+      },
+    };
+  }
+
+  const pageSize = options.cursor?.pageSize ?? 10;
+  const direction = options.cursor?.direction ?? 'next';
+  const cursor = options.cursor?.cursor;
+
+  const whereConditions: SQL[] = [eq(tasks.assigneeId, employeeRow.id)];
+  if (options.subDepartmentId) {
+    whereConditions.push(
+      eq(tasks.targetSubDepartmentId, options.subDepartmentId),
+    );
+  }
+  applyDepartmentTaskFilters(whereConditions, {
+    status: options.status,
+    priority: options.priority,
+    search: options.search,
+  });
+
+  const mergeLimit = 500;
+  const delegationWhere: SQL[] = [
+    eq(taskDelegations.assigneeId, employeeRow.id),
+  ];
+  if (options.status?.length) {
+    delegationWhere.push(
+      inArray(
+        taskDelegations.status,
+        options.status.map((s) => statusToDb(s)),
+      ),
+    );
+  }
+  const needsTaskJoin =
+    (options.search?.trim() && options.search.trim().length > 0) ||
+    (options.priority?.length ?? 0) > 0;
+
+  const delegationJoinWhere: SQL[] = [...delegationWhere];
+  if (options.priority?.length) {
+    delegationJoinWhere.push(
+      inArray(
+        tasks.priority,
+        options.priority.map((p) => priorityToDb(p)),
+      ),
+    );
+  }
+  if (options.search?.trim()) {
+    delegationJoinWhere.push(
+      or(
+        ilike(tasks.title, `%${options.search.trim()}%`),
+        ilike(tasks.description, `%${options.search.trim()}%`),
+      ) as SQL,
+    );
+  }
+
+  const [taskList, delegationRows] = await Promise.all([
+    fetchTasks(ctx, {
+      where: and(...whereConditions),
+      paginationParams: {
+        pageSize: mergeLimit,
+        direction: 'next',
+        cursor: undefined,
+        cursorData: null,
+        limit: mergeLimit + 1,
+      },
+    }),
+    needsTaskJoin
+      ? ctx.db
+          .select({ delegation: taskDelegations })
+          .from(taskDelegations)
+          .innerJoin(tasks, eq(taskDelegations.taskId, tasks.id))
+          .where(and(...delegationJoinWhere))
+          .then((rows) => rows.map((r) => r.delegation))
+      : ctx.db
+          .select()
+          .from(taskDelegations)
+          .where(and(...delegationWhere)),
+  ]);
+
+  const delegationTaskIds = [...new Set(delegationRows.map((d) => d.taskId))];
+  const tasksForDelegations =
+    delegationTaskIds.length > 0
+      ? await crud.findByIds(ctx, delegationTaskIds)
+      : [];
+  const taskMap = new Map(tasksForDelegations.map((t) => [t.id, t]));
+
+  const taskItems: UnifiedMyTaskItem[] = taskList.map((t) => ({
+    type: 'task' as const,
+    taskId: t.task.id,
+    task: t.task,
+    rejectionReason: t.submissions.find((s) => s.status === 'REJECTED')
+      ?.feedback,
+    approvalFeedback: t.submissions.find((s) => s.status === 'APPROVED')
+      ?.feedback,
+    createdAt: t.task.createdAt,
+  }));
+
+  const delegationItems: UnifiedMyTaskItem[] = delegationRows.map((row) => {
+    const task = taskMap.get(row.taskId);
+    return {
+      type: 'delegation' as const,
+      taskId: row.taskId,
+      delegationId: row.id,
+      task: task!,
+      statusOverride: delegationDbToStatus(row.status),
+      createdAt: row.createdAt,
+    };
+  });
+
+  const allItems = [...taskItems, ...delegationItems].sort(
+    (a, b) =>
+      b.createdAt.getTime() - a.createdAt.getTime() ||
+      (a.type === b.type ? 0 : a.type < b.type ? 1 : -1) ||
+      a.taskId.localeCompare(b.taskId) ||
+      0,
+  );
+
+  let cursorData: UnifiedCursorData | null = null;
+  if (cursor) {
+    try {
+      cursorData = decodeCursor<UnifiedCursorData>(cursor);
+    } catch {
+      cursorData = null;
+    }
+  }
+
+  const itemId = (i: UnifiedMyTaskItem) => i.delegationId ?? i.taskId;
+  let filtered = allItems;
+  if (cursorData) {
+    const cursorDate = new Date(cursorData.createdAt).getTime();
+    const cursorId = cursorData.delegationId ?? cursorData.taskId;
+    filtered = allItems.filter((item) => {
+      const itemDate = item.createdAt.getTime();
+      if (direction === 'next') {
+        return (
+          itemDate < cursorDate ||
+          (itemDate === cursorDate &&
+            (item.type > cursorData!.type ||
+              (item.type === cursorData!.type && itemId(item) > cursorId)))
+        );
+      } else {
+        return (
+          itemDate > cursorDate ||
+          (itemDate === cursorDate &&
+            (item.type < cursorData!.type ||
+              (item.type === cursorData!.type && itemId(item) < cursorId)))
+        );
+      }
+    });
+  }
+
+  const hasMore = filtered.length > pageSize;
+  const data = hasMore ? filtered.slice(0, pageSize) : filtered;
+  const lastItem = data[data.length - 1];
+  const firstItem = data[0];
+
+  const hasNextPage = direction === 'next' ? hasMore : !!cursor;
+  const hasPrevPage = direction === 'prev' ? hasMore : !!cursor;
+
+  const [pendingTasks] = await ctx.db
+    .select({ count: count(tasks.id) })
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.assigneeId, employeeRow.id),
+        sql`${tasks.status} <> 'completed'`,
+      ),
+    );
+  const [completedTasks] = await ctx.db
+    .select({ count: count(tasks.id) })
+    .from(tasks)
+    .where(
+      and(eq(tasks.assigneeId, employeeRow.id), eq(tasks.status, 'completed')),
+    );
+  const pendingDelegations = delegationRows.filter(
+    (d) => d.status !== 'completed',
+  ).length;
+  const completedDelegations = delegationRows.filter(
+    (d) => d.status === 'completed',
+  ).length;
+  const taskPending = pendingTasks?.count ?? 0;
+  const taskCompleted = completedTasks?.count ?? 0;
+  const delTotal = pendingDelegations + completedDelegations;
+  const taskTotal = taskPending + taskCompleted;
+  const totalItems = taskTotal + delTotal;
+  const totalPercentage =
+    totalItems > 0
+      ? ((taskCompleted + completedDelegations) / totalItems) * 100
+      : 0;
+
+  return {
+    data,
+    meta: {
+      nextCursor:
+        hasNextPage && lastItem
+          ? encodeCursor({
+              createdAt: lastItem.createdAt.toISOString(),
+              type: lastItem.type,
+              taskId: lastItem.taskId,
+              delegationId: lastItem.delegationId,
+            })
+          : undefined,
+      prevCursor:
+        hasPrevPage && firstItem
+          ? encodeCursor({
+              createdAt: firstItem.createdAt.toISOString(),
+              type: firstItem.type,
+              taskId: firstItem.taskId,
+              delegationId: firstItem.delegationId,
+            })
+          : undefined,
+      hasNextPage,
+      hasPrevPage,
+    },
+    fileHubAttachments: [],
+    metrics: {
+      pendingTasks: taskPending + pendingDelegations,
+      completedTasks: taskCompleted + completedDelegations,
+      taskCompletionPercentage: Math.floor(totalPercentage),
     },
   };
 }

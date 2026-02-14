@@ -87,18 +87,18 @@ export class TaskDelegation {
     this._assigneeId = value;
   }
 
-  get targetSubDepartment(): Department {
+  get targetSubDepartment(): Department | undefined {
     return this._targetSubDepartment;
   }
-  set targetSubDepartment(department: Department) {
+  set targetSubDepartment(department: Department | undefined) {
     this._targetSubDepartment = department;
   }
 
-  get targetSubDepartmentId(): string {
-    return this._targetSubDepartmentId.value;
+  get targetSubDepartmentId(): string | undefined {
+    return this._targetSubDepartmentId?.value;
   }
-  set targetSubDepartmentId(id: string) {
-    this._targetSubDepartmentId = UUID.create(id);
+  set targetSubDepartmentId(id: string | undefined) {
+    this._targetSubDepartmentId = id ? UUID.create(id) : undefined;
   }
 
   get delegator(): Supervisor {
@@ -158,7 +158,7 @@ export class TaskDelegation {
       assignee: this.assignee ? (typeof this.assignee["toJSON"] === "function" ? this.assignee.toJSON() : this.assignee) : undefined,
       assigneeId: this.assigneeId,
       targetSubDepartment: this.targetSubDepartment ? (typeof this.targetSubDepartment["toJSON"] === "function" ? this.targetSubDepartment.toJSON() : this.targetSubDepartment) : undefined,
-      targetSubDepartmentId: this.targetSubDepartmentId,
+      targetSubDepartmentId: this.targetSubDepartmentId ?? undefined,
       delegator: this.delegator ? (typeof this.delegator["toJSON"] === "function" ? this.delegator.toJSON() : this.delegator) : undefined,
       delegatorId: this.delegatorId,
       status: this.status,

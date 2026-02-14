@@ -345,6 +345,36 @@ export class DrizzleTaskRepository implements TaskRepository {
     return get.getTasksAndDelegationsForEmployee(this.ctx, options);
   }
 
+  async getUnifiedMyTasksForEmployee(options: {
+    employeeUserId: string;
+    status?: TaskStatus[];
+    priority?: TaskPriority[];
+    cursor?: CursorInput;
+    search?: string;
+    subDepartmentId?: string;
+  }): Promise<
+    PaginatedArrayResult<{
+      type: 'task' | 'delegation';
+      taskId: string;
+      delegationId?: string;
+      task: Task;
+      statusOverride?: TaskStatus;
+      rejectionReason?: string;
+      approvalFeedback?: string;
+      submissions?: TaskDelegationSubmission[];
+      createdAt: Date;
+    }> & {
+      fileHubAttachments: Attachment[];
+      metrics: {
+        pendingTasks: number;
+        completedTasks: number;
+        taskCompletionPercentage: number;
+      };
+    }
+  > {
+    return get.getUnifiedMyTasksForEmployee(this.ctx, options);
+  }
+
   async findTaskForReminder(taskId: string): Promise<Task | null> {
     return misc.findTaskForReminder(this.ctx, taskId);
   }

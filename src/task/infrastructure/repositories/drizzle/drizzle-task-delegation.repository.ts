@@ -35,7 +35,9 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
   private async toDomain(row: any): Promise<TaskDelegation> {
     const [task, targetSubDepartment, delegator, assignee] = await Promise.all([
       this.taskRepository.findById(row.taskId),
-      this.departmentRepository.findById(row.targetSubDepartmentId),
+      row.targetSubDepartmentId
+        ? this.departmentRepository.findById(row.targetSubDepartmentId)
+        : Promise.resolve(null),
       this.supervisorRepository.findById(row.delegatorId),
       row.assigneeId
         ? this.employeeRepository.findById(row.assigneeId)
@@ -46,7 +48,7 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
       throw new Error(`Task with id ${row.taskId} not found`);
     }
 
-    if (!targetSubDepartment) {
+    if (row.targetSubDepartmentId && !targetSubDepartment) {
       throw new Error(
         `Target sub-department with id ${row.targetSubDepartmentId} not found`,
       );
@@ -62,8 +64,8 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
       task: task,
       assignee: assignee ?? undefined,
       assigneeId: row.assigneeId ?? undefined,
-      targetSubDepartment: targetSubDepartment,
-      targetSubDepartmentId: row.targetSubDepartmentId,
+      targetSubDepartment: targetSubDepartment ?? undefined,
+      targetSubDepartmentId: row.targetSubDepartmentId ?? undefined,
       delegator: delegator,
       delegatorId: row.delegatorId,
       status: drizzleToDomainStatus(row.status),
@@ -88,7 +90,7 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
       id: taskDelegation.id.toString(),
       taskId: taskDelegation.taskId.toString(),
       assigneeId: taskDelegation.assigneeId ?? null,
-      targetSubDepartmentId: taskDelegation.targetSubDepartmentId.toString(),
+      targetSubDepartmentId: taskDelegation.targetSubDepartmentId ?? null,
       delegatorId: taskDelegation.delegatorId.toString(),
       status: domainToDrizzleStatus(taskDelegation.status),
       assignmentType: mapDomainAssignmentTypeToDrizzleAssignmentType(

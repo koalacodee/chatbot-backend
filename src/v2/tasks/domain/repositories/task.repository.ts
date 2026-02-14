@@ -248,6 +248,34 @@ export abstract class TaskRepository {
     }
   >;
 
+  abstract getUnifiedMyTasksForEmployee(options: {
+    employeeUserId: string;
+    status?: TaskStatus[];
+    priority?: TaskPriority[];
+    cursor?: CursorInput;
+    search?: string;
+    subDepartmentId?: string;
+  }): Promise<
+    PaginatedArrayResult<{
+      type: 'task' | 'delegation';
+      taskId: string;
+      delegationId?: string;
+      task: Task;
+      statusOverride?: TaskStatus;
+      rejectionReason?: string;
+      approvalFeedback?: string;
+      submissions?: TaskDelegationSubmission[];
+      createdAt: Date;
+    }> & {
+      fileHubAttachments: Attachment[];
+      metrics: {
+        pendingTasks: number;
+        completedTasks: number;
+        taskCompletionPercentage: number;
+      };
+    }
+  >;
+
   // Database-level filtering for reminder processing
   abstract findTaskForReminder(taskId: string): Promise<Task | null>;
 

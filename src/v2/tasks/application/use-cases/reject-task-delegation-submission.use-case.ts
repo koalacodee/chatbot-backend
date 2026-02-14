@@ -66,7 +66,24 @@ export class RejectTaskDelegationSubmissionUseCase {
       });
     }
 
-    const delegation = submission.delegation;
+    let delegation = submission.delegation;
+    if (!delegation) {
+      const loaded = await this.taskDelegationRepo.findById(
+        submission.delegationId,
+      );
+      if (!loaded) {
+        throw new NotFoundException({
+          details: [
+            {
+              field: 'submissionId',
+              message: 'Delegation not found for this submission',
+            },
+          ],
+        });
+      }
+      delegation = loaded;
+      submission.delegation = delegation;
+    }
 
     const { reviewer, reviewerType } = await this.resolveReviewer(
       dto.reviewerId,

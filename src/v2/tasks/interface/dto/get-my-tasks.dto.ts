@@ -13,7 +13,7 @@ import {
 } from '../../domain/entities/task.entity';
 import { TaskResponseDto } from './create-task.dto';
 import { AttachmentResponseDto } from './get-all-tasks.dto';
-import { DelegateTaskResponseDto } from './delegate-task.dto';
+import { TaskDelegationSubmissionResponseDto } from './get-my-delegations.dto';
 import { CursorDto } from './cursor.dto';
 // ──────────────────────────────────────────────
 // Request
@@ -60,6 +60,33 @@ export class MyTaskItemResponseDto {
   approvalFeedback?: string;
 }
 
+export class UnifiedMyTaskItemDto {
+  @Expose()
+  type: 'task' | 'delegation';
+
+  @Expose()
+  taskId: string;
+
+  @Expose()
+  delegationId?: string;
+
+  @Expose()
+  @ValidateNested()
+  @Type(() => TaskResponseDto)
+  task: TaskResponseDto;
+
+  @Expose()
+  rejectionReason?: string;
+
+  @Expose()
+  approvalFeedback?: string;
+
+  @Expose()
+  @ValidateNested({ each: true })
+  @Type(() => TaskDelegationSubmissionResponseDto)
+  submissions?: TaskDelegationSubmissionResponseDto[];
+}
+
 export class MyTasksMetricsResponseDto {
   @Expose()
   pendingTasks: number;
@@ -74,16 +101,11 @@ export class MyTasksMetricsResponseDto {
 export class GetMyTasksResponseDto {
   @Expose()
   @ValidateNested({ each: true })
-  @Type(() => MyTaskItemResponseDto)
-  data: MyTaskItemResponseDto[];
+  @Type(() => UnifiedMyTaskItemDto)
+  data: UnifiedMyTaskItemDto[];
 
   @Expose()
   meta: any;
-
-  @Expose()
-  @ValidateNested({ each: true })
-  @Type(() => DelegateTaskResponseDto)
-  delegations?: DelegateTaskResponseDto[];
 
   @Expose()
   @ValidateNested({ each: true })
