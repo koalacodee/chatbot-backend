@@ -393,14 +393,9 @@ export const attachmentGroups = pgTable(
     name: varchar({ length: 255 }).notNull().default('Unnamed'),
     key: varchar({ length: 255 }).notNull(),
     ips: varchar({ length: 255 }).array(),
-    createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp('updated_at', {
-      precision: 3,
-      mode: 'string',
-    }).notNull(),
-    expiresAt: timestamp('expires_at', { precision: 3, mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+    expiresAt: timestamp('expires_at', { mode: 'date' }),
   },
   (table) => [
     index('attachment_groups_created_by_id_idx').using(
@@ -2043,12 +2038,9 @@ export const attachmentGroupMembers = pgTable(
     attachmentGroupId: uuid('attachment_group_id').notNull(),
     memberId: varchar('member_id', { length: 255 }).notNull(),
     name: varchar('name', { length: 255 }).notNull(),
-    createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp('updated_at', { precision: 3, mode: 'string' })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+    departmentId: uuid('department_id').references(() => departments.id),
   },
   (table) => [
     index('attachment_group_members_attachment_group_id_idx').using(
@@ -2059,10 +2051,17 @@ export const attachmentGroupMembers = pgTable(
       'btree',
       table.memberId.asc().nullsLast().op('uuid_ops'),
     ),
+    index().on(table.departmentId),
     foreignKey({
       columns: [table.attachmentGroupId],
       foreignColumns: [attachmentGroups.id],
       name: 'attachment_group_members_attachment_group_id_fkey',
+    })
+      .onUpdate('cascade')
+      .onDelete('cascade'),
+    foreignKey({
+      columns: [table.departmentId],
+      foreignColumns: [departments.id],
     })
       .onUpdate('cascade')
       .onDelete('cascade'),
