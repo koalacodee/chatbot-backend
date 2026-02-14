@@ -30,6 +30,7 @@ export class DrizzleMemberRepository extends MemberRepository {
       name: record.name,
       createdAt: record.createdAt ? new Date(record.createdAt) : new Date(),
       updatedAt: record.updatedAt ? new Date(record.updatedAt) : new Date(),
+      departmentId: record.departmentId ?? undefined,
     });
   }
 
@@ -39,8 +40,9 @@ export class DrizzleMemberRepository extends MemberRepository {
       attachmentGroupId: member.attachmentGroupId.value,
       memberId: member.memberId.value,
       name: member.name,
-      createdAt: member.createdAt.toISOString(),
-      updatedAt: member.updatedAt.toISOString(),
+      createdAt: member.createdAt,
+      updatedAt: member.updatedAt,
+      departmentId: member.departmentId?.value ?? null,
     };
 
     await this.db
@@ -51,7 +53,8 @@ export class DrizzleMemberRepository extends MemberRepository {
         set: {
           name: data.name,
           memberId: data.memberId,
-          updatedAt: new Date().toISOString(),
+          departmentId: data.departmentId,
+          updatedAt: new Date(),
         },
       });
 
@@ -137,6 +140,10 @@ export class DrizzleMemberRepository extends MemberRepository {
       updateData.attachmentGroupId = update.attachmentGroupId;
     }
 
+    if (update.departmentId !== undefined) {
+      updateData.departmentId = update.departmentId ?? null;
+    }
+
     await this.db
       .update(attachmentGroupMembers)
       .set(updateData)
@@ -173,6 +180,7 @@ export class DrizzleMemberRepository extends MemberRepository {
         name: member.attachment_group_members.name,
         createdAt: new Date(member.attachment_group_members.createdAt),
         updatedAt: new Date(member.attachment_group_members.updatedAt),
+        departmentId: member.attachment_group_members.departmentId ?? undefined,
         attachmentGroup: AttachmentGroup.create({
           id: member.attachment_groups.id,
           key: member.attachment_groups.key,

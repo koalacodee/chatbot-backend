@@ -9,6 +9,7 @@ export interface AttachmentGroupMemberProps {
   name: string;
   createdAt?: Date;
   updatedAt?: Date;
+  departmentId?: string | null;
 }
 
 export class AttachmentGroupMember {
@@ -19,6 +20,7 @@ export class AttachmentGroupMember {
   private _name: string;
   private _createdAt: Date;
   private _updatedAt: Date;
+  private _departmentId: UUID | null;
 
   private constructor(props: AttachmentGroupMemberProps) {
     this._id = UUID.create(props.id);
@@ -28,6 +30,9 @@ export class AttachmentGroupMember {
     this._name = props.name;
     this._createdAt = props.createdAt ?? new Date();
     this._updatedAt = props.updatedAt ?? new Date();
+    this._departmentId = props.departmentId
+      ? UUID.create(props.departmentId)
+      : null;
   }
 
   public static create(
@@ -50,6 +55,10 @@ export class AttachmentGroupMember {
 
   public get memberId(): UUID {
     return this._memberId;
+  }
+
+  public get departmentId(): UUID | null {
+    return this._departmentId;
   }
 
   public get name(): string {
@@ -88,15 +97,20 @@ export class AttachmentGroupMember {
     this._createdAt = createdAt;
   }
 
+  public set departmentId(value: UUID | null) {
+    this._departmentId = value;
+  }
+
   toJSON() {
     return {
       id: this._id.value,
       attachmentGroupId: this._attachmentGroupId.value,
-      attachmentGroup: this._attachmentGroup.toJSON(),
+      attachmentGroup: this._attachmentGroup?.toJSON?.() ?? null,
       memberId: this._memberId.value,
       name: this._name,
       createdAt: this._createdAt,
       updatedAt: this._updatedAt,
+      departmentId: this._departmentId?.value ?? null,
     };
   }
 }
