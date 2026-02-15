@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsBoolean } from 'class-validator';
 import { DepartmentVisibility } from '../../../domain/entities/department.entity';
 
 export class CreateDepartmentInputDto {
@@ -7,6 +7,10 @@ export class CreateDepartmentInputDto {
 
   @IsEnum(DepartmentVisibility)
   visibility: DepartmentVisibility;
+
+  @IsOptional()
+  @IsBoolean()
+  isExposedToTvContent?: boolean;
 
   @IsOptional()
   @IsString()

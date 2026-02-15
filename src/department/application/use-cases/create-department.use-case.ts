@@ -10,6 +10,7 @@ import { DepartmentKnowledgeEvent } from '../../domain/events/department-knowled
 interface CreateDepartmentDto {
   name: string;
   visibility?: DepartmentVisibility;
+  isExposedToTvContent?: boolean;
   knowledgeChunkContent?: string;
 }
 
@@ -24,6 +25,7 @@ export class CreateDepartmentUseCase {
     const department = Department.create({
       name: dto.name,
       visibility: dto.visibility,
+      isExposedToTvContent: dto.isExposedToTvContent,
     });
     const savedDept = await this.departmentRepo.save(department);
     if (dto.knowledgeChunkContent) {

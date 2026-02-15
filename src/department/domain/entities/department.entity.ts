@@ -16,6 +16,7 @@ interface ConstructDepartmentOptions {
   knowledgeChunks?: KnowledgeChunk[];
   subDepartments?: Department[];
   parent?: Department;
+  isExposedToTvContent?: boolean;
 }
 
 export class Department {
@@ -27,7 +28,7 @@ export class Department {
   private _knowledgeChunks: KnowledgeChunk[];
   private _subDepartments?: Department[];
   private _parent?: Department;
-
+  private _isExposedToTvContent?: boolean;
   constructor({
     id,
     name,
@@ -37,6 +38,7 @@ export class Department {
     knowledgeChunks,
     subDepartments,
     parent,
+    isExposedToTvContent,
   }: ConstructDepartmentOptions) {
     this._id = UUID.create(id);
     this._name = name;
@@ -46,6 +48,7 @@ export class Department {
     this._knowledgeChunks = knowledgeChunks || [];
     this._subDepartments = subDepartments || [];
     this._parent = parent;
+    this._isExposedToTvContent = isExposedToTvContent;
   }
 
   // Getters
@@ -81,6 +84,10 @@ export class Department {
     return this._parent;
   }
 
+  get isExposedToTvContent(): boolean {
+    return this._isExposedToTvContent ?? false;
+  }
+
   // Setters
   set name(newName: string) {
     this._name = newName;
@@ -108,6 +115,10 @@ export class Department {
 
   set parent(parent: Department) {
     this._parent = parent;
+  }
+
+  set isExposedToTvContent(newIsExposedToTvContent: boolean) {
+    this._isExposedToTvContent = newIsExposedToTvContent;
   }
 
   // Utility methods
@@ -163,16 +174,24 @@ export class Department {
     subDepartments: any[];
     parent: any;
     parentId: string;
+    isExposedToTvContent: boolean;
   } {
     return {
       id: this._id?.toString(),
       name: this._name,
       visibility: this._visibility,
-      questions: this._questions?.map((q) => typeof q?.toJSON === 'function' ? q.toJSON() : q),
+      questions: this._questions?.map((q) =>
+        typeof q?.toJSON === 'function' ? q.toJSON() : q,
+      ),
       parentId: this._parentId?.toString(),
-      knowledgeChunks: this._knowledgeChunks?.map((kc) => typeof kc?.toJSON === 'function' ? kc.toJSON() : kc),
-      subDepartments: this._subDepartments?.map((d) => typeof d?.toJSON === 'function' ? d.toJSON() : d),
+      knowledgeChunks: this._knowledgeChunks?.map((kc) =>
+        typeof kc?.toJSON === 'function' ? kc.toJSON() : kc,
+      ),
+      subDepartments: this._subDepartments?.map((d) =>
+        typeof d?.toJSON === 'function' ? d.toJSON() : d,
+      ),
       parent: this._parent?.toJSON(),
+      isExposedToTvContent: this._isExposedToTvContent ?? false,
     };
   }
 

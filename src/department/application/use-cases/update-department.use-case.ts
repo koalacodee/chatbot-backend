@@ -8,6 +8,7 @@ import {
 interface UpdateDepartmentDto {
   name?: string;
   visibility?: DepartmentVisibility;
+  isExposedToTvContent?: boolean;
 }
 
 @Injectable()

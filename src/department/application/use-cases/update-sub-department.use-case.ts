@@ -8,6 +8,7 @@ import { Roles } from 'src/shared/value-objects/role.vo';
 export interface UpdateSubDepartmentInput {
   name?: string;
   parentId?: string;
+  isExposedToTvContent?: boolean;
 }
 
 @Injectable()
@@ -58,6 +59,7 @@ export class UpdateSubDepartmentUseCase {
 
     const updateData: Partial<Department> = {
       name: input.name,
+      isExposedToTvContent: input.isExposedToTvContent,
     };
 
     if (input.parentId) {

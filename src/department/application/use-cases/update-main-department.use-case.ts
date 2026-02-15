@@ -11,6 +11,7 @@ import { Roles } from 'src/shared/value-objects/role.vo';
 export interface UpdateMainDepartmentInput {
   name?: string;
   visibility?: string;
+  isExposedToTvContent?: boolean;
 }
 
 @Injectable()
@@ -57,6 +58,7 @@ export class UpdateMainDepartmentUseCase {
       visibility: input.visibility
         ? (input.visibility as DepartmentVisibility)
         : undefined,
+      isExposedToTvContent: input.isExposedToTvContent,
     };
     if (input.visibility) {
       await this.departmentRepository.updateDepartmentVisibilityByParentId(

@@ -81,6 +81,7 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
       name: department.name,
       parentId: department.parentId?.toString() ?? null,
       visibility: mapToDrizzleDepartmentVisibility(department.visibility),
+      isExposedToTvContent: department.isExposedToTvContent ?? false,
       updatedAt: new Date(),
     };
 
@@ -93,6 +94,7 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
           name: departmentData.name,
           parentId: departmentData.parentId?.toString() ?? null,
           visibility: departmentData.visibility,
+          isExposedToTvContent: departmentData.isExposedToTvContent,
           updatedAt: departmentData.updatedAt,
         },
       })
@@ -232,6 +234,10 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
       updateData.parentId = update.parentId.toString() ?? null;
     }
 
+    if (update.isExposedToTvContent !== undefined) {
+      updateData.isExposedToTvContent = update.isExposedToTvContent;
+    }
+
     updateData.updatedAt = new Date();
 
     const result = await this.db
@@ -273,6 +279,9 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
     if (update.name) data.name = update.name;
     if (update.parent) {
       data.parentId = update.parent.id.toString();
+    }
+    if (update.isExposedToTvContent !== undefined) {
+      data.isExposedToTvContent = update.isExposedToTvContent;
     }
 
     const [updated] = await this.db
@@ -660,6 +669,7 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
             id: departments.id,
             name: departments.name,
             visibility: departments.visibility,
+            isExposedToTvContent: departments.isExposedToTvContent,
             createdAt: departments.createdAt,
             updatedAt: departments.updatedAt,
             parentId: departments.parentId,
@@ -748,12 +758,18 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
       name: row.department.name,
       visibility: mapToDepartmentVisibility(row.department.visibility),
       parentId: row.department.parentId ?? undefined,
+      isExposedToTvContent:
+        (row.department as { isExposedToTvContent?: boolean })
+          ?.isExposedToTvContent ?? false,
       subDepartments: row.subDepartments?.map((subDepartment) =>
         Department.create({
           id: subDepartment.id,
           name: subDepartment.name,
           visibility: mapToDepartmentVisibility(subDepartment.visibility),
           parentId: subDepartment.parentId ?? undefined,
+          isExposedToTvContent:
+            (subDepartment as { isExposedToTvContent?: boolean })
+              ?.isExposedToTvContent ?? false,
         }),
       ),
       parent: row.parent
@@ -762,6 +778,9 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
             name: row.parent.name,
             visibility: mapToDepartmentVisibility(row.parent.visibility),
             parentId: row.parent.parentId ?? undefined,
+            isExposedToTvContent:
+              (row.parent as { isExposedToTvContent?: boolean })
+                ?.isExposedToTvContent ?? false,
           })
         : undefined,
     });
@@ -842,6 +861,7 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
             id: employeeSubDepartments.departmentId,
             name: departments.name,
             visibility: departments.visibility,
+            isExposedToTvContent: departments.isExposedToTvContent,
             parentId: departments.parentId,
             createdAt: departments.createdAt,
             updatedAt: departments.updatedAt,

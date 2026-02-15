@@ -22,7 +22,8 @@ export class CreateSubDepartmentUseCase {
       name: dto.name,
       parent,
       visibility: parent.visibility,
-      parentId: dto.parentId
+      isExposedToTvContent: parent.isExposedToTvContent,
+      parentId: dto.parentId,
     });
 
     await this.departmentRepo.save(subDept, { includeParent: true });
