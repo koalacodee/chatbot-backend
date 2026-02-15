@@ -64,6 +64,13 @@
       "when": 1771083722428,
       "tag": "0009_organic_firebird",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771155106072,
+      "tag": "0010_rare_warpath",
+      "breakpoints": true
     }
   ]
 }

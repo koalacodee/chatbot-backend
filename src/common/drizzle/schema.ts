@@ -185,6 +185,9 @@ export const departments = pgTable(
       .notNull()
       .defaultNow(),
     visibility: departmentVisibility().default('public').notNull(),
+    isExposedToTvContent: boolean('is_exposed_to_tv_content')
+      .default(false)
+      .notNull(),
   },
   (table) => [
     index('departments_parent_id_idx').using(
