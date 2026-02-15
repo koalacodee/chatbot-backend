@@ -9,6 +9,7 @@ export type AvailableDepartmentsResponse =
       mainDepartments: Array<{
         id: string;
         name: string;
+        includeMainAsOption?: boolean;
         subDepartments: Array<{ id: string; name: string }>;
       }>;
     }
@@ -35,10 +36,32 @@ export class GetAvailableDepartmentsForMemberUseCase {
         });
       const mainDepts = allDepartments.filter((d) => !d.parentId);
       const subDepts = allDepartments.filter((d) => d.parentId);
+      const mainDeptIds = new Set(mainDepts.map((m) => m.id.toString()));
 
-      const mainDepartments = mainDepts.map((main) => ({
+      const orphanedParentIds = [
+        ...new Set(
+          subDepts
+            .filter(
+              (sub) =>
+                sub.parentId &&
+                !mainDeptIds.has(sub.parentId.toString()),
+            )
+            .map((sub) => sub.parentId!.toString()),
+        ),
+      ];
+
+      let orphanParents: Awaited<
+        ReturnType<DepartmentRepository['findByIds']>
+      > = [];
+      if (orphanedParentIds.length > 0) {
+        orphanParents =
+          await this.departmentRepository.findByIds(orphanedParentIds);
+      }
+
+      const exposedMains = mainDepts.map((main) => ({
         id: main.id.toString(),
         name: main.name,
+        includeMainAsOption: true,
         subDepartments: subDepts
           .filter(
             (sub) => sub.parentId?.toString() === main.id.toString(),
@@ -48,6 +71,22 @@ export class GetAvailableDepartmentsForMemberUseCase {
             name: sub.name,
           })),
       }));
+
+      const orphanMainGroups = orphanParents.map((parent) => ({
+        id: parent.id.toString(),
+        name: parent.name,
+        includeMainAsOption: false,
+        subDepartments: subDepts
+          .filter(
+            (sub) => sub.parentId?.toString() === parent.id.toString(),
+          )
+          .map((sub) => ({
+            id: sub.id.toString(),
+            name: sub.name,
+          })),
+      }));
+
+      const mainDepartments = [...exposedMains, ...orphanMainGroups];
 
       return { role: 'admin', mainDepartments };
     }
