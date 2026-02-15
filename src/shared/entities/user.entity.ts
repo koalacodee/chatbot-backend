@@ -15,7 +15,7 @@ export interface UserOptions {
   name: string;
   email: string;
   username: string;
-  password: string;
+  password?: string;
   role: Roles;
   employeeId?: string;
   jobTitle?: string;
@@ -47,7 +47,7 @@ export class User {
     name: string,
     email: Email,
     username: string,
-    password: Password,
+    password: Password | undefined,
     role: Role,
     employeeId?: string,
     jobTitle?: string,
@@ -77,9 +77,13 @@ export class User {
     hashPassword: boolean = true,
   ): Promise<User> {
     const email = Email.create(options.email);
-    const password = hashPassword
-      ? await Password.fromPlain(options.password)
-      : Password.fromHash(options.password);
+    const password = options.password
+      ? hashPassword
+        ? await Password.fromPlain(options.password)
+        : Password.fromHash(options.password)
+      : undefined;
+    console.log('The Fucking User Role', options.role);
+
     const role = Role.create(options.role);
 
     return new User(
@@ -116,7 +120,7 @@ export class User {
     return this._username;
   }
 
-  get password(): Password {
+  get password(): Password | undefined {
     return this._password;
   }
 

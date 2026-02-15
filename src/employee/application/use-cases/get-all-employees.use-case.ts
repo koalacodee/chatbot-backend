@@ -31,19 +31,30 @@ export class GetAllEmployeesUseCase {
         const supervisor = await this.supervisorRepository.findByUserId(userId);
 
         // Get employees that are directly supervised by this supervisor
-        employees = await this.employeeRepository.findBySupervisorIds([
-          supervisor.id.toString(),
-        ]);
+        employees = await this.employeeRepository.findBySupervisorIds(
+          [supervisor.id.toString()],
+          undefined,
+          { includeUser: true, includeSubDepartments: true },
+        );
       } else if (userRole === Roles.ADMIN) {
         // Admins see all employees
-        employees = await this.employeeRepository.findAll();
+        employees = await this.employeeRepository.findAll({
+          includeUser: true,
+          includeSubDepartments: true,
+        });
       } else {
         // Employees typically shouldn't access this endpoint, but if they do, show all for now
-        employees = await this.employeeRepository.findAll();
+        employees = await this.employeeRepository.findAll({
+          includeUser: true,
+          includeSubDepartments: true,
+        });
       }
     } else {
       // No userId provided, return all employees
-      employees = await this.employeeRepository.findAll();
+      employees = await this.employeeRepository.findAll({
+        includeUser: true,
+        includeSubDepartments: true,
+      });
     }
 
     // Get all user IDs from employees

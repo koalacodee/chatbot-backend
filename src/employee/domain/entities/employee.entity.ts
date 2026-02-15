@@ -1,5 +1,5 @@
 import { Question } from 'src/questions/domain/entities/question.entity';
-import { User } from 'src/shared/entities/user.entity';
+import { User, UserOptions } from 'src/shared/entities/user.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
@@ -62,14 +62,14 @@ export class Employee {
   }
 
   static async create(
-    props: Omit<EmployeeProps, 'user'> & { user?: any },
+    props: Omit<EmployeeProps, 'user'> & { user?: UserOptions | User },
   ): Promise<Employee> {
-    props.user = props.user
+    const user = props.user
       ? props.user instanceof User
         ? props.user
         : await User.create(props.user)
       : undefined;
-    return new Employee(props);
+    return new Employee({ ...props, user });
   }
 
   get id(): UUID {

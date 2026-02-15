@@ -7,7 +7,7 @@ export type EmployeeQueryOptions = {
 export abstract class EmployeeRepository {
   abstract save(employee: Employee): Promise<Employee>;
   abstract findById(id: string, options?: EmployeeQueryOptions): Promise<Employee | null>;
-  abstract findAll(): Promise<Employee[]>;
+  abstract findAll(options?: EmployeeQueryOptions): Promise<Employee[]>;
   abstract removeById(id: string): Promise<Employee | null>;
 
   abstract findByIds(ids: string[]): Promise<Employee[]>;
@@ -18,6 +18,7 @@ export abstract class EmployeeRepository {
   abstract findBySupervisorIds(
     supervisorIds: string[],
     permissions?: EmployeePermissionsEnum[],
+    options?: EmployeeQueryOptions,
   ): Promise<Employee[]>;
   abstract findBySubDepartment(id: string): Promise<Employee[]>;
   abstract canDeleteEmployee(id: string): Promise<boolean>;

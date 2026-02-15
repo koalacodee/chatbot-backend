@@ -5,7 +5,10 @@ import {
   Employee,
   EmployeePermissionsEnum,
 } from '../../domain/entities/employee.entity';
-import { EmployeeRepository } from '../../domain/repositories/employee.repository';
+import {
+  EmployeeQueryOptions,
+  EmployeeRepository,
+} from '../../domain/repositories/employee.repository';
 import { Department } from 'src/department/domain/entities/department.entity';
 import { User } from 'src/shared/entities/user.entity';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
@@ -104,7 +107,7 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
     return emp ? this.toDomain(emp) : null;
   }
 
-  async findAll(): Promise<Employee[]> {
+  async findAll(_options?: EmployeeQueryOptions): Promise<Employee[]> {
     const items = await this.prisma.employee.findMany({
       include: {
         subDepartments: {
@@ -321,6 +324,7 @@ export class PrismaEmployeeRepository extends EmployeeRepository {
   async findBySupervisorIds(
     supervisorIds: string[],
     permissions?: EmployeePermissionsEnum[],
+    _options?: EmployeeQueryOptions,
   ): Promise<Employee[]> {
     const items = await this.prisma.employee.findMany({
       where: {

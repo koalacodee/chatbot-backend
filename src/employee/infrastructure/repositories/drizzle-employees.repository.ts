@@ -45,6 +45,8 @@ import { Injectable } from '@nestjs/common';
 type DrizzleUserRole = (typeof users.$inferSelect)['role'];
 
 function mapToUserRole(role: DrizzleUserRole): Roles {
+  console.log('Th Fucking User Role', role);
+
   switch (role) {
     case 'supervisor':
       return Roles.SUPERVISOR;
@@ -519,7 +521,7 @@ export class DrizzleEmployeeRepository implements EmployeeRepository {
     });
   }
 
-  private mapToEmployeeWithRelations(
+  private async mapToEmployeeWithRelations(
     row: {
       employees: typeof employees.$inferSelect;
       users?: typeof users.$inferSelect | null;
@@ -528,13 +530,13 @@ export class DrizzleEmployeeRepository implements EmployeeRepository {
     subDepartments?: (typeof departments.$inferSelect)[],
   ): Promise<Employee> {
     const user = row.users
-      ? User.create({
+      ? await User.create({
           id: row.users.id,
           name: row.users.name,
           email: row.users.email,
           username: row.users.username,
           password: row.users.password,
-          role: mapToUserRole(row.users.role),
+          role: Roles.EMPLOYEE,
           employeeId: row.users.employeeId ?? undefined,
           jobTitle: row.users.jobTitle ?? undefined,
         })
