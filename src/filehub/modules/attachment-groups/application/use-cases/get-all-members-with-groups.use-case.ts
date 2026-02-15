@@ -61,6 +61,7 @@ export class GetAllMembersWithGroupsUseCase {
         await this.departmentRepository.getSupervisorDepartments({
           supervisorIdOrUserId: { supervisorUserId: userId },
           fullDepartment: false,
+          onlyExposedToTvContent: true,
         });
       departmentIds = depts.map((d) => d.id);
     } else if (userRole === Roles.EMPLOYEE) {
@@ -68,6 +69,7 @@ export class GetAllMembersWithGroupsUseCase {
         await this.departmentRepository.getEmployeeSubDepartments(
           { employeeUserId: userId },
           false,
+          { onlyExposedToTvContent: true },
         );
       departmentIds = subDepts.map((d) => d.id);
     } else {

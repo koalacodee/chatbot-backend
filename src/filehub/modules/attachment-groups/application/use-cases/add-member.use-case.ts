@@ -1,9 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { MemberRepository } from '../../domain/repositories/member.repository';
+import { DepartmentRepository } from '@/department/domain/repositories/department.repository';
 import { AttachmentGroupMemberGateway } from '../../interface/websocket/member.gateway';
 import { RedisService } from 'src/shared/infrastructure/redis';
 import { AttachmentGroupMember } from '../../domain/entities/member.entity';
-import { randomBytes, randomInt } from 'crypto';
+import { randomBytes } from 'crypto';
 import { AttachmentGroupRepository } from '../../domain/repositories/attachment-group.repository';
 export interface AddMemberUseCaseInput {
   otp: string;
@@ -16,6 +21,7 @@ export interface AddMemberUseCaseInput {
 export class AddMemberUseCase {
   constructor(
     private readonly memberRepository: MemberRepository,
+    private readonly departmentRepository: DepartmentRepository,
     private readonly attachmentGroupMemberGateway: AttachmentGroupMemberGateway,
     private readonly attachmentGroupRepository: AttachmentGroupRepository,
     private readonly redisService: RedisService,
@@ -37,6 +43,19 @@ export class AddMemberUseCase {
 
     if (!attachmentGroup) {
       throw new Error('Attachment group not found');
+    }
+
+    if (departmentId) {
+      const department =
+        await this.departmentRepository.findById(departmentId);
+      if (!department) {
+        throw new NotFoundException('Department not found');
+      }
+      if (!department.isExposedToTvContent) {
+        throw new BadRequestException(
+          'Department must have TV content exposure enabled to be assigned',
+        );
+      }
     }
 
     const member = AttachmentGroupMember.create({

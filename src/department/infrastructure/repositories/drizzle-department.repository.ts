@@ -646,6 +646,7 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
     supervisorIdOrUserId: SupervisorIdOrUserId;
     fullDepartment: T;
     onlySubDepartments?: boolean;
+    onlyExposedToTvContent?: boolean;
   }): Promise<T extends true ? Department[] : { id: string }[]> {
     const supervisorId = await this._getSupervisorId(
       options.supervisorIdOrUserId,
@@ -655,6 +656,7 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
       supervisorId,
       options.fullDepartment,
       options.onlySubDepartments,
+      options.onlyExposedToTvContent,
     )) as T extends true ? Department[] : { id: string }[];
   }
 
@@ -662,7 +664,15 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
     supervisorId: string,
     fullDepartment: T = true as T,
     onlySubDepartments?: boolean,
+    onlyExposedToTvContent?: boolean,
   ): Promise<T extends true ? Department[] : { id: string }[]> {
+    const mainWhereConditions = [
+      eq(departmentToSupervisor.supervisorId, supervisorId),
+      isNull(departments.parentId),
+    ];
+    if (onlyExposedToTvContent) {
+      mainWhereConditions.push(eq(departments.isExposedToTvContent, true));
+    }
     const mainDepartments: Department[] | { id: string }[] = fullDepartment
       ? await this.db
           .select({
@@ -679,12 +689,7 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
             departments,
             eq(departmentToSupervisor.departmentId, departments.id),
           )
-          .where(
-            and(
-              eq(departmentToSupervisor.supervisorId, supervisorId),
-              isNull(departments.parentId),
-            ),
-          )
+          .where(and(...mainWhereConditions))
           .then((mainDepartments) =>
             mainDepartments.map((d) =>
               this.mapToDepartment({
@@ -692,41 +697,61 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
               }),
             ),
           )
-      : await this.db
-          .select({ id: departmentToSupervisor.departmentId })
-          .from(departmentToSupervisor)
-          .where(eq(departmentToSupervisor.supervisorId, supervisorId));
+      : onlyExposedToTvContent
+        ? await this.db
+            .select({ id: departmentToSupervisor.departmentId })
+            .from(departmentToSupervisor)
+            .innerJoin(
+              departments,
+              eq(departmentToSupervisor.departmentId, departments.id),
+            )
+            .where(
+              and(
+                eq(departmentToSupervisor.supervisorId, supervisorId),
+                eq(departments.isExposedToTvContent, true),
+              ),
+            )
+        : await this.db
+            .select({ id: departmentToSupervisor.departmentId })
+            .from(departmentToSupervisor)
+            .where(eq(departmentToSupervisor.supervisorId, supervisorId));
 
+    const subDeptParentIds = mainDepartments.map((d: Department | { id: string }) =>
+      d.id.toString(),
+    );
+    const subDeptWhereConditions =
+      subDeptParentIds.length > 0
+        ? [
+            inArray(departments.parentId, subDeptParentIds),
+            ...(onlyExposedToTvContent
+              ? [eq(departments.isExposedToTvContent, true)]
+              : []),
+          ]
+        : [];
     const subDepartments: Department[] | { id: string }[] = fullDepartment
-      ? await this.db
-          .select()
-          .from(departments)
-          .where(
-            inArray(
-              departments.parentId,
-              mainDepartments.map((d: Department | { id: string }) =>
-                d.id.toString(),
+      ? subDeptParentIds.length === 0
+        ? []
+        : await this.db
+            .select()
+            .from(departments)
+            .where(and(...subDeptWhereConditions))
+            .then((rows) =>
+              rows.map((d) =>
+                this.mapToDepartment({
+                  department: d,
+                }),
               ),
-            ),
-          )
-          .then((subDepartments) =>
-            subDepartments.map((d) =>
-              this.mapToDepartment({
-                department: d,
-              }),
-            ),
-          )
-      : await this.db
-          .select({ id: departments.id })
-          .from(departments)
-          .where(
-            inArray(
-              departments.parentId,
-              mainDepartments.map((d: Department | { id: string }) =>
-                d.id.toString(),
-              ),
-            ),
-          );
+            )
+      : subDeptParentIds.length === 0
+        ? []
+        : await this.db
+            .select({ id: departments.id })
+            .from(departments)
+            .where(
+              subDeptWhereConditions.length > 0
+                ? and(...subDeptWhereConditions)
+                : sql`false`,
+            );
 
     return (
       fullDepartment
@@ -829,12 +854,14 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
   async getEmployeeSubDepartments<T extends boolean>(
     employeeIdOrUserId: EmployeeIdOrUserId,
     fullSubDepartment: T = true as T,
+    options?: { onlyExposedToTvContent?: boolean },
   ): Promise<T extends true ? Department[] : { id: string }[]> {
     const employeeId = await this._getEmployeeId(employeeIdOrUserId);
     if (!employeeId) return [];
     return (await this._getEmployeeSubDepartments(
       employeeId,
       fullSubDepartment,
+      options?.onlyExposedToTvContent,
     )) as T extends true ? Department[] : { id: string }[];
   }
 
@@ -854,7 +881,15 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
   private async _getEmployeeSubDepartments<T extends boolean>(
     employeeId: string,
     fullSubDepartment: T = true as T,
+    onlyExposedToTvContent?: boolean,
   ): Promise<T extends true ? Department[] : { id: string }[]> {
+    const employeeWhere = eq(employeeSubDepartments.employeeId, employeeId);
+    const tvWhere = onlyExposedToTvContent
+      ? eq(departments.isExposedToTvContent, true)
+      : undefined;
+    const fullWhere =
+      tvWhere !== undefined ? and(employeeWhere, tvWhere) : employeeWhere;
+
     const result: Department[] | { id: string }[] = fullSubDepartment
       ? await this.db
           .select({
@@ -871,7 +906,7 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
             departments,
             eq(employeeSubDepartments.departmentId, departments.id),
           )
-          .where(eq(employeeSubDepartments.employeeId, employeeId))
+          .where(fullWhere)
           .then((subDepartments) =>
             subDepartments.map((d) =>
               this.mapToDepartment({
@@ -879,10 +914,19 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
               }),
             ),
           )
-      : await this.db
-          .select({ id: employeeSubDepartments.departmentId })
-          .from(employeeSubDepartments)
-          .where(eq(employeeSubDepartments.employeeId, employeeId));
+      : onlyExposedToTvContent
+        ? await this.db
+            .select({ id: employeeSubDepartments.departmentId })
+            .from(employeeSubDepartments)
+            .innerJoin(
+              departments,
+              eq(employeeSubDepartments.departmentId, departments.id),
+            )
+            .where(fullWhere)
+        : await this.db
+            .select({ id: employeeSubDepartments.departmentId })
+            .from(employeeSubDepartments)
+            .where(employeeWhere);
     return result as T extends true ? Department[] : { id: string }[];
   }
 
@@ -924,6 +968,17 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
       );
   }
 
+  private buildEffectiveWhere(
+    baseWhere: SQL | undefined,
+    queryDto?: DepartmentQueryDto,
+  ): SQL | undefined {
+    const tvWhere = queryDto?.onlyExposedToTvContent
+      ? eq(departments.isExposedToTvContent, true)
+      : undefined;
+    if (baseWhere && tvWhere) return and(baseWhere, tvWhere);
+    return tvWhere ?? baseWhere;
+  }
+
   private async fetchDepartments(options?: {
     where?: SQL;
     limit?: number;
@@ -936,14 +991,18 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
       subDepartments?: (typeof departments.$inferSelect)[];
     }[]
   > {
+    const effectiveWhere = this.buildEffectiveWhere(
+      options?.where,
+      options?.queryDto,
+    );
     if (
       options?.queryDto?.includeParent &&
       options?.queryDto?.includeSubDepartments
     ) {
       const query =
         this.departmentQueryWithParentAndSubDepartments().$dynamic();
-      if (options?.where) {
-        query.where(options.where);
+      if (effectiveWhere) {
+        query.where(effectiveWhere);
       }
       if (options?.limit) {
         query.limit(options.limit);
@@ -979,8 +1038,8 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
       return Object.values(departmentsMap);
     } else if (options?.queryDto?.includeParent) {
       const query = this.departmentQueryWithParent().$dynamic();
-      if (options?.where) {
-        query.where(options.where);
+      if (effectiveWhere) {
+        query.where(effectiveWhere);
       }
       if (options?.limit) {
         query.limit(options.limit);
@@ -996,8 +1055,8 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
       }));
     } else if (options?.queryDto?.includeSubDepartments) {
       const query = this.departmentQueryWithSubDepartments().$dynamic();
-      if (options?.where) {
-        query.where(options.where);
+      if (effectiveWhere) {
+        query.where(effectiveWhere);
       }
       if (options?.limit) {
         query.limit(options.limit);
@@ -1030,8 +1089,8 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
     } else {
       const query = this.db.select().from(departments).$dynamic();
 
-      if (options?.where) {
-        query.where(options.where);
+      if (effectiveWhere) {
+        query.where(effectiveWhere);
       }
       if (options?.limit) {
         query.limit(options.limit);

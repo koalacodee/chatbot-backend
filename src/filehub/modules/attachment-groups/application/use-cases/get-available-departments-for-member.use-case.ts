@@ -29,7 +29,10 @@ export class GetAvailableDepartmentsForMemberUseCase {
     const userRole = user.role.getRole();
 
     if (userRole === Roles.ADMIN) {
-      const allDepartments = await this.departmentRepository.findAll();
+      const allDepartments =
+        await this.departmentRepository.findAll({
+          onlyExposedToTvContent: true,
+        });
       const mainDepts = allDepartments.filter((d) => !d.parentId);
       const subDepts = allDepartments.filter((d) => d.parentId);
 
@@ -54,6 +57,7 @@ export class GetAvailableDepartmentsForMemberUseCase {
         await this.departmentRepository.getSupervisorDepartments({
           supervisorIdOrUserId: { supervisorUserId: userId },
           fullDepartment: true,
+          onlyExposedToTvContent: true,
         });
       const departments = depts.map((d) => ({
         id: d.id.toString(),
@@ -67,6 +71,7 @@ export class GetAvailableDepartmentsForMemberUseCase {
         await this.departmentRepository.getEmployeeSubDepartments(
           { employeeUserId: userId },
           true,
+          { onlyExposedToTvContent: true },
         );
       const departments = subDepts.map((d) => ({
         id: d.id.toString(),

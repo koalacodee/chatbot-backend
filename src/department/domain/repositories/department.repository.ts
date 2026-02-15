@@ -5,6 +5,7 @@ export interface DepartmentQueryDto {
   includeKnowledgeChunks?: boolean;
   includeSubDepartments?: boolean;
   includeParent?: boolean;
+  onlyExposedToTvContent?: boolean;
 }
 
 export type SupervisorIdOrUserId =
@@ -256,6 +257,7 @@ export abstract class DepartmentRepository {
     supervisorIdOrUserId: SupervisorIdOrUserId;
     fullDepartment: T;
     onlySubDepartments?: boolean;
+    onlyExposedToTvContent?: boolean;
   }): Promise<T extends true ? Department[] : { id: string }[]>;
 
   abstract employeeHasAccessToSubDepartment(
@@ -280,5 +282,6 @@ export abstract class DepartmentRepository {
   abstract getEmployeeSubDepartments<T extends boolean>(
     employeeIdOrUserId: EmployeeIdOrUserId,
     fullSubDepartment: T,
+    options?: { onlyExposedToTvContent?: boolean },
   ): Promise<T extends true ? Department[] : { id: string }[]>;
 }

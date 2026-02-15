@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { MemberRepository } from '../../domain/repositories/member.repository';
+import { DepartmentRepository } from '@/department/domain/repositories/department.repository';
 import { AttachmentGroupRepository } from '../../domain/repositories/attachment-group.repository';
 import { AttachmentGroupMemberGateway } from '../../interface/websocket/member.gateway';
 import { AttachmentRepository } from 'src/filehub/domain/repositories/attachment.repository';
@@ -30,6 +31,7 @@ export interface UpdateMemberUseCaseResponse {
 export class UpdateMemberUseCase {
   constructor(
     private readonly memberRepository: MemberRepository,
+    private readonly departmentRepository: DepartmentRepository,
     private readonly attachmentGroupRepository: AttachmentGroupRepository,
     private readonly memberGateway: AttachmentGroupMemberGateway,
     private readonly attachmentRepository: AttachmentRepository,
@@ -70,6 +72,20 @@ export class UpdateMemberUseCase {
       if (!attachmentGroup) {
         throw new NotFoundException(
           `Attachment group with ID ${attachmentGroupId} not found`,
+        );
+      }
+    }
+
+    // If departmentId is being set (non-null), validate it exists and is exposed to TV content
+    if (departmentId !== undefined && departmentId) {
+      const department =
+        await this.departmentRepository.findById(departmentId);
+      if (!department) {
+        throw new NotFoundException('Department not found');
+      }
+      if (!department.isExposedToTvContent) {
+        throw new BadRequestException(
+          'Department must have TV content exposure enabled to be assigned',
         );
       }
     }
