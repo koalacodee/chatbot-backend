@@ -14,6 +14,7 @@ import { GetMyAttachmentsUseCase } from 'src/filehub/application/use-cases/get-m
 import { GenerateUserUploadTokenUseCase } from 'src/filehub/application/use-cases/generate-user-upload-token.use-case';
 import { DeleteMyAttachmentsUseCase } from 'src/filehub/application/use-cases/delete-my-attachments.use-case';
 import { DeleteMyAttachmentsDto } from 'src/filehub/interface/http/dtos/delete-my-attachments.dto';
+import { GetMyAttachmentsQueryDto } from 'src/filehub/interface/http/dtos/get-my-attachments-query.dto';
 
 @Controller('filehub')
 export class FilehubHttpController {
@@ -27,7 +28,10 @@ export class FilehubHttpController {
 
   @UseGuards(UserJwtAuthGuard)
   @Get('/my-attachments')
-  async getMyAttachments(@Req() req: any) {
+  async getMyAttachments(
+    @Req() req: any,
+    @Query() dto: GetMyAttachmentsQueryDto,
+  ) {
     const userId = req.user.id;
     this.logger.log(`[HTTP] GET /my-attachments for userId: ${userId}`);
 
@@ -35,9 +39,19 @@ export class FilehubHttpController {
       throw new Error('User ID not found in request');
     }
 
-    const result = await this.getMyAttachmentsUseCase.execute({ userId });
+    const cursor =
+      dto.cursor !== undefined ||
+      dto.direction !== undefined ||
+      dto.pageSize !== undefined
+        ? { cursor: dto.cursor, direction: dto.direction, pageSize: dto.pageSize }
+        : undefined;
+
+    const result = await this.getMyAttachmentsUseCase.execute({
+      userId,
+      cursor,
+    });
     this.logger.log(
-      `[HTTP] GET /my-attachments returning ${result.length} attachments`,
+      `[HTTP] GET /my-attachments returning ${result.data.length} attachments`,
     );
     return result;
   }

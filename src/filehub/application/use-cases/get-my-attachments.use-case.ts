@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { CursorInput } from 'src/common/drizzle/helpers/cursor';
 import { AttachmentRepository } from 'src/filehub/domain/repositories/attachment.repository';
 import {
   FileHubService,
@@ -9,6 +10,7 @@ import { FilehubAttachmentMessage } from './get-target-attachments-with-signed-u
 export interface GetMyAttachmentsInput {
   userId: string;
   expiresInMs?: number;
+  cursor?: CursorInput;
 }
 
 @Injectable()
@@ -20,28 +22,32 @@ export class GetMyAttachmentsUseCase {
     private readonly fileHubService: FileHubService,
   ) {}
 
-  async execute(
-    input: GetMyAttachmentsInput,
-  ): Promise<FilehubAttachmentMessage[]> {
-    const { userId, expiresInMs } = input;
+  async execute(input: GetMyAttachmentsInput): Promise<{
+    data: FilehubAttachmentMessage[];
+    meta: { nextCursor?: string; prevCursor?: string; hasNextPage: boolean; hasPrevPage: boolean };
+  }> {
+    const { userId, expiresInMs, cursor } = input;
 
     this.logger.log(`[GetMyAttachments] Starting for userId: ${userId}`);
 
     if (!userId) {
       this.logger.warn('[GetMyAttachments] No userId, returning empty');
-      return [];
+      return { data: [], meta: { hasNextPage: false, hasPrevPage: false } };
     }
 
-    // Fetch all attachments for the user (user's attachments + global attachments)
-    const allAttachments =
-      await this.attachmentRepository.findUserAndGlobalAttachments(userId);
+    // Fetch paginated attachments for the user (user's attachments + global attachments)
+    const { data: allAttachments, meta } =
+      await this.attachmentRepository.findUserAndGlobalAttachmentsPaginated(
+        userId,
+        cursor,
+      );
 
     this.logger.log(
       `[GetMyAttachments] Fetched ${allAttachments.length} attachments from DB`,
     );
 
     if (allAttachments.length === 0) {
-      return [];
+      return { data: [], meta };
     }
 
     // Get unique filenames to avoid duplicate signed URL requests
@@ -99,7 +105,7 @@ export class GetMyAttachmentsUseCase {
       `[GetMyAttachments] Returning ${result.length} attachments (filtered out ${allAttachments.length - result.length})`,
     );
 
-    return result;
+    return { data: result, meta };
   }
 
   private createSignedUrlLookup(batch: SignedUrlBatch[]): Map<string, string> {

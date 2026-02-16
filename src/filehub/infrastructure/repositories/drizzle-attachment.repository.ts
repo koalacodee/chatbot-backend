@@ -1,9 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { DrizzleService } from 'src/common/drizzle/drizzle.service';
+import {
+  createCursorPagination,
+  CursorInput,
+  PaginatedArrayResult,
+} from 'src/common/drizzle/helpers/cursor';
 import { AttachmentRepository } from '../../domain/repositories/attachment.repository';
 import { Attachment } from '../../domain/entities/attachment.entity';
 import { attachments } from 'src/common/drizzle/schema';
-import { eq, or, inArray, count, desc } from 'drizzle-orm';
+import { and, eq, or, inArray, count, desc } from 'drizzle-orm';
+
+interface AttachmentCursorData {
+  createdAt: string;
+  id: string;
+}
+
+const attachmentPagination = createCursorPagination<AttachmentCursorData>({
+  table: attachments,
+  cursorFields: [
+    { column: attachments.createdAt, key: 'createdAt' },
+    { column: attachments.id, key: 'id' },
+  ],
+  defaultPageSize: 20,
+  sortDirection: 'desc',
+});
 
 @Injectable()
 export class DrizzleAttachmentRepository extends AttachmentRepository {
@@ -249,6 +269,51 @@ export class DrizzleAttachmentRepository extends AttachmentRepository {
             : await baseQuery;
 
     return records.map((record) => this.toDomain(record));
+  }
+
+  async findUserAndGlobalAttachmentsPaginated(
+    userId: string,
+    cursor?: CursorInput,
+  ): Promise<PaginatedArrayResult<Attachment>> {
+    const { pageSize, direction, cursor: cursorStr, cursorData, limit } =
+      attachmentPagination.parseInput(cursor);
+
+    const baseWhere = or(
+      eq(attachments.userId, userId),
+      eq(attachments.isGlobal, true),
+    );
+    const cursorCondition = attachmentPagination.buildCursorCondition(
+      cursorData,
+      direction,
+    );
+    const whereClause =
+      cursorCondition !== undefined
+        ? and(baseWhere, cursorCondition)
+        : baseWhere;
+
+    const records = await this.db
+      .select()
+      .from(attachments)
+      .where(whereClause)
+      .orderBy(...attachmentPagination.getOrderBy())
+      .limit(limit);
+
+    const { data, meta } = attachmentPagination.processResults(
+      records,
+      { pageSize, direction, cursor: cursorStr },
+      (r) => ({
+        createdAt:
+          typeof r.createdAt === 'string'
+            ? r.createdAt
+            : new Date(r.createdAt).toISOString(),
+        id: r.id,
+      }),
+    );
+
+    return {
+      data: data.map((r) => this.toDomain(r)),
+      meta,
+    };
   }
 
   async countUserAndGlobalAttachments(userId: string): Promise<number> {

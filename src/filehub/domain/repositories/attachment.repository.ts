@@ -1,3 +1,7 @@
+import {
+  CursorInput,
+  PaginatedArrayResult,
+} from 'src/common/drizzle/helpers/cursor';
 import { Attachment } from '../entities/attachment.entity';
 
 export abstract class AttachmentRepository {
@@ -33,6 +37,10 @@ export abstract class AttachmentRepository {
     limit?: number,
     offset?: number,
   ): Promise<Attachment[]>;
+  abstract findUserAndGlobalAttachmentsPaginated(
+    userId: string,
+    cursor?: CursorInput,
+  ): Promise<PaginatedArrayResult<Attachment>>;
   abstract countUserAndGlobalAttachments(userId: string): Promise<number>;
 
   abstract removeById(id: string): Promise<Attachment | null>;
