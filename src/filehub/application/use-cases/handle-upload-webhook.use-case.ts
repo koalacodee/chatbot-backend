@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FilehubUploadedEvent } from 'src/filehub/domain/events/filehub.uploaded.event';
 import { WebhookData } from 'src/filehub/domain/services/filehub.service';
@@ -15,12 +15,18 @@ export interface HandleUploadWebhookInput {
 
 @Injectable()
 export class HandleUploadWebhookUseCase {
+  private readonly logger = new Logger(HandleUploadWebhookUseCase.name);
+
   constructor(
     private readonly eventEmitter: EventEmitter2,
     private readonly redis: RedisService,
   ) {}
 
   async execute(input: WebhookData): Promise<void> {
+    this.logger.log(
+      `[HandleWebhook] Processing event: ${input.event}`,
+    );
+
     if (input.event !== 'tus_completed') {
       if (input.event == 'upload_completed') {
         const userId = await this.redis.get(
@@ -32,9 +38,15 @@ export class HandleUploadWebhookUseCase {
             new ProfilePictureUploadedEvent(input.objectPath, userId),
           );
         }
+        this.logger.log('[HandleWebhook] Handled upload_completed (profile picture)');
         return;
       }
     }
+
+    const tusInput = input as { upload: { uploadKey: string; filePath?: string }; metadata?: Record<string, string>; timestamp: string };
+    this.logger.log(
+      `[HandleWebhook] Emitting FilehubUploadedEvent for uploadKey: ${tusInput.upload?.uploadKey}, filePath: ${tusInput.upload?.filePath ?? 'n/a'}`,
+    );
 
     await this.eventEmitter.emitAsync(
       FilehubUploadedEvent.name,

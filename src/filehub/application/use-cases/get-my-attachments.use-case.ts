@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AttachmentRepository } from 'src/filehub/domain/repositories/attachment.repository';
 import {
   FileHubService,
@@ -13,6 +13,8 @@ export interface GetMyAttachmentsInput {
 
 @Injectable()
 export class GetMyAttachmentsUseCase {
+  private readonly logger = new Logger(GetMyAttachmentsUseCase.name);
+
   constructor(
     private readonly attachmentRepository: AttachmentRepository,
     private readonly fileHubService: FileHubService,
@@ -23,13 +25,20 @@ export class GetMyAttachmentsUseCase {
   ): Promise<FilehubAttachmentMessage[]> {
     const { userId, expiresInMs } = input;
 
+    this.logger.log(`[GetMyAttachments] Starting for userId: ${userId}`);
+
     if (!userId) {
+      this.logger.warn('[GetMyAttachments] No userId, returning empty');
       return [];
     }
 
     // Fetch all attachments for the user (user's attachments + global attachments)
     const allAttachments =
       await this.attachmentRepository.findUserAndGlobalAttachments(userId);
+
+    this.logger.log(
+      `[GetMyAttachments] Fetched ${allAttachments.length} attachments from DB`,
+    );
 
     if (allAttachments.length === 0) {
       return [];
@@ -40,21 +49,41 @@ export class GetMyAttachmentsUseCase {
       new Set(allAttachments.map((attachment) => attachment.filename)),
     );
 
+    this.logger.log(
+      `[GetMyAttachments] Requesting signed URLs for ${uniqueFilenames.length} unique filenames`,
+    );
+
     // Bulk get signed URLs for all unique filenames
     const signedUrlBatch = await this.fileHubService.getSignedUrlBatch(
       uniqueFilenames,
       expiresInMs,
     );
 
+    this.logger.log(
+      `[GetMyAttachments] Batch API returned ${signedUrlBatch?.length ?? 0} signed URLs, isArray=${Array.isArray(signedUrlBatch)}`,
+    );
+
     // Create a lookup map for quick access
     const signedUrlMap = this.createSignedUrlLookup(signedUrlBatch);
 
+    const missingFilenames = uniqueFilenames.filter(
+      (fn) => !signedUrlMap.has(fn),
+    );
+    if (missingFilenames.length > 0) {
+      this.logger.warn(
+        `[GetMyAttachments] ${missingFilenames.length} filenames missing from batch response: ${missingFilenames.slice(0, 5).join(', ')}${missingFilenames.length > 5 ? '...' : ''}`,
+      );
+    }
+
     // Map attachments to FilehubAttachmentMessage format
     // Filter out attachments that don't have signed URLs
-    return allAttachments
+    const result = allAttachments
       .map((attachment) => {
         const signedUrl = signedUrlMap.get(attachment.filename);
         if (!signedUrl) {
+          this.logger.debug(
+            `[GetMyAttachments] Filtering out attachment id=${attachment.id} (no signed URL for filename: ${attachment.filename})`,
+          );
           return null;
         }
         return {
@@ -65,6 +94,12 @@ export class GetMyAttachmentsUseCase {
       .filter(
         (message): message is FilehubAttachmentMessage => message !== null,
       );
+
+    this.logger.log(
+      `[GetMyAttachments] Returning ${result.length} attachments (filtered out ${allAttachments.length - result.length})`,
+    );
+
+    return result;
   }
 
   private createSignedUrlLookup(batch: SignedUrlBatch[]): Map<string, string> {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   FileHubService,
@@ -12,6 +12,7 @@ import { RedisService } from 'src/shared/infrastructure/redis';
 import { FilehubUploadedTempData } from 'src/filehub/application/listeners/filehub.uploaded.listener';
 @Injectable()
 export class FileHubServiceImpl implements FileHubService {
+  private readonly logger = new Logger(FileHubServiceImpl.name);
   private readonly fileHubBaseUrl: string;
   private readonly fileHubApiKey: string;
 
@@ -40,6 +41,10 @@ export class FileHubServiceImpl implements FileHubService {
       userId: options.userId,
       guestId: options.guestId,
     };
+    this.logger.log(
+      `[generateUploadToken] POST to ${this.fileHubBaseUrl}/api/uploads, userId=${options.userId ?? 'n/a'}`,
+    );
+
     const response = await ky.post<{
       uploadKey: string;
       uploadExpiry: string /* ISO 8601 */;
@@ -51,10 +56,14 @@ export class FileHubServiceImpl implements FileHubService {
       },
     });
     const data = await response.json();
-    await this.redis.set(
-      `filehub:upload:${data.uploadKey}`,
-      JSON.stringify(filehubUploadedTempData),
+
+    const redisKey = `filehub:upload:${data.uploadKey}`;
+    await this.redis.set(redisKey, JSON.stringify(filehubUploadedTempData));
+
+    this.logger.log(
+      `[generateUploadToken] Stored Redis key ${redisKey} for userId=${options.userId ?? 'n/a'}`,
     );
+
     return {
       uploadKey: data.uploadKey,
       uploadExpiry: new Date(data.uploadExpiry),
@@ -101,6 +110,11 @@ export class FileHubServiceImpl implements FileHubService {
     if (fileNames.length === 0) {
       return [];
     }
+
+    this.logger.log(
+      `[getSignedUrlBatch] POST to ${this.fileHubBaseUrl}/api/uploads/sign-url/batch, count=${fileNames.length}`,
+    );
+
     const response = await ky
       .post<SignedUrlBatch[]>(
         `${this.fileHubBaseUrl}/api/uploads/sign-url/batch`,
@@ -116,10 +130,24 @@ export class FileHubServiceImpl implements FileHubService {
         },
       )
       .catch((error) => {
-        console.error(error);
+        this.logger.error(
+          `[getSignedUrlBatch] Request failed: ${error?.message ?? error}`,
+        );
         throw error;
       });
+
     const data = await response.json();
+
+    this.logger.log(
+      `[getSignedUrlBatch] Response: isArray=${Array.isArray(data)}, length=${Array.isArray(data) ? data.length : 'n/a'}, type=${typeof data}`,
+    );
+
+    if (!Array.isArray(data)) {
+      this.logger.warn(
+        `[getSignedUrlBatch] Unexpected response shape. Keys: ${typeof data === 'object' && data !== null ? Object.keys(data).join(', ') : 'n/a'}`,
+      );
+    }
+
     return data;
   }
 

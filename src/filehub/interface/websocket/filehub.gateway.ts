@@ -73,10 +73,18 @@ export class FilehubGateway
   }
 
   async broadcastAttachment(attachment: Attachment): Promise<void> {
+    this.logger.log(
+      `[Broadcast] Starting for attachment id=${attachment.id}, filename=${attachment.filename}, userId=${attachment.userId ?? 'null'}, isGlobal=${attachment.isGlobal}`,
+    );
+
     if (!this.server) {
-      this.logger.warn('Socket server not ready, skipping broadcast');
+      this.logger.warn('[Broadcast] Socket server not ready, skipping broadcast');
       return;
     }
+
+    this.logger.log(
+      `[Broadcast] Fetching signed URL for filename: ${attachment.filename}`,
+    );
 
     const payload: FilehubAttachmentMessage = {
       ...attachment.toJSON(),
@@ -93,13 +101,15 @@ export class FilehubGateway
       this.server
         .to(this.getUserRoom(userId))
         .emit('filehub:attachment', payload);
-      this.logger.log(`Emitted attachment ${attachment.id} to user ${userId}`);
+      this.logger.log(
+        `[Broadcast] Emitted attachment ${attachment.id} to user room ${userId}`,
+      );
     }
 
     if (attachment.isGlobal) {
       this.server.emit('filehub:attachment', payload);
       this.logger.log(
-        `Broadcasted global attachment ${attachment.id} to all clients`,
+        `[Broadcast] Broadcasted global attachment ${attachment.id} to all clients`,
       );
     }
   }

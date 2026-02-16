@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   Post,
   Query,
   Req,
@@ -16,31 +17,47 @@ import { DeleteMyAttachmentsDto } from 'src/filehub/interface/http/dtos/delete-m
 
 @Controller('filehub')
 export class FilehubHttpController {
+  private readonly logger = new Logger(FilehubHttpController.name);
+
   constructor(
     private readonly getMyAttachmentsUseCase: GetMyAttachmentsUseCase,
     private readonly generateUserUploadTokenUseCase: GenerateUserUploadTokenUseCase,
     private readonly deleteMyAttachmentsUseCase: DeleteMyAttachmentsUseCase,
   ) {}
+
   @UseGuards(UserJwtAuthGuard)
   @Get('/my-attachments')
   async getMyAttachments(@Req() req: any) {
     const userId = req.user.id;
+    this.logger.log(`[HTTP] GET /my-attachments for userId: ${userId}`);
+
     if (!userId) {
       throw new Error('User ID not found in request');
     }
 
-    return await this.getMyAttachmentsUseCase.execute({ userId });
+    const result = await this.getMyAttachmentsUseCase.execute({ userId });
+    this.logger.log(
+      `[HTTP] GET /my-attachments returning ${result.length} attachments`,
+    );
+    return result;
   }
 
   @UseGuards(UserJwtAuthGuard)
   @Post('/upload-token')
   async generateUploadToken(@Req() req: any) {
     const userId = req.user.id;
+    this.logger.log(`[HTTP] POST /upload-token for userId: ${userId}`);
+
     if (!userId) {
       throw new Error('User ID not found in request');
     }
 
-    return this.generateUserUploadTokenUseCase.execute({ userId });
+    const result =
+      await this.generateUserUploadTokenUseCase.execute({ userId });
+    this.logger.log(
+      `[HTTP] POST /upload-token returning uploadKey for userId: ${userId}`,
+    );
+    return result;
   }
 
   @UseGuards(UserJwtAuthGuard)
