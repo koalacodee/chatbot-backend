@@ -257,11 +257,6 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
     id: string,
     update: Partial<Department>,
   ): Promise<Department> {
-    const isMain = await this.isMainDepartment(id);
-    if (!isMain) {
-      throw new Error('Department is not a main department');
-    }
-
     return this.update(id, update);
   }
 
@@ -270,11 +265,6 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
     update: Partial<Department>,
     query?: DepartmentQueryDto,
   ): Promise<Department> {
-    const isSub = await this.isSubDepartment(id);
-    if (!isSub) {
-      throw new Error('Department is not a sub-department');
-    }
-
     const data: any = {};
     if (update.name) data.name = update.name;
     if (update.parent) {
@@ -716,8 +706,8 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
             .from(departmentToSupervisor)
             .where(eq(departmentToSupervisor.supervisorId, supervisorId));
 
-    const subDeptParentIds = mainDepartments.map((d: Department | { id: string }) =>
-      d.id.toString(),
+    const subDeptParentIds = mainDepartments.map(
+      (d: Department | { id: string }) => d.id.toString(),
     );
     const subDeptWhereConditions =
       subDeptParentIds.length > 0
