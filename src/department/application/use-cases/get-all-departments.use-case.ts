@@ -13,7 +13,9 @@ export class GetAllDepartmentsUseCase {
   ) {}
 
   async execute(userId?: string): Promise<any[]> {
-    let departments = await this.departmentRepo.findAllDepartments({});
+    let departments = await this.departmentRepo.findAllDepartments({
+      isMainOnly: true,
+    });
 
     // Apply department filtering for supervisors
     if (userId) {

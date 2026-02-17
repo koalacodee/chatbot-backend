@@ -962,11 +962,20 @@ export class DrizzleDepartmentRepository implements DepartmentRepository {
     baseWhere: SQL | undefined,
     queryDto?: DepartmentQueryDto,
   ): SQL | undefined {
-    const tvWhere = queryDto?.onlyExposedToTvContent
-      ? eq(departments.isExposedToTvContent, true)
-      : undefined;
-    if (baseWhere && tvWhere) return and(baseWhere, tvWhere);
-    return tvWhere ?? baseWhere;
+    const conditions: SQL[] = [];
+    if (baseWhere) conditions.push(baseWhere);
+
+    if (queryDto?.onlyExposedToTvContent) {
+      conditions.push(eq(departments.isExposedToTvContent, true));
+    }
+
+    if (queryDto?.isMainOnly) {
+      conditions.push(isNull(departments.parentId));
+    }
+
+    if (conditions.length === 0) return undefined;
+    if (conditions.length === 1) return conditions[0];
+    return and(...conditions);
   }
 
   private async fetchDepartments(options?: {

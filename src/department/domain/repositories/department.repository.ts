@@ -6,6 +6,7 @@ export interface DepartmentQueryDto {
   includeSubDepartments?: boolean;
   includeParent?: boolean;
   onlyExposedToTvContent?: boolean;
+  isMainOnly?: boolean;
 }
 
 export type SupervisorIdOrUserId =
