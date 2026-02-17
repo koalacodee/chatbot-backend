@@ -11,7 +11,7 @@ export class TaskDelegationCreatedListener {
     private readonly notificationRepository: NotificationRepository,
     private readonly recipientResolver: NotificationRecipientResolverService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
   @OnEvent(TaskDelegationCreatedEvent.name)
   async handleTaskDelegationCreatedEvent(
@@ -24,8 +24,6 @@ export class TaskDelegationCreatedListener {
         undefined, // targetDepartmentId - delegations use sub-departments
         event.targetSubDepartmentId,
       );
-
-    console.log('delegation recipients', recipients);
 
     const notification = Notification.create({
       title: event.title,
@@ -42,4 +40,3 @@ export class TaskDelegationCreatedListener {
     });
   }
 }
-

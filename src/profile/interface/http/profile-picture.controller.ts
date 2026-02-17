@@ -29,7 +29,7 @@ type MultipartPart = {
   mimetype?: string;
 };
 
-interface UploadProfilePictureQuery { }
+interface UploadProfilePictureQuery {}
 
 @Controller('profile/pictures')
 export class ProfilePictureController {
@@ -37,18 +37,16 @@ export class ProfilePictureController {
     private readonly uploadProfilePictureUseCase: UploadProfilePictureUseCase,
     private readonly getProfilePictureByTokenUseCase: GetProfilePictureByTokenUseCase,
     private readonly generateProfilePictureUploadKeyUseCase: GenerateProfilePictureUploadKeyUseCase,
-  ) { }
+  ) {}
 
-  @Post("generate-upload-key")
+  @Post('generate-upload-key')
   @HttpCode(HttpStatus.OK)
   @UseGuards(UserJwtAuthGuard)
   async generateUploadKey(@Req() req: any) {
     const userId = req.user.id;
     if (!userId) {
       throw new BadRequestException({
-        details: [
-          { field: 'userId', message: 'User ID not found in request' },
-        ],
+        details: [{ field: 'userId', message: 'User ID not found in request' }],
       });
     }
 
@@ -71,23 +69,15 @@ export class ProfilePictureController {
     @Query() query: UploadProfilePictureQuery,
   ) {
     try {
-      console.log('Starting profile picture upload...');
       const parts = req.parts();
       let file: { filename: string; originalName: string } | null = null;
 
       // Process each part of the multipart form
       for await (const part of parts) {
-        console.log('Processing part:', {
-          fieldname: part.fieldname,
-          filename: (part as any).filename,
-          hasFile: !!(part as any).file,
-        });
-
         const multipartPart = part as MultipartPart;
 
         if (multipartPart.file && !file) {
           // This part is a file
-          console.log('Found file:', multipartPart.filename);
 
           const result = await this.uploadProfilePictureUseCase.execute({
             userId: (req.headers['x-target-id'] as string) || '',

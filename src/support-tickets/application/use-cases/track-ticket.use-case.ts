@@ -30,7 +30,6 @@ export class TrackTicketUseCase {
     if (!result) throw new NotFoundException({ code: 'ticket_not_found' });
     if (!result.ticket)
       throw new NotFoundException({ code: 'ticket_not_found' });
-    console.log(result);
 
     const signedUrls =
       result.fileHubAttachments.length > 0

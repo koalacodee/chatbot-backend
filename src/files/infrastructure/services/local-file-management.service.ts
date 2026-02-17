@@ -164,7 +164,6 @@ export class LocalFileManagementService implements FileManagementClass {
 
   async uploadSingle(req: FastifyRequest, res: FastifyReply): Promise<any> {
     try {
-      console.log('Starting single file upload...');
       const parts = req.parts();
       let file: { filename: string; originalName: string } | null = null;
       let expirationDate: string = '';
@@ -179,17 +178,10 @@ export class LocalFileManagementService implements FileManagementClass {
 
       // Process each part of the multipart form
       for await (const part of parts) {
-        console.log('Processing part:', {
-          fieldname: part.fieldname,
-          filename: (part as any).filename,
-          hasFile: !!(part as any).file,
-        });
-
         const multipartPart = part as any;
 
         if (multipartPart.file && !file) {
           // This part is a file
-          console.log('Found file:', multipartPart.filename);
           const ext = extname(multipartPart.filename || '');
           const filename = `${UUID.create().toString()}${ext}`;
           const filepath = join(this.uploadsDir, filename);
@@ -208,20 +200,10 @@ export class LocalFileManagementService implements FileManagementClass {
           };
         } else if (multipartPart.fieldname === 'expirationDate') {
           // This part is an expiration date field
-          console.log(
-            'Found expiration date field:',
-            multipartPart.fieldname,
-            multipartPart.value,
-          );
 
           expirationDate = multipartPart.value;
         } else if (multipartPart.fieldname === 'isGlobal') {
           // This part is an isGlobal field
-          console.log(
-            'Found isGlobal field:',
-            multipartPart.fieldname,
-            multipartPart.value,
-          );
 
           isGlobal = multipartPart.value === 'true';
         }
@@ -268,7 +250,6 @@ export class LocalFileManagementService implements FileManagementClass {
 
   async uploadMultiple(req: FastifyRequest, res: FastifyReply): Promise<any> {
     try {
-      console.log('Starting multiple file upload...');
       const parts = req.parts();
       const files: { filename: string; originalName: string }[] = [];
       let expirationDates: string[] = [];
@@ -283,17 +264,10 @@ export class LocalFileManagementService implements FileManagementClass {
 
       // Process each part of the multipart form
       for await (const part of parts) {
-        console.log('Processing part:', {
-          fieldname: part.fieldname,
-          filename: (part as any).filename,
-          hasFile: !!(part as any).file,
-        });
-
         const multipartPart = part as any;
 
         if (multipartPart.file) {
           // This part is a file
-          console.log('Found file:', multipartPart.filename);
           const ext = extname(multipartPart.filename || '');
           const filename = `${UUID.create().toString()}${ext}`;
           const filepath = join(this.uploadsDir, filename);
@@ -313,11 +287,6 @@ export class LocalFileManagementService implements FileManagementClass {
           });
         } else if (multipartPart.fieldname?.startsWith('expirationDates[')) {
           // This part is an expiration date field like expirationDates[0], expirationDates[1], etc.
-          console.log(
-            'Found expiration date field:',
-            multipartPart.fieldname,
-            multipartPart.value,
-          );
 
           // Extract index from fieldname like "expirationDates[0]" -> 0
           const match = multipartPart.fieldname.match(
@@ -333,11 +302,6 @@ export class LocalFileManagementService implements FileManagementClass {
           }
         } else if (multipartPart.fieldname?.startsWith('isGlobalValues[')) {
           // This part is an isGlobal field like isGlobalValues[0], isGlobalValues[1], etc.
-          console.log(
-            'Found isGlobal field:',
-            multipartPart.fieldname,
-            multipartPart.value,
-          );
 
           // Extract index from fieldname like "isGlobalValues[0]" -> 0
           const match = multipartPart.fieldname.match(

@@ -26,57 +26,32 @@ export class GetAttachmentMetadataByTokenUseCase {
   async execute({
     token,
   }: GetAttachmentMetadataByTokenInput): Promise<AttachmentMetadataResult> {
-    console.log(
-      'GetAttachmentMetadataByTokenUseCase - Processing token:',
-      token,
-    );
-
     let attachment: any;
     let tokenExpiryDate: Date | undefined;
 
     // Check if the input is a UUID (ID) or a token
     if (isUUID(token)) {
-      console.log(
-        'GetAttachmentMetadataByTokenUseCase - Input is UUID, querying database directly',
-      );
       // Direct ID lookup - get attachment from database
       attachment = await this.attachmentRepository.findById(token);
       if (!attachment) {
-        console.log(
-          'GetAttachmentMetadataByTokenUseCase - Attachment not found in database',
-        );
         throw new NotFoundException({
           details: [{ field: 'attachmentId', message: 'Attachment not found' }],
         });
       }
     } else {
-      console.log(
-        'GetAttachmentMetadataByTokenUseCase - Input is token, checking Redis',
-      );
       // Token-based lookup - get attachment ID from Redis
       const redisKey = `shareKey:${token}`;
       const attachmentId = await this.redis.get(redisKey);
 
       if (!attachmentId) {
-        console.log(
-          'GetAttachmentMetadataByTokenUseCase - Token not found in Redis',
-        );
         throw new NotFoundException({
           details: [{ field: 'token', message: 'Token not found or expired' }],
         });
       }
 
-      console.log(
-        'GetAttachmentMetadataByTokenUseCase - Found attachment ID:',
-        attachmentId,
-      );
-
       // Get attachment from database
       attachment = await this.attachmentRepository.findById(attachmentId);
       if (!attachment) {
-        console.log(
-          'GetAttachmentMetadataByTokenUseCase - Attachment not found in database',
-        );
         throw new NotFoundException({
           details: [{ field: 'attachmentId', message: 'Attachment not found' }],
         });
@@ -89,31 +64,16 @@ export class GetAttachmentMetadataByTokenUseCase {
       }
     }
 
-    console.log('GetAttachmentMetadataByTokenUseCase - Attachment details:', {
-      id: attachment.id,
-      filename: attachment.filename,
-      originalName: attachment.originalName,
-      expirationDate: attachment.expirationDate,
-    });
-
     // Check if attachment is still valid (not expired)
     if (attachment.expirationDate && attachment.expirationDate <= new Date()) {
-      console.log(
-        'GetAttachmentMetadataByTokenUseCase - Attachment has expired',
-      );
       throw new GoneException('Attachment has expired');
     }
 
     // Determine file type based on file extension
     const fileType = this.getFileType(attachment.filename);
-    console.log('GetAttachmentMetadataByTokenUseCase - File type:', fileType);
 
     // Determine content type based on file extension
     const contentType = this.getContentType(attachment.filename);
-    console.log(
-      'GetAttachmentMetadataByTokenUseCase - Content type:',
-      contentType,
-    );
 
     return {
       fileType,

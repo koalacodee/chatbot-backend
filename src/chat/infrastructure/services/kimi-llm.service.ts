@@ -141,7 +141,6 @@ export class KimiLLMService implements LLMService {
     );
 
     if (response.status !== 200) {
-      console.log(response);
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 

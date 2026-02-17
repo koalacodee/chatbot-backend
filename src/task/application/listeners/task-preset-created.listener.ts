@@ -12,7 +12,7 @@ export class TaskPresetCreatedListener {
     @Inject('TaskPresetRepository')
     private readonly taskPresetRepository: TaskPresetRepository,
     private readonly taskRepository: TaskRepository,
-  ) { }
+  ) {}
 
   @OnEvent(TaskPresetCreatedEvent.name)
   async handleTaskPresetCreated(event: TaskPresetCreatedEvent) {
@@ -55,15 +55,10 @@ export class TaskPresetCreatedListener {
         targetDepartmentId: task.targetDepartmentId,
         targetSubDepartmentId: task.targetSubDepartmentId,
         priority: task.priority,
-
       });
 
       // Save the preset
       await this.taskPresetRepository.save(preset);
-
-      console.log(
-        `Task preset "${presetName}" created successfully for task ${taskId}`,
-      );
     } catch (error) {
       console.error('Error creating task preset:', error);
     }

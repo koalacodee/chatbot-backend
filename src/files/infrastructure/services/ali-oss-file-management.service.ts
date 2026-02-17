@@ -4,7 +4,10 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { randomInt } from 'crypto';
 import { extname } from 'path';
 import * as OSS from 'ali-oss';
-import { FileManagementClass, UploadFromAsyncGeneratorOutput } from '../../domain/services/file-mangement.service';
+import {
+  FileManagementClass,
+  UploadFromAsyncGeneratorOutput,
+} from '../../domain/services/file-mangement.service';
 import { RedisService } from '../../../shared/infrastructure/redis';
 import { UploadFileUseCase } from '../../application/use-cases/upload-file.use-case';
 import { UUID } from '../../../shared/value-objects/uuid.vo';
@@ -160,7 +163,6 @@ export class AliOSSFileManagementService implements FileManagementClass {
 
   async uploadSingle(req: FastifyRequest, res: FastifyReply): Promise<any> {
     try {
-      console.log('Starting single file upload...');
       const parts = req.parts();
       let file: { filename: string; originalName: string } | null = null;
       let expirationDate = '';
@@ -175,10 +177,6 @@ export class AliOSSFileManagementService implements FileManagementClass {
 
           const multipartUpload =
             await this.ossClient.initMultipartUpload(filename);
-          console.log(
-            'Initialized multipart upload with upload ID:',
-            multipartUpload.uploadId,
-          );
 
           let buffer = Buffer.alloc(0);
           let partNumber = 1;
@@ -200,10 +198,6 @@ export class AliOSSFileManagementService implements FileManagementClass {
                 buffer,
                 start,
                 end,
-              );
-
-              console.log(
-                `Uploaded part ${partNumber} (${buffer.length} bytes)`,
               );
 
               partsList.push({
@@ -232,10 +226,6 @@ export class AliOSSFileManagementService implements FileManagementClass {
               end,
             );
 
-            console.log(
-              `Uploaded final part ${partNumber} (${buffer.length} bytes)`,
-            );
-
             partsList.push({
               number: partNumber,
               etag: uploadPartResult.etag,
@@ -250,7 +240,6 @@ export class AliOSSFileManagementService implements FileManagementClass {
             partsList,
           );
 
-          console.log('✅ Completed multipart upload');
           file = {
             filename,
             originalName: multipartPart.filename || '',
@@ -297,7 +286,6 @@ export class AliOSSFileManagementService implements FileManagementClass {
 
   async uploadMultiple(req: FastifyRequest, res: FastifyReply): Promise<any> {
     try {
-      console.log('Starting multiple file upload...');
       const parts = req.parts();
       const files: { filename: string; originalName: string }[] = [];
       let expirationDates: string[] = [];
@@ -306,17 +294,10 @@ export class AliOSSFileManagementService implements FileManagementClass {
 
       // Process each part of the multipart form
       for await (const part of parts) {
-        console.log('Processing part:', {
-          fieldname: part.fieldname,
-          filename: (part as any).filename,
-          hasFile: !!(part as any).file,
-        });
-
         const multipartPart = part as any;
 
         if (multipartPart.file) {
           // This part is a file
-          console.log('Found file:', multipartPart.filename);
           const ext = extname(multipartPart.filename || '');
           const filename = `${UUID.create().toString()}${ext}`;
 
@@ -324,10 +305,6 @@ export class AliOSSFileManagementService implements FileManagementClass {
             // Upload to Ali-OSS
             const multipartUpload =
               await this.ossClient.initMultipartUpload(filename);
-            console.log(
-              'Initialized multipart upload with upload ID:',
-              multipartUpload.uploadId,
-            );
 
             let buffer = Buffer.alloc(0);
             let partNumber = 1;
@@ -350,10 +327,6 @@ export class AliOSSFileManagementService implements FileManagementClass {
                   buffer,
                   start,
                   end,
-                );
-
-                console.log(
-                  `Uploaded part ${partNumber} (${buffer.length} bytes)`,
                 );
 
                 partsList.push({
@@ -380,10 +353,6 @@ export class AliOSSFileManagementService implements FileManagementClass {
                 buffer,
                 start,
                 end,
-              );
-
-              console.log(
-                `Uploaded final part ${partNumber} (${buffer.length} bytes)`,
               );
 
               partsList.push({
@@ -416,11 +385,6 @@ export class AliOSSFileManagementService implements FileManagementClass {
           }
         } else if (multipartPart.fieldname?.startsWith('expirationDates[')) {
           // This part is an expiration date field like expirationDates[0], expirationDates[1], etc.
-          console.log(
-            'Found expiration date field:',
-            multipartPart.fieldname,
-            multipartPart.value,
-          );
 
           // Extract index from fieldname like "expirationDates[0]" -> 0
           const match = multipartPart.fieldname.match(
@@ -436,11 +400,6 @@ export class AliOSSFileManagementService implements FileManagementClass {
           }
         } else if (multipartPart.fieldname?.startsWith('isGlobalValues[')) {
           // This part is an isGlobal field like isGlobalValues[0], isGlobalValues[1], etc.
-          console.log(
-            'Found isGlobal field:',
-            multipartPart.fieldname,
-            multipartPart.value,
-          );
 
           // Extract index from fieldname like "isGlobalValues[0]" -> 0
           const match = multipartPart.fieldname.match(
@@ -621,13 +580,23 @@ export class AliOSSFileManagementService implements FileManagementClass {
     }
   }
 
-  async uploadFromAsyncGenerator(objectName: string, generator: AsyncGenerator<Buffer>): Promise<UploadFromAsyncGeneratorOutput> {
+  async uploadFromAsyncGenerator(
+    objectName: string,
+    generator: AsyncGenerator<Buffer>,
+  ): Promise<UploadFromAsyncGeneratorOutput> {
     const upload = await this.ossClient.initMultipartUpload(objectName);
     let bytesUploaded = 0;
     let partNumber = 1;
     const partsList: { number: number; etag: string }[] = [];
     for await (const chunk of generator) {
-      const uploadPartResult = await this.ossClient.uploadPart(objectName, upload.uploadId, partNumber, chunk, bytesUploaded, bytesUploaded + chunk.length);
+      const uploadPartResult = await this.ossClient.uploadPart(
+        objectName,
+        upload.uploadId,
+        partNumber,
+        chunk,
+        bytesUploaded,
+        bytesUploaded + chunk.length,
+      );
       partsList.push({
         number: partNumber,
         etag: uploadPartResult.etag,
@@ -635,7 +604,11 @@ export class AliOSSFileManagementService implements FileManagementClass {
       partNumber++;
       bytesUploaded += chunk.length;
     }
-    await this.ossClient.completeMultipartUpload(objectName, upload.uploadId, partsList);
+    await this.ossClient.completeMultipartUpload(
+      objectName,
+      upload.uploadId,
+      partsList,
+    );
     return { objectName, bytesUploaded };
   }
 }

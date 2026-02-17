@@ -24,8 +24,6 @@ export class TaskCreatedListener {
         event.targetSubDepartmentId,
       );
 
-    console.log('recipients', recipients);
-
     const notification = Notification.create({
       title: event.title,
       type: 'task_created',

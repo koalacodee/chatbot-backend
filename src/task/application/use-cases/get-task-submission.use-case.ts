@@ -60,8 +60,6 @@ export class GetTaskSubmissionUseCase {
       this.taskDelegationSubmissionRepository.findByTaskId(taskId, true),
     ]);
 
-    console.log('taskSubmissions', taskSubmissions);
-
     // Combine task submission IDs and delegation submission IDs for attachments/filehub
     const allSubmissionIds = [
       ...taskSubmissions.map((submission) => submission.id.toString()),

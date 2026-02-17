@@ -3,8 +3,6 @@ import { Email } from '../value-objects/email.vo';
 import { Password } from '../value-objects/password.vo';
 import { Role, Roles } from '../value-objects/role.vo';
 import { minLength } from 'class-validator';
-import { randomUUID } from 'crypto';
-import { UUID } from '../value-objects/uuid.vo';
 import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Admin } from 'src/admin/domain/entities/admin.entity';
 import { Driver } from 'src/driver/domain/entities/driver.entity';
@@ -82,7 +80,6 @@ export class User {
         ? await Password.fromPlain(options.password)
         : Password.fromHash(options.password)
       : undefined;
-    console.log('The Fucking User Role', options.role);
 
     const role = Role.create(options.role);
 

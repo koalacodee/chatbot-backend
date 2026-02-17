@@ -45,8 +45,6 @@ import { Injectable } from '@nestjs/common';
 type DrizzleUserRole = (typeof users.$inferSelect)['role'];
 
 function mapToUserRole(role: DrizzleUserRole): Roles {
-  console.log('Th Fucking User Role', role);
-
   switch (role) {
     case 'supervisor':
       return Roles.SUPERVISOR;

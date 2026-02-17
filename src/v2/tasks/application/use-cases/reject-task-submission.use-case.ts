@@ -55,8 +55,6 @@ export class RejectTaskSubmissionUseCase {
       );
     }
 
-    console.log('taskId', submission.taskId);
-
     const task = await this.taskRepo.findById(submission.taskId);
     // Validate rejection rights
     const user = await this.userRepo.findById(userId);

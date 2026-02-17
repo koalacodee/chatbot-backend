@@ -138,7 +138,6 @@ export class ReplyToTicketUseCase {
     }
 
     // Send email notification to the guest
-    console.log(ticket);
 
     if (ticket.guestEmail) {
       // Get department with parent information to determine if it's a sub-department
@@ -162,8 +161,6 @@ export class ReplyToTicketUseCase {
         departmentName = department?.name || 'Unknown Department';
         subDepartmentName = undefined;
       }
-
-      console.log('Sending Email to' + ticket.guestEmail);
 
       await this.emailService.sendReactEmail(
         ticket.guestEmail,

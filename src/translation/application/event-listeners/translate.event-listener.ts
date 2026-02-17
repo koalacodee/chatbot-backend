@@ -34,9 +34,6 @@ export class TranslateEventListener {
                 );
 
               if (existingTranslation) {
-                console.log(
-                  `Translation already exists for targetId: ${event.targetId}, lang: ${targetLang}`,
-                );
                 return;
               }
 
@@ -67,9 +64,6 @@ export class TranslateEventListener {
 
       if (translations.length > 0) {
         await this.translationRepository.createMany(translations);
-        console.log(
-          `Created ${translations.length} translations for targetId: ${event.targetId}`,
-        );
       }
     } catch (error) {
       console.error('Error handling translate event:', error);

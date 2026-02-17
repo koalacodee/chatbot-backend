@@ -80,7 +80,7 @@ export class TaskController {
     private readonly exportTasksUseCase: ExportTasksUseCase,
     private readonly exportFileService: ExportFileService,
     private readonly restartTaskUseCase: RestartTaskUseCase,
-  ) { }
+  ) {}
 
   @Post()
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_TASKS)
@@ -116,8 +116,6 @@ export class TaskController {
     uploadKey?: string;
     fileHubUploadKey?: string;
   }> {
-    console.log("Update input:", input);
-    
     const { completedAt, dueDate, ...rest } = input;
     return this.updateUseCase.execute(
       id,
@@ -144,7 +142,11 @@ export class TaskController {
   async getAll(
     @Req() req: any,
     @Query() query: TasksQueryDto,
-  ): Promise<{ data: Task[]; meta: CursorMeta; attachments: { [taskId: string]: string[] } }> {
+  ): Promise<{
+    data: Task[];
+    meta: CursorMeta;
+    attachments: { [taskId: string]: string[] };
+  }> {
     const list = await this.getAllUseCase.execute(
       query.cursor,
       query.cursorDir,
@@ -180,7 +182,7 @@ export class TaskController {
     @Query() query: GetTeamTasksDto,
     @Req() req: any,
   ): Promise<{
-    data: (ReturnType<Task['toJSON']>)[];
+    data: ReturnType<Task['toJSON']>[];
     meta: CursorMeta;
     attachments: { [taskId: string]: string[] };
     submissions: any[];

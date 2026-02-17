@@ -545,8 +545,6 @@ export class DrizzleSupportTicketRepository extends SupportTicketRepository {
       .where(eq(supportTickets.code, code))
       .limit(1);
 
-    console.log(results);
-
     if (results.length === 0) return null;
 
     const attachmentRows = await this.db

@@ -144,7 +144,6 @@ export class DrizzleTaskDelegationRepository extends TaskDelegationRepository {
       .where(eq(taskDelegations.id, id))
       .returning();
 
-    console.log(result);
     return this.toDomain(result[0]);
   }
 

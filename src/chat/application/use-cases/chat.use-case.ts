@@ -28,8 +28,6 @@ export class ChatUseCase {
       conversationId &&
       !(await this.conversationRepo.exists(conversationId))
     ) {
-      console.log('Conversation Not Found');
-
       throw new NotFoundException({
         conversationId: 'conversation_not_found',
       });
@@ -42,7 +40,6 @@ export class ChatUseCase {
       await this.conversationRepo.save(newConversation);
       conversationId = newConversation.id.value;
     }
-    console.log('Conversation ID', conversationId);
 
     const messages = conversationId
       ? await this.messagesRepo.findByConversationId(conversationId)

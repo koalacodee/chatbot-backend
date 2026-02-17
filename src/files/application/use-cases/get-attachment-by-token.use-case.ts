@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, GoneException } from '@nestjs/common';
 import { AttachmentRepository } from '../../domain/repositories/attachment.repository';
 import { RedisService } from 'src/shared/infrastructure/redis';
-import { createReadStream, existsSync } from 'fs';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { isUUID } from 'class-validator';
 
@@ -25,38 +25,23 @@ export class GetAttachmentByTokenUseCase {
   async execute({
     tokenOrId,
   }: GetAttachmentByTokenInput): Promise<AttachmentStreamResult> {
-    console.log(
-      'GetAttachmentByTokenUseCase - Processing tokenOrId:',
-      tokenOrId,
-    );
-
     let attachment: any;
 
     // Check if the input is a UUID (ID) or a token
     if (isUUID(tokenOrId)) {
-      console.log(
-        'GetAttachmentByTokenUseCase - Input is UUID, querying database directly',
-      );
       // Direct ID lookup - get attachment from database
       attachment = await this.attachmentRepository.findById(tokenOrId);
       if (!attachment) {
-        console.log(
-          'GetAttachmentByTokenUseCase - Attachment not found in database',
-        );
         throw new NotFoundException({
           details: [{ field: 'attachmentId', message: 'Attachment not found' }],
         });
       }
     } else {
-      console.log(
-        'GetAttachmentByTokenUseCase - Input is token, checking Redis',
-      );
       // Token-based lookup - get attachment ID from Redis
       const redisKey = `shareKey:${tokenOrId}`;
       const attachmentId = await this.redis.get(redisKey);
 
       if (!attachmentId) {
-        console.log('GetAttachmentByTokenUseCase - Token not found in Redis');
         throw new NotFoundException({
           details: [
             { field: 'tokenOrId', message: 'Token not found or expired' },
@@ -64,60 +49,32 @@ export class GetAttachmentByTokenUseCase {
         });
       }
 
-      console.log(
-        'GetAttachmentByTokenUseCase - Found attachment ID:',
-        attachmentId,
-      );
-
       // Get attachment from database
       attachment = await this.attachmentRepository.findById(attachmentId);
       if (!attachment) {
-        console.log(
-          'GetAttachmentByTokenUseCase - Attachment not found in database',
-        );
         throw new NotFoundException({
           details: [{ field: 'attachmentId', message: 'Attachment not found' }],
         });
       }
     }
 
-    console.log('GetAttachmentByTokenUseCase - Attachment details:', {
-      id: attachment.id,
-      filename: attachment.filename,
-      originalName: attachment.originalName,
-      expirationDate: attachment.expirationDate,
-    });
-
     // Check if attachment is still valid (not expired)
     if (attachment.expirationDate && attachment.expirationDate <= new Date()) {
-      console.log('GetAttachmentByTokenUseCase - Attachment has expired');
       throw new GoneException('Attachment has expired');
     }
 
     // Construct file path
     const filePath = join(process.cwd(), 'uploads', attachment.filename);
-    console.log('GetAttachmentByTokenUseCase - File path:', filePath);
 
     // Check if file exists
     if (!existsSync(filePath)) {
-      console.log('GetAttachmentByTokenUseCase - File does not exist on disk');
       throw new NotFoundException({
         details: [{ field: 'file', message: 'File not found on disk' }],
       });
     }
 
-    // Get file stats for debugging
-    const fs = require('fs');
-    const stats = fs.statSync(filePath);
-    console.log('GetAttachmentByTokenUseCase - File stats:', {
-      size: stats.size,
-      isFile: stats.isFile(),
-      mtime: stats.mtime,
-    });
-
     // Determine content type based on file extension
     const contentType = this.getContentType(attachment.filename);
-    console.log('GetAttachmentByTokenUseCase - Content type:', contentType);
 
     return {
       filePath,

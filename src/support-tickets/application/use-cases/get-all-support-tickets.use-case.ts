@@ -11,10 +11,7 @@ import {
 } from '../../domain/entities/support-ticket.entity';
 import { FilehubAttachmentMessage } from 'src/filehub/application/use-cases/get-target-attachments-with-signed-urls.use-case';
 import { FileHubService } from 'src/filehub/domain/services/filehub.service';
-import {
-  CursorInput,
-  CursorMeta,
-} from 'src/common/drizzle/helpers/cursor';
+import { CursorInput, CursorMeta } from 'src/common/drizzle/helpers/cursor';
 
 export interface GetAllSupportTicketsUseCaseInput {
   cursor?: CursorInput;
@@ -30,7 +27,7 @@ export class GetAllSupportTicketsUseCase {
   constructor(
     private readonly supportTicketRepo: SupportTicketRepository,
     private readonly fileHubService: FileHubService,
-  ) { }
+  ) {}
 
   async execute({
     cursor,
@@ -46,7 +43,6 @@ export class GetAllSupportTicketsUseCase {
     meta: CursorMeta;
   }> {
     let result: { data: GetAllTicketsAndMetricsOutput; meta: CursorMeta };
-    console.log(userRole);
 
     switch (userRole) {
       case Roles.ADMIN:

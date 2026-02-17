@@ -23,8 +23,6 @@ export class GetUnseenNotificationsUseCase {
       });
     }
 
-    console.log(userId);
-
     // First, get the unseen notifications
     const result =
       await this.notificationsRepository.findUnseenNotifications(userId);

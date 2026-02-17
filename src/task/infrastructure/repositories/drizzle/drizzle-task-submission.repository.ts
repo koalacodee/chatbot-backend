@@ -279,8 +279,6 @@ export class DrizzleTaskSubmissionRepository extends TaskSubmissionRepository {
       .where(eq(taskSubmissions.taskId, taskId))
       .orderBy(desc(taskSubmissions.submittedAt));
 
-    console.log('results', results);
-
     return Promise.all(
       results.map((row) =>
         this.toDomain({
