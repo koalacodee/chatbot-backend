@@ -1,6 +1,5 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { EmployeeRepository } from '../../domain/repositories/employee.repository';
-import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { GetUsersProfilePicturesUseCase } from 'src/profile/application/use-cases/get-users-profile-pictures.use-case';
@@ -18,7 +17,6 @@ interface GetEmployeesBySubDepartmentInput {
 export class GetEmployeesBySubDepartmentUseCase {
   constructor(
     private readonly employeeRepository: EmployeeRepository,
-    private readonly supervisorRepository: SupervisorRepository,
     private readonly userRepository: UserRepository,
     private readonly departmentRepository: DepartmentRepository,
     private readonly getUsersProfilePicturesUseCase: GetUsersProfilePicturesUseCase,
@@ -34,16 +32,10 @@ export class GetEmployeesBySubDepartmentUseCase {
       const userRole = user.role.getRole();
 
       if (userRole === Roles.SUPERVISOR) {
-        const supervisor = await this.supervisorRepository.findByUserId(userId);
-        const supervisorDepartmentIds = supervisor.departments.map((d) =>
-          d.id.toString(),
-        );
-
-        // Check if supervisor has access to this sub-department through its parent
-        const hasAccess =
-          await this.departmentRepository.validateDepartmentAccess(
+        const { hasAccess } =
+          await this.departmentRepository.supervisorHasAccessToDepartment(
+            { supervisorUserId: userId },
             dto.subDepartmentId,
-            supervisorDepartmentIds,
           );
 
         if (!hasAccess) {

@@ -301,8 +301,6 @@ export class CreateTaskUseCase {
     }
 
     if (role === Roles.SUPERVISOR) {
-      const supervisor = await this.supervisorRepository.findByUserId(userId);
-
       // Supervisors cannot create department-level tasks
       if (assignmentType === TaskAssignmentType.DEPARTMENT) {
         throw new ForbiddenException(
@@ -315,14 +313,13 @@ export class CreateTaskUseCase {
         assignmentType === TaskAssignmentType.INDIVIDUAL &&
         dto.assignee.assigneeId
       ) {
-        const assignee = await this.employeeRepository.findById(
-          dto.assignee.assigneeId,
-        );
-        if (!assignee) {
-          throw new NotFoundException({ assigneeId: 'not_found' });
-        }
+        const hasAccess =
+          await this.employeeRepository.supervisorHasAccessToEmployee({
+            supervisor: { supervisorUserId: userId },
+            employee: { employeeId: dto.assignee.assigneeId },
+          });
 
-        if (assignee.supervisorId.toString() !== supervisor.id.toString()) {
+        if (!hasAccess) {
           throw new ForbiddenException(
             'You can only assign tasks to employees you directly supervise',
           );

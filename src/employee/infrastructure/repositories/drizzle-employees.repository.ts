@@ -480,33 +480,44 @@ export class DrizzleEmployeeRepository implements EmployeeRepository {
       return true;
     }
 
-    const supevisorSubDepartmentIds = await this.db
+    // Get all departments assigned to the supervisor
+    const supervisorMainDepartmentIds = await this.db
+      .select({ departmentId: departmentToSupervisor.departmentId })
+      .from(departmentToSupervisor)
+      .where(eq(departmentToSupervisor.supervisorId, supervisorId))
+      .then((result) => result.map((r) => r.departmentId));
+
+    if (supervisorMainDepartmentIds.length === 0) {
+      return false;
+    }
+
+    // Find all sub-departments of these main departments
+    const subDepartmentIds = await this.db
       .select({ id: departments.id })
       .from(departments)
-      .innerJoin(
-        departmentToSupervisor,
-        eq(departments.id, departmentToSupervisor.departmentId),
-      )
       .where(
         and(
-          eq(departmentToSupervisor.supervisorId, supervisorId),
+          inArray(departments.parentId, supervisorMainDepartmentIds),
           isNotNull(departments.parentId),
         ),
       )
       .then((result) => result.map((r) => r.id));
 
+    if (subDepartmentIds.length === 0) {
+      return false;
+    }
+
+    // Check if employee is assigned to any of these sub-departments
     const result = await this.db
       .select()
       .from(employeeSubDepartments)
       .where(
         and(
           eq(employeeSubDepartments.employeeId, employee.id),
-          inArray(
-            employeeSubDepartments.departmentId,
-            supevisorSubDepartmentIds,
-          ),
+          inArray(employeeSubDepartments.departmentId, subDepartmentIds),
         ),
       );
+
     return result.length > 0;
   }
 
