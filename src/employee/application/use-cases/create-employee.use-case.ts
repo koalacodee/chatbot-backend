@@ -54,7 +54,7 @@ export class CreateEmployeeDirectUseCase {
     private readonly invitationService: EmployeeInvitationService,
     private readonly emailService: ResendEmailService,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   async execute(
     input: CreateEmployeeDirectUseCaseInput,
@@ -87,28 +87,17 @@ export class CreateEmployeeDirectUseCase {
     }
 
     if (userRole === Roles.SUPERVISOR) {
-      const supervisor =
-        await this.supervisorRepository.findByUserId(requestingUserId);
-      const supervisorDepartmentIds = supervisor.departments.map((d) =>
-        d.id.toString(),
-      );
-
-      // Validate that all sub-departments belong to the supervisor's assigned parent departments
-      const invalidSubDepartments =
-        await this.departmentRepository.validateSubDepartments(
-          supervisorDepartmentIds,
+      const hasAccess =
+        await this.departmentRepository.supervisorHasAccessToDepartments(
+          { supervisorUserId: requestingUserId },
           input.subDepartmentIds,
         );
-
-      if (invalidSubDepartments.length > 0) {
-        const invalidNames = invalidSubDepartments
-          .map((dept) => dept.name)
-          .join(', ');
+      if (!hasAccess) {
         throw new ForbiddenException({
           details: [
             {
               field: 'subDepartmentIds',
-              message: `You can only create employees in sub-departments of your assigned departments. Invalid sub-departments: ${invalidNames}`,
+              message: 'You do not have access to these sub-departments',
             },
           ],
         });
