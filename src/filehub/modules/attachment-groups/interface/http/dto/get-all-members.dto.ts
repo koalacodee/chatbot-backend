@@ -1,16 +1,18 @@
-import { IsInt, IsOptional, Min } from 'class-validator';
+import { IsInt, IsOptional, Min, IsString, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GetAllMembersDto {
+  @IsString()
+  @IsOptional()
+  cursor?: string;
+
+  @IsIn(['next', 'prev'])
+  @IsOptional()
+  direction?: 'next' | 'prev';
+
   @IsInt()
   @Min(1)
   @IsOptional()
   @Type(() => Number)
-  limit?: number;
-
-  @IsInt()
-  @Min(0)
-  @IsOptional()
-  @Type(() => Number)
-  offset?: number;
+  pageSize?: number;
 }

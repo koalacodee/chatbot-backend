@@ -3,10 +3,10 @@ import { MemberRepository } from '../../domain/repositories/member.repository';
 import { DepartmentRepository } from '@/department/domain/repositories/department.repository';
 import { UserRepository } from '@/shared/repositories/user.repository';
 import { Roles } from '@/shared/value-objects/role.vo';
+import { CursorInput, CursorMeta } from 'src/common/drizzle/helpers/cursor';
 
 export interface GetAllMembersWithGroupsUseCaseRequest {
-  limit?: number;
-  offset?: number;
+  cursor?: CursorInput;
   userId: string;
 }
 
@@ -29,11 +29,7 @@ export interface MemberWithGroupDetails {
 
 export interface GetAllMembersWithGroupsUseCaseResponse {
   members: MemberWithGroupDetails[];
-  pagination: {
-    limit: number;
-    offset: number;
-    hasMore: boolean;
-  };
+  meta: CursorMeta;
 }
 
 @Injectable()
@@ -47,7 +43,7 @@ export class GetAllMembersWithGroupsUseCase {
   async execute(
     request: GetAllMembersWithGroupsUseCaseRequest,
   ): Promise<GetAllMembersWithGroupsUseCaseResponse> {
-    const { limit, offset, userId } = request;
+    const { cursor, userId } = request;
 
     let departmentIds: string[] | undefined;
 
@@ -76,11 +72,11 @@ export class GetAllMembersWithGroupsUseCase {
       departmentIds = [];
     }
 
-    const membersWithDepts = await this.memberRepository.findAll({
-      limit,
-      offset,
-      departmentIds,
-    });
+    const { data: membersWithDepts, meta } =
+      await this.memberRepository.findAll({
+        cursor,
+        departmentIds,
+      });
 
     // Transform to response format
     const membersWithGroupDetails: MemberWithGroupDetails[] =
@@ -101,16 +97,9 @@ export class GetAllMembersWithGroupsUseCase {
         department,
       }));
 
-    // Check if there might be more results
-    const hasMore = membersWithDepts.length === limit;
-
     return {
       members: membersWithGroupDetails,
-      pagination: {
-        limit,
-        offset,
-        hasMore,
-      },
+      meta,
     };
   }
 }

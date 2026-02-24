@@ -428,15 +428,23 @@ export class AttachmentGroupController {
       );
     }
 
+    const cursor =
+      query.cursor !== undefined || query.direction !== undefined
+        ? {
+            cursor: query.cursor,
+            direction: query.direction,
+            pageSize: query.pageSize,
+          }
+        : undefined;
+
     const result = await this.getAllMembersWithGroupsUseCase.execute({
-      limit: query.limit,
-      offset: query.offset,
+      cursor,
       userId,
     });
 
     return {
       members: result.members,
-      pagination: result.pagination,
+      meta: result.meta,
     };
   }
 

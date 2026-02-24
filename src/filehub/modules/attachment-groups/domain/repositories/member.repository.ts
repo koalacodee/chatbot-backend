@@ -2,6 +2,10 @@ import {
   AttachmentGroupMember,
   AttachmentGroupMemberProps,
 } from '../entities/member.entity';
+import {
+  CursorInput,
+  PaginatedArrayResult,
+} from 'src/common/drizzle/helpers/cursor';
 
 export abstract class MemberRepository {
   abstract save(member: AttachmentGroupMember): Promise<AttachmentGroupMember>;
@@ -18,11 +22,10 @@ export abstract class MemberRepository {
     update: Partial<AttachmentGroupMemberProps>,
   ): Promise<AttachmentGroupMember>;
   abstract findAll(options: {
-    limit?: number;
-    offset?: number;
+    cursor?: CursorInput;
     departmentIds?: string[];
   }): Promise<
-    Array<{
+    PaginatedArrayResult<{
       member: AttachmentGroupMember;
       department: { id: string; name: string } | null;
     }>
