@@ -20,6 +20,7 @@ import { MemberJwtStrategy } from './interface/http/strategies/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AddMemberUseCase } from './application/use-cases/add-member.use-case';
+import { ReauthMemberUseCase } from './application/use-cases/reauth-member.use-case';
 import { UpdateMemberUseCase } from './application/use-cases/update-member.use-case';
 import { DeleteMemberUseCase } from './application/use-cases/delete-member.use-case';
 import { GetAllMembersWithGroupsUseCase } from './application/use-cases/get-all-members-with-groups.use-case';
@@ -52,6 +53,7 @@ import { DepartmentModule } from '@/department/department.module';
     GetAttachmentGroupByMemberIdUseCase,
     MemberJwtStrategy,
     AddMemberUseCase,
+    ReauthMemberUseCase,
     UpdateMemberUseCase,
     DeleteMemberUseCase,
     GetAllMembersWithGroupsUseCase,

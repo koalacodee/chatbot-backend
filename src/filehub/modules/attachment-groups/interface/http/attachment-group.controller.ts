@@ -27,6 +27,7 @@ import { GetAllMembersWithGroupsUseCase } from '../../application/use-cases/get-
 import { UpdateMemberUseCase } from '../../application/use-cases/update-member.use-case';
 import { DeleteMemberUseCase } from '../../application/use-cases/delete-member.use-case';
 import { AddMemberUseCase } from '../../application/use-cases/add-member.use-case';
+import { ReauthMemberUseCase } from '../../application/use-cases/reauth-member.use-case';
 import { GetAvailableDepartmentsForMemberUseCase } from '../../application/use-cases/get-available-departments-for-member.use-case';
 import { CreateAttachmentGroupDto } from './dto/create-attachment-group.dto';
 import { UpdateAttachmentGroupDto } from './dto/update-attachment-group.dto';
@@ -34,6 +35,7 @@ import { VerifyMemberOtpDto } from './dto/verify-member-otp.dto';
 import { GetAllMembersDto } from './dto/get-all-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { AddMemberDto } from './dto/add-member.dto';
+import { ReauthMemberDto } from './dto/reauth-member.dto';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { SupervisorOrEmployeePermissions } from 'src/rbac/decorators';
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
@@ -59,6 +61,7 @@ export class AttachmentGroupController {
     private readonly updateMemberUseCase: UpdateMemberUseCase,
     private readonly deleteMemberUseCase: DeleteMemberUseCase,
     private readonly addMemberUseCase: AddMemberUseCase,
+    private readonly reauthMemberUseCase: ReauthMemberUseCase,
     private readonly getAvailableDepartmentsForMemberUseCase: GetAvailableDepartmentsForMemberUseCase,
     private readonly configService: ConfigService,
   ) {}
@@ -370,6 +373,31 @@ export class AttachmentGroupController {
       name: addMemberDto.name,
       attachmentGroupId: addMemberDto.attachmentGroupId,
       departmentId: addMemberDto.departmentId,
+    });
+
+    return {
+      success: true,
+      member: {
+        id: member.id.value,
+        name: member.name,
+        memberId: member.memberId.value,
+        attachmentGroupId: member.attachmentGroupId.value,
+        createdAt: member.createdAt,
+        updatedAt: member.updatedAt,
+      },
+    };
+  }
+
+  // Re-authenticate an existing member (e.g. after cookies cleared on TV display)
+  @Post('members/reauth')
+  @SupervisorOrEmployeePermissions({
+    employeePermissions: [EmployeePermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+    supervisorPermissions: [SupervisorPermissionsEnum.MANAGE_ATTACHMENT_GROUPS],
+  })
+  async reauthMember(@Body() reauthMemberDto: ReauthMemberDto) {
+    const member = await this.reauthMemberUseCase.execute({
+      otp: reauthMemberDto.otp,
+      memberId: reauthMemberDto.memberId,
     });
 
     return {
