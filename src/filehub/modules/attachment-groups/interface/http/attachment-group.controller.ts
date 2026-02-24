@@ -437,9 +437,15 @@ export class AttachmentGroupController {
           }
         : undefined;
 
+    const filterDepartmentId =
+      query.filterDepartmentId === '__unassigned__'
+        ? null
+        : query.filterDepartmentId;
+
     const result = await this.getAllMembersWithGroupsUseCase.execute({
       cursor,
       userId,
+      filterDepartmentId,
     });
 
     return {

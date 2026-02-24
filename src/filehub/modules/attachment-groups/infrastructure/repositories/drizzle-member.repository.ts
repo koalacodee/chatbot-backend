@@ -10,7 +10,7 @@ import {
   attachmentGroups,
   departments,
 } from 'src/common/drizzle/schema';
-import { eq, count, desc, inArray, and, SQL } from 'drizzle-orm';
+import { eq, count, desc, inArray, and, isNull, SQL } from 'drizzle-orm';
 import {
   createCursorPagination,
   CursorInput,
@@ -175,6 +175,7 @@ export class DrizzleMemberRepository extends MemberRepository {
   async findAll(options: {
     cursor?: CursorInput;
     departmentIds?: string[];
+    filterDepartmentId?: string | null;
   }): Promise<
     PaginatedArrayResult<{
       member: AttachmentGroupMember;
@@ -194,7 +195,12 @@ export class DrizzleMemberRepository extends MemberRepository {
       : undefined;
 
     const whereConditions: SQL[] = [];
+    const isFilteringUnassigned = options.filterDepartmentId === null;
+
+    // Role-based department scope: supervisor/employee restricted to their departments
+    // Skip when filtering by Unassigned: NULL IN (...) is false in SQL, so we'd get no results
     if (
+      !isFilteringUnassigned &&
       options.departmentIds !== undefined &&
       options.departmentIds.length > 0
     ) {
@@ -202,6 +208,18 @@ export class DrizzleMemberRepository extends MemberRepository {
         inArray(attachmentGroupMembers.departmentId, options.departmentIds),
       );
     }
+
+    // Department filter (user-selected)
+    if (options.filterDepartmentId !== undefined) {
+      if (options.filterDepartmentId === null) {
+        whereConditions.push(isNull(attachmentGroupMembers.departmentId));
+      } else {
+        whereConditions.push(
+          eq(attachmentGroupMembers.departmentId, options.filterDepartmentId),
+        );
+      }
+    }
+
     if (cursorCondition) {
       whereConditions.push(cursorCondition);
     }

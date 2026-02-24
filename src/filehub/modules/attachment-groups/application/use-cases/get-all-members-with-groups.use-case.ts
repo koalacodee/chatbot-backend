@@ -8,6 +8,7 @@ import { CursorInput, CursorMeta } from 'src/common/drizzle/helpers/cursor';
 export interface GetAllMembersWithGroupsUseCaseRequest {
   cursor?: CursorInput;
   userId: string;
+  filterDepartmentId?: string | null;
 }
 
 export interface MemberWithGroupDetails {
@@ -43,7 +44,7 @@ export class GetAllMembersWithGroupsUseCase {
   async execute(
     request: GetAllMembersWithGroupsUseCaseRequest,
   ): Promise<GetAllMembersWithGroupsUseCaseResponse> {
-    const { cursor, userId } = request;
+    const { cursor, userId, filterDepartmentId } = request;
 
     let departmentIds: string[] | undefined;
 
@@ -72,10 +73,21 @@ export class GetAllMembersWithGroupsUseCase {
       departmentIds = [];
     }
 
+    // Access control: supervisor/employee can only filter by departments they have access to
+    if (
+      filterDepartmentId !== undefined &&
+      filterDepartmentId !== null &&
+      departmentIds !== undefined &&
+      !departmentIds.includes(filterDepartmentId)
+    ) {
+      return { members: [], meta: { hasNextPage: false, hasPrevPage: false } };
+    }
+
     const { data: membersWithDepts, meta } =
       await this.memberRepository.findAll({
         cursor,
         departmentIds,
+        filterDepartmentId,
       });
 
     // Transform to response format

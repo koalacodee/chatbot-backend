@@ -24,6 +24,7 @@ export abstract class MemberRepository {
   abstract findAll(options: {
     cursor?: CursorInput;
     departmentIds?: string[];
+    filterDepartmentId?: string | null;
   }): Promise<
     PaginatedArrayResult<{
       member: AttachmentGroupMember;

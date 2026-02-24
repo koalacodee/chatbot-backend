@@ -15,4 +15,8 @@ export class GetAllMembersDto {
   @IsOptional()
   @Type(() => Number)
   pageSize?: number;
+
+  @IsString()
+  @IsOptional()
+  filterDepartmentId?: string;
 }
