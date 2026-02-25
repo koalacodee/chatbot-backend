@@ -28,7 +28,7 @@ export class DrizzleMemberRepository extends MemberRepository {
       { column: attachmentGroupMembers.createdAt, key: 'createdAt' },
       { column: attachmentGroupMembers.id, key: 'id' },
     ],
-    defaultPageSize: 10,
+    defaultPageSize: 20,
     sortDirection: 'desc',
   });
 
