@@ -61,44 +61,45 @@ export async function save(ctx: TaskRepoContext, task: Task): Promise<Task> {
     return result;
   };
 
-  if (task.reminders.length > 0) {
+  if (task.reminders !== undefined) {
     return ctx.db.transaction(async (tx) => {
       const savedTask = await returnSavedTask(tx);
 
-      const reminderValues: (typeof taskReminders.$inferInsert)[] =
-        task.reminders.map((r) => ({
-          ...r,
-          taskId: savedTask.id,
-        }));
+      // Delete all existing reminders for the task, then insert current list
+      await tx
+        .delete(taskReminders)
+        .where(eq(taskReminders.taskId, savedTask.id));
 
-      const savedReminders = await tx
-        .insert(taskReminders)
-        .values(reminderValues)
-        .onConflictDoUpdate({
-          target: taskReminders.id,
-          set: buildConflictUpdateColumns(taskReminders, [
-            'name',
-            'reminderDate',
-            'reminderInterval',
-          ]),
-        })
-        .returning();
+      if (task.reminders.length > 0) {
+        const reminderValues: (typeof taskReminders.$inferInsert)[] =
+          task.reminders.map((r) => ({
+            ...r,
+            taskId: savedTask.id,
+          }));
 
-      return Task.create({
-        ...savedTask,
-        status: dbToStatus(savedTask.status),
-        assignmentType: dbToAssignmentType(savedTask.assignmentType),
-        priority: dbToPriority(savedTask.priority),
-        reminders: savedReminders.map((r) => ({
-          id: r.id,
-          name: r.name,
-          reminderDate: r.reminderDate,
-          reminderInterval: r.reminderInterval,
-          taskId: r.taskId,
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
-        })),
-      });
+        const savedReminders = await tx
+          .insert(taskReminders)
+          .values(reminderValues)
+          .returning();
+
+        return Task.create({
+          ...savedTask,
+          status: dbToStatus(savedTask.status),
+          assignmentType: dbToAssignmentType(savedTask.assignmentType),
+          priority: dbToPriority(savedTask.priority),
+          reminders: savedReminders.map((r) => ({
+            id: r.id,
+            name: r.name,
+            reminderDate: r.reminderDate,
+            reminderInterval: r.reminderInterval,
+            taskId: r.taskId,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          })),
+        });
+      }
+
+        return ctx.mapRowToTask({ ...savedTask, reminders: [] });
     });
   }
 
