@@ -45,6 +45,7 @@ interface UpdateTaskInputDto {
     reminderDate: Date;
     reminderInterval: number;
   }[];
+  daysBeforeDeadlineReminder?: number;
 }
 
 @Injectable()
@@ -84,6 +85,8 @@ export class UpdateTaskUseCase {
     if (dto.description !== undefined) existing.description = dto.description;
     if (dto.dueDate !== undefined) existing.dueDate = dto.dueDate;
     if (dto.priority !== undefined) existing.priority = dto.priority;
+    if (dto.daysBeforeDeadlineReminder !== undefined)
+      existing.daysBeforeDeadlineReminder = dto.daysBeforeDeadlineReminder;
 
     if (dto.assignerId !== undefined) {
       const user = await this.supervisorRepository.findByUserId(dto.assignerId);
@@ -201,12 +204,15 @@ export class UpdateTaskUseCase {
 
       existing.reminders = [...(existing.reminders ?? []), ...newReminders];
 
+      const daysOffset = existing.daysBeforeDeadlineReminder ?? 0;
       for (const reminder of newReminders) {
+        const startDate = new Date(reminder.reminderDate);
+        startDate.setDate(startDate.getDate() - daysOffset);
         await this.reminderQueueService.scheduleReminder(
           reminder.id,
           existing.id.toString(),
           reminder.reminderInterval,
-          reminder.reminderDate,
+          startDate,
         );
       }
     }
@@ -232,6 +238,21 @@ export class UpdateTaskUseCase {
     ]);
 
     savedTask.assigneeName = newAssigneeName ?? savedTask.assigneeName;
+
+    // When daysBeforeDeadlineReminder changed, reschedule all reminders with new offset
+    if (dto.daysBeforeDeadlineReminder !== undefined && savedTask.reminders && savedTask.reminders.length > 0) {
+      const daysOffset = savedTask.daysBeforeDeadlineReminder ?? 0;
+      for (const r of savedTask.reminders) {
+        const startDate = new Date(r.reminderDate);
+        startDate.setDate(startDate.getDate() - daysOffset);
+        await this.reminderQueueService.updateReminder(
+          r.id,
+          id,
+          r.reminderInterval,
+          startDate,
+        );
+      }
+    }
 
     // Handle attachment cloning (via Domain Event)
     if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {

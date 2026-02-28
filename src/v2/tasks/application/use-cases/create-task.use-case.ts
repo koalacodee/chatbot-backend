@@ -58,6 +58,7 @@ interface CreateTaskInputDto {
   reminders?: TaskReminderOptions[];
   savePreset?: boolean;
   chooseAttachments?: string[];
+  daysBeforeDeadlineReminder?: number;
 }
 
 @Injectable()
@@ -218,6 +219,7 @@ export class CreateTaskUseCase {
       targetSubDepartmentId: dto.assignee.targetSubDepartmentId,
       targetDepartmentId: dto.assignee.targetDepartmentId,
       assigneeId: dto.assignee.assigneeId,
+      daysBeforeDeadlineReminder: dto.daysBeforeDeadlineReminder,
     });
 
     const [saved, fileHubUploadKey] = await Promise.all([
@@ -281,6 +283,7 @@ export class CreateTaskUseCase {
             interval: r.reminderInterval,
             dueDate: r.reminderDate,
           })),
+          saved.daysBeforeDeadlineReminder ?? 0,
         ),
       );
     }

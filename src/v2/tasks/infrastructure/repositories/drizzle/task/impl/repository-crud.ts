@@ -46,6 +46,7 @@ export async function save(ctx: TaskRepoContext, task: Task): Promise<Task> {
     priority: priorityToDb(task.priority),
     dueDate: task.dueDate ?? null,
     creatorId: task.creatorId,
+    daysBeforeDeadlineReminder: task.daysBeforeDeadlineReminder ?? null,
   };
 
   const returnSavedTask = async (db: DrizzleTransaction | DatabaseInstance) => {

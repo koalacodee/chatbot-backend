@@ -107,6 +107,11 @@ export class CreateTaskRequestDto {
   @IsArray()
   @IsUUID(undefined, { each: true })
   chooseAttachments?: string[];
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  daysBeforeDeadlineReminder?: number;
 }
 
 // ──────────────────────────────────────────────
@@ -192,6 +197,9 @@ export class TaskResponseDto {
 
   @Expose()
   assigneeName?: string;
+
+  @Expose()
+  daysBeforeDeadlineReminder?: number;
 }
 
 export class CreateTaskResponseDto {

@@ -9,15 +9,18 @@ export class TaskRemindersListener {
 
   @OnEvent(TaskRemindersCreatedEvent.name, { async: true })
   async handleTaskRemindersCreatedEvent(event: TaskRemindersCreatedEvent) {
+    const daysOffset = event.daysBeforeDeadlineReminder || 0;
     await Promise.all(
-      event.reminders.map((reminder) =>
-        this.reminderQueueService.scheduleReminder(
+      event.reminders.map((reminder) => {
+        const startDate = new Date(reminder.dueDate);
+        startDate.setDate(startDate.getDate() - daysOffset);
+        return this.reminderQueueService.scheduleReminder(
           reminder.id,
           event.taskId,
           reminder.interval,
-          reminder.dueDate,
-        ),
-      ),
+          startDate,
+        );
+      }),
     );
   }
 }

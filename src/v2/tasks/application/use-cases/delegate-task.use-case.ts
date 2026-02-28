@@ -205,6 +205,7 @@ export class DelegateTaskUseCase {
             interval: r.reminderInterval,
             dueDate: r.reminderDate,
           })),
+          task.daysBeforeDeadlineReminder ?? 0,
         ),
       );
     }

@@ -7,7 +7,7 @@ import { TaskRepository } from '../../domain/repositories/task.repository';
 
 interface ReminderJobData {
   taskId: string;
-  reminderId: string;
+  reminderId?: string;
 }
 
 @Processor('v2-task-reminders')

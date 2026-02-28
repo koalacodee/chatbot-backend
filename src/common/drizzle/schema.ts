@@ -1522,6 +1522,7 @@ export const tasks = pgTable(
       mode: 'date',
     }),
     creatorId: uuid('creator_id'),
+    daysBeforeDeadlineReminder: integer('days_before_deadline_reminder'),
   },
   (table) => [
     index('idx_tasks_cursor').on(table.createdAt.desc(), table.id.desc()),

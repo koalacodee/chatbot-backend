@@ -69,6 +69,7 @@ export interface TaskOptions {
   targetDepartmentId?: string;
   targetSubDepartmentId?: string;
   assigneeName?: string;
+  daysBeforeDeadlineReminder?: number;
 }
 
 export class Task {
@@ -97,6 +98,7 @@ export class Task {
   private _reminders?: TaskReminder[];
   // Either assignee name or department name or sub-department name based on assignment type, used for display purposes
   private _assigneeName?: string;
+  private _daysBeforeDeadlineReminder?: number;
 
   private constructor(options: TaskOptions) {
     this._id = options.id ?? uuidv7();
@@ -121,6 +123,7 @@ export class Task {
     this._assigneeId = options.assigneeId ?? undefined;
     this._targetDepartmentId = options.targetDepartmentId ?? undefined;
     this._targetSubDepartmentId = options.targetSubDepartmentId ?? undefined;
+    this._daysBeforeDeadlineReminder = options.daysBeforeDeadlineReminder ?? undefined;
     this._reminders =
       options.reminders?.map((reminder) => ({
         id: reminder.id ?? uuidv7(),
@@ -359,6 +362,14 @@ export class Task {
     this._assigneeName = value;
   }
 
+  get daysBeforeDeadlineReminder(): number | undefined {
+    return this._daysBeforeDeadlineReminder;
+  }
+
+  set daysBeforeDeadlineReminder(value: number | undefined) {
+    this._daysBeforeDeadlineReminder = value;
+  }
+
   toJSON() {
     return {
       id: this.id,
@@ -383,6 +394,7 @@ export class Task {
       targetSubDepartmentId: this.targetSubDepartmentId,
       assigneeName: this.assigneeName,
       reminders: this.reminders,
+      daysBeforeDeadlineReminder: this.daysBeforeDeadlineReminder,
     };
   }
 }

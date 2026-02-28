@@ -94,5 +94,6 @@ export function mapRowToTask(row: TaskRow): Task {
     completedAt: row.completedAt ?? undefined,
     reminders: row.reminders,
     assigneeName: row.assigneeName,
+    daysBeforeDeadlineReminder: row.daysBeforeDeadlineReminder ?? undefined,
   });
 }

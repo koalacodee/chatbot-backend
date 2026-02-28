@@ -6,5 +6,6 @@ export class TaskRemindersCreatedEvent {
       interval: number;
       dueDate: Date;
     }[],
+    public readonly daysBeforeDeadlineReminder: number,
   ) {}
 }

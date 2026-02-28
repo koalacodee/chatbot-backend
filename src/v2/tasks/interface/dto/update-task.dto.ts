@@ -113,6 +113,11 @@ export class UpdateTaskRequestDto {
   @Type(() => UpdateTaskReminderDto)
   @IsArray()
   addReminders?: UpdateTaskReminderDto[];
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  daysBeforeDeadlineReminder?: number;
 }
 
 // ──────────────────────────────────────────────
