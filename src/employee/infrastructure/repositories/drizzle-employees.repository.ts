@@ -40,6 +40,7 @@ import {
 } from '@/supervisor/domain/entities/supervisor.entity';
 import { Roles } from '@/shared/value-objects/role.vo';
 import { User } from '@/shared/entities/user.entity';
+import { randomUUID } from 'crypto';
 import { Injectable } from '@nestjs/common';
 
 type DrizzleUserRole = (typeof users.$inferSelect)['role'];
@@ -235,6 +236,26 @@ export class DrizzleEmployeeRepository implements EmployeeRepository {
 
     if (result.length === 0) {
       throw new Error(`Employee with id ${id} not found`);
+    }
+
+    if (update.subDepartments !== undefined) {
+      await this.db.transaction(async (tx) => {
+        await tx
+          .delete(employeeSubDepartments)
+          .where(eq(employeeSubDepartments.employeeId, id));
+
+        if (update.subDepartments.length > 0) {
+          const now = new Date().toISOString();
+          await tx.insert(employeeSubDepartments).values(
+            update.subDepartments.map((dept) => ({
+              id: randomUUID(),
+              employeeId: id,
+              departmentId: dept.id.toString(),
+              updatedAt: now,
+            })),
+          );
+        }
+      });
     }
 
     return this.mapToEmployee(result[0]);
