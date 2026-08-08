@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { AttachmentGroupRepository } from './domain/repositories/attachment-group.repository';
-import { PrismaAttachmentGroupRepository } from './infrastructure/repositories/prisma-attachment-group.repository';
 import { CreateAttachmentGroupUseCase } from './application/use-cases/create-attachment-group.use-case';
 import { GetAttachmentGroupByKeyUseCase } from './application/use-cases/get-attachment-group-by-key.use-case';
 import { GetAttachmentGroupDetailsUseCase } from './application/use-cases/get-attachment-group-details.use-case';
@@ -12,6 +11,7 @@ import { AttachmentGroupController } from './interface/http/attachment-group.con
 import { AttachmentGroupGateway } from './interface/websocket/attachment-group.gateway';
 import { AttachmentGroupNotificationService } from './domain/services/attachment-group-notification.service';
 import { FileModule } from '../files/files.module';
+import { DrizzleAttachmentGroupRepository } from './infrastructure/repositories/drizzle-attachment-group.repository';
 
 @Module({
   imports: [FileModule],
@@ -19,7 +19,7 @@ import { FileModule } from '../files/files.module';
   providers: [
     {
       provide: AttachmentGroupRepository,
-      useClass: PrismaAttachmentGroupRepository,
+      useClass: DrizzleAttachmentGroupRepository,
     },
     AttachmentGroupGateway,
     AttachmentGroupNotificationService,

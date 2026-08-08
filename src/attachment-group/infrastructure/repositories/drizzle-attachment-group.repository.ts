@@ -6,7 +6,7 @@ import {
   attachmentGroups,
   attachmentToAttachmentGroup,
 } from 'src/common/drizzle/schema';
-import { eq, and, desc, sql, count, inArray } from 'drizzle-orm';
+import { eq, desc, count, inArray } from 'drizzle-orm';
 
 @Injectable()
 export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository {
@@ -18,14 +18,6 @@ export class DrizzleAttachmentGroupRepository extends AttachmentGroupRepository 
     return this.drizzleService.client;
   }
 
-  private toISOStringSafe(
-    date: Date | string | undefined | null,
-  ): string | null {
-    if (!date) return null;
-    if (typeof date === 'string') return date;
-    if (date instanceof Date) return date.toISOString();
-    return null;
-  }
 
   private toDateSafe(
     date: Date | string | undefined | null,
