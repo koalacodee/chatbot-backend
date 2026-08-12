@@ -45,7 +45,7 @@ import {
   count,
   SQL,
 } from 'drizzle-orm';
-import { TicketCode } from 'src/tickets/domain/value-objects/ticket-code.vo';
+import { TicketCode } from '@/support-tickets/domain/entities/ticket-code.vo';
 import { SupportTicketAnswer } from 'src/support-tickets/domain/entities/support-ticket-answer.entity';
 import { Attachment } from 'src/filehub/domain/entities/attachment.entity';
 import {

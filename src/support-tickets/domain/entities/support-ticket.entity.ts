@@ -2,7 +2,7 @@ import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Guest } from 'src/guest/domain/entities/guest.entity';
 import { Department } from 'src/department/domain/entities/department.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
-import { TicketCode } from 'src/tickets/domain/value-objects/ticket-code.vo';
+import { TicketCode } from '@/support-tickets/domain/entities/ticket-code.vo';
 import { SupportTicketInteraction } from './support-ticket-interaction.entity';
 import { SupportTicketAnswer } from './support-ticket-answer.entity';
 
