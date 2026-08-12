@@ -3,80 +3,10 @@
   "dialect": "postgresql",
   "entries": [
     {
-      "idx": 1,
+      "idx": 0,
       "version": "7",
-      "when": 1764607608705,
-      "tag": "0001_pink_shiver_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1768482733433,
-      "tag": "0002_chunky_vengeance",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1769459021953,
-      "tag": "0003_right_bastion",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1769570184402,
-      "tag": "0004_ordinary_triton",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1770257877570,
-      "tag": "0005_dry_invisible_woman",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1770341151808,
-      "tag": "0006_volatile_frog_thor",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1770626216254,
-      "tag": "0007_abandoned_vermin",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1770991157994,
-      "tag": "0008_add_forwarded_message_and_target",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1771083722428,
-      "tag": "0009_organic_firebird",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1771155106072,
-      "tag": "0010_rare_warpath",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1772297418851,
-      "tag": "0011_add_days_before_deadline_reminder",
+      "when": 1786545749173,
+      "tag": "0000_baseline",
       "breakpoints": true
     }
   ]

@@ -1,1 +1,0 @@
-CREATE INDEX "idx_tasks_cursor" ON "tasks" USING btree ("created_at" DESC NULLS LAST,"id" DESC NULLS LAST);

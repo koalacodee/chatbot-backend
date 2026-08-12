@@ -6,13 +6,13 @@ import { CsvService } from './domain/services/csv.service';
 import { CsvService as CsvServiceImpl } from './infrastructure/services/csv.service';
 import { ExportService } from './domain/services/export.service';
 import { ExportService as ExportServiceImpl } from './infrastructure/services/export.service';
-import { FileModule } from '../files/files.module';
 import { ExportFileService } from './domain/services/export-file.service';
 import { ExportFileServiceImpl } from './infrastructure/services/export-file.service';
 import { ExportFileController } from './interface/http/export-file.controller';
 
+// FileHubService comes from FilehubModule, which is @Global().
 @Module({
-  imports: [FileModule, ConfigModule],
+  imports: [ConfigModule],
   controllers: [ExportFileController],
   providers: [
     { provide: ExportRepository, useClass: PrismaExportRepository },

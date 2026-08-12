@@ -1,6 +1,6 @@
 {
-  "id": "5005ee8c-78b6-4486-a642-214b186b47b3",
-  "prevId": "b0fa531c-3c9d-4cae-87b2-3c4b59b034d3",
+  "id": "e4a3151b-6845-400c-8d02-13b366b701a0",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -73,8 +73,7 @@
               "expression": "occurred_at",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "timestamp_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -89,8 +88,7 @@
               "expression": "type",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "enum_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -105,8 +103,7 @@
               "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -161,8 +158,7 @@
               "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -249,8 +245,7 @@
               "expression": "attachment_group_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -265,8 +260,7 @@
               "expression": "member_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -388,8 +382,7 @@
               "expression": "created_by_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -404,8 +397,7 @@
               "expression": "key",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -460,8 +452,7 @@
               "expression": "B",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -607,8 +598,7 @@
               "expression": "cloned",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -623,8 +613,7 @@
               "expression": "guest_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -639,8 +628,7 @@
               "expression": "is_global",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -655,8 +643,7 @@
               "expression": "target_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -671,8 +658,7 @@
               "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -752,15 +738,13 @@
               "expression": "guest_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             },
             {
               "expression": "is_deleted",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -815,8 +799,7 @@
               "expression": "B",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -927,8 +910,7 @@
               "expression": "parent_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1014,8 +996,7 @@
               "expression": "licensing_number",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -1030,8 +1011,7 @@
               "expression": "supervisor_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1046,8 +1026,7 @@
               "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -1203,8 +1182,7 @@
               "expression": "requested_by_supervisor_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1219,15 +1197,13 @@
               "expression": "resolved_by_admin_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "status",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1314,8 +1290,7 @@
               "expression": "department_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1330,15 +1305,13 @@
               "expression": "employee_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "department_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -1353,8 +1326,7 @@
               "expression": "employee_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1435,8 +1407,7 @@
               "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -1536,8 +1507,7 @@
               "expression": "type",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "enum_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1603,8 +1573,7 @@
               "expression": "email",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -1619,8 +1588,7 @@
               "expression": "phone",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -1686,8 +1654,7 @@
               "expression": "department_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1702,8 +1669,7 @@
               "expression": "point_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1783,8 +1749,7 @@
               "expression": "conversation_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1965,8 +1930,7 @@
               "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -2072,22 +2036,19 @@
               "expression": "created_by_admin_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "is_active",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             },
             {
               "expression": "created_by_supervisor_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2186,8 +2147,7 @@
               "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2254,8 +2214,7 @@
               "expression": "guest_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2270,15 +2229,13 @@
               "expression": "question_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "guest_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -2293,8 +2250,7 @@
               "expression": "question_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2368,8 +2324,7 @@
               "expression": "guest_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2384,15 +2339,13 @@
               "expression": "question_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "guest_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -2407,8 +2360,7 @@
               "expression": "question_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2540,8 +2492,7 @@
               "expression": "creator_supervisor_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2556,8 +2507,7 @@
               "expression": "department_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2572,15 +2522,13 @@
               "expression": "department_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "int4_ops"
+              "nulls": "last"
             },
             {
               "expression": "views",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2595,8 +2543,7 @@
               "expression": "views",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "int4_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2716,8 +2663,7 @@
               "expression": "notification_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2732,8 +2678,7 @@
               "expression": "seen",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2748,8 +2693,7 @@
               "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2848,8 +2792,7 @@
               "expression": "token",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2922,8 +2865,7 @@
               "expression": "knowledge_chunk_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2938,8 +2880,7 @@
               "expression": "message_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -3027,8 +2968,7 @@
               "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3043,8 +2983,7 @@
               "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -3143,22 +3082,19 @@
               "expression": "answerer_supervisor_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "answerer_employee_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "answerer_admin_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3173,8 +3109,7 @@
               "expression": "support_ticket_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -3300,8 +3235,7 @@
               "expression": "anonymous_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3316,8 +3250,7 @@
               "expression": "guest_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3332,8 +3265,7 @@
               "expression": "support_ticket_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3348,8 +3280,7 @@
               "expression": "support_ticket_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -3522,8 +3453,7 @@
               "expression": "code",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -3538,8 +3468,7 @@
               "expression": "department_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3554,8 +3483,7 @@
               "expression": "status",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "enum_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3711,8 +3639,7 @@
               "expression": "delegation_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3727,8 +3654,7 @@
               "expression": "performer_admin_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3743,8 +3669,7 @@
               "expression": "performer_employee_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3759,8 +3684,7 @@
               "expression": "performer_supervisor_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3775,15 +3699,13 @@
               "expression": "reviewed_by_admin_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "reviewed_by_supervisor_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3798,8 +3720,7 @@
               "expression": "status",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "enum_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3997,8 +3918,7 @@
               "expression": "assignee_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4013,8 +3933,7 @@
               "expression": "delegator_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4029,8 +3948,7 @@
               "expression": "status",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "enum_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4045,8 +3963,7 @@
               "expression": "target_sub_department_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4061,8 +3978,7 @@
               "expression": "task_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4244,8 +4160,7 @@
               "expression": "assigner_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4260,8 +4175,7 @@
               "expression": "assigner_role",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4276,8 +4190,7 @@
               "expression": "name",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4474,8 +4387,7 @@
               "expression": "performer_admin_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4490,8 +4402,7 @@
               "expression": "performer_employee_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4506,8 +4417,7 @@
               "expression": "performer_supervisor_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4522,15 +4432,13 @@
               "expression": "reviewed_by_admin_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "reviewed_by_supervisor_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4545,8 +4453,7 @@
               "expression": "status",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "enum_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4561,8 +4468,7 @@
               "expression": "task_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4824,8 +4730,7 @@
               "expression": "assignee_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4840,8 +4745,7 @@
               "expression": "assigner_admin_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4856,8 +4760,7 @@
               "expression": "assigner_supervisor_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4872,8 +4775,7 @@
               "expression": "priority",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "enum_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4888,8 +4790,7 @@
               "expression": "target_department_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4904,8 +4805,7 @@
               "expression": "target_sub_department_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -5044,8 +4944,7 @@
               "expression": "ticket_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -5152,8 +5051,7 @@
               "expression": "department_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -5168,8 +5066,7 @@
               "expression": "guest_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -5184,15 +5081,13 @@
               "expression": "point_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "is_auto_generated",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -5207,8 +5102,7 @@
               "expression": "ticket_code",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -5308,8 +5202,7 @@
               "expression": "lang",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "enum_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -5324,8 +5217,7 @@
               "expression": "target_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -5416,8 +5308,7 @@
               "expression": "email",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -5432,8 +5323,7 @@
               "expression": "employee_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -5448,8 +5338,7 @@
               "expression": "username",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -5540,8 +5429,7 @@
               "expression": "vehicle_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -5659,15 +5547,13 @@
               "expression": "driver_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "status",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -5836,8 +5722,7 @@
               "expression": "driver_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -5852,15 +5737,13 @@
               "expression": "rule_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "is_paid",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -5875,8 +5758,7 @@
               "expression": "vehicle_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,

@@ -1,36 +1,52 @@
 import { Injectable } from '@nestjs/common';
-import { ExportService as AbstractExportService, Primitive } from '../../domain/services/export.service';
+import {
+  ExportService as AbstractExportService,
+  Primitive,
+} from '../../domain/services/export.service';
 import { CsvService } from '../../domain/services/csv.service';
-import { FileManagementClass } from 'src/files/domain/services/file-mangement.service';
-import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { ExportRepository } from 'src/export/domain/repositories/export.repository';
 import { Export, ExportType } from 'src/export/domain/entities/export.entity';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
+import ky from 'ky';
 
 @Injectable()
 export class ExportService extends AbstractExportService {
+  private readonly uploadUrlTtlSeconds = 3600;
+  private readonly uploadTimeoutMs = 300000;
+
   constructor(
     private readonly csvService: CsvService,
-    private readonly fileManagementService: FileManagementClass,
     private readonly exportRepository: ExportRepository,
+    private readonly fileHubService: FileHubService,
   ) {
     super();
   }
 
-  async export(data: { [key: string]: Primitive }[]): Promise<Export> {
-    // Convert data to CSV string
-    const csvString = await this.csvService.stringify(data);
-
-    // Write CSV to temporary file
-    const filename = `export-${UUID.create().toString()}.csv`;
-
-    async function* csvBufferGenerator() {
-      yield Buffer.from(csvString, 'utf-8');
-    }
-
-    const result = await this.fileManagementService.uploadFromAsyncGenerator(
-      filename,
-      csvBufferGenerator(),
+  /**
+   * Uploads a CSV payload to FileHub through a signed PUT URL and returns the
+   * object key to persist on the export row. That key is the same value
+   * FileHubService.getSignedUrl() expects when the file is read back.
+   */
+  private async uploadCsv(
+    csv: string,
+  ): Promise<{ objectName: string; bytesUploaded: number }> {
+    const { signedUrl, filename } = await this.fileHubService.getSignedPutUrl(
+      this.uploadUrlTtlSeconds,
+      'csv',
     );
+
+    await ky.put(signedUrl, {
+      body: csv,
+      headers: { 'Content-Type': 'text/csv; charset=utf-8' },
+      timeout: this.uploadTimeoutMs,
+    });
+
+    return { objectName: filename, bytesUploaded: Buffer.byteLength(csv) };
+  }
+
+  async export(data: { [key: string]: Primitive }[]): Promise<Export> {
+    const csvString = await this.csvService.stringify(data);
+    const result = await this.uploadCsv(csvString);
 
     const exportEntity = Export.create({
       type: ExportType.CSV,
@@ -39,48 +55,33 @@ export class ExportService extends AbstractExportService {
       rows: data.length,
     });
 
-    const savedExportEntity = await this.exportRepository.save(exportEntity);
-    return savedExportEntity;
+    return this.exportRepository.save(exportEntity);
   }
 
   async exportFromAsyncGenerator(
     data: AsyncGenerator<{ [key: string]: Primitive }[]>,
   ): Promise<Export> {
-    // Generate unique filename for the export
-    const filename = `export-${UUID.create().toString()}.csv`;
-
-    // Convert data generator to CSV buffer generator
-    const csvService = this.csvService;
+    const chunks: string[] = [];
     let isFirstChunk = true;
     let rows = 0;
 
-    async function* csvBufferGenerator() {
-      for await (const chunk of data) {
-        // Convert each chunk to CSV
-        const csvString = await csvService.stringify(chunk);
-        const csvBuffer = Buffer.from(csvString, 'utf-8');
+    for await (const chunk of data) {
+      const csvString = await this.csvService.stringify(chunk);
 
-        // For the first chunk, include headers. For subsequent chunks, skip headers
-        if (isFirstChunk) {
-          isFirstChunk = false;
-          yield csvBuffer;
-        } else {
-          // Remove header line from subsequent chunks
-          const lines = csvString.split('\n');
-          if (lines.length > 1) {
-            const dataLines = lines.slice(1).join('\n');
-            yield Buffer.from(dataLines, 'utf-8');
-          }
+      if (isFirstChunk) {
+        isFirstChunk = false;
+        chunks.push(csvString);
+      } else {
+        // Subsequent chunks repeat the header row — drop it.
+        const lines = csvString.split('\n');
+        if (lines.length > 1) {
+          chunks.push(lines.slice(1).join('\n'));
         }
-        rows += chunk.length;
       }
+      rows += chunk.length;
     }
 
-    // Upload using uploadFromAsyncGenerator
-    const result = await this.fileManagementService.uploadFromAsyncGenerator(
-      filename,
-      csvBufferGenerator(),
-    );
+    const result = await this.uploadCsv(chunks.join(''));
 
     const exportEntity = Export.create({
       type: ExportType.CSV,
@@ -89,9 +90,6 @@ export class ExportService extends AbstractExportService {
       rows,
     });
 
-    const savedExportEntity = await this.exportRepository.save(exportEntity);
-
-    return savedExportEntity;
+    return this.exportRepository.save(exportEntity);
   }
 }
-

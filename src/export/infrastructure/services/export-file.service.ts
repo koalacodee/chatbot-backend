@@ -1,10 +1,8 @@
 import {
   BadRequestException,
   Injectable,
-  MethodNotAllowedException,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
   ExportFileService,
   ExportFileStreamResult,
@@ -14,44 +12,22 @@ import { ExportRepository } from '../../domain/repositories/export.repository';
 import { RedisService } from 'src/shared/infrastructure/redis';
 import { randomInt } from 'crypto';
 import { isUUID } from 'class-validator';
-import { createReadStream, existsSync } from 'fs';
-import { join } from 'path';
-import * as OSS from 'ali-oss';
+import { Readable } from 'stream';
+import ky from 'ky';
+import { FileHubService } from 'src/filehub/domain/services/filehub.service';
 
 @Injectable()
 export class ExportFileServiceImpl extends ExportFileService {
   private readonly shareKeyPrefix = 'exportShareKey:';
-  private readonly uploadsDir: string;
-  private readonly storageDriver: 'local' | 'ali-oss';
-  private readonly ossClient?: OSS;
+  private readonly signedUrlTtlMs = 3600 * 1000;
+  private readonly downloadTimeoutMs = 300000;
 
   constructor(
     private readonly exportRepository: ExportRepository,
     private readonly redisService: RedisService,
-    private readonly configService: ConfigService,
+    private readonly fileHubService: FileHubService,
   ) {
     super();
-    this.uploadsDir = join(process.cwd(), 'uploads');
-    this.storageDriver = this.configService.get<'local' | 'ali-oss'>(
-      'FILE_MANAGEMENT_SERVICE',
-      'local',
-    );
-
-    if (this.storageDriver === 'ali-oss') {
-      this.ossClient = new OSS({
-        region: this.configService.getOrThrow<string>('OSS_REGION'),
-        accessKeyId: this.configService.getOrThrow<string>('OSS_ACCESS_KEY_ID'),
-        accessKeySecret: this.configService.getOrThrow<string>(
-          'OSS_ACCESS_KEY_SECRET',
-        ),
-        bucket: this.configService.getOrThrow<string>('OSS_BUCKET'),
-        endpoint: this.configService.getOrThrow<string>('OSS_ENDPOINT'),
-        timeout: parseInt(
-          this.configService.getOrThrow<string>('OSS_TIMEOUT', '300000'),
-        ),
-        secure: true,
-      });
-    }
   }
 
   private async resolveExportId(identifier: string): Promise<string> {
@@ -102,25 +78,26 @@ export class ExportFileServiceImpl extends ExportFileService {
     const exportEntity = await this.fetchExport(identifier);
     const objectName = exportEntity.objectPath;
 
-    if (this.storageDriver === 'ali-oss') {
-      if (!this.ossClient) {
-        throw new MethodNotAllowedException('OSS client is not configured');
-      }
-      const streamResult = await this.ossClient.getStream(objectName);
-      return {
-        stream: streamResult?.stream ?? null,
-        exportId: exportEntity.id,
-        objectName,
-      };
-    }
+    const { signedUrl } = await this.fileHubService.getSignedUrl(
+      objectName,
+      this.signedUrlTtlMs,
+    );
 
-    const filePath = join(this.uploadsDir, objectName);
-    if (!existsSync(filePath)) {
+    const response = await ky.get(signedUrl, {
+      timeout: this.downloadTimeoutMs,
+      throwHttpErrors: false,
+    });
+
+    if (response.status === 404) {
       throw new NotFoundException('Export file not found on storage');
     }
 
+    if (!response.ok || !response.body) {
+      throw new NotFoundException('Export file could not be read from storage');
+    }
+
     return {
-      stream: createReadStream(filePath),
+      stream: Readable.fromWeb(response.body),
       exportId: exportEntity.id,
       objectName,
     };
@@ -129,18 +106,11 @@ export class ExportFileServiceImpl extends ExportFileService {
   async getSignedUrl(identifier: string): Promise<string | null> {
     const exportEntity = await this.fetchExport(identifier);
 
-    if (this.storageDriver !== 'ali-oss') {
-      return null;
-    }
+    const { signedUrl } = await this.fileHubService.getSignedUrl(
+      exportEntity.objectPath,
+      this.signedUrlTtlMs,
+    );
 
-    if (!this.ossClient) {
-      throw new MethodNotAllowedException('OSS client is not configured');
-    }
-
-    return this.ossClient.signatureUrl(exportEntity.objectPath, {
-      expires: 3600,
-    });
+    return signedUrl;
   }
 }
-
-

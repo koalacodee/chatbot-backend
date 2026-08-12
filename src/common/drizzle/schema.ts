@@ -160,7 +160,7 @@ export const admins = pgTable(
   (table) => [
     uniqueIndex('admins_user_id_key').using(
       'btree',
-      table.userId.asc().nullsLast().op('uuid_ops'),
+      table.userId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.userId],
@@ -192,7 +192,7 @@ export const departments = pgTable(
   (table) => [
     index('departments_parent_id_idx').using(
       'btree',
-      table.parentId.asc().nullsLast().op('uuid_ops'),
+      table.parentId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.parentId],
@@ -221,16 +221,16 @@ export const employeeSubDepartments = pgTable(
   (table) => [
     index('employee_sub_departments_department_id_idx').using(
       'btree',
-      table.departmentId.asc().nullsLast().op('uuid_ops'),
+      table.departmentId.asc().nullsLast(),
     ),
     uniqueIndex('employee_sub_departments_employee_id_department_id_key').using(
       'btree',
-      table.employeeId.asc().nullsLast().op('uuid_ops'),
-      table.departmentId.asc().nullsLast().op('uuid_ops'),
+      table.employeeId.asc().nullsLast(),
+      table.departmentId.asc().nullsLast(),
     ),
     index('employee_sub_departments_employee_id_idx').using(
       'btree',
-      table.employeeId.asc().nullsLast().op('uuid_ops'),
+      table.employeeId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.departmentId],
@@ -267,11 +267,11 @@ export const knowledgeChunks = pgTable(
   (table) => [
     index('knowledge_chunks_department_id_idx').using(
       'btree',
-      table.departmentId.asc().nullsLast().op('uuid_ops'),
+      table.departmentId.asc().nullsLast(),
     ),
     index('knowledge_chunks_point_id_idx').using(
       'btree',
-      table.pointId.asc().nullsLast().op('uuid_ops'),
+      table.pointId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.departmentId],
@@ -302,15 +302,15 @@ export const drivers = pgTable(
   (table) => [
     uniqueIndex('drivers_licensing_number_key').using(
       'btree',
-      table.licensingNumber.asc().nullsLast().op('text_ops'),
+      table.licensingNumber.asc().nullsLast(),
     ),
     index('drivers_supervisor_id_idx').using(
       'btree',
-      table.supervisorId.asc().nullsLast().op('uuid_ops'),
+      table.supervisorId.asc().nullsLast(),
     ),
     uniqueIndex('drivers_user_id_key').using(
       'btree',
-      table.userId.asc().nullsLast().op('uuid_ops'),
+      table.userId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.supervisorId],
@@ -347,7 +347,7 @@ export const messages = pgTable(
   (table) => [
     index('messages_conversation_id_idx').using(
       'btree',
-      table.conversationId.asc().nullsLast().op('uuid_ops'),
+      table.conversationId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.conversationId],
@@ -376,7 +376,7 @@ export const profilePictures = pgTable(
   (table) => [
     uniqueIndex('profile_pictures_user_id_key').using(
       'btree',
-      table.userId.asc().nullsLast().op('uuid_ops'),
+      table.userId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.userId],
@@ -403,11 +403,11 @@ export const attachmentGroups = pgTable(
   (table) => [
     index('attachment_groups_created_by_id_idx').using(
       'btree',
-      table.createdById.asc().nullsLast().op('uuid_ops'),
+      table.createdById.asc().nullsLast(),
     ),
     index('attachment_groups_key_idx').using(
       'btree',
-      table.key.asc().nullsLast().op('text_ops'),
+      table.key.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.createdById],
@@ -443,9 +443,9 @@ export const promotions = pgTable(
       'promotions_created_by_admin_id_is_active_created_by_supervi_idx',
     ).using(
       'btree',
-      table.createdByAdminId.asc().nullsLast().op('uuid_ops'),
-      table.isActive.asc().nullsLast().op('bool_ops'),
-      table.createdBySupervisorId.asc().nullsLast().op('uuid_ops'),
+      table.createdByAdminId.asc().nullsLast(),
+      table.isActive.asc().nullsLast(),
+      table.createdBySupervisorId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.createdByAdminId],
@@ -492,23 +492,23 @@ export const attachments = pgTable(
   (table) => [
     index('attachments_cloned_idx').using(
       'btree',
-      table.cloned.asc().nullsLast().op('bool_ops'),
+      table.cloned.asc().nullsLast(),
     ),
     index('attachments_guest_id_idx').using(
       'btree',
-      table.guestId.asc().nullsLast().op('uuid_ops'),
+      table.guestId.asc().nullsLast(),
     ),
     index('attachments_is_global_idx').using(
       'btree',
-      table.isGlobal.asc().nullsLast().op('bool_ops'),
+      table.isGlobal.asc().nullsLast(),
     ),
     index('attachments_target_id_idx').using(
       'btree',
-      table.targetId.asc().nullsLast().op('uuid_ops'),
+      table.targetId.asc().nullsLast(),
     ),
     index('attachments_user_id_idx').using(
       'btree',
-      table.userId.asc().nullsLast().op('uuid_ops'),
+      table.userId.asc().nullsLast(),
     ),
   ],
 );
@@ -537,15 +537,15 @@ export const activityLogs = pgTable(
   (table) => [
     index('activity_logs_occurred_at_idx').using(
       'btree',
-      table.occurredAt.asc().nullsLast().op('timestamp_ops'),
+      table.occurredAt.asc().nullsLast(),
     ),
     index('activity_logs_type_idx').using(
       'btree',
-      table.type.asc().nullsLast().op('enum_ops'),
+      table.type.asc().nullsLast(),
     ),
     index('activity_logs_user_id_idx').using(
       'btree',
-      table.userId.asc().nullsLast().op('uuid_ops'),
+      table.userId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.userId],
@@ -575,11 +575,11 @@ export const guests = pgTable(
   (table) => [
     uniqueIndex('guests_email_key').using(
       'btree',
-      table.email.asc().nullsLast().op('text_ops'),
+      table.email.asc().nullsLast(),
     ),
     uniqueIndex('guests_phone_key').using(
       'btree',
-      table.phone.asc().nullsLast().op('text_ops'),
+      table.phone.asc().nullsLast(),
     ),
   ],
 );
@@ -606,8 +606,8 @@ export const conversations = pgTable(
   (table) => [
     index('conversations_guest_id_is_deleted_idx').using(
       'btree',
-      table.guestId.asc().nullsLast().op('bool_ops'),
-      table.isDeleted.asc().nullsLast().op('bool_ops'),
+      table.guestId.asc().nullsLast(),
+      table.isDeleted.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.guestId],
@@ -657,12 +657,12 @@ export const employeeRequests = pgTable(
   (table) => [
     index('employee_requests_requested_by_supervisor_id_idx').using(
       'btree',
-      table.requestedBySupervisorId.asc().nullsLast().op('uuid_ops'),
+      table.requestedBySupervisorId.asc().nullsLast(),
     ),
     index('employee_requests_resolved_by_admin_id_status_idx').using(
       'btree',
-      table.resolvedByAdminId.asc().nullsLast().op('uuid_ops'),
-      table.status.asc().nullsLast().op('uuid_ops'),
+      table.resolvedByAdminId.asc().nullsLast(),
+      table.status.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.requestedBySupervisorId],
@@ -692,7 +692,7 @@ export const employees = pgTable(
   (table) => [
     uniqueIndex('employees_user_id_key').using(
       'btree',
-      table.userId.asc().nullsLast().op('uuid_ops'),
+      table.userId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.supervisorId],
@@ -746,7 +746,7 @@ export const pushSubscriptions = pgTable(
   (table) => [
     index('push_subscriptions_user_id_idx').using(
       'btree',
-      table.userId.asc().nullsLast().op('text_ops'),
+      table.userId.asc().nullsLast(),
     ),
   ],
 );
@@ -768,16 +768,16 @@ export const questionViews = pgTable(
   (table) => [
     index('question_views_guest_id_idx').using(
       'btree',
-      table.guestId.asc().nullsLast().op('uuid_ops'),
+      table.guestId.asc().nullsLast(),
     ),
     uniqueIndex('question_views_question_id_guest_id_key').using(
       'btree',
-      table.questionId.asc().nullsLast().op('uuid_ops'),
-      table.guestId.asc().nullsLast().op('uuid_ops'),
+      table.questionId.asc().nullsLast(),
+      table.guestId.asc().nullsLast(),
     ),
     index('question_views_question_id_idx').using(
       'btree',
-      table.questionId.asc().nullsLast().op('uuid_ops'),
+      table.questionId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.questionId],
@@ -811,7 +811,7 @@ export const refreshTokens = pgTable(
   (table) => [
     index('refresh_tokens_token_idx').using(
       'btree',
-      table.token.asc().nullsLast().op('text_ops'),
+      table.token.asc().nullsLast(),
     ),
   ],
 );
@@ -842,20 +842,20 @@ export const questions = pgTable(
   (table) => [
     index('questions_creator_supervisor_id_idx').using(
       'btree',
-      table.creatorSupervisorId.asc().nullsLast().op('uuid_ops'),
+      table.creatorSupervisorId.asc().nullsLast(),
     ),
     index('questions_department_id_idx').using(
       'btree',
-      table.departmentId.asc().nullsLast().op('uuid_ops'),
+      table.departmentId.asc().nullsLast(),
     ),
     index('questions_department_id_views_idx').using(
       'btree',
-      table.departmentId.asc().nullsLast().op('int4_ops'),
-      table.views.asc().nullsLast().op('uuid_ops'),
+      table.departmentId.asc().nullsLast(),
+      table.views.asc().nullsLast(),
     ),
     index('questions_views_idx').using(
       'btree',
-      table.views.asc().nullsLast().op('int4_ops'),
+      table.views.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.creatorAdminId],
@@ -909,11 +909,11 @@ export const supervisors = pgTable(
   (table) => [
     index('supervisors_user_id_idx').using(
       'btree',
-      table.userId.asc().nullsLast().op('uuid_ops'),
+      table.userId.asc().nullsLast(),
     ),
     uniqueIndex('supervisors_user_id_key').using(
       'btree',
-      table.userId.asc().nullsLast().op('uuid_ops'),
+      table.userId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.userId],
@@ -936,15 +936,15 @@ export const recipientNotifications = pgTable(
   (table) => [
     index('recipient_notifications_notification_id_idx').using(
       'btree',
-      table.notificationId.asc().nullsLast().op('uuid_ops'),
+      table.notificationId.asc().nullsLast(),
     ),
     index('recipient_notifications_seen_idx').using(
       'btree',
-      table.seen.asc().nullsLast().op('bool_ops'),
+      table.seen.asc().nullsLast(),
     ),
     index('recipient_notifications_user_id_idx').using(
       'btree',
-      table.userId.asc().nullsLast().op('uuid_ops'),
+      table.userId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.notificationId],
@@ -984,11 +984,11 @@ export const retrievedChunks = pgTable(
   (table) => [
     index('retrieved_chunks_knowledge_chunk_id_idx').using(
       'btree',
-      table.knowledgeChunkId.asc().nullsLast().op('uuid_ops'),
+      table.knowledgeChunkId.asc().nullsLast(),
     ),
     uniqueIndex('retrieved_chunks_message_id_key').using(
       'btree',
-      table.messageId.asc().nullsLast().op('uuid_ops'),
+      table.messageId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.knowledgeChunkId],
@@ -1026,19 +1026,19 @@ export const supportTicketInteractions = pgTable(
   (table) => [
     index('support_ticket_interactions_anonymous_id_idx').using(
       'btree',
-      table.anonymousId.asc().nullsLast().op('uuid_ops'),
+      table.anonymousId.asc().nullsLast(),
     ),
     index('support_ticket_interactions_guest_id_idx').using(
       'btree',
-      table.guestId.asc().nullsLast().op('uuid_ops'),
+      table.guestId.asc().nullsLast(),
     ),
     index('support_ticket_interactions_support_ticket_id_idx').using(
       'btree',
-      table.supportTicketId.asc().nullsLast().op('uuid_ops'),
+      table.supportTicketId.asc().nullsLast(),
     ),
     uniqueIndex('support_ticket_interactions_support_ticket_id_key').using(
       'btree',
-      table.supportTicketId.asc().nullsLast().op('uuid_ops'),
+      table.supportTicketId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.guestId],
@@ -1080,13 +1080,13 @@ export const supportTicketAnswers = pgTable(
       'support_ticket_answers_answerer_supervisor_id_answerer_empl_idx',
     ).using(
       'btree',
-      table.answererSupervisorId.asc().nullsLast().op('uuid_ops'),
-      table.answererEmployeeId.asc().nullsLast().op('uuid_ops'),
-      table.answererAdminId.asc().nullsLast().op('uuid_ops'),
+      table.answererSupervisorId.asc().nullsLast(),
+      table.answererEmployeeId.asc().nullsLast(),
+      table.answererAdminId.asc().nullsLast(),
     ),
     uniqueIndex('support_ticket_answers_support_ticket_id_key').using(
       'btree',
-      table.supportTicketId.asc().nullsLast().op('uuid_ops'),
+      table.supportTicketId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.answererAdminId],
@@ -1152,15 +1152,15 @@ export const supportTickets = pgTable(
     ),
     uniqueIndex('support_tickets_code_key').using(
       'btree',
-      table.code.asc().nullsLast().op('text_ops'),
+      table.code.asc().nullsLast(),
     ),
     index('support_tickets_department_id_idx').using(
       'btree',
-      table.departmentId.asc().nullsLast().op('uuid_ops'),
+      table.departmentId.asc().nullsLast(),
     ),
     index('support_tickets_status_idx').using(
       'btree',
-      table.status.asc().nullsLast().op('enum_ops'),
+      table.status.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.assigneeId],
@@ -1204,15 +1204,15 @@ export const taskPresets = pgTable(
   (table) => [
     index('task_presets_assigner_id_idx').using(
       'btree',
-      table.assignerId.asc().nullsLast().op('uuid_ops'),
+      table.assignerId.asc().nullsLast(),
     ),
     index('task_presets_assigner_role_idx').using(
       'btree',
-      table.assignerRole.asc().nullsLast().op('text_ops'),
+      table.assignerRole.asc().nullsLast(),
     ),
     index('task_presets_name_idx').using(
       'btree',
-      table.name.asc().nullsLast().op('text_ops'),
+      table.name.asc().nullsLast(),
     ),
   ],
 );
@@ -1239,30 +1239,30 @@ export const taskSubmissions = pgTable(
   (table) => [
     index('task_submissions_performer_admin_id_idx').using(
       'btree',
-      table.performerAdminId.asc().nullsLast().op('uuid_ops'),
+      table.performerAdminId.asc().nullsLast(),
     ),
     index('task_submissions_performer_employee_id_idx').using(
       'btree',
-      table.performerEmployeeId.asc().nullsLast().op('uuid_ops'),
+      table.performerEmployeeId.asc().nullsLast(),
     ),
     index('task_submissions_performer_supervisor_id_idx').using(
       'btree',
-      table.performerSupervisorId.asc().nullsLast().op('uuid_ops'),
+      table.performerSupervisorId.asc().nullsLast(),
     ),
     index(
       'task_submissions_reviewed_by_admin_id_reviewed_by_superviso_idx',
     ).using(
       'btree',
-      table.reviewedByAdminId.asc().nullsLast().op('uuid_ops'),
-      table.reviewedBySupervisorId.asc().nullsLast().op('uuid_ops'),
+      table.reviewedByAdminId.asc().nullsLast(),
+      table.reviewedBySupervisorId.asc().nullsLast(),
     ),
     index('task_submissions_status_idx').using(
       'btree',
-      table.status.asc().nullsLast().op('enum_ops'),
+      table.status.asc().nullsLast(),
     ),
     index('task_submissions_task_id_idx').using(
       'btree',
-      table.taskId.asc().nullsLast().op('uuid_ops'),
+      table.taskId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.performerAdminId],
@@ -1338,20 +1338,20 @@ export const tickets = pgTable(
   (table) => [
     index('tickets_department_id_idx').using(
       'btree',
-      table.departmentId.asc().nullsLast().op('uuid_ops'),
+      table.departmentId.asc().nullsLast(),
     ),
     index('tickets_guest_id_idx').using(
       'btree',
-      table.guestId.asc().nullsLast().op('uuid_ops'),
+      table.guestId.asc().nullsLast(),
     ),
     index('tickets_point_id_is_auto_generated_idx').using(
       'btree',
-      table.pointId.asc().nullsLast().op('uuid_ops'),
-      table.isAutoGenerated.asc().nullsLast().op('bool_ops'),
+      table.pointId.asc().nullsLast(),
+      table.isAutoGenerated.asc().nullsLast(),
     ),
     uniqueIndex('tickets_ticket_code_key').using(
       'btree',
-      table.ticketCode.asc().nullsLast().op('text_ops'),
+      table.ticketCode.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.departmentId],
@@ -1397,8 +1397,8 @@ export const vehicles = pgTable(
   (table) => [
     index('vehicles_driver_id_status_idx').using(
       'btree',
-      table.driverId.asc().nullsLast().op('uuid_ops'),
-      table.status.asc().nullsLast().op('uuid_ops'),
+      table.driverId.asc().nullsLast(),
+      table.status.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.driverId],
@@ -1441,7 +1441,7 @@ export const vehicleLicenses = pgTable(
   (table) => [
     uniqueIndex('vehicle_licenses_vehicle_id_key').using(
       'btree',
-      table.vehicleId.asc().nullsLast().op('uuid_ops'),
+      table.vehicleId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.vehicleId],
@@ -1472,11 +1472,11 @@ export const translations = pgTable(
   (table) => [
     index('translations_lang_idx').using(
       'btree',
-      table.lang.asc().nullsLast().op('enum_ops'),
+      table.lang.asc().nullsLast(),
     ),
     index('translations_target_id_idx').using(
       'btree',
-      table.targetId.asc().nullsLast().op('uuid_ops'),
+      table.targetId.asc().nullsLast(),
     ),
   ],
 );
@@ -1528,27 +1528,27 @@ export const tasks = pgTable(
     index('idx_tasks_cursor').on(table.createdAt.desc(), table.id.desc()),
     index('tasks_assignee_id_idx').using(
       'btree',
-      table.assigneeId.asc().nullsLast().op('uuid_ops'),
+      table.assigneeId.asc().nullsLast(),
     ),
     index('tasks_assigner_admin_id_idx').using(
       'btree',
-      table.assignerAdminId.asc().nullsLast().op('uuid_ops'),
+      table.assignerAdminId.asc().nullsLast(),
     ),
     index('tasks_assigner_supervisor_id_idx').using(
       'btree',
-      table.assignerSupervisorId.asc().nullsLast().op('uuid_ops'),
+      table.assignerSupervisorId.asc().nullsLast(),
     ),
     index('tasks_priority_idx').using(
       'btree',
-      table.priority.asc().nullsLast().op('enum_ops'),
+      table.priority.asc().nullsLast(),
     ),
     index('tasks_target_department_id_idx').using(
       'btree',
-      table.targetDepartmentId.asc().nullsLast().op('uuid_ops'),
+      table.targetDepartmentId.asc().nullsLast(),
     ),
     index('tasks_target_sub_department_id_idx').using(
       'btree',
-      table.targetSubDepartmentId.asc().nullsLast().op('uuid_ops'),
+      table.targetSubDepartmentId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.assigneeId],
@@ -1640,15 +1640,15 @@ export const users = pgTable(
   (table) => [
     uniqueIndex('users_email_key').using(
       'btree',
-      table.email.asc().nullsLast().op('text_ops'),
+      table.email.asc().nullsLast(),
     ),
     uniqueIndex('users_employee_id_key').using(
       'btree',
-      table.employeeId.asc().nullsLast().op('text_ops'),
+      table.employeeId.asc().nullsLast(),
     ),
     uniqueIndex('users_username_key').using(
       'btree',
-      table.username.asc().nullsLast().op('text_ops'),
+      table.username.asc().nullsLast(),
     ),
   ],
 );
@@ -1668,16 +1668,16 @@ export const questionInteractions = pgTable(
   (table) => [
     index('question_interactions_guest_id_idx').using(
       'btree',
-      table.guestId.asc().nullsLast().op('uuid_ops'),
+      table.guestId.asc().nullsLast(),
     ),
     uniqueIndex('question_interactions_question_id_guest_id_key').using(
       'btree',
-      table.questionId.asc().nullsLast().op('uuid_ops'),
-      table.guestId.asc().nullsLast().op('uuid_ops'),
+      table.questionId.asc().nullsLast(),
+      table.guestId.asc().nullsLast(),
     ),
     index('question_interactions_question_id_idx').using(
       'btree',
-      table.questionId.asc().nullsLast().op('uuid_ops'),
+      table.questionId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.questionId],
@@ -1706,7 +1706,7 @@ export const ticketAnswers = pgTable(
   (table) => [
     uniqueIndex('ticket_answers_ticket_id_key').using(
       'btree',
-      table.ticketId.asc().nullsLast().op('uuid_ops'),
+      table.ticketId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.ticketId],
@@ -1740,16 +1740,16 @@ export const violations = pgTable(
   (table) => [
     index('violations_driver_id_idx').using(
       'btree',
-      table.driverId.asc().nullsLast().op('uuid_ops'),
+      table.driverId.asc().nullsLast(),
     ),
     index('violations_rule_id_is_paid_idx').using(
       'btree',
-      table.ruleId.asc().nullsLast().op('uuid_ops'),
-      table.isPaid.asc().nullsLast().op('bool_ops'),
+      table.ruleId.asc().nullsLast(),
+      table.isPaid.asc().nullsLast(),
     ),
     index('violations_vehicle_id_idx').using(
       'btree',
-      table.vehicleId.asc().nullsLast().op('uuid_ops'),
+      table.vehicleId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.driverId],
@@ -1795,7 +1795,7 @@ export const exportsTable = pgTable(
   (table) => [
     index('exports_type_idx').using(
       'btree',
-      table.type.asc().nullsLast().op('enum_ops'),
+      table.type.asc().nullsLast(),
     ),
   ],
 );
@@ -1819,23 +1819,23 @@ export const taskDelegations = pgTable(
   (table) => [
     index('task_delegations_assignee_id_idx').using(
       'btree',
-      table.assigneeId.asc().nullsLast().op('uuid_ops'),
+      table.assigneeId.asc().nullsLast(),
     ),
     index('task_delegations_delegator_id_idx').using(
       'btree',
-      table.delegatorId.asc().nullsLast().op('uuid_ops'),
+      table.delegatorId.asc().nullsLast(),
     ),
     index('task_delegations_status_idx').using(
       'btree',
-      table.status.asc().nullsLast().op('enum_ops'),
+      table.status.asc().nullsLast(),
     ),
     index('task_delegations_target_sub_department_id_idx').using(
       'btree',
-      table.targetSubDepartmentId.asc().nullsLast().op('uuid_ops'),
+      table.targetSubDepartmentId.asc().nullsLast(),
     ),
     index('task_delegations_task_id_idx').using(
       'btree',
-      table.taskId.asc().nullsLast().op('uuid_ops'),
+      table.taskId.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.taskId],
@@ -1893,30 +1893,30 @@ export const taskDelegationSubmissions = pgTable(
   (table) => [
     index('task_delegation_submissions_delegation_id_idx').using(
       'btree',
-      table.delegationId.asc().nullsLast().op('uuid_ops'),
+      table.delegationId.asc().nullsLast(),
     ),
     index('task_delegation_submissions_performer_admin_id_idx').using(
       'btree',
-      table.performerAdminId.asc().nullsLast().op('uuid_ops'),
+      table.performerAdminId.asc().nullsLast(),
     ),
     index('task_delegation_submissions_performer_employee_id_idx').using(
       'btree',
-      table.performerEmployeeId.asc().nullsLast().op('uuid_ops'),
+      table.performerEmployeeId.asc().nullsLast(),
     ),
     index('task_delegation_submissions_performer_supervisor_id_idx').using(
       'btree',
-      table.performerSupervisorId.asc().nullsLast().op('uuid_ops'),
+      table.performerSupervisorId.asc().nullsLast(),
     ),
     index(
       'task_delegation_submissions_reviewed_by_admin_id_reviewed_b_idx',
     ).using(
       'btree',
-      table.reviewedByAdminId.asc().nullsLast().op('uuid_ops'),
-      table.reviewedBySupervisorId.asc().nullsLast().op('uuid_ops'),
+      table.reviewedByAdminId.asc().nullsLast(),
+      table.reviewedBySupervisorId.asc().nullsLast(),
     ),
     index('task_delegation_submissions_status_idx').using(
       'btree',
-      table.status.asc().nullsLast().op('enum_ops'),
+      table.status.asc().nullsLast(),
     ),
     foreignKey({
       columns: [table.delegationId],
@@ -1984,7 +1984,7 @@ export const departmentToSupervisor = pgTable(
     supervisorId: uuid('B').notNull(),
   },
   (table) => [
-    index().using('btree', table.supervisorId.asc().nullsLast().op('uuid_ops')),
+    index().using('btree', table.supervisorId.asc().nullsLast()),
     foreignKey({
       columns: [table.departmentId],
       foreignColumns: [departments.id],
@@ -2013,7 +2013,7 @@ export const attachmentToAttachmentGroup = pgTable(
     b: uuid('B').notNull(),
   },
   (table) => [
-    index().using('btree', table.b.asc().nullsLast().op('uuid_ops')),
+    index().using('btree', table.b.asc().nullsLast()),
     foreignKey({
       columns: [table.a],
       foreignColumns: [attachments.id],
@@ -2049,11 +2049,11 @@ export const attachmentGroupMembers = pgTable(
   (table) => [
     index('attachment_group_members_attachment_group_id_idx').using(
       'btree',
-      table.attachmentGroupId.asc().nullsLast().op('uuid_ops'),
+      table.attachmentGroupId.asc().nullsLast(),
     ),
     index('attachment_group_members_member_id_idx').using(
       'btree',
-      table.memberId.asc().nullsLast().op('uuid_ops'),
+      table.memberId.asc().nullsLast(),
     ),
     index().on(table.departmentId),
     foreignKey({

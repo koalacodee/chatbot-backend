@@ -1,1 +1,0 @@
-ALTER TABLE "departments" ADD COLUMN "is_exposed_to_tv_content" boolean DEFAULT false NOT NULL;

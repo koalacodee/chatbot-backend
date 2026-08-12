@@ -1,1 +1,0 @@
-ALTER TABLE "tasks" ADD COLUMN "days_before_deadline_reminder" integer;
