@@ -5,7 +5,6 @@ import * as UseCases from './application/use-cases';
 import { PrismaModule } from 'src/common/prisma/prisma.module';
 import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 import { EmployeeRequestModule } from 'src/employee-request/employee-request.module';
-import { PrismaDashboardRepository } from './infrastructure/repositories/prisma-dashboard.repository';
 import { SupervisorModule } from 'src/supervisor/supervisor.module';
 import { EmployeeModule } from 'src/employee/employee.module';
 import { SharedModule } from 'src/shared/shared.module';
