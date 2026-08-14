@@ -107,8 +107,19 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1",
+      "^@/(.*)$": "<rootDir>/$1"
+    },
+    "clearMocks": true,
+    "restoreMocks": true,
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.(t|j)s",
+      "!**/*.module.ts",
+      "!**/*.dto.ts",
+      "!**/index.ts",
+      "!main.ts",
+      "!common/drizzle/schema.ts"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
