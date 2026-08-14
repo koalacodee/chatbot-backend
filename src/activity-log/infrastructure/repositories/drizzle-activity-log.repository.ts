@@ -59,9 +59,9 @@ import {
  * here, in both directions, or every read returns an unknown type and every write
  * fails the enum check.
  */
-type ActivityLogDbType = (typeof activityLogs.type.enumValues)[number];
+export type ActivityLogDbType = (typeof activityLogs.type.enumValues)[number];
 
-const DOMAIN_TO_DB: Record<ActivityLogType, ActivityLogDbType> = {
+export const DOMAIN_TO_DB: Record<ActivityLogType, ActivityLogDbType> = {
   [ActivityLogType.TICKET_ANSWERED]: 'ticket_answered',
   [ActivityLogType.TASK_PERFORMED]: 'task_performed',
   [ActivityLogType.TASK_APPROVED]: 'task_approved',
@@ -71,7 +71,7 @@ const DOMAIN_TO_DB: Record<ActivityLogType, ActivityLogDbType> = {
   [ActivityLogType.STAFF_REQUEST_CREATED]: 'staff_request_created',
 };
 
-const DB_TO_DOMAIN = Object.entries(DOMAIN_TO_DB).reduce(
+export const DB_TO_DOMAIN = Object.entries(DOMAIN_TO_DB).reduce(
   (acc, [domain, db]) => {
     acc[db] = domain as ActivityLogType;
     return acc;
@@ -91,7 +91,7 @@ const MANAGE_PROMOTIONS = 'manage_promotions';
  * enforces that every enum label is handled and the return type is a real union
  * instead of `string` cast to `any`.
  */
-const RECENT_ACTIVITY_KIND: Record<
+export const RECENT_ACTIVITY_KIND: Record<
   ActivityLogDbType,
   'ticket' | 'task' | 'faq' | 'user' | 'promotion'
 > = {
@@ -104,7 +104,7 @@ const RECENT_ACTIVITY_KIND: Record<
   staff_request_created: 'user',
 };
 
-const RECENT_ACTIVITY_DESCRIPTION: Record<
+export const RECENT_ACTIVITY_DESCRIPTION: Record<
   ActivityLogDbType,
   (title: string) => string
 > = {
