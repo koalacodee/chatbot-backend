@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { ProfilePictureRepository } from './domain/repositories/profile-picture.repository';
-import { PrismaProfilePictureRepository } from './infrastructure/repositories/prisma-profile-picture.repository';
+import { DrizzleProfilePictureRepository } from './infrastructure/repositories/drizzle-profile-picture.repository';
 import { ProfileRepository } from './domain/repositories/profile.repository';
 import { DrizzleProfileRepository } from './infrastructure/repositories/drizzle-profile.repository';
 import { ProfilePictureController } from './interface/http/profile-picture.controller';
@@ -20,7 +20,7 @@ import { VerifyProfilePasswordResetOTPUseCase } from './application/use-cases/ve
   providers: [
     {
       provide: ProfilePictureRepository,
-      useClass: PrismaProfilePictureRepository,
+      useClass: DrizzleProfilePictureRepository,
     },
     {
       provide: ProfileRepository,

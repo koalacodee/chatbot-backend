@@ -3,7 +3,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TranslationService } from './domain/services/translation.service';
 import { QwenMtTranslationService } from './infrastructure/services/qwen-mt-translation.service';
 import { TranslationRepository } from './domain/repositories/translation.repository';
-import { PrismaTranslationRepository } from './infrastructure/repositories/prisma-translation.repository';
+import { DrizzleTranslationRepository } from './infrastructure/repositories/drizzle-translation.repository';
 import { TranslateEventListener } from './application/event-listeners/translate.event-listener';
 import { GetTranslationsByTargetIdsUseCase } from './application/use-cases/get-translations-by-target-ids.use-case';
 
@@ -16,7 +16,7 @@ import { GetTranslationsByTargetIdsUseCase } from './application/use-cases/get-t
     },
     {
       provide: TranslationRepository,
-      useClass: PrismaTranslationRepository,
+      useClass: DrizzleTranslationRepository,
     },
     TranslateEventListener,
     GetTranslationsByTargetIdsUseCase,

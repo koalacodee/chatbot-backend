@@ -517,12 +517,11 @@ export const activityLogs = pgTable(
   'activity_logs',
   {
     id: uuid().primaryKey().notNull(),
-    createdAt: timestamp('created_at', { precision: 3, mode: 'string' })
+    createdAt: timestamp('created_at', { precision: 3 })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
     updatedAt: timestamp('updated_at', {
       precision: 3,
-      mode: 'string',
     }).notNull(),
     userId: uuid('user_id').notNull(),
     itemId: varchar('item_id', { length: 255 }).notNull(),
@@ -531,7 +530,6 @@ export const activityLogs = pgTable(
     type: activityLogType().notNull(),
     occurredAt: timestamp('occurred_at', {
       precision: 3,
-      mode: 'string',
     }).notNull(),
   },
   (table) => [

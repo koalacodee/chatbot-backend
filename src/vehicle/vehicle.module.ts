@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { VehicleRepository } from './domain/repositories/vehicle.repository';
-import { PrismaVehicleRepository } from './infrastructure/repositories/prisma-vehicle.repository';
+import { DrizzleVehicleRepository } from './infrastructure/repositories/drizzle-vehicle.repository';
 import { VehicleController } from './interface/http/vehicle.controller';
 import {
   CreateVehicleUseCase,
@@ -18,7 +18,7 @@ import { VehicleLicenseModule } from 'src/vehicle-license/vehicle-license.module
 @Module({
   controllers: [VehicleController],
   providers: [
-    { provide: VehicleRepository, useClass: PrismaVehicleRepository },
+    { provide: VehicleRepository, useClass: DrizzleVehicleRepository },
     CreateVehicleUseCase,
     UpdateVehicleUseCase,
     GetVehicleUseCase,

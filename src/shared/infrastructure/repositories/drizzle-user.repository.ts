@@ -1,205 +1,331 @@
-import { eq, like, or } from 'drizzle-orm';
-import type {
+import { Injectable } from '@nestjs/common';
+import { and, asc, eq, ilike, inArray, or, SQL } from 'drizzle-orm';
+import {
   DatabaseInstance,
+  DrizzleService,
   DrizzleTransaction,
-} from '@/common/drizzle/drizzle.service';
-import { supervisors, users } from '@/common/drizzle/schema';
-import { UserRepository } from '@/shared/repositories/user.repository';
-import { Roles } from '@/shared/value-objects/role.vo';
-import { User } from '@/shared/entities/user.entity';
+} from 'src/common/drizzle/drizzle.service';
+import {
+  admins,
+  departments as departmentsTable,
+  departmentToSupervisor,
+  drivers,
+  employees,
+  profilePictures,
+  supervisors,
+  users,
+} from 'src/common/drizzle/schema';
+import {
+  UserQuery,
+  UserRepository,
+} from 'src/shared/repositories/user.repository';
+import { User } from 'src/shared/entities/user.entity';
+import { Roles } from 'src/shared/value-objects/role.vo';
+import { Employee } from 'src/employee/domain/entities/employee.entity';
+import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
+import { Admin } from 'src/admin/domain/entities/admin.entity';
+import { Driver } from 'src/driver/domain/entities/driver.entity';
+import { Department } from 'src/department/domain/entities/department.entity';
+import { isUUID } from 'class-validator';
 
-type DrizzleUserRole = (typeof users.$inferSelect)['role'];
+type UserRow = typeof users.$inferSelect;
+type DrizzleUserRole = UserRow['role'];
 
-function mapToUserRole(role: DrizzleUserRole): Roles {
-  switch (role) {
-    case 'supervisor':
-      return Roles.SUPERVISOR;
-    case 'admin':
-      return Roles.ADMIN;
-    case 'employee':
-      return Roles.EMPLOYEE;
-    case 'driver':
-      return Roles.DRIVER;
-  }
+/** Domain roles are upper-case; the `user_role` DB enum is lower-case. */
+function toDbRole(role: Roles): DrizzleUserRole {
+  return role.toLowerCase() as DrizzleUserRole;
 }
 
-function mapToDrizzleUserRole(role: Roles): DrizzleUserRole {
-  switch (role) {
-    case Roles.SUPERVISOR:
-      return 'supervisor';
-    case Roles.ADMIN:
-      return 'admin';
-    case Roles.EMPLOYEE:
-      return 'employee';
-    case Roles.DRIVER:
-      return 'driver';
-  }
-}
 
-export class DrizzleUserRepository implements UserRepository {
-  constructor(private readonly db: DatabaseInstance | DrizzleTransaction) {}
-
-  static fromTransaction(tx: DrizzleTransaction): DrizzleUserRepository {
-    return new DrizzleUserRepository(tx);
+@Injectable()
+export class DrizzleUserRepository extends UserRepository {
+  constructor(private readonly drizzle: DrizzleService) {
+    super();
   }
 
-  async existsByEmail(email: string): Promise<boolean> {
-    const result = await this.db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
-
-    return result.length > 0;
+  private get db(): DatabaseInstance | DrizzleTransaction {
+    return this.tx ?? this.drizzle.client;
   }
 
-  async existsById(id: string): Promise<boolean> {
-    const result = await this.db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.id, id))
-      .limit(1);
+  private tx?: DrizzleTransaction;
 
-    return result.length > 0;
+  /**
+   * Returns a repository bound to an open transaction, so callers can compose
+   * user writes with other work in the same unit.
+   */
+  withTransaction(tx: DrizzleTransaction): DrizzleUserRepository {
+    const scoped = new DrizzleUserRepository(this.drizzle);
+    scoped.tx = tx;
+    return scoped;
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
+  // ─── reads ────────────────────────────────────────────────────────────────
 
-    if (result.length === 0) {
-      return null;
+  private async findOne(
+    where: SQL,
+    query?: UserQuery,
+  ): Promise<User | null> {
+    if (!query?.includeEntity) {
+      const rows = await this.db
+        .select()
+        .from(users)
+        .where(where)
+        .limit(1);
+      return rows.length ? this.mapToDomain(rows[0]) : null;
     }
 
-    return this.mapToUser(result[0]);
-  }
-
-  async findById(id: string): Promise<User | null> {
-    const result = await this.db
-      .select()
+    // One round trip for the user plus each of the four role rows. Every join
+    // is on a unique user_id, so this cannot fan out.
+    const rows = await this.db
+      .select({
+        user: users,
+        employee: employees,
+        supervisor: supervisors,
+        admin: admins,
+        driver: drivers,
+      })
       .from(users)
-      .where(eq(users.id, id))
+      .leftJoin(employees, eq(employees.userId, users.id))
+      .leftJoin(supervisors, eq(supervisors.userId, users.id))
+      .leftJoin(admins, eq(admins.userId, users.id))
+      .leftJoin(drivers, eq(drivers.userId, users.id))
+      .where(where)
       .limit(1);
 
-    if (result.length === 0) {
-      return null;
+    if (!rows.length) return null;
+    const row = rows[0];
+
+    // Supervisors carry a department list; second trip only when one exists.
+    let supervisorDepartments: Department[] = [];
+    if (row.supervisor) {
+      const deptRows = await this.db
+        .select({ department: departmentsTable })
+        .from(departmentToSupervisor)
+        .innerJoin(
+          departmentsTable,
+          eq(departmentToSupervisor.departmentId, departmentsTable.id),
+        )
+        .where(eq(departmentToSupervisor.supervisorId, row.supervisor.id));
+
+      supervisorDepartments = deptRows.map((d) =>
+        Department.create({
+          id: d.department.id,
+          name: d.department.name,
+          visibility: d.department.visibility as any,
+          parentId: d.department.parentId ?? undefined,
+        }),
+      );
     }
 
-    return this.mapToUser(result[0]);
+    return this.mapToDomain(row.user, {
+      employee: row.employee,
+      supervisor: row.supervisor,
+      admin: row.admin,
+      driver: row.driver,
+      supervisorDepartments,
+    });
   }
 
-  async findBySupervisorId(id: string): Promise<User | null> {
-    const supervisorResult = await this.db
-      .select()
+  async findById(id: string, query?: UserQuery): Promise<User | null> {
+    return this.findOne(eq(users.id, id), query);
+  }
+
+  async findByEmail(email: string, query?: UserQuery): Promise<User | null> {
+    return this.findOne(eq(users.email, email), query);
+  }
+
+  async findByUsername(
+    username: string,
+    query?: UserQuery,
+  ): Promise<User | null> {
+    return this.findOne(eq(users.username, username), query);
+  }
+
+  async findByEmployeeId(
+    employeeId: string,
+    query?: UserQuery,
+  ): Promise<User | null> {
+    return this.findOne(eq(users.employeeId, employeeId), query);
+  }
+
+  async findBySupervisorId(id: string, query?: UserQuery): Promise<User> {
+    const rows = await this.db
+      .select({ userId: supervisors.userId })
       .from(supervisors)
-      .innerJoin(users, eq(supervisors.userId, users.id))
       .where(eq(supervisors.id, id))
       .limit(1);
 
-    if (supervisorResult.length === 0) {
-      return null;
-    }
-
-    const supervisor = supervisorResult[0];
-    return this.mapToUser(supervisor.users);
+    if (!rows.length) return null;
+    return this.findOne(eq(users.id, rows[0].userId), query);
   }
 
-  async findByUsername(username: string): Promise<User | null> {
-    const result = await this.db
-      .select()
+  async existsByEmail(email: string): Promise<boolean> {
+    const rows = await this.db
+      .select({ id: users.id })
       .from(users)
-      .where(eq(users.username, username))
+      .where(eq(users.email, email))
       .limit(1);
-
-    if (result.length === 0) {
-      return null;
-    }
-
-    return this.mapToUser(result[0]);
+    return rows.length > 0;
   }
 
-  async findByEmployeeId(employeeId: string): Promise<User | null> {
-    const result = await this.db
-      .select()
+  async existsById(id: string): Promise<boolean> {
+    const rows = await this.db
+      .select({ id: users.id })
       .from(users)
-      .where(eq(users.employeeId, employeeId))
+      .where(eq(users.id, id))
       .limit(1);
-
-    if (result.length === 0) {
-      return null;
-    }
-
-    return this.mapToUser(result[0]);
+    return rows.length > 0;
   }
+
+  async search(query: string): Promise<User[]> {
+    const q = query?.trim();
+
+    const roleFilter = inArray(users.role, ['employee', 'supervisor']);
+
+    // `id` is a uuid column — only compare it when the term could be one,
+    // otherwise Postgres rejects the cast and the whole search 500s.
+    const textFilter = q
+      ? or(
+          ilike(users.name, `%${q}%`),
+          ilike(users.email, `%${q}%`),
+          ilike(users.username, `%${q}%`),
+          ...(isUUID(q) ? [eq(users.id, q)] : []),
+        )
+      : undefined;
+
+    const rows = await this.db
+      .select({ user: users, profilePicture: profilePictures.filename })
+      .from(users)
+      .leftJoin(profilePictures, eq(profilePictures.userId, users.id))
+      .where(textFilter ? and(roleFilter, textFilter) : roleFilter)
+      .orderBy(asc(users.name));
+
+    // A user may have several profile-picture rows; keep the first per user.
+    const seen = new Set<string>();
+    const deduped = rows.filter((r) => {
+      if (seen.has(r.user.id)) return false;
+      seen.add(r.user.id);
+      return true;
+    });
+
+    return Promise.all(
+      deduped.map((r) =>
+        this.mapToDomain(r.user, { profilePicture: r.profilePicture }),
+      ),
+    );
+  }
+
+  // ─── writes ───────────────────────────────────────────────────────────────
 
   async save(user: User): Promise<User> {
-    const userData = {
+    const values = {
       id: user.id,
       name: user.name,
       email: user.email.toString(),
       username: user.username,
       password: user.password.toString(),
-      role: mapToDrizzleUserRole(user.role.getRole()),
+      role: toDbRole(user.role.getRole()),
       employeeId: user.employeeId ?? null,
       jobTitle: user.jobTitle ?? null,
       updatedAt: new Date(),
     };
 
-    const result = await this.db
+    const [row] = await this.db
       .insert(users)
-      .values(userData)
+      .values(values)
       .onConflictDoUpdate({
         target: users.id,
         set: {
-          name: userData.name,
-          email: userData.email.toString(),
-          username: userData.username,
-          password: userData.password.toString(),
-          role: mapToDrizzleUserRole(user.role.getRole()),
-          employeeId: userData.employeeId,
-          jobTitle: userData.jobTitle,
-          updatedAt: userData.updatedAt,
+          name: values.name,
+          email: values.email,
+          username: values.username,
+          password: values.password,
+          role: values.role,
+          employeeId: values.employeeId,
+          jobTitle: values.jobTitle,
+          updatedAt: values.updatedAt,
         },
       })
       .returning();
 
-    return this.mapToUser(result[0]);
-  }
-
-  async search(query: string): Promise<User[]> {
-    const searchTerm = `%${query}%`;
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(
-        or(
-          like(users.name, searchTerm),
-          like(users.email, searchTerm),
-          like(users.username, searchTerm),
-          like(users.employeeId, searchTerm),
-        ),
-      );
-
-    return Promise.all(result.map(this.mapToUser));
+    return this.mapToDomain(row);
   }
 
   async delete(id: string): Promise<void> {
     await this.db.delete(users).where(eq(users.id, id));
   }
 
-  private mapToUser(row: typeof users.$inferSelect): Promise<User> {
-    return User.create({
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      username: row.username,
-      password: row.password,
-      role: mapToUserRole(row.role),
-      employeeId: row.employeeId ?? undefined,
-      jobTitle: row.jobTitle ?? undefined,
-    });
+  // ─── mapping ──────────────────────────────────────────────────────────────
+
+  private async mapToDomain(
+    row: UserRow,
+    relations?: {
+      employee?: typeof employees.$inferSelect | null;
+      supervisor?: typeof supervisors.$inferSelect | null;
+      admin?: typeof admins.$inferSelect | null;
+      driver?: typeof drivers.$inferSelect | null;
+      supervisorDepartments?: Department[];
+      profilePicture?: string | null;
+    },
+  ): Promise<User> {
+    const employee = relations?.employee
+      ? await Employee.create({
+          id: relations.employee.id,
+          userId: relations.employee.userId,
+          permissions: (relations.employee.permissions ?? []) as any,
+          supervisorId: relations.employee.supervisorId,
+        })
+      : undefined;
+
+    const supervisor = relations?.supervisor
+      ? Supervisor.create({
+          id: relations.supervisor.id,
+          userId: relations.supervisor.userId,
+          permissions: (relations.supervisor.permissions ?? []) as any,
+          departments: relations.supervisorDepartments ?? [],
+          createdAt: relations.supervisor.createdAt,
+          updatedAt: relations.supervisor.updatedAt,
+        })
+      : undefined;
+
+    const admin = relations?.admin
+      ? Admin.create({
+          id: relations.admin.id,
+          userId: relations.admin.userId,
+        })
+      : undefined;
+
+    const driver = relations?.driver
+      ? Driver.create({
+          id: relations.driver.id,
+          userId: relations.driver.userId,
+          supervisorId: relations.driver.supervisorId,
+          licensingNumber: relations.driver.licensingNumber,
+          drivingLicenseExpiry: new Date(
+            relations.driver.drivingLicenseExpiry,
+          ),
+        })
+      : undefined;
+
+    // `false` = the stored password is already an argon2 hash. Passing `true`
+    // (the default) would re-hash it and break every password check.
+    return User.create(
+      {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        username: row.username,
+        password: row.password,
+        role: row.role as unknown as Roles,
+        employeeId: row.employeeId ?? undefined,
+        jobTitle: row.jobTitle ?? undefined,
+        profilePicture: relations?.profilePicture ?? undefined,
+        employee,
+        supervisor,
+        admin,
+        driver,
+      },
+      false,
+    );
   }
 }

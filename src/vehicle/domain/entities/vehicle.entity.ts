@@ -1,4 +1,3 @@
-import { User } from '@prisma/client';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { VehicleLicense } from 'src/vehicle-license/domain/entities/vehicle-license.entity';
 
@@ -6,6 +5,16 @@ export enum VehicleStatus {
   ACTIVE = 'ACTIVE',
   IN_MAINTENANCE = 'IN_MAINTENANCE',
   OUT_OF_SERVICE = 'OUT_OF_SERVICE',
+}
+
+/**
+ * A vehicle row carries only `driver_id`. This was typed as Prisma's generated `User`,
+ * but no caller ever reads anything but the id — the repositories hand it a driver row,
+ * and `assign-driver-to-vehicle` assigns a bare `{ id }` — so a reference is what it
+ * actually is.
+ */
+export interface VehicleDriverRef {
+  id: string;
 }
 
 interface VehicleOptions {
@@ -16,8 +25,8 @@ interface VehicleOptions {
   plateNumber: string;
   vin: string;
   status: VehicleStatus;
-  driver: User;
-  license: VehicleLicense;
+  driver?: VehicleDriverRef;
+  license?: VehicleLicense;
   createdAt?: Date;
   updatedAt?: Date;
   notes?: string;
@@ -32,8 +41,8 @@ export class Vehicle {
   private _plateNumber: string;
   private _vin: string;
   private _status: VehicleStatus;
-  private _driver: User;
-  private _license: VehicleLicense;
+  private _driver?: VehicleDriverRef;
+  private _license?: VehicleLicense;
   private _createdAt: Date;
   private _updatedAt: Date;
   private _notes?: string;
@@ -81,7 +90,7 @@ export class Vehicle {
   get status(): VehicleStatus {
     return this._status;
   }
-  get driver(): User {
+  get driver(): VehicleDriverRef {
     return this._driver;
   }
   get createdAt(): Date {
@@ -125,7 +134,7 @@ export class Vehicle {
     this._status = value;
     this._updatedAt = new Date();
   }
-  set driver(value: User) {
+  set driver(value: VehicleDriverRef) {
     this._driver = value;
     this._updatedAt = new Date();
   }

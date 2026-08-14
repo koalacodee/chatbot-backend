@@ -2,13 +2,14 @@ import { ActivityLog } from '../entities/activity-log.entity';
 
 // Activity object inside each type
 export interface Activity {
-  id: number;
+  id: string;
   title: string;
-  itemId: number;
+  itemId: string;
   meta: Record<string, any>; // لو meta ممكن يكون JSON object
   createdAt: string; // أو Date لو بتحول الـ string لـ Date
   updatedAt: string;
   occurredAt: string;
+  userId: string;
   user: {
     id: string;
     name: string;
@@ -58,7 +59,7 @@ export interface CategoryView {
 
 // ------------------ 2. Top FAQs ------------------
 export interface TopFaq {
-  id: number;
+  id: string; // questions.id is a uuid
   question: string;
   viewCount: number;
   categoryName: string;
@@ -67,22 +68,24 @@ export interface TopFaq {
 // ------------------ 3. FAQ Opportunities ------------------
 export interface FaqOpportunity {
   originalCasing: string;
-  categoryId: number;
+  categoryId: string; // support_tickets.department_id is a uuid
   categoryName: string;
   count: number;
 }
 
 // ------------------ 4. Active Promotion ------------------
+// Mirrors the promotions table exactly — the query selects the whole row.
 export interface ActivePromotion {
-  id: number;
+  id: string;
   title: string;
-  description: string;
-  startDate: string | null; // or Date if you parse it
-  endDate: string | null; // or Date if you parse it
+  audience: 'customer' | 'supervisor' | 'employee' | 'all';
   isActive: boolean;
+  startDate: string | null;
+  endDate: string | null;
   createdAt: string;
   updatedAt: string;
-  // أضف أي حقل تاني موجود في جدول promotions
+  createdByAdminId: string | null;
+  createdBySupervisorId: string | null;
 }
 
 // ------------------ 5. Aggregated Result ------------------
@@ -113,6 +116,17 @@ export interface TicketRow {
 export interface QueryOutput {
   users: UserRow[];
   tickets: TicketRow[];
+}
+
+// ------------------ 6. Performance Summary ------------------
+export interface PerformanceSummary {
+  ticketsAnswered: number;
+  avgResponseTime: number | null; // milliseconds
+  tasksPerformed: number;
+  avgTaskTime: number | null; // milliseconds
+  tasksApproved: number;
+  satisfiedTickets: number;
+  dissatisfiedTickets: number;
 }
 export abstract class ActivityLogRepository {
   abstract save(log: ActivityLog): Promise<ActivityLog>;
@@ -155,4 +169,6 @@ export abstract class ActivityLogRepository {
       meta: Record<string, any>;
     }>
   >;
+
+  abstract getPerformanceSummary(userId?: string): Promise<PerformanceSummary>;
 }

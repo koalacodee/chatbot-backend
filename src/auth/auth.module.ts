@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { RefreshTokenRepository } from './domain/repositories/refresh-token.repository';
-import { PrismaRefreshTokenRepository } from './infrastructure/repositories/prisma-refresh-token.repository';
+import { DrizzleRefreshTokenRepository } from './infrastructure/repositories/drizzle-refresh-token.repository';
 import { GuestAuthModule } from './guest/guest.module';
 import { UserAuthModule } from './user/user.module';
 import { forwardRef } from '@nestjs/common';
@@ -11,7 +11,7 @@ import { forwardRef } from '@nestjs/common';
     forwardRef(() => UserAuthModule),
   ],
   providers: [
-    { provide: RefreshTokenRepository, useClass: PrismaRefreshTokenRepository },
+    { provide: RefreshTokenRepository, useClass: DrizzleRefreshTokenRepository },
   ],
   exports: [RefreshTokenRepository],
 })

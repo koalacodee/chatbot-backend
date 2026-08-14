@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { VehicleLicenseRepository } from './domain/repositories/vehicle-license.repository';
-import { PrismaVehicleLicenseRepository } from './infrastructure/repositories/prisma-vehicle-license.repository';
+import { DrizzleVehicleLicenseRepository } from './infrastructure/repositories/drizzle-vehicle-license.repository';
 import { VehicleLicenseController } from './interface/http/vehicle-license.controller';
 import {
   GetAllLicensesUseCase,
@@ -14,7 +14,7 @@ import {
   providers: [
     {
       provide: VehicleLicenseRepository,
-      useClass: PrismaVehicleLicenseRepository,
+      useClass: DrizzleVehicleLicenseRepository,
     },
     GetAllLicensesUseCase,
     GetSingleLicenseUseCase,

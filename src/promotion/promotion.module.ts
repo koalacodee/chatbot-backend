@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PromotionRepository } from './domain/repositories/promotion.repository';
-import { PrismaPromotionRepository } from './infrastructure/repositories/prisma-promotion.repository';
+import { DrizzlePromotionRepository } from './infrastructure/repositories/drizzle-promotion.repository';
 import { CreatePromotionUseCase } from './application/use-cases/create-promotion.use-case';
 import { GetAllPromotionsUseCase } from './application/use-cases/get-all-promotions.use-case';
 import { GetPromotionUseCase } from './application/use-cases/get-promotion.use-case';
@@ -17,7 +17,7 @@ import { ActivityLogModule } from 'src/activity-log/activity-log.module';
 
 @Module({
   providers: [
-    { provide: PromotionRepository, useClass: PrismaPromotionRepository },
+    { provide: PromotionRepository, useClass: DrizzlePromotionRepository },
     CreatePromotionUseCase,
     GetAllPromotionsUseCase,
     GetPromotionUseCase,

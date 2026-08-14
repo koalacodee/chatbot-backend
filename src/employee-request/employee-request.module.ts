@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EmployeeRequestRepository } from './domain/repositories/employee-request.repository';
-import { PrismaEmployeeRequestRepository } from './infrastructure/repositories/prisma-employee-request.repository';
+import { DrizzleEmployeeRequestRepository } from './infrastructure/repositories/drizzle-employee-request.repository';
 import { SubmitEmployeeRequestUseCase } from './application/use-cases/submit-employee-request.use-case';
 import { ApproveEmployeeRequestUseCase } from './application/use-cases/approve-employee-request.use-case';
 import { RejectEmployeeRequestUseCase } from './application/use-cases/reject-employee-request.use-case';
@@ -22,7 +22,7 @@ import { ActivityLogModule } from 'src/activity-log/activity-log.module';
     GetPendingPreviewUseCase,
     {
       provide: EmployeeRequestRepository,
-      useClass: PrismaEmployeeRequestRepository,
+      useClass: DrizzleEmployeeRequestRepository,
     },
     StaffRequestedListener,
   ],

@@ -96,10 +96,10 @@ export class ActivityLog {
       title: this.title,
       itemId: this.itemId,
       meta: this.meta,
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
       userId: this.userId,
-      occurredAt: this.occurredAt.toISOString(),
+      occurredAt: this.occurredAt,
     };
   }
 }

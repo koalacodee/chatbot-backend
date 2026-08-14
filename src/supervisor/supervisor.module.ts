@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { SupervisorRepository } from './domain/repository/supervisor.repository';
-import { PrismaSupervisorRepository } from './infrastructure/repositories/prisma-supervisor.repository';
+import { DrizzleSupervisorRepository } from './infrastructure/repositories/drizzle-supervisor.repository';
 import { SupervisorController } from './interface/http/supervisor.controller';
 import { SupervisorInvitationController } from './interface/http/supervisor-invitation.controller';
 import { SupervisorInvitationsController } from './interface/http/supervisor-invitations.controller';
@@ -28,7 +28,7 @@ import { DeleteSupervisorInvitationUseCase } from './application/use-cases/delet
     SupervisorInvitationsController,
   ],
   providers: [
-    { provide: SupervisorRepository, useClass: PrismaSupervisorRepository },
+    { provide: SupervisorRepository, useClass: DrizzleSupervisorRepository },
     CanDeleteUseCase,
     AddSupervisorByAdminUseCase,
     CompleteSupervisorInvitationUseCase,

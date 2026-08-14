@@ -5,9 +5,9 @@ import { ViolationRule } from './violation-rule.entity';
 
 export interface ViolationOptions {
   id: string;
-  driver: User;
-  vehicle: Vehicle;
-  rule: ViolationRule;
+  driver?: User;
+  vehicle?: Vehicle;
+  rule?: ViolationRule;
   description: string;
   amount: number;
   isPaid: boolean;
@@ -18,9 +18,9 @@ export interface ViolationOptions {
 
 export class Violation {
   private readonly _id: UUID;
-  private _driver: User;
-  private _vehicle: Vehicle;
-  private _rule: ViolationRule;
+  private _driver?: User;
+  private _vehicle?: Vehicle;
+  private _rule?: ViolationRule;
   private _description: string;
   private _amount: number;
   private _isPaid: boolean;

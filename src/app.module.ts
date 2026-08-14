@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './auth/auth.module';
-import { PrismaModule } from './common/prisma/prisma.module';
 import { RbacModule } from './rbac';
 import { BullModule } from '@nestjs/bullmq';
 import { DepartmentModule } from './department/department.module';
@@ -55,7 +54,6 @@ import { TasksModule } from './v2/tasks/tasks.module';
     EventEmitterModule.forRoot(),
     SharedModule,
     AuthModule,
-    PrismaModule,
     DrizzleModule,
     RbacModule,
     DepartmentModule,

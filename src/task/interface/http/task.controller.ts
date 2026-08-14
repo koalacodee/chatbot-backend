@@ -44,8 +44,11 @@ import {
 } from './dto';
 import { ExportTasksDto } from './dto/export-tasks.dto';
 import { GetTeamTasksDto } from './dto/get-team-tasks.dto';
-import { Task, TaskAssignmentType } from '../../domain/entities/task.entity';
-import { TaskStatus } from '@prisma/client';
+import {
+  Task,
+  TaskAssignmentType,
+  TaskStatus,
+} from '../../domain/entities/task.entity';
 import {
   EmployeePermissions,
   SupervisorPermissions,

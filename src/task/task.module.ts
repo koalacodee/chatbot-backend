@@ -4,7 +4,6 @@ import { TaskRepository } from './domain/repositories/task.repository';
 import { TaskSubmissionRepository } from './domain/repositories/task-submission.repository';
 import { TaskDelegationRepository } from './domain/repositories/task-delegation.repository';
 import { TaskDelegationSubmissionRepository } from './domain/repositories/task-delegation-submission.repository';
-import { PrismaModule } from 'src/common/prisma/prisma.module';
 import { DepartmentModule } from 'src/department/department.module';
 import { SharedModule } from 'src/shared/shared.module';
 import { TaskController } from './interface/http/task.controller';
@@ -30,7 +29,6 @@ import { DrizzleTaskPresetRepository } from './infrastructure/repositories/drizz
 
 @Module({
   imports: [
-    PrismaModule,
     DepartmentModule,
     SharedModule,
     ActivityLogModule,

@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ExportRepository } from './domain/repositories/export.repository';
-import { PrismaExportRepository } from './infrastructure/repositories/prisma-export.repository';
+import { DrizzleExportRepository } from './infrastructure/repositories/drizzle-export.repository';
 import { CsvService } from './domain/services/csv.service';
 import { CsvService as CsvServiceImpl } from './infrastructure/services/csv.service';
 import { ExportService } from './domain/services/export.service';
@@ -15,7 +15,7 @@ import { ExportFileController } from './interface/http/export-file.controller';
   imports: [ConfigModule],
   controllers: [ExportFileController],
   providers: [
-    { provide: ExportRepository, useClass: PrismaExportRepository },
+    { provide: ExportRepository, useClass: DrizzleExportRepository },
     { provide: CsvService, useClass: CsvServiceImpl },
     { provide: ExportService, useClass: ExportServiceImpl },
     { provide: ExportFileService, useClass: ExportFileServiceImpl },

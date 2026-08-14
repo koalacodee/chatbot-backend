@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConversationRepository } from './domain/repositories/conversation.repository';
-import { PrismaConversationRepository } from './infrastructure/repositories/prisma-conversation.repository';
+import { DrizzleConversationRepository } from './infrastructure/repositories/drizzle-conversation.repository';
 import { MessageRepository } from './domain/repositories/message.repository';
-import { PrismaMessageRepository } from './infrastructure/repositories/prisma-message.repository';
+import { DrizzleMessageRepository } from './infrastructure/repositories/drizzle-message.repository';
 import { RetrievedChunkRepository } from './domain/repositories/retrieved-chunk.repository';
-import { PrismaRetrievedChunkRepository } from './infrastructure/repositories/prisma-retrieved-chunk.repository';
+import { DrizzleRetrievedChunkRepository } from './infrastructure/repositories/drizzle-retrieved-chunk.repository';
 import { BullModule } from '@nestjs/bullmq';
 import { SaveMessageProcessor } from './infrastructure/queues/save-message.processor';
 import { SaveMessagesUseCase } from './application/use-cases/save-messages.use-case';
@@ -22,15 +22,15 @@ import { LLMService } from './domain/services/llm.service';
   providers: [
     {
       provide: ConversationRepository,
-      useClass: PrismaConversationRepository,
+      useClass: DrizzleConversationRepository,
     },
     {
       provide: MessageRepository,
-      useClass: PrismaMessageRepository,
+      useClass: DrizzleMessageRepository,
     },
     {
       provide: RetrievedChunkRepository,
-      useClass: PrismaRetrievedChunkRepository,
+      useClass: DrizzleRetrievedChunkRepository,
     },
     {
       provide: LLMService,

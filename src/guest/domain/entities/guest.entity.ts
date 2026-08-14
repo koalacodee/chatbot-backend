@@ -1,4 +1,3 @@
-import { Conversation } from '@prisma/client';
 import { RefreshToken } from 'src/auth/domain/entities/refresh-token.entity';
 import { Interaction } from 'src/shared/entities/interactions.entity';
 import { Email } from 'src/shared/value-objects/email.vo';
@@ -13,7 +12,6 @@ interface GuestOptions {
   createdAt?: Date;
   updatedAt?: Date;
   tokens?: RefreshToken[];
-  conversations?: Conversation[];
   interactions?: Interaction[];
   supportTickets?: SupportTicket[];
 }
@@ -26,7 +24,6 @@ export class Guest {
   private _createdAt: Date;
   private _updatedAt: Date;
   private _tokens: RefreshToken[];
-  private _conversations: Conversation[];
   private _interactions: Interaction[];
   private _supportTickets: SupportTicket[];
 
@@ -38,7 +35,6 @@ export class Guest {
     this._createdAt = options.createdAt ?? new Date();
     this._updatedAt = options.updatedAt ?? new Date();
     this._tokens = options.tokens;
-    this._conversations = options.conversations;
     this._interactions = options.interactions;
     this._supportTickets = options.supportTickets;
   }
@@ -99,14 +95,6 @@ export class Guest {
 
   set tokens(value: RefreshToken[]) {
     this._tokens = value;
-  }
-
-  get conversations() {
-    return this._conversations;
-  }
-
-  set conversations(value: Conversation[]) {
-    this._conversations = value;
   }
 
   get interactions() {

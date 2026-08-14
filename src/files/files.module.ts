@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AttachmentRepository } from './domain/repositories/attachment.repository';
-import { PrismaAttachmentRepository } from './infrastructure/repositories/prisma-attachment.repository';
+import { DrizzleAttachmentRepository } from './infrastructure/repositories/drizzle-attachment.repository';
 import { FilesService } from './domain/services/files.service';
 import { LocalFilesService } from './infrastructure/services/local.files.service';
 import { FileManagementClass } from './domain/services/file-mangement.service';
@@ -29,7 +29,7 @@ import { SharedModule } from '../shared/shared.module';
   providers: [
     {
       provide: AttachmentRepository,
-      useClass: PrismaAttachmentRepository,
+      useClass: DrizzleAttachmentRepository,
     },
     {
       provide: FilesService,
