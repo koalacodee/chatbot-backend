@@ -10,6 +10,26 @@ import { AdminRepository } from '../../domain/repositories/admin.repository';
 
 type DrizzleAdmin = typeof admins.$inferSelect;
 
+/**
+ * `userId` is a UUID value object on the entity, but callers have been known to hand over
+ * a plain string — the Prisma implementation duck-typed both, so this preserves that.
+ *
+ * Extracted from `update` because it is the only branching logic in this repository and
+ * the only part testable without a database.
+ */
+export function resolveUserId(incoming: unknown): string | undefined {
+  const candidate = incoming as
+    | { value?: string; toString?: () => string }
+    | null
+    | undefined;
+
+  return (
+    candidate?.value ??
+    candidate?.toString?.() ??
+    (candidate as string | undefined)
+  );
+}
+
 @Injectable()
 export class DrizzleAdminRepository extends AdminRepository {
   constructor(private readonly drizzle: DrizzleService) {
@@ -84,10 +104,7 @@ export class DrizzleAdminRepository extends AdminRepository {
   }
 
   async update(id: string, update: Partial<Admin>): Promise<Admin> {
-    // userId is a UUID value object on the entity, but callers have been known to hand
-    // over a plain string, so accept either — same duck-typing the Prisma version did.
-    const incoming = (update)?.userId;
-    const userId = incoming?.value ?? incoming?.toString?.() ?? incoming;
+    const userId = resolveUserId(update?.userId);
 
     // Drizzle refuses an empty `set`, and Prisma treated an empty data object as a
     // no-op that still returned the row, so mirror that with a plain read.
@@ -99,7 +116,7 @@ export class DrizzleAdminRepository extends AdminRepository {
 
     const [updated] = await this.db
       .update(admins)
-      .set({ userId: userId.toString() })
+      .set({ userId })
       .where(eq(admins.id, id))
       .returning();
 
