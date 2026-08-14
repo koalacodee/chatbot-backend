@@ -39,8 +39,9 @@ export class FakeAdminRepository extends AdminRepository {
     return existing;
   }
 
+  /** Set semantics, matching `WHERE id IN (...)`: a repeated id yields a single row. */
   async findByIds(ids: string[]): Promise<Admin[]> {
-    return ids
+    return [...new Set(ids)]
       .map((id) => this.admins.get(id))
       .filter((admin): admin is Admin => admin !== undefined);
   }
