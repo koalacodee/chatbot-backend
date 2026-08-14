@@ -60,7 +60,6 @@ import { TasksModule } from './v2/tasks/tasks.module';
     QdrantModule,
     KnowledgeChunkModule,
     ChatModule,
-    // TicketModule,
     PushManagerModule,
     QuestionModule,
     SupportTicketModule,
