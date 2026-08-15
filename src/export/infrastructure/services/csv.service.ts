@@ -12,7 +12,9 @@ export class CsvService extends AbstractCsvService {
         {
           columns: true,
           skip_empty_lines: true,
-          cast: true,
+          // No `cast`: CSV has no types, and inferring them corrupts data that only looks
+          // numeric — a leading-zero employee id, a phone number, a version like "1.10".
+          // Callers know what each column means and can coerce; this cannot.
         },
         (err, records) => {
           if (err) {

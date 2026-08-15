@@ -66,7 +66,18 @@ export class ExportService extends AbstractExportService {
     let rows = 0;
 
     for await (const chunk of data) {
+      rows += chunk.length;
+
       const csvString = await this.csvService.stringify(chunk);
+
+      // An empty chunk renders to '' and contributes nothing. It must not consume the
+      // "first chunk" slot either: doing so left the header unwritten while still marking
+      // it as emitted, so every later chunk had its header stripped as a duplicate and the
+      // document came out with no header row at all. Reachable whenever a paginated query
+      // returns an empty first page.
+      if (!csvString) {
+        continue;
+      }
 
       if (isFirstChunk) {
         isFirstChunk = false;
@@ -78,7 +89,6 @@ export class ExportService extends AbstractExportService {
           chunks.push(lines.slice(1).join('\n'));
         }
       }
-      rows += chunk.length;
     }
 
     const result = await this.uploadCsv(chunks.join(''));
