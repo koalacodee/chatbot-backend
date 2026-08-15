@@ -6,7 +6,6 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EmployeeRequestRepository } from '../../domain/repositories/employee-request.repository';
 import { UserRepository } from 'src/shared/repositories/user.repository';
-import { EmployeeRepository } from 'src/employee/domain/repositories/employee.repository';
 import {
   EmployeeRequest,
   RequestStatus,
@@ -16,7 +15,6 @@ import { Employee } from 'src/employee/domain/entities/employee.entity';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { AdminRepository } from 'src/admin/domain/repositories/admin.repository';
 import { StaffRequestResolvedEvent } from '../../domain/events/staff-request-resolved.event';
-import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
 
 export interface ApproveEmployeeRequestDto {
   employeeRequestId: string;
@@ -25,13 +23,14 @@ export interface ApproveEmployeeRequestDto {
 
 @Injectable()
 export class ApproveEmployeeRequestUseCase {
+  // EmployeeRepository and SupervisorRepository are gone: the employee write moved into
+  // the transactional approval, and the supervisor's userId is already hydrated on the
+  // request, so the extra lookup it was fetched for is unnecessary.
   constructor(
     private readonly employeeRequestRepository: EmployeeRequestRepository,
     private readonly userRepository: UserRepository,
     private readonly adminRepository: AdminRepository,
-    private readonly employeeRepository: EmployeeRepository,
     private readonly eventEmitter: EventEmitter2,
-    private readonly supervisorRepository: SupervisorRepository,
   ) {}
 
   async execute(dto: ApproveEmployeeRequestDto): Promise<{
@@ -41,9 +40,6 @@ export class ApproveEmployeeRequestUseCase {
   }> {
     const employeeRequest = await this.employeeRequestRepository.findById(
       dto.employeeRequestId,
-    );
-    const admin = await this.adminRepository.findByUserId(
-      dto.approvedAdminUserID,
     );
 
     if (!employeeRequest) {
@@ -57,7 +53,7 @@ export class ApproveEmployeeRequestUseCase {
       });
     }
 
-    if (employeeRequest.status !== 'PENDING') {
+    if (employeeRequest.status !== RequestStatus.PENDING) {
       console.warn(
         `[ApproveEmployeeRequestUseCase] Employee request is not pending. Current status: ${employeeRequest.status}`,
       );
@@ -68,6 +64,19 @@ export class ApproveEmployeeRequestUseCase {
             message: 'Employee request is not pending',
           },
         ],
+      });
+    }
+
+    // Resolved after the request is validated, and guarded — previously this was fetched
+    // up front and used without a null check, so approving with an unknown admin id
+    // succeeded and recorded no resolver.
+    const admin = await this.adminRepository.findByUserId(
+      dto.approvedAdminUserID,
+    );
+
+    if (!admin) {
+      throw new NotFoundException({
+        details: [{ field: 'approvedAdminUserID', message: 'Admin not found' }],
       });
     }
 
@@ -111,34 +120,37 @@ export class ApproveEmployeeRequestUseCase {
       employeeId: employeeRequest.newEmployeeId,
     });
 
-    const savedUser = await this.userRepository.save(newUser);
     const newEmployee = await Employee.create({
-      userId: savedUser.id,
+      userId: newUser.id,
       supervisorId: employeeRequest.requestedBySupervisor.id.toString(),
       permissions: [],
       subDepartments: [],
       user: newUser,
     });
 
-    const savedEmployee = await this.employeeRepository.save(newEmployee);
-
-    // Update employee request status
     employeeRequest.status = RequestStatus.APPROVED;
     employeeRequest.resolvedByAdmin = admin;
     employeeRequest.resolvedAt = new Date();
-    const updatedRequest =
-      await this.employeeRequestRepository.save(employeeRequest);
-    const supervisor = await this.supervisorRepository.findById(
-      updatedRequest.requestedBySupervisorId,
-    );
 
-    // Emit staff request resolved event
+    // One transaction for all three writes. Previously these were three independent
+    // saves, so a failure partway committed the earlier ones — leaving an orphan user
+    // holding the email and username, and a request stuck at PENDING that could never be
+    // approved again because those checks would now find the orphan.
+    const { request: updatedRequest, user: savedUser, employee: savedEmployee } =
+      await this.employeeRequestRepository.approveTransactionally({
+        request: employeeRequest,
+        user: newUser,
+        employee: newEmployee,
+      });
+
+    // The resolver treats this field as a USER id, so the supervisor's userId belongs
+    // here rather than the supervisor row id. findById already hydrates it.
     this.eventEmitter.emit(
       StaffRequestResolvedEvent.name,
       new StaffRequestResolvedEvent(
         updatedRequest.id.toString(),
         updatedRequest.newEmployeeUsername,
-        supervisor.userId.toString(),
+        updatedRequest.requestedBySupervisor.userId.toString(),
         'approved',
         new Date(),
       ),

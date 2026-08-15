@@ -8,6 +8,7 @@ import {
   departmentToSupervisor,
   departments,
   employeeRequests,
+  employees,
   supervisors,
   users,
 } from 'src/common/drizzle/schema';
@@ -22,11 +23,16 @@ import {
   Supervisor,
   SupervisorPermissionsEnum,
 } from 'src/supervisor/domain/entities/supervisor.entity';
+import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import {
   EmployeeRequest,
   RequestStatus,
 } from '../../domain/entities/employee-request.entity';
-import { EmployeeRequestRepository } from '../../domain/repositories/employee-request.repository';
+import {
+  ApproveEmployeeRequestInput,
+  ApproveEmployeeRequestResult,
+  EmployeeRequestRepository,
+} from '../../domain/repositories/employee-request.repository';
 
 type RequestRow = typeof employeeRequests.$inferSelect;
 type SupervisorRow = typeof supervisors.$inferSelect;
@@ -61,6 +67,12 @@ const toPermission = (label: string) =>
 
 const toVisibility = (label: string) =>
   label.toUpperCase() as DepartmentVisibility;
+
+type EmployeeRow = typeof employees.$inferSelect;
+
+/** The employee permission enum is @map'd like the rest — lowercase in Postgres. */
+const toDbPermission = (permission: EmployeePermissionsEnum) =>
+  permission.toLowerCase() as NonNullable<EmployeeRow['permissions']>[number];
 
 @Injectable()
 export class DrizzleEmployeeRequestRepository extends EmployeeRequestRepository {
@@ -226,10 +238,8 @@ export class DrizzleEmployeeRequestRepository extends EmployeeRequestRepository 
     );
   }
 
-  async save(request: EmployeeRequest): Promise<EmployeeRequest> {
-    const updatedAt = new Date();
-
-    const values = {
+  private toRow(request: EmployeeRequest, updatedAt: Date) {
+    return {
       id: request.id.toString(),
       requestedBySupervisorId: request.requestedBySupervisor.id.toString(),
       newEmployeeEmail: request.newEmployeeEmail.toString(),
@@ -247,27 +257,37 @@ export class DrizzleEmployeeRequestRepository extends EmployeeRequestRepository 
       rejectionReason: request.rejectionReason ?? null,
       acknowledgedBySupervisor: request.acknowledgedBySupervisor,
     };
+  }
+
+  /**
+   * Mirrors Prisma's `update` block, which deliberately left the immutable new-employee
+   * fields and createdAt alone.
+   */
+  private updatableColumns(values: ReturnType<typeof this.toRow>) {
+    return {
+      requestedBySupervisorId: values.requestedBySupervisorId,
+      newEmployeeEmail: values.newEmployeeEmail,
+      newEmployeeFullName: values.newEmployeeFullName,
+      newEmployeeDesignation: values.newEmployeeDesignation,
+      newEmployeeId: values.newEmployeeId,
+      status: values.status,
+      resolvedAt: values.resolvedAt,
+      resolvedByAdminId: values.resolvedByAdminId,
+      rejectionReason: values.rejectionReason,
+      acknowledgedBySupervisor: values.acknowledgedBySupervisor,
+      updatedAt: values.updatedAt,
+    };
+  }
+
+  async save(request: EmployeeRequest): Promise<EmployeeRequest> {
+    const values = this.toRow(request, new Date());
 
     const [saved] = await this.db
       .insert(employeeRequests)
       .values(values)
       .onConflictDoUpdate({
         target: employeeRequests.id,
-        // Mirrors Prisma's `update` block, which deliberately left the immutable
-        // new-employee fields and createdAt alone.
-        set: {
-          requestedBySupervisorId: values.requestedBySupervisorId,
-          newEmployeeEmail: values.newEmployeeEmail,
-          newEmployeeFullName: values.newEmployeeFullName,
-          newEmployeeDesignation: values.newEmployeeDesignation,
-          newEmployeeId: values.newEmployeeId,
-          status: values.status,
-          resolvedAt: values.resolvedAt,
-          resolvedByAdminId: values.resolvedByAdminId,
-          rejectionReason: values.rejectionReason,
-          acknowledgedBySupervisor: values.acknowledgedBySupervisor,
-          updatedAt: values.updatedAt,
-        },
+        set: this.updatableColumns(values),
       })
       .returning();
 
@@ -293,6 +313,87 @@ export class DrizzleEmployeeRequestRepository extends EmployeeRequestRepository 
       rejectionReason: saved.rejectionReason ?? undefined,
       acknowledgedBySupervisor: saved.acknowledgedBySupervisor ?? false,
     });
+  }
+
+  /**
+   * The three writes an approval implies, in one transaction: the new user, the employee
+   * row pointing at it, and the request moving to APPROVED.
+   *
+   * The row shapes are duplicated from the user and employee repositories on purpose —
+   * those expose `save(entity)` against their own connection, so there is no way to
+   * enlist them in a transaction owned here without threading a transaction handle
+   * through every repository interface. Duplicating two small value maps is the cheaper
+   * trade; the alternative is leaving the sequence non-atomic.
+   */
+  async approveTransactionally(
+    input: ApproveEmployeeRequestInput,
+  ): Promise<ApproveEmployeeRequestResult> {
+    const { request, user, employee } = input;
+    const now = new Date();
+
+    const userValues = {
+      id: user.id,
+      name: user.name,
+      email: user.email.toString(),
+      username: user.username,
+      password: user.password.toString(),
+      role: user.role.getRole().toLowerCase() as UserRow['role'],
+      employeeId: user.employeeId ?? null,
+      jobTitle: user.jobTitle ?? null,
+      updatedAt: now,
+    };
+
+    const employeeValues = {
+      id: employee.id.toString(),
+      userId: employee.userId.toString(),
+      permissions: employee.permissions.map(toDbPermission),
+      supervisorId: employee.supervisorId.toString(),
+    };
+
+    const requestValues = this.toRow(request, now);
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .insert(users)
+        .values(userValues)
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            name: userValues.name,
+            email: userValues.email,
+            username: userValues.username,
+            password: userValues.password,
+            role: userValues.role,
+            employeeId: userValues.employeeId,
+            jobTitle: userValues.jobTitle,
+            updatedAt: userValues.updatedAt,
+          },
+        });
+
+      await tx
+        .insert(employees)
+        .values(employeeValues)
+        .onConflictDoUpdate({
+          target: employees.id,
+          set: {
+            userId: employeeValues.userId,
+            permissions: employeeValues.permissions,
+            supervisorId: employeeValues.supervisorId,
+          },
+        });
+
+      await tx
+        .insert(employeeRequests)
+        .values(requestValues)
+        .onConflictDoUpdate({
+          target: employeeRequests.id,
+          set: this.updatableColumns(requestValues),
+        });
+    });
+
+    // The caller owns fully-built entities already; re-reading would only cost round trips
+    // and lose the relations the request carries.
+    return { request, user, employee };
   }
 
   async findById(id: string): Promise<EmployeeRequest | null> {

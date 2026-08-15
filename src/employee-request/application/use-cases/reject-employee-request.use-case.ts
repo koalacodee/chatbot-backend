@@ -66,13 +66,18 @@ export class RejectEmployeeRequestUseCase {
     const updatedRequest =
       await this.employeeRequestRepository.save(employeeRequest);
 
-    // Emit staff request resolved event
+    // The notification resolver treats this field as a USER id and returns it verbatim as
+    // the recipient, so the supervisor's userId is what belongs here — the supervisor row
+    // id matches no user, and the notification repository silently drops unknown
+    // recipients, which is why rejections were never delivered.
+    //
+    // No extra lookup: findById hydrates requestedBySupervisor, including its userId.
     this.eventEmitter.emit(
       StaffRequestResolvedEvent.name,
       new StaffRequestResolvedEvent(
         updatedRequest.id.toString(),
         updatedRequest.newEmployeeUsername,
-        updatedRequest.requestedBySupervisor.id.toString(),
+        updatedRequest.requestedBySupervisor.userId.toString(),
         'rejected',
         new Date(),
       ),
