@@ -1,7 +1,7 @@
 import {
   InMemoryRedis,
   createInMemoryRedis,
-} from '../../__fixtures__/in-memory-redis.service';
+} from 'src/common/__fixtures__/in-memory-redis';
 import { EmployeePermissionsEnum } from '../../domain/entities/employee.entity';
 import {
   EmployeeInvitationService,

@@ -5,6 +5,10 @@ import { GuestRepository } from 'src/guest/domain/repositories/guest.repository'
 import { ResendEmailService } from 'src/shared/infrastructure/email';
 import TwoFactorEmail from 'src/shared/infrastructure/email/TwoFactorEmail';
 import { RedisService } from 'src/shared/infrastructure/redis';
+import {
+  GUEST_VERIFICATION_CODE_TTL_SECONDS,
+  registrationKey,
+} from '../guest-verification.constants';
 
 interface RegisterGuestUseCaseProps {
   name: string;
@@ -46,7 +50,13 @@ export class RegisterGuestUseCase {
 
     const code = randomInt(100000, 1000000).toString();
     await Promise.all([
-      this.redis.set(`guest:${code}:reg`, JSON.stringify(guest.toJSON())),
+      // Keyed by guest, with the code stored as part of the payload — see
+      // registrationKey() for why the code cannot be the key.
+      this.redis.set(
+        registrationKey(guest.id.value),
+        JSON.stringify({ code, guest: guest.toJSON() }),
+        GUEST_VERIFICATION_CODE_TTL_SECONDS,
+      ),
       this.email.sendReactEmail<{ name: string; code: string }>(
         email,
         'Verify your email',

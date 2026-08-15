@@ -47,7 +47,8 @@ export class GuestController {
   @HttpCode(200)
   async loginGuest(@Body() dto: LoginGuestDto) {
     const result = await this.loginGuestUseCase.execute(dto);
-    return { message: result.message };
+    // guestId is required to redeem the code at verify/login.
+    return { message: result.message, guestId: result.guestId };
   }
 
   @Post('verify/login')
@@ -56,7 +57,7 @@ export class GuestController {
     @Body() dto: VerifyCodeDto,
     @Res({ passthrough: true }) res: FastifyReply,
   ) {
-    const result = await this.verifyLoginUseCase.execute(dto.code);
+    const result = await this.verifyLoginUseCase.execute(dto.guestId, dto.code);
     this.setGuestRefreshTokenCookie(res, result.tokens.refreshToken);
     return {
       guest: result.guest,
@@ -70,7 +71,10 @@ export class GuestController {
     @Body() dto: VerifyCodeDto,
     @Res({ passthrough: true }) res: FastifyReply,
   ) {
-    const result = await this.verifyRegisterUseCase.execute(dto.code);
+    const result = await this.verifyRegisterUseCase.execute(
+      dto.guestId,
+      dto.code,
+    );
     this.setGuestRefreshTokenCookie(res, result.tokens.refreshToken);
     return {
       guest: result.guest,
