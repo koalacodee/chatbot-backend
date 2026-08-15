@@ -88,43 +88,6 @@ describe('RetrievedChunk', () => {
     });
   });
 
-  describe('clone', () => {
-    it('produces an equal but distinct instance', () => {
-      const original = build({ id: CHUNK_ID });
-
-      const copy = original.clone();
-
-      expect(copy).not.toBe(original);
-      expect(copy.equals(original)).toBe(true);
-    });
-
-    it('deep-copies the knowledge chunk rather than sharing it', () => {
-      const original = build();
-
-      const copy = original.clone();
-
-      expect(copy.knowledgeChunk).not.toBe(original.knowledgeChunk);
-      expect(copy.knowledgeChunk.content).toBe(original.knowledgeChunk.content);
-    });
-
-    it('copies retrievedAt rather than sharing the Date', () => {
-      const original = build();
-
-      const copy = original.clone();
-
-      expect(copy.retrievedAt).not.toBe(original.retrievedAt);
-      expect(copy.retrievedAt).toEqual(original.retrievedAt);
-    });
-
-    it('leaves the original untouched when the copy is edited', () => {
-      const original = build();
-
-      const copy = original.clone();
-      copy.score = 0.01;
-
-      expect(original.score).toBe(0.87);
-    });
-  });
 
   describe('toJSON', () => {
     it('nests the serialised knowledge chunk and stringifies the date', () => {

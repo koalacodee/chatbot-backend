@@ -44,14 +44,15 @@ export class UpdateKnowledgeChunkUseCase {
     fileHubUploadKey?: string;
   }> {
     const chunk = await this.chunkRepo.findById(id);
-    await this.accessControl.canAccessDepartment(
-      dto.userId,
-      chunk.department.id.value,
-    );
     if (!chunk)
       throw new NotFoundException({
         details: [{ field: 'id', message: 'Knowledge chunk not found' }],
       });
+
+    await this.accessControl.canAccessDepartment(
+      dto.userId,
+      chunk.departmentId,
+    );
 
     if (dto.content) {
       const embedding = await this.embeddingService.embed(dto.content, 2048);

@@ -64,6 +64,10 @@ export class KnowledgeChunk {
 
   set departmentId(newDepartmentId: string) {
     this._departmentId = newDepartmentId;
+    // Mirrors updatePointId: an id we can no longer vouch for invalidates the object.
+    if (this._department && this._department.id.value !== newDepartmentId) {
+      this._department = null;
+    }
   }
 
   set point(newPoint: Point) {
@@ -88,21 +92,14 @@ export class KnowledgeChunk {
 
   public updateDepartment(newDepartment: Department | null): void {
     this._department = newDepartment;
+
+    // department_id is NOT NULL, so detaching the object must not orphan the id — only
+    // attaching a real department moves it.
+    if (newDepartment) this._departmentId = newDepartment.id.value;
   }
 
   public equals(other: KnowledgeChunk): boolean {
     return this._id.value === other._id.value;
-  }
-
-  public clone(): KnowledgeChunk {
-    return new KnowledgeChunk({
-      id: this._id.value,
-      content: this._content,
-      point: this._point,
-      pointId: this._pointId,
-      department: this._department,
-      departmentId: this._departmentId,
-    });
   }
 
   public toJSON(): object {

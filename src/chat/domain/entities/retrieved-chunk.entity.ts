@@ -84,13 +84,4 @@ export class RetrievedChunk {
     return this._id === other._id;
   }
 
-  clone(): RetrievedChunk {
-    return new RetrievedChunk({
-      id: this._id,
-      messageId: this._messageId,
-      knowledgeChunk: this._knowledgeChunk.clone(),
-      score: this._score,
-      retrievedAt: new Date(this._retrievedAt),
-    });
-  }
 }

@@ -34,7 +34,7 @@ export class DrizzleKnowledgeChunkRepository extends KnowledgeChunkRepository {
     const data = {
       id: chunk.id.value,
       content: chunk.content,
-      departmentId: chunk.department.id.toString(),
+      departmentId: chunk.departmentId,
       pointId: chunk.pointId,
       updatedAt: new Date().toISOString(),
     };
