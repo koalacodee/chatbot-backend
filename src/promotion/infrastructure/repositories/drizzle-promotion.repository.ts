@@ -8,6 +8,7 @@ import {
   gte,
   isNull,
   lte,
+  not,
   or,
   sql,
 } from 'drizzle-orm';
@@ -234,6 +235,27 @@ export class DrizzlePromotionRepository extends PromotionRepository {
     await this.db.delete(promotions).where(eq(promotions.id, id));
 
     return existing;
+  }
+
+  /**
+   * `NOT is_active` in the statement itself, so two overlapping toggles serialise into
+   * two flips rather than both reading the same starting value and writing the same
+   * result. The creators are re-joined afterwards because `returning()` only carries the
+   * promotion row.
+   */
+  async toggleActive(id: string): Promise<Promotion | null> {
+    const [updated] = await this.db
+      .update(promotions)
+      .set({
+        isActive: not(promotions.isActive),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(promotions.id, id))
+      .returning({ id: promotions.id });
+
+    if (!updated) return null;
+
+    return this.findById(updated.id);
   }
 
   async exists(id: string): Promise<boolean> {

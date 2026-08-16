@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Req,
   UseInterceptors,
@@ -26,6 +27,7 @@ import { SupervisorPermissions } from 'src/rbac/decorators';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
 import { GuestIdInterceptor } from 'src/shared/interceptors/guest-id.interceptor';
 import { UpdatePromotionDto } from './dtos/update-promotion.dto';
+import { ListPromotionsDto } from './dtos/list-promotions.dto';
 
 // moved to ./dtos/update-promotion.dto
 
@@ -68,10 +70,15 @@ export class PromotionController {
     );
   }
 
+  /**
+   * The repository has always supported pagination; nothing above it used it, so every
+   * call loaded the whole table. `limit` defaults rather than being optional, so the
+   * endpoint is bounded even when the client sends nothing.
+   */
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_PROMOTIONS)
   @Get()
-  async getAll() {
-    return this.getAllPromotionsUseCase.execute();
+  async getAll(@Query() query: ListPromotionsDto) {
+    return this.getAllPromotionsUseCase.execute(query.offset, query.limit);
   }
 
   @SupervisorPermissions(SupervisorPermissionsEnum.MANAGE_PROMOTIONS)

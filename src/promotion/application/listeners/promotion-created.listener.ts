@@ -3,22 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { ActivityLog } from 'src/activity-log/domain/entities/activity-log.entity';
 import { ActivityLogType } from 'src/activity-log/domain/entities/activity-log.entity';
 import { ActivityLogRepository } from 'src/activity-log/domain/repositories/activity-log.repository';
-
-export enum AudienceType {
-  ALL = 'ALL',
-  DEPARTMENT = 'DEPARTMENT',
-  SPECIFIC = 'SPECIFIC',
-}
-
-export class PromotionCreatedEvent {
-  constructor(
-    public readonly title: string,
-    public readonly itemId: string,
-    public readonly userId: string,
-    public readonly occurredAt: Date,
-    public readonly audience: AudienceType,
-  ) {}
-}
+import { PromotionCreatedEvent } from '../../domain/events/promotion-created.event';
 
 @Injectable()
 export class PromotionCreatedListener {

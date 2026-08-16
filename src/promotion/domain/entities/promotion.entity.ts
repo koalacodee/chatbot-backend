@@ -1,5 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
 import { Admin } from 'src/admin/domain/entities/admin.entity';
-import { User } from 'src/shared/entities/user.entity';
 import { UUID } from 'src/shared/value-objects/uuid.vo';
 import { Supervisor } from 'src/supervisor/domain/entities/supervisor.entity';
 
@@ -36,6 +36,16 @@ export class Promotion {
   private _createdBySupervisor?: Supervisor;
 
   private constructor(options: PromotionOptions) {
+    // `audience` reaches here as `any` from both use-cases, and an unrecognised value
+    // survives all the way to the repository, where the lookup into AUDIENCE_TO_DB
+    // yields undefined against a NOT NULL enum column. Reads are unaffected: the column
+    // is a Postgres enum, so `toDomain` can only ever produce one of these four.
+    if (!Object.values(AudienceType).includes(options.audience)) {
+      throw new BadRequestException({
+        details: [{ field: 'audience', message: 'Audience is invalid' }],
+      });
+    }
+
     this._id = UUID.create(options.id);
     this._title = options.title;
     this._audience = options.audience;
@@ -50,6 +60,26 @@ export class Promotion {
 
   public static create(options: PromotionOptions): Promotion {
     return new Promotion(options);
+  }
+
+  /**
+   * A promotion whose window closes before it opens is excluded by the repository's
+   * schedule predicate, so it reads as live in the admin list while being invisible to
+   * every audience query.
+   *
+   * This is deliberately not a constructor invariant: rows written before the check
+   * existed may already be inverted, and `toDomain` builds through the same path — so
+   * enforcing it there would make those promotions unreadable rather than merely
+   * uneditable. The use-cases call it on the way in instead.
+   */
+  public assertCoherentSchedule(): void {
+    if (this._startDate && this._endDate && this._endDate < this._startDate) {
+      throw new BadRequestException({
+        details: [
+          { field: 'endDate', message: 'End date must not precede start date' },
+        ],
+      });
+    }
   }
 
   public get id(): UUID {

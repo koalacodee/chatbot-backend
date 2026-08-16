@@ -45,12 +45,10 @@ export class UpdatePromotionUseCase {
     if (dto.startDate !== undefined) existing.startDate = dto.startDate;
     if (dto.endDate !== undefined) existing.endDate = dto.endDate ?? undefined;
 
-    // Handle attachment deletion if specified
-    if (dto.deleteAttachments && dto.deleteAttachments.length > 0) {
-      await this.deleteAttachmentsUseCase.execute({
-        attachmentIds: dto.deleteAttachments,
-      });
-    }
+    // A patch can invert an otherwise healthy window, which would leave the promotion
+    // looking live in the admin list while the schedule predicate excludes it from
+    // every audience query.
+    existing.assertCoherentSchedule();
 
     const [savedPromotion, uploadKey, fileHubUploadKey] = await Promise.all([
       this.promotionRepo.save(existing),
@@ -65,6 +63,15 @@ export class UpdatePromotionUseCase {
             .then((upload) => upload.uploadKey)
         : undefined,
     ]);
+
+    // Both attachment mutations run after the save. Deleting first meant a patch that
+    // failed downstream had already destroyed the attachments, with no transaction and
+    // no compensating restore.
+    if (dto.deleteAttachments && dto.deleteAttachments.length > 0) {
+      await this.deleteAttachmentsUseCase.execute({
+        attachmentIds: dto.deleteAttachments,
+      });
+    }
 
     // Clone attachments if provided
     if (dto.chooseAttachments && dto.chooseAttachments.length > 0) {
