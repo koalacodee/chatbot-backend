@@ -4,7 +4,10 @@ import { Guest } from 'src/guest/domain/entities/guest.entity';
 import { GuestRepository } from 'src/guest/domain/repositories/guest.repository';
 import { RedisService } from 'src/shared/infrastructure/redis';
 import {
+  attemptKey,
   codesMatch,
+  GUEST_VERIFICATION_CODE_TTL_SECONDS,
+  MAX_VERIFICATION_ATTEMPTS,
   registrationKey,
 } from '../guest-verification.constants';
 
@@ -27,6 +30,16 @@ export class VerifyRegisterUseCase {
         details: [{ field: 'code', message: 'Code is incorrect' }],
       });
 
+    const attempts = await this.redis.increment(
+      attemptKey(guestId),
+      GUEST_VERIFICATION_CODE_TTL_SECONDS,
+    );
+
+    if (attempts > MAX_VERIFICATION_ATTEMPTS) {
+      await this.redis.del(registrationKey(guestId));
+      throw invalidCode();
+    }
+
     const stored = await this.redis.get(registrationKey(guestId));
 
     if (!stored) throw invalidCode();
@@ -43,6 +56,7 @@ export class VerifyRegisterUseCase {
     await Promise.all([
       this.guestRepo.save(guest),
       this.redis.del(registrationKey(guestId)),
+      this.redis.del(attemptKey(guestId)),
     ]);
 
     const userData = guest.toJSON();

@@ -10,8 +10,10 @@ import { GuestRepository } from 'src/guest/domain/repositories/guest.repository'
 import { ResendEmailService } from 'src/shared/infrastructure/email';
 import { LoginGuestUseCase } from './login-guest.use-case';
 import {
+  attemptKey,
   GUEST_VERIFICATION_CODE_TTL_SECONDS,
   loginKey,
+  MAX_VERIFICATION_ATTEMPTS,
   registrationKey,
 } from '../guest-verification.constants';
 import { RegisterGuestUseCase } from './register-guest.use-case';
@@ -336,6 +338,101 @@ describe('guest auth flow', () => {
       ).rejects.toThrow();
 
       expect(redis.strings.has(loginKey(OTHER_GUEST_ID))).toBe(false);
+    });
+  });
+
+  /**
+   * Six digits inside a 25-minute window is walkable without a cap, so failed redemptions
+   * are counted per guest and the code is burned once the cap is hit.
+   */
+  describe('attempt limiting', () => {
+    const seedLiveCode = async (redis: InMemoryRedis) => {
+      await redis.service.set(loginKey(GUEST_ID), '123456');
+    };
+
+    /** The cap counts every redemption, so the last one inside it may still succeed. */
+    it('lets the correct code through on the final permitted attempt', async () => {
+      const { verifyLogin, redis } = build({ guests: [buildGuest()] });
+      await seedLiveCode(redis);
+
+      for (
+        let attempt = 0;
+        attempt < MAX_VERIFICATION_ATTEMPTS - 1;
+        attempt += 1
+      ) {
+        await expect(verifyLogin.execute(GUEST_ID, '000000')).rejects.toThrow(
+          BadRequestException,
+        );
+      }
+
+      await expect(
+        verifyLogin.execute(GUEST_ID, '123456'),
+      ).resolves.toMatchObject({ guest: { id: GUEST_ID } });
+    });
+
+    it('rejects the correct code once the cap is spent', async () => {
+      const { verifyLogin, redis } = build({ guests: [buildGuest()] });
+      await seedLiveCode(redis);
+
+      for (let attempt = 0; attempt < MAX_VERIFICATION_ATTEMPTS; attempt += 1) {
+        await expect(verifyLogin.execute(GUEST_ID, '000000')).rejects.toThrow();
+      }
+
+      await expect(verifyLogin.execute(GUEST_ID, '123456')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('burns the code once the cap is exceeded', async () => {
+      const { verifyLogin, redis } = build({ guests: [buildGuest()] });
+      await seedLiveCode(redis);
+
+      for (let attempt = 0; attempt <= MAX_VERIFICATION_ATTEMPTS; attempt += 1) {
+        await expect(verifyLogin.execute(GUEST_ID, '000000')).rejects.toThrow();
+      }
+
+      expect(redis.strings.has(loginKey(GUEST_ID))).toBe(false);
+      // Even the correct code is now useless.
+      await expect(verifyLogin.execute(GUEST_ID, '123456')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('counts attempts per guest, not globally', async () => {
+      const { verifyLogin, redis } = build({
+        guests: [buildGuest(), buildGuest(OTHER_GUEST_ID, 'sam@example.com')],
+      });
+      await seedLiveCode(redis);
+      await redis.service.set(loginKey(OTHER_GUEST_ID), '654321');
+
+      for (let attempt = 0; attempt <= MAX_VERIFICATION_ATTEMPTS; attempt += 1) {
+        await expect(verifyLogin.execute(GUEST_ID, '000000')).rejects.toThrow();
+      }
+
+      // Sam is unaffected by Dana exhausting her attempts.
+      await expect(
+        verifyLogin.execute(OTHER_GUEST_ID, '654321'),
+      ).resolves.toMatchObject({ guest: { id: OTHER_GUEST_ID } });
+    });
+
+    it('clears the counter on a successful redemption', async () => {
+      const { verifyLogin, redis } = build({ guests: [buildGuest()] });
+      await seedLiveCode(redis);
+
+      await verifyLogin.execute(GUEST_ID, '123456');
+
+      expect(redis.strings.has(attemptKey(GUEST_ID))).toBe(false);
+    });
+
+    it('gives the counter the same lifetime as the code', async () => {
+      const { verifyLogin, redis } = build({ guests: [buildGuest()] });
+      await seedLiveCode(redis);
+
+      await expect(verifyLogin.execute(GUEST_ID, '000000')).rejects.toThrow();
+
+      expect(redis.ttls.get(attemptKey(GUEST_ID))).toBe(
+        GUEST_VERIFICATION_CODE_TTL_SECONDS,
+      );
     });
   });
 

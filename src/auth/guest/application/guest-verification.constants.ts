@@ -23,6 +23,15 @@ export const registrationKey = (guestId: string) => `guest:${guestId}:reg`;
 export const loginKey = (guestId: string) => `guest:${guestId}:login`;
 
 /**
+ * Failed redemptions per guest. Six digits is a small enough space that an unbounded
+ * guesser would walk it inside the code's own lifetime, so attempts are capped and the
+ * code is burned when the cap is hit.
+ */
+export const attemptKey = (guestId: string) => `guest:${guestId}:attempts`;
+
+export const MAX_VERIFICATION_ATTEMPTS = 5;
+
+/**
  * Constant-time comparison of a submitted code against the stored one. The six-digit
  * space is small enough that brute force is the real threat rather than timing, but a
  * secret comparison should not leak its prefix either way.
