@@ -15,13 +15,7 @@ import {
   MarkViolationAsPaidUseCase,
   MarkViolationAsPendingUseCase,
 } from '../../application/use-cases';
-import { UserJwtAuthGuard } from 'src/auth/user/infrastructure/guards/jwt-auth.guard';
-import { Roles } from 'src/shared/value-objects/role.vo';
 import { AdminAuth } from 'src/rbac/decorators/admin.decorator';
-import {
-  Permissions,
-  PermissionsEnum,
-} from 'src/rbac/decorators/permissions.decorator';
 
 interface CreateViolationDto {
   driverId: string;
