@@ -1,13 +1,13 @@
 import {
-  Injectable,
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
-
-export const EMPLOYEE_PERMISSIONS_KEY = 'employee_permissions';
+import { Roles } from 'src/shared/value-objects/role.vo';
+import { EMPLOYEE_PERMISSIONS_KEY } from '../rbac.constants';
 
 @Injectable()
 export class EmployeePermissionsGuard implements CanActivate {
@@ -18,19 +18,37 @@ export class EmployeePermissionsGuard implements CanActivate {
       EmployeePermissionsEnum[]
     >(EMPLOYEE_PERMISSIONS_KEY, [context.getHandler(), context.getClass()]);
 
-    // No decorator → allow
-    if (!requiredPermissions?.length) {
+    // See SupervisorPermissionsGuard: absent means no decorator, empty means role-only.
+    // `[]` is truthy, so it survives this and reaches the role check below.
+    if (!requiredPermissions) {
       return true;
     }
 
     const { user } = context.switchToHttp().getRequest();
 
-    // Skip validation if user is supervisor or admin
-    if (user.role === 'SUPERVISOR' || user.role === 'ADMIN') {
+    if (!user?.role) {
+      throw new ForbiddenException({
+        details: [{ field: 'role', message: 'No roles found for user' }],
+      });
+    }
+
+    // Supervisors and admins outrank the employee grant table, so they pass without
+    // holding an employee permission. This is long-standing behaviour, kept deliberately.
+    if (user.role === Roles.ADMIN || user.role === Roles.SUPERVISOR) {
       return true;
     }
 
-    if (!user?.permissions) {
+    if (user.role !== Roles.EMPLOYEE) {
+      throw new ForbiddenException({
+        details: [{ field: 'role', message: 'Insufficient role' }],
+      });
+    }
+
+    if (requiredPermissions.length === 0) {
+      return true;
+    }
+
+    if (!user.permissions) {
       throw new ForbiddenException({
         details: [
           { field: 'permissions', message: 'No permissions found for user' },

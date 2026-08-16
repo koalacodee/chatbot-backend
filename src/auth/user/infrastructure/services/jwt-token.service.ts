@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { RefreshTokenRepository } from 'src/auth/domain/repositories/refresh-token.repository';
 import { RefreshToken } from 'src/auth/domain/entities/refresh-token.entity';
 import { TokensService } from 'src/auth/domain/services/tokens.service';
-import { PermissionsEnum } from 'src/rbac/decorators/permissions.decorator';
+import { Permission } from 'src/rbac/rbac.constants';
 import { FastifyReply } from 'fastify';
 @Injectable()
 export class JwtTokensService extends TokensService {
@@ -29,7 +29,7 @@ export class JwtTokensService extends TokensService {
     userId: string,
     email: string,
     role: string,
-    permissions?: PermissionsEnum,
+    permissions?: Permission[],
   ) {
     const [accessToken, refreshToken] = await Promise.all([
       this.generateAccessToken(userId, email, role, permissions),
@@ -58,7 +58,7 @@ export class JwtTokensService extends TokensService {
     userId: string,
     email: string,
     role: string,
-    permissions?: PermissionsEnum,
+    permissions?: Permission[],
   ) {
     const payload = { sub: userId, email, role, permissions };
     return this.jwtService.signAsync(payload, {
@@ -71,7 +71,7 @@ export class JwtTokensService extends TokensService {
     userId: string,
     email: string,
     role: string,
-    permissions?: PermissionsEnum,
+    permissions?: Permission[],
   ) {
     const payload = { sub: userId, email, role, permissions };
     return this.jwtService.signAsync(payload, {
@@ -86,7 +86,7 @@ export class JwtTokensService extends TokensService {
       sub: string;
       email: string;
       role: string;
-      permissions?: PermissionsEnum;
+      permissions?: Permission[];
     };
 
     // Generate a new access token

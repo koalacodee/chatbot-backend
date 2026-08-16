@@ -1,47 +1,78 @@
 import {
-  Injectable,
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 import { Roles } from 'src/shared/value-objects/role.vo';
 import { SupervisorPermissionsEnum } from 'src/supervisor/domain/entities/supervisor.entity';
-import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
+import { SUPERVISOR_OR_EMPLOYEE_PERMISSIONS_KEY } from '../rbac.constants';
 
-export const SUPERVISOR_OR_EMPLOYEE_PERMISSIONS_KEY =
-  'supervisor_or_employee_permissions';
-
-interface SupervisorOrEmployeePermissions {
+export interface SupervisorOrEmployeePermissionsConfig {
   supervisorPermissions?: SupervisorPermissionsEnum[];
   employeePermissions?: EmployeePermissionsEnum[];
 }
 
 @Injectable()
 export class SupervisorOrEmployeePermissionsGuard implements CanActivate {
-  constructor(private reflector: Reflector) { }
+  constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const permissionsConfig = this.reflector.getAllAndOverride<
-      SupervisorOrEmployeePermissions
-    >(SUPERVISOR_OR_EMPLOYEE_PERMISSIONS_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const config =
+      this.reflector.getAllAndOverride<SupervisorOrEmployeePermissionsConfig>(
+        SUPERVISOR_OR_EMPLOYEE_PERMISSIONS_KEY,
+        [context.getHandler(), context.getClass()],
+      );
 
-    // No decorator → allow
-    if (!permissionsConfig) {
+    if (!config) {
       return true;
     }
 
     const { user } = context.switchToHttp().getRequest();
 
-    // Admin always has access
-    if (user.role === Roles.ADMIN || user.role === 'ADMIN') {
+    if (!user?.role) {
+      throw new ForbiddenException({
+        details: [{ field: 'role', message: 'No roles found for user' }],
+      });
+    }
+
+    if (user.role === Roles.ADMIN) {
       return true;
     }
 
-    if (!user?.permissions) {
+    // This guard always checked the role before the permission list, which is why the
+    // overlap between the two enums was never exploitable through it. The other two now
+    // do the same.
+    const required =
+      user.role === Roles.SUPERVISOR
+        ? config.supervisorPermissions
+        : user.role === Roles.EMPLOYEE
+          ? config.employeePermissions
+          : undefined;
+
+    if (required === undefined) {
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'permissions',
+            message:
+              'Insufficient permissions. Requires supervisor or employee permissions.',
+          },
+        ],
+      });
+    }
+
+    // An explicitly empty list for the caller's role asks for the role and nothing more,
+    // matching `@SupervisorPermissions()`. It used to fall through to the refusal below.
+    // A config that omits the caller's role entirely still refuses, above — that is a
+    // route declared for the other role, not an unrestricted one.
+    if (required.length === 0) {
+      return true;
+    }
+
+    if (!user.permissions) {
       throw new ForbiddenException({
         details: [
           { field: 'permissions', message: 'No permissions found for user' },
@@ -49,45 +80,20 @@ export class SupervisorOrEmployeePermissionsGuard implements CanActivate {
       });
     }
 
-    const userRole = user.role;
+    const hasAccess = required.every((p) => user.permissions.includes(p));
 
-    // Check if user is supervisor with required supervisor permissions
-    if (userRole === Roles.SUPERVISOR || userRole === 'SUPERVISOR') {
-      const requiredSupervisorPermissions =
-        permissionsConfig.supervisorPermissions;
-      if (requiredSupervisorPermissions?.length) {
-        const hasAccess = requiredSupervisorPermissions.every((p) =>
-          user.permissions.includes(p),
-        );
-        if (hasAccess) {
-          return true;
-        }
-      }
+    if (!hasAccess) {
+      throw new ForbiddenException({
+        details: [
+          {
+            field: 'permissions',
+            message:
+              'Insufficient permissions. Requires supervisor or employee permissions.',
+          },
+        ],
+      });
     }
 
-    // Check if user is employee with required employee permissions
-    if (userRole === Roles.EMPLOYEE || userRole === 'EMPLOYEE') {
-      const requiredEmployeePermissions = permissionsConfig.employeePermissions;
-      if (requiredEmployeePermissions?.length) {
-        const hasAccess = requiredEmployeePermissions.every((p) =>
-          user.permissions.includes(p),
-        );
-        if (hasAccess) {
-          return true;
-        }
-      }
-    }
-
-    // User doesn't have required permissions
-    throw new ForbiddenException({
-      details: [
-        {
-          field: 'permissions',
-          message:
-            'Insufficient permissions. Requires supervisor or employee permissions.',
-        },
-      ],
-    });
+    return true;
   }
 }
-

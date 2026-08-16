@@ -25,8 +25,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       });
     }
 
-    // Only handle authenticated users (not guests)
-    const user = await this.userRepository.findById(payload.sub);
+    // `includeEntity` joins the four role rows on a unique user_id, so it cannot fan out
+    // — one extra query only when the user turns out to be a supervisor.
+    const user = await this.userRepository.findById(payload.sub, {
+      includeEntity: true,
+    });
 
     if (!user) {
       throw new UnauthorizedException({
@@ -34,12 +37,16 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       });
     }
 
-    // Return user data that will be attached to the request object
+    // Read from the database, not from `payload.permissions`. Trusting the claim meant a
+    // revoked permission stayed usable until the access token turned over, and left the
+    // request carrying a role sourced from the database beside permissions sourced from
+    // the token — two views of the same account that could disagree.
     return {
       id: user.id.toString(),
       email: user.email.toString(),
       role: user.role.toString(),
-      permissions: payload.permissions,
+      permissions:
+        user.supervisor?.permissions ?? user.employee?.permissions ?? [],
     };
   }
 }
