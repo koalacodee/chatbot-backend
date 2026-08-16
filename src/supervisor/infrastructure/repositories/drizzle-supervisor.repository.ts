@@ -296,6 +296,17 @@ export class DrizzleSupervisorRepository extends SupervisorRepository {
     );
   }
 
+  async findByDepartmentIds(departmentIds: string[]): Promise<Supervisor[]> {
+    if (departmentIds.length === 0) return [];
+
+    return this.load(
+      inArray(
+        supervisors.id,
+        this.supervisorsInDepartments(inArray(departments.id, departmentIds)),
+      ),
+    );
+  }
+
   async search(query: string): Promise<Supervisor[]> {
     const pattern = `%${query}%`;
 
@@ -325,14 +336,11 @@ export class DrizzleSupervisorRepository extends SupervisorRepository {
     // Sequential on purpose — each check short-circuits the rest. EXISTS rather than
     // COUNT(*), since only the presence of a row matters.
     //
-    // NOTE: the first two checks compare `department_id` against the SUPERVISOR id, which
-    // is what the Prisma version did. That looks like it was copied from a department
-    // guard and never re-pointed, so those two effectively never match. Preserved rather
-    // than silently changing when a supervisor becomes undeletable.
-    if (await this.hasAny(questions, eq(questions.departmentId, id)))
-      return false;
-
-    if (await this.hasAny(knowledgeChunks, eq(knowledgeChunks.departmentId, id)))
+    // The questions check tests authorship. It previously compared `department_id`
+    // against the supervisor id — copied from a department guard and never re-pointed —
+    // so it could never match. `knowledge_chunks` has no supervisor column at all, so
+    // that check had no meaning and is gone.
+    if (await this.hasAny(questions, eq(questions.creatorSupervisorId, id)))
       return false;
 
     if (

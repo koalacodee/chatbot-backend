@@ -29,10 +29,22 @@ export class Notification {
     this._updatedAt = options.updatedAt || new Date();
   }
 
+  /**
+   * A genuinely new notification — raises the created event so listeners can fan it out.
+   */
   public static create(options: NotificationOptions): Notification {
     const notification = new Notification(options);
     notification._events.push(new NotificationCreatedEvent(notification));
     return notification;
+  }
+
+  /**
+   * Rebuilds one that already exists in storage. No event: the notification was created
+   * once, and re-raising on every read would let any "flush events after load" step
+   * re-fire the entire notification history.
+   */
+  public static fromPersistence(options: NotificationOptions): Notification {
+    return new Notification(options);
   }
 
   public get id(): string {
@@ -83,7 +95,16 @@ export class Notification {
     this._updatedAt = new Date(updatedAt);
   }
 
+  /**
+   * Idempotent per user: a notification addressed to the same person twice would write
+   * duplicate recipient rows, and callers should not have to deduplicate on the entity's
+   * behalf.
+   */
   public addRecipient(userId: string) {
+    if (this._recipients.some((recipient) => recipient.userId === userId)) {
+      return;
+    }
+
     this._recipients.push(
       NotificationRecipient.create({
         userId,

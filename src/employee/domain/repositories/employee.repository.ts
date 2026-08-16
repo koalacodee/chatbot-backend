@@ -15,6 +15,7 @@ export abstract class EmployeeRepository {
   abstract exists(id: string): Promise<boolean>;
   abstract count(): Promise<number>;
   abstract findByUserId(id: string): Promise<Employee | null>;
+
   abstract findBySupervisorIds(
     supervisorIds: string[],
     permissions?: EmployeePermissionsEnum[],

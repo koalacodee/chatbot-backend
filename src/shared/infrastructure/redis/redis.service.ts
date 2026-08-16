@@ -46,6 +46,21 @@ export class RedisService implements OnModuleDestroy {
     return this.client.del(key);
   }
 
+  /**
+   * Increments a counter and returns its new value, creating it at 1 if absent.
+   * `expireSeconds` is applied only on that first increment, so the window starts with
+   * the first attempt rather than sliding forward on every one.
+   */
+  async increment(key: string, expireSeconds?: number): Promise<number> {
+    const value = await this.client.incr(key);
+
+    if (value === 1 && expireSeconds) {
+      await this.client.expire(key, expireSeconds);
+    }
+
+    return value;
+  }
+
   async execCommand(command: string, ...args: any[]): Promise<any> {
     // Generic method for advanced use
     // Example: await redisService.execCommand('hgetall', 'myhash')

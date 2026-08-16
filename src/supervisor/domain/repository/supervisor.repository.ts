@@ -26,6 +26,12 @@ export abstract class SupervisorRepository {
 
   abstract findManyByDepartmentId(departmentId: string): Promise<Supervisor[]>;
 
+  /**
+   * Supervisors owning any of these departments. Lets callers scope in the database
+   * rather than loading every supervisor and filtering in memory.
+   */
+  abstract findByDepartmentIds(departmentIds: string[]): Promise<Supervisor[]>;
+
   abstract search(query: string): Promise<Supervisor[]>;
 
   abstract canDelete(id: string): Promise<boolean>;

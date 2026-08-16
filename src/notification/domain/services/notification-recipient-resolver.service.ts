@@ -4,7 +4,6 @@ import { EmployeeRepository } from 'src/employee/domain/repositories/employee.re
 import { DepartmentRepository } from 'src/department/domain/repositories/department.repository';
 import { NotificationRecipient } from '../entities/notification-recipient.entity';
 import { SupervisorRepository } from 'src/supervisor/domain/repository/supervisor.repository';
-import { DepartmentHierarchyService } from 'src/department/application/services/department-hierarchy.service';
 import { EmployeePermissionsEnum } from 'src/employee/domain/entities/employee.entity';
 
 @Injectable()
@@ -14,7 +13,6 @@ export class NotificationRecipientResolverService {
     private readonly supervisorRepository: SupervisorRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly departmentRepository: DepartmentRepository,
-    private readonly departmentHierarchyService: DepartmentHierarchyService,
   ) {}
 
   async resolveTicketCreatedRecipients(
@@ -143,7 +141,6 @@ export class NotificationRecipientResolverService {
       | 'ADMIN_REVIEW'
       | 'SUPERVISOR_AND_ADMIN_REVIEW',
     assignedEmployeeId?: string,
-    supervisorId?: string,
   ): Promise<string[]> {
     const recipients: string[] = [];
 
@@ -151,10 +148,10 @@ export class NotificationRecipientResolverService {
       case 'SUPERVISOR_REVIEW':
         // Task submitted by employee, needs supervisor review
         if (assignedEmployeeId) {
-          const supervisorId =
+          const reviewerUserId =
             await this.getEmployeeSupervisor(assignedEmployeeId);
-          if (supervisorId) {
-            recipients.push(supervisorId);
+          if (reviewerUserId) {
+            recipients.push(reviewerUserId);
           }
         }
         break;
@@ -168,10 +165,10 @@ export class NotificationRecipientResolverService {
       case 'SUPERVISOR_AND_ADMIN_REVIEW':
         // Both supervisors and admins can resolve
         if (assignedEmployeeId) {
-          const supervisorId =
+          const reviewerUserId =
             await this.getEmployeeSupervisor(assignedEmployeeId);
-          if (supervisorId) {
-            recipients.push(supervisorId);
+          if (reviewerUserId) {
+            recipients.push(reviewerUserId);
           }
         }
         const allAdmins = await this.adminRepository.findAll();
@@ -182,42 +179,39 @@ export class NotificationRecipientResolverService {
     return [...new Set(recipients)]; // Remove duplicates
   }
 
-  async resolveTaskApprovedRecipients(
+  /**
+   * Approved and rejected notify the same two people. Kept as one implementation so the
+   * pair cannot drift; the public names stay separate because the events do.
+   */
+  private assigneeAndPerformer(
     assignedEmployeeId?: string,
     performerEmployeeId?: string,
-  ): Promise<string[]> {
+  ): string[] {
     const recipients: string[] = [];
 
-    // Notify the assigned employee
     if (assignedEmployeeId) {
       recipients.push(assignedEmployeeId);
     }
 
-    // Notify the performer employee (if different from assignee)
     if (performerEmployeeId && performerEmployeeId !== assignedEmployeeId) {
       recipients.push(performerEmployeeId);
     }
 
-    return [...new Set(recipients)]; // Remove duplicates
+    return [...new Set(recipients)];
+  }
+
+  async resolveTaskApprovedRecipients(
+    assignedEmployeeId?: string,
+    performerEmployeeId?: string,
+  ): Promise<string[]> {
+    return this.assigneeAndPerformer(assignedEmployeeId, performerEmployeeId);
   }
 
   async resolveTaskRejectedRecipients(
     assignedEmployeeId?: string,
     performerEmployeeId?: string,
   ): Promise<string[]> {
-    const recipients: string[] = [];
-
-    // Notify the assigned employee
-    if (assignedEmployeeId) {
-      recipients.push(assignedEmployeeId);
-    }
-
-    // Notify the performer employee (if different from assignee)
-    if (performerEmployeeId && performerEmployeeId !== assignedEmployeeId) {
-      recipients.push(performerEmployeeId);
-    }
-
-    return [...new Set(recipients)]; // Remove duplicates
+    return this.assigneeAndPerformer(assignedEmployeeId, performerEmployeeId);
   }
 
   async resolveStaffRequestCreatedRecipients(): Promise<string[]> {
@@ -251,62 +245,55 @@ export class NotificationRecipientResolverService {
   }
 
   /**
-   * Helper method to get employees in a specific sub-department (with HANDLE_TICKETS permission)
+   * Employees assigned to a sub-department who can handle tickets.
+   *
+   * Scoped in the database. This used to call `findAll()` and filter in memory, so every
+   * ticket creation loaded every employee in the system.
    */
   private async getEmployeesInSubDepartment(
     subDepartmentId: string,
   ): Promise<string[]> {
-    const employees = await this.employeeRepository.findAll();
-    const relevantEmployees = employees.filter(
-      (employee) =>
-        employee.subDepartments?.some(
-          (dept) => dept.id.toString() === subDepartmentId,
-        ) &&
+    const employees =
+      await this.employeeRepository.findBySubDepartment(subDepartmentId);
+
+    return employees
+      .filter((employee) =>
         employee.permissions?.includes(EmployeePermissionsEnum.HANDLE_TICKETS),
-    );
-    return relevantEmployees.map((employee) => employee.userId.toString());
+      )
+      .map((employee) => employee.userId.toString());
   }
 
   /**
-   * Helper method to get supervisors with access to a department
+   * Supervisors who reach the department directly or through its parent.
+   *
+   * The parent is resolved once and both ids handed to a single scoped query, replacing a
+   * `findAll()` followed by one sequential `hasHierarchicalAccess` call per supervisor.
    */
   private async getSupervisorsWithDepartmentAccess(
     departmentId: string,
   ): Promise<string[]> {
-    const supervisors = await this.supervisorRepository.findAll();
-    const relevantSupervisors = [];
+    const department = await this.departmentRepository.findById(departmentId);
+    const parentId = department?.parentId?.toString();
 
-    for (const supervisor of supervisors) {
-      const supervisorDepartmentIds = supervisor.departments.map((dept) =>
-        dept.id.toString(),
-      );
+    const reachableFrom = parentId ? [departmentId, parentId] : [departmentId];
 
-      const hasAccess =
-        await this.departmentHierarchyService.hasHierarchicalAccess(
-          departmentId,
-          supervisorDepartmentIds,
-        );
+    const supervisors =
+      await this.supervisorRepository.findByDepartmentIds(reachableFrom);
 
-      if (hasAccess) {
-        relevantSupervisors.push(supervisor);
-      }
-    }
-
-    return relevantSupervisors.map((supervisor) =>
-      supervisor.userId.toString(),
-    );
+    return supervisors.map((supervisor) => supervisor.userId.toString());
   }
 
-  /**
-   * Helper method to check if a department is a sub-department
-   */
+  /** Whether the department hangs off a parent. */
   private async isSubDepartment(departmentId: string): Promise<boolean> {
     const department = await this.departmentRepository.findById(departmentId);
     return department ? !!department.parentId : false;
   }
 
   /**
-   * Helper method to get employees assigned under specific supervisors (with HANDLE_TICKETS permission)
+   * Employees reporting to any of the given supervisors who can handle tickets.
+   *
+   * Takes supervisor *user* ids, which is what the resolver passes around, so it maps
+   * back to supervisor row ids before scoping the employee query.
    */
   private async getEmployeesUnderSupervisors(
     supervisorUserIds: string[],
@@ -315,26 +302,25 @@ export class NotificationRecipientResolverService {
       return [];
     }
 
-    // Get supervisor entities by user IDs
-    const supervisors = await this.supervisorRepository.findAll();
-    const relevantSupervisors = supervisors.filter((supervisor) =>
-      supervisorUserIds.includes(supervisor.userId.toString()),
+    const supervisors = await Promise.all(
+      supervisorUserIds.map((userId) =>
+        this.supervisorRepository.findByUserId(userId),
+      ),
     );
 
-    // Get all employees and filter by supervisor assignment and HANDLE_TICKETS permission
-    const employees = await this.employeeRepository.findAll();
-    const relevantEmployees = employees.filter((employee) => {
-      if (!employee.supervisorId) return false;
+    const supervisorIds = supervisors
+      .filter((supervisor) => supervisor !== null)
+      .map((supervisor) => supervisor.id.toString());
 
-      return (
-        relevantSupervisors.some(
-          (supervisor) =>
-            supervisor.id.toString() === employee.supervisorId.toString(),
-        ) &&
-        employee.permissions?.includes(EmployeePermissionsEnum.HANDLE_TICKETS)
-      );
-    });
+    if (supervisorIds.length === 0) {
+      return [];
+    }
 
-    return relevantEmployees.map((employee) => employee.userId.toString());
+    const employees = await this.employeeRepository.findBySupervisorIds(
+      supervisorIds,
+      [EmployeePermissionsEnum.HANDLE_TICKETS],
+    );
+
+    return employees.map((employee) => employee.userId.toString());
   }
 }

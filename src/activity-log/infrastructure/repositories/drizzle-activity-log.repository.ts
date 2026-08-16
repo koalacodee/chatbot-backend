@@ -674,36 +674,84 @@ export class DrizzleActivityLogRepository extends ActivityLogRepository {
    * manual mean over them, so the cost scaled with total history rather than with the
    * seven numbers it returns.
    *
-   * NOTE: `userId` is compared against answerer/performer/reviewer columns, which hold
-   * Admin/Supervisor/Employee row ids — not user ids. The controller passes `req.user.id`,
-   * so these filters almost certainly match nothing today. Preserved exactly; see the
-   * `coalesce(...user_id)` in getAgentPerformance for how the two are normally bridged.
+   * The answerer/performer/reviewer columns hold Admin/Supervisor/Employee *row* ids,
+   * while callers pass a user id, so the two have to be bridged first — the same join
+   * `getAgentPerformance` makes with `coalesce(emp.user_id, sup.user_id, adm.user_id)`.
    */
+  /**
+   * The admin / supervisor / employee rows belonging to one user. A person holds at most
+   * one of each, and any of the three may be absent.
+   */
+  private async resolveActorRowIds(userId: string): Promise<{
+    adminId: string | null;
+    supervisorId: string | null;
+    employeeId: string | null;
+  }> {
+    const [adminRow, supervisorRow, employeeRow] = await Promise.all([
+      this.db
+        .select({ id: admins.id })
+        .from(admins)
+        .where(eq(admins.userId, userId))
+        .limit(1),
+      this.db
+        .select({ id: supervisors.id })
+        .from(supervisors)
+        .where(eq(supervisors.userId, userId))
+        .limit(1),
+      this.db
+        .select({ id: employees.id })
+        .from(employees)
+        .where(eq(employees.userId, userId))
+        .limit(1),
+    ]);
+
+    return {
+      adminId: adminRow[0]?.id ?? null,
+      supervisorId: supervisorRow[0]?.id ?? null,
+      employeeId: employeeRow[0]?.id ?? null,
+    };
+  }
+
   async getPerformanceSummary(userId?: string): Promise<PerformanceSummary> {
-    // Prisma treated `{ column: undefined }` as "no filter", so an absent userId means
-    // the summary covers everyone.
-    const answeredBy = userId
-      ? or(
-          eq(supportTicketAnswers.answererAdminId, userId),
-          eq(supportTicketAnswers.answererSupervisorId, userId),
-          eq(supportTicketAnswers.answererEmployeeId, userId),
-        )
-      : undefined;
+    // An absent userId means the summary covers everyone, as it always has.
+    const actor = userId ? await this.resolveActorRowIds(userId) : null;
 
-    const performedBy = userId
-      ? or(
-          eq(taskSubmissions.performerAdminId, userId),
-          eq(taskSubmissions.performerSupervisorId, userId),
-          eq(taskSubmissions.performerEmployeeId, userId),
-        )
-      : undefined;
+    /** Matches when the column holds this user's corresponding row id. */
+    const isActor = (
+      adminColumn: PgColumn,
+      supervisorColumn: PgColumn,
+      employeeColumn?: PgColumn,
+    ) => {
+      if (!actor) return undefined;
 
-    const reviewedBy = userId
-      ? or(
-          eq(taskSubmissions.reviewedByAdminId, userId),
-          eq(taskSubmissions.reviewedBySupervisorId, userId),
-        )
-      : undefined;
+      const arms = [
+        actor.adminId ? eq(adminColumn, actor.adminId) : undefined,
+        actor.supervisorId ? eq(supervisorColumn, actor.supervisorId) : undefined,
+        employeeColumn && actor.employeeId
+          ? eq(employeeColumn, actor.employeeId)
+          : undefined,
+      ].filter(Boolean);
+
+      // A user who is none of the three matches nothing, rather than everything.
+      return arms.length ? or(...arms) : sql`FALSE`;
+    };
+
+    const answeredBy = isActor(
+      supportTicketAnswers.answererAdminId,
+      supportTicketAnswers.answererSupervisorId,
+      supportTicketAnswers.answererEmployeeId,
+    );
+
+    const performedBy = isActor(
+      taskSubmissions.performerAdminId,
+      taskSubmissions.performerSupervisorId,
+      taskSubmissions.performerEmployeeId,
+    );
+
+    const reviewedBy = isActor(
+      taskSubmissions.reviewedByAdminId,
+      taskSubmissions.reviewedBySupervisorId,
+    );
 
     const [answerStats, submissionStats, approvedRows] = await Promise.all([
       // The interaction join is LEFT: the original read `supportTicket.interaction.type`

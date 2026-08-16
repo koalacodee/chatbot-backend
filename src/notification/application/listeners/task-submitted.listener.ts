@@ -20,7 +20,6 @@ export class TaskSubmittedListener {
       await this.recipientResolver.resolveTaskSubmittedRecipients(
         event.submissionType,
         event.assignedEmployeeId,
-        event.supervisorId,
       );
 
     const notification = Notification.create({

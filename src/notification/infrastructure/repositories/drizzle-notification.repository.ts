@@ -33,7 +33,8 @@ export class DrizzleNotificationRepository extends NotificationRepository {
   }
 
   private toDomain(row: NotificationRow, recipients: RecipientRow[]) {
-    return Notification.create({
+    // Rebuilt from storage, not newly created — no created event.
+    return Notification.fromPersistence({
       id: row.id,
       title: row.title,
       type: row.type,

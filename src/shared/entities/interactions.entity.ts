@@ -89,17 +89,6 @@ export class Interaction {
     };
   }
 
-  public clone(): Interaction {
-    return new Interaction({
-      id: this._id.value,
-      type: this._type,
-      createdAt: this._createdAt,
-      updatedAt: this._updatedAt,
-      question: this._question,
-      guest: this._guest,
-    });
-  }
-
   public equals(other: Interaction): boolean {
     return (
       this._id.value === other._id.value &&

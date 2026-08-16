@@ -97,14 +97,4 @@ export class Message {
     return this._id.value === other._id.value;
   }
 
-  clone(): Message {
-    return new Message({
-      id: this._id,
-      conversationId: this._conversationId,
-      role: this._role,
-      content: this._content,
-      createdAt: new Date(this._createdAt),
-      updatedAt: new Date(this._updatedAt),
-    });
-  }
 }

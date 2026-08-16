@@ -156,40 +156,6 @@ describe('Message', () => {
     });
   });
 
-  describe('clone', () => {
-    it('produces an equal but distinct instance', () => {
-      const original = Message.create({
-        id: MESSAGE_ID,
-        role: 'user',
-        content: 'hello',
-        conversationId: CONVERSATION_ID,
-      });
-
-      const copy = original.clone();
-
-      expect(copy).not.toBe(original);
-      expect(copy.equals(original)).toBe(true);
-      expect(copy.toJSON()).toEqual(original.toJSON());
-    });
-
-    it('copies the dates rather than sharing them', () => {
-      const original = Message.create({ role: 'user', content: 'hello' });
-
-      const copy = original.clone();
-
-      expect(copy.createdAt).not.toBe(original.createdAt);
-      expect(copy.createdAt).toEqual(original.createdAt);
-    });
-
-    it('leaves the original untouched when the copy is edited', () => {
-      const original = Message.create({ role: 'user', content: 'original' });
-
-      const copy = original.clone();
-      copy.content = 'edited';
-
-      expect(original.content).toBe('original');
-    });
-  });
 
   describe('toJSON', () => {
     it('emits ids as strings and timestamps as ISO strings', () => {
