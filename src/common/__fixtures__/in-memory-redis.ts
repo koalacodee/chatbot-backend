@@ -33,6 +33,17 @@ export function createInMemoryRedis(): InMemoryRedis {
   const service = stubRepository<RedisService>('RedisService', {
     get: async (key: string) => strings.get(key) ?? null,
 
+    /**
+     * Mirrors INCR + a first-write EXPIRE: the counter starts at 1 and its window is set
+     * once, so repeated attempts do not slide the expiry forward.
+     */
+    increment: async (key: string, expireSeconds?: number) => {
+      const next = Number(strings.get(key) ?? 0) + 1;
+      strings.set(key, String(next));
+      if (next === 1 && expireSeconds) ttls.set(key, expireSeconds);
+      return next;
+    },
+
     set: async (key: string, value: string, expireSeconds?: number) => {
       strings.set(key, value);
       ttls.set(key, expireSeconds);
